@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turnos Equipo Clínico — CSU Valdivia</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+.container { padding: 1.5rem 1rem; max-width: 480px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 1.5rem; }
+.header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+.header p { font-size: 13px; color: #666; margin-top: 4px; }
+.logo { font-size: 13px; color: #999; text-align: center; margin-bottom: 1rem; font-weight: 500; letter-spacing: 0.5px; }
+select, textarea, button, input[type=text], input[type=password] { font-family: inherit; font-size: 14px; border-radius: 8px; border: 1px solid #ddd; padding: 10px 12px; width: 100%; background: #fff; color: #1a1a1a; }
+select:focus, textarea:focus, input:focus { outline: none; border-color: #888; }
+button { cursor: pointer; background: #fff; border: 1px solid #ddd; width: auto; padding: 8px 16px; transition: background 0.15s; }
+button:hover { background: #f0f0f0; }
+.select-wrap { margin-bottom: 1rem; }
+.day-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 10px; }
+.day-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.day-name { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+.bloque-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-top: 1px solid #f0f0f0; }
+.bloque-area { font-size: 12px; color: #666; min-width: 95px; padding-top: 3px; }
+.badge { font-size: 11px; padding: 3px 9px; border-radius: 6px; background: #e8f1fc; color: #1a5ca8; display: inline-block; font-weight: 500; }
+.badge.colacion { background: #fef3e2; color: #8a5100; }
+.badge.pabellon { background: #dbeafe; color: #1d4ed8; }
+.tarea-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-top: 1px solid #f0f0f0; }
+.tarea-icon { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
+.tarea-icon.pabellon { background: #dbeafe; color: #1d4ed8; }
+.tarea-icon.pedido { background: #ffedd5; color: #c2410c; }
+.tarea-icon.consentimiento { background: #ede9fe; color: #7c3aed; }
+.tarea-icon.tarea { background: #dcfce7; color: #15803d; }
+.tarea-content { flex: 1; font-size: 12px; color: #1a1a1a; padding-top: 4px; }
+.tarea-tipo { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.tarea-tipo.pabellon { color: #1d4ed8; }
+.tarea-tipo.pedido { color: #c2410c; }
+.tarea-tipo.consentimiento { color: #7c3aed; }
+.tarea-tipo.tarea { color: #15803d; }
+.no-result { text-align: center; padding: 2rem; color: #888; font-size: 14px; }
+.pendientes-section { margin-top: 1rem; }
+.pendientes-title { font-size: 14px; font-weight: 600; color: #dc2626; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.pendiente-card { background: #fff; border: 1.5px dashed #f87171; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+.pendiente-card.cubierto { background: #dc2626; border: none; }
+.pendiente-info { font-size: 13px; color: #1a1a1a; font-weight: 500; margin-bottom: 4px; }
+.pendiente-card.cubierto .pendiente-info { color: #fff; }
+.pendiente-sub { font-size: 11px; color: #888; }
+.pendiente-card.cubierto .pendiente-sub { color: #fecaca; }
+.pendiente-btn { margin-top: 8px; width: 100%; padding: 7px; font-size: 12px; background: #dc2626; color: #fff; border: none; border-radius: 7px; font-weight: 500; }
+.pendiente-btn:hover { background: #b91c1c; }
+.admin-toggle { text-align: center; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.admin-toggle button { font-size: 12px; color: #999; background: #fff; border: 1px solid #e0e0e0; border-radius: 20px; padding: 5px 14px; width: auto; }
+.admin-toggle button:hover { background: #f5f5f5; }
+.admin-panel { display: none; border: 1px solid #e8e8e8; border-radius: 12px; padding: 1rem 1.25rem; margin-top: 0.5rem; background: #fff; }
+.admin-panel.open { display: block; }
+.admin-section { margin-bottom: 1.25rem; }
+.admin-section-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; }
+.flex-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.flex-row select, .flex-row input { flex: 1; font-size: 13px; padding: 8px 10px; }
+textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: vertical; min-height: 52px; border: 1px solid #ddd; border-radius: 8px; }
+.btn-add { width: 100%; padding: 9px; font-size: 13px; margin-top: 6px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-weight: 500; }
+.btn-add:hover { background: #333; }
+.btn-danger { width: 100%; padding: 9px; font-size: 13px; margin-top: 6px; background: #fff; color: #c0392b; border: 1px solid #e8e8e8; border-radius: 8px; }
+.btn-danger:hover { background: #fff5f5; }
+.items-list { margin-top: 10px; }
+.list-item { display: flex; align-items: flex-start; gap: 6px; padding: 7px 0; border-top: 1px solid #f0f0f0; font-size: 12px; }
+.list-item-info { flex: 1; color: #1a1a1a; }
+.list-item-sub { color: #888; font-size: 11px; margin-top: 1px; }
+.del-btn { background: none; border: none; cursor: pointer; color: #bbb; padding: 2px 4px; font-size: 14px; width: auto; flex-shrink: 0; }
+.del-btn:hover { color: #c0392b; background: none; }
+.empty-list { font-size: 12px; color: #aaa; text-align: center; padding: 8px 0; }
+.saved-ok { font-size: 11px; color: #1D9E75; text-align: center; margin-top: 4px; display: none; }
+.pin-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.pin-box { background: #fff; border-radius: 12px; padding: 1.5rem; width: 280px; text-align: center; }
+.pin-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.pin-box input { text-align: center; font-size: 20px; letter-spacing: 8px; margin-bottom: 10px; }
+.pin-error { font-size: 12px; color: #c0392b; margin-top: 6px; display: none; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal-box { background: #fff; border-radius: 12px; padding: 1.5rem; width: 300px; }
+.modal-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.alerta-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 99; }
+.alerta-box { background: #fff; border-radius: 14px; padding: 1.5rem; width: 300px; text-align: center; border-top: 4px solid #dc2626; }
+.alerta-box h3 { font-size: 15px; font-weight: 600; color: #dc2626; margin-bottom: 8px; }
+.alerta-box p { font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 1rem; }
+.alerta-btns { display: flex; gap: 8px; }
+.alerta-btns button { flex: 1; padding: 9px; font-size: 13px; border-radius: 8px; }
+.btn-ver { background: #dc2626; color: #fff; border: none; font-weight: 500; }
+.btn-ver:hover { background: #b91c1c; }
+.bulk-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.bulk-table th { background: #f5f5f5; padding: 6px 4px; text-align: left; font-weight: 600; border: 1px solid #e8e8e8; font-size: 11px; }
+.bulk-table td { padding: 3px 3px; border: 1px solid #f0f0f0; }
+.bulk-table select { font-size: 11px; padding: 4px 4px; border-radius: 4px; width: 100%; }
+.bulk-row-add { font-size: 12px; color: #1a5ca8; background: none; border: none; cursor: pointer; margin-top: 6px; width: auto; padding: 4px 0; }
+.bulk-row-add:hover { background: none; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">CSU VALDIVIA — USS</div>
+  <div class="header">
+    <h1><i class="ti ti-calendar-week" style="font-size:20px;vertical-align:-3px;margin-right:6px"></i>Turnos equipo clínico</h1>
+    <p id="semanaLabel">Cargando...</p>
+  </div>
+
+  <div class="select-wrap">
+    <select id="nameSelect">
+      <option value="">— Selecciona tu nombre —</option>
+      <option>Barbara</option><option>Camila</option><option>Cony</option><option>Diego</option>
+      <option>Gisa</option><option>Jacqueline</option><option>Javiera</option><option>Marcia</option><option>Nathaly</option>
+    </select>
+  </div>
+
+  <div id="results"></div>
+  <div id="pendientesSection"></div>
+
+  <div class="admin-toggle">
+    <button id="adminBtn"><i class="ti ti-settings" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Admin</button>
+  </div>
+
+  <div class="admin-panel" id="adminPanel">
+
+    <div class="admin-section">
+      <p class="admin-section-title"><i class="ti ti-calendar" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Nombre de la semana</p>
+      <input type="text" id="semanaTexto" placeholder="Ej: Semana 22 – 27 junio 2025" style="font-size:13px;padding:8px 10px;margin-bottom:4px">
+      <button class="btn-add" id="saveSemanaBtn"><i class="ti ti-device-floppy" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>Guardar</button>
+      <div class="saved-ok" id="semanaSaved">✓ Guardado</div>
+    </div>
+
+    <div class="admin-section">
+      <p class="admin-section-title"><i class="ti ti-table-import" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Carga masiva de turnos</p>
+      <table class="bulk-table">
+        <thead><tr><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th></th></tr></thead>
+        <tbody id="bulkBody"></tbody>
+      </table>
+      <button class="bulk-row-add" id="addRowBtn"><i class="ti ti-plus" style="font-size:12px;vertical-align:-1px"></i> Agregar fila</button>
+      <button class="btn-add" id="saveBulkBtn" style="margin-top:10px"><i class="ti ti-device-floppy" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>Guardar todos los turnos</button>
+      <div class="saved-ok" id="bulkSaved">✓ Turnos guardados</div>
+    </div>
+
+    <div class="admin-section">
+      <p class="admin-section-title"><i class="ti ti-clipboard-list" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Asignar tarea / aviso</p>
+      <div class="flex-row">
+        <select id="tDia"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
+        <select id="tNombre"><option value="">Persona</option><option>Barbara</option><option>Camila</option><option>Cony</option><option>Diego</option><option>Gisa</option><option>Jacqueline</option><option>Javiera</option><option>Marcia</option><option>Nathaly</option></select>
+      </div>
+      <div class="flex-row">
+        <select id="tTipo">
+          <option value="">Tipo</option>
+          <option value="pabellon">🔵 Pabellón</option>
+          <option value="pedido">🟠 Pedido</option>
+          <option value="consentimiento">🟣 Consentimientos</option>
+          <option value="tarea">🟢 Tarea especial</option>
+        </select>
+      </div>
+      <textarea class="admin-txt" id="tTexto" placeholder="Descripción..."></textarea>
+      <button class="btn-add" id="addTareaBtn"><i class="ti ti-plus" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>Agregar</button>
+      <div class="saved-ok" id="tareaSaved">✓ Guardado</div>
+      <div class="items-list" id="tareasList"></div>
+    </div>
+
+    <div class="admin-section">
+      <p class="admin-section-title"><i class="ti ti-user-plus" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Turno pendiente de cubrir</p>
+      <div class="flex-row">
+        <select id="pDia"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
+        <select id="pArea"><option value="">Área</option><option>Esterilización</option><option>Rayos</option><option>Pabellón</option><option>Dispensario 1</option><option>Dispensario 2</option></select>
+      </div>
+      <div class="flex-row">
+        <select id="pHorario"><option value="">Horario</option></select>
+      </div>
+      <button class="btn-add" id="addPendienteBtn"><i class="ti ti-plus" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>Agregar pendiente</button>
+      <div class="saved-ok" id="pendienteSaved">✓ Guardado</div>
+      <div class="items-list" id="pendientesList"></div>
+    </div>
+
+    <div class="admin-section">
+      <p class="admin-section-title"><i class="ti ti-list" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Bloques cargados</p>
+      <div class="items-list" id="bloquesList"></div>
+    </div>
+
+    <div class="admin-section">
+      <p class="admin-section-title" style="color:#c0392b"><i class="ti ti-trash" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Limpiar semana</p>
+      <p style="font-size:12px;color:#888;margin-bottom:8px">Borra todos los bloques, tareas y pendientes.</p>
+      <button class="btn-danger" id="clearBtn"><i class="ti ti-refresh" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>Limpiar todo</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyDrm0TlQ0fNK57xIFSVX82L1qdMbyBU8Ng",
+  authDomain: "turnos-equipo-cl.firebaseapp.com",
+  databaseURL: "https://turnos-equipo-cl-default-rtdb.firebaseio.com",
+  projectId: "turnos-equipo-cl",
+  storageBucket: "turnos-equipo-cl.firebasestorage.app",
+  messagingSenderId: "313100676497",
+  appId: "1:313100676497:web:5edc3746bc1be66758be30"
+});
+var db = firebase.database();
+
+var COLACION = {'07:45':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
+function getColacion(h) { return COLACION[h.split('–')[0]] || null; }
+var dias = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+var areas = ['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
+var nombres = ['Barbara','Camila','Cony','Diego','Gisa','Jacqueline','Javiera','Marcia','Nathaly'];
+var TIPO_CONFIG = {
+  pabellon:       { icon:'ti-building-hospital', label:'Pabellón',        cls:'pabellon' },
+  pedido:         { icon:'ti-shopping-cart',     label:'Pedido',          cls:'pedido' },
+  consentimiento: { icon:'ti-file-text',         label:'Consentimientos', cls:'consentimiento' },
+  tarea:          { icon:'ti-clipboard-check',   label:'Tarea especial',  cls:'tarea' }
+};
+
+var horarios = ['07:45–13:00','07:45–17:00','09:00–14:00','10:00–14:00','10:00–20:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','14:00–20:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
+function pad(n){ return n<10?'0'+n:String(n); }
+for(var h=8;h<20;h++){
+  var hs=pad(h)+':00–'+pad(h+1)+':00';
+  var hm=pad(h)+':30–'+pad(h+1)+':30';
+  if(horarios.indexOf(hs)===-1) horarios.push(hs);
+  if(h<19&&horarios.indexOf(hm)===-1) horarios.push(hm);
+}
+if(horarios.indexOf('19:30–20:00')===-1) horarios.push('19:30–20:00');
+
+var pHorarioSel=document.getElementById('pHorario');
+horarios.forEach(function(h){ var o=document.createElement('option'); o.value=h; o.textContent=h; pHorarioSel.appendChild(o); });
+
+var PIN='2715';
+var bloques={}, tareas={}, pendientes={}, currentNombre='';
+var alertaMostrada=false;
+
+function makeOpts(arr,placeholder){
+  return '<option value="">'+placeholder+'</option>'+arr.map(function(o){return '<option>'+o+'</option>';}).join('');
+}
+
+function addBulkRow(){
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td><select>'+makeOpts(dias,'Día')+'</select></td><td><select>'+makeOpts(nombres,'Persona')+'</select></td><td><select>'+makeOpts(areas,'Área')+'</select></td><td><select>'+makeOpts(horarios,'Horario')+'</select></td><td><button class="del-btn" onclick="this.closest(\'tr\').remove()"><i class="ti ti-x"></i></button></td>';
+  document.getElementById('bulkBody').appendChild(tr);
+}
+document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
+addBulkRow();
+
+function mostrarAlertaPendientes(){
+  if(alertaMostrada) return;
+  var sinCubrir=Object.values(pendientes).filter(function(p){return !p.cubiertoPor;});
+  if(!sinCubrir.length) return;
+  alertaMostrada=true;
+  var overlay=document.createElement('div');
+  overlay.className='alerta-overlay';
+  overlay.innerHTML='<div class="alerta-box"><h3><i class="ti ti-alert-triangle" style="font-size:18px;vertical-align:-3px;margin-right:6px"></i>Turnos sin cubrir</h3><p>Esta semana hay <strong>'+sinCubrir.length+' turno'+(sinCubrir.length>1?'s':'')+' pendiente'+(sinCubrir.length>1?'s':'')+' de cubrir</strong>.<br>Si deseas hacer turno extra, regístrate en la sección <strong>Pendientes por cubrir</strong>.</p><div class="alerta-btns"><button onclick="document.body.removeChild(this.closest(\'.alerta-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cerrar</button><button class="btn-ver" onclick="verPendientes(this)">Ver pendientes</button></div></div>';
+  document.body.appendChild(overlay);
+}
+
+window.verPendientes=function(btn){
+  document.body.removeChild(btn.closest('.alerta-overlay'));
+  var sec=document.getElementById('pendientesSection');
+  if(sec) sec.scrollIntoView({behavior:'smooth'});
+};
+
+db.ref('semana').on('value',function(snap){
+  var val=snap.val();
+  document.getElementById('semanaLabel').textContent=val||'Semana actual';
+  var si=document.getElementById('semanaTexto');
+  if(si&&!si.value) si.value=val||'';
+});
+
+db.ref('bloques').on('value',function(snap){
+  bloques=snap.val()||{};
+  if(currentNombre) renderResults(currentNombre);
+  renderBloquesList();
+});
+
+db.ref('tareas').on('value',function(snap){
+  tareas=snap.val()||{};
+  if(currentNombre) renderResults(currentNombre);
+  renderTareasList();
+});
+
+db.ref('pendientes').on('value',function(snap){
+  pendientes=snap.val()||{};
+  renderPendientes();
+  renderPendientesList();
+  if(!alertaMostrada) mostrarAlertaPendientes();
+});
+
+function renderResults(nombre){
+  var div=document.getElementById('results');
+  if(!nombre){div.innerHTML='';return;}
+  var html='',found=false;
+  dias.forEach(function(dia){
+    var propios=Object.values(bloques).filter(function(b){return b.dia===dia&&b.nombre===nombre;});
+    if(!propios.length) return;
+    found=true;
+    var cols=new Set();
+    propios.forEach(function(b){var c=getColacion(b.horario);if(c) cols.add(c);});
+    var td=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
+    html+='<div class="day-card"><div class="day-header"><i class="ti ti-calendar-event" style="font-size:16px;color:#888"></i><span class="day-name">'+dia+'</span></div>';
+    propios.forEach(function(b){
+      var isPab=b.area==='Pabellón';
+      html+='<div class="bloque-row"><span class="bloque-area"><i class="ti ti-building-hospital" style="font-size:12px;vertical-align:-1px;margin-right:3px'+(isPab?';color:#1d4ed8':'')+'" ></i>'+b.area+'</span><div><span class="badge'+(isPab?' pabellon':'')+'">'+b.horario+'</span></div></div>';
+    });
+    cols.forEach(function(c){
+      html+='<div class="bloque-row"><span class="bloque-area" style="color:#8a5100"><i class="ti ti-tools-kitchen-2" style="font-size:12px;vertical-align:-1px;margin-right:3px"></i>Colación</span><div><span class="badge colacion">'+c+'</span></div></div>';
+    });
+    td.forEach(function(t){
+      var cfg=TIPO_CONFIG[t.tipo]||TIPO_CONFIG['tarea'];
+      html+='<div class="tarea-row"><div class="tarea-icon '+cfg.cls+'"><i class="ti '+cfg.icon+'"></i></div><div class="tarea-content"><div class="tarea-tipo '+cfg.cls+'">'+cfg.label+'</div>'+t.texto+'</div></div>';
+    });
+    html+='</div>';
+  });
+  if(!found) html='<div class="no-result"><i class="ti ti-user-x" style="font-size:32px;color:#bbb;display:block;margin-bottom:8px"></i><p>Sin turnos asignados esta semana.</p></div>';
+  div.innerHTML=html;
+}
+
+function renderPendientes(){
+  var div=document.getElementById('pendientesSection');
+  var entries=Object.entries(pendientes);
+  if(!entries.length){div.innerHTML='';return;}
+  var html='<div class="pendientes-section"><div class="pendientes-title"><i class="ti ti-alert-triangle" style="font-size:15px"></i>Pendientes por cubrir</div>';
+  entries.forEach(function(e){
+    var key=e[0],p=e[1];
+    if(p.cubiertoPor){
+      html+='<div class="pendiente-card cubierto"><div class="pendiente-info"><i class="ti ti-check" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>'+p.dia+' — '+p.area+' — '+p.horario+'</div><div class="pendiente-sub">Cubierto por: <strong style="color:#fff">'+p.cubiertoPor+'</strong></div></div>';
+    } else {
+      html+='<div class="pendiente-card"><div class="pendiente-info"><i class="ti ti-calendar-x" style="font-size:13px;vertical-align:-1px;margin-right:4px;color:#dc2626"></i>'+p.dia+' — '+p.area+'</div><div class="pendiente-sub">Horario: '+p.horario+'</div><button class="pendiente-btn" onclick="anotarme(\''+key+'\')"><i class="ti ti-hand-stop" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Puedo cubrir este turno</button></div>';
+    }
+  });
+  html+='</div>';
+  div.innerHTML=html;
+}
+
+window.anotarme=function(key){
+  var modal=document.createElement('div');
+  modal.className='modal-overlay';
+  modal.innerHTML='<div class="modal-box"><h3><i class="ti ti-user-check" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Confirmar turno extra</h3><p style="font-size:13px;color:#666;margin-bottom:12px">Selecciona tu nombre para confirmar.</p><select id="nombreExtra" style="margin-bottom:10px">'+makeOpts(nombres,'Selecciona tu nombre')+'</select><div style="display:flex;gap:8px;margin-top:8px"><button onclick="document.body.removeChild(this.closest(\'.modal-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="confirmarBtn" style="flex:1;padding:9px;font-size:13px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:500">Confirmar</button></div></div>';
+  document.body.appendChild(modal);
+  modal.querySelector('#confirmarBtn').addEventListener('click',function(){
+    var nombre=modal.querySelector('#nombreExtra').value;
+    if(!nombre) return;
+    db.ref('pendientes/'+key).update({cubiertoPor:nombre}).then(function(){
+      document.body.removeChild(modal);
+    });
+  });
+};
+
+function showSaved(id){
+  var el=document.getElementById(id);
+  el.style.display='block';
+  setTimeout(function(){el.style.display='none';},2000);
+}
+
+function renderBloquesList(){
+  var div=document.getElementById('bloquesList');
+  if(!div) return;
+  var entries=Object.entries(bloques);
+  if(!entries.length){div.innerHTML='<p class="empty-list">No hay bloques cargados.</p>';return;}
+  div.innerHTML=entries.map(function(e){
+    var key=e[0],b=e[1];
+    return '<div class="list-item"><div class="list-item-info"><strong>'+b.nombre+'</strong> — '+b.dia+'<div class="list-item-sub">'+b.area+' · '+b.horario+(getColacion(b.horario)?' · col. '+getColacion(b.horario):'')+' </div></div><button class="del-btn" onclick="deleteBloque(\''+key+'\')"><i class="ti ti-trash"></i></button></div>';
+  }).join('');
+}
+
+function renderTareasList(){
+  var div=document.getElementById('tareasList');
+  if(!div) return;
+  var entries=Object.entries(tareas);
+  if(!entries.length){div.innerHTML='<p class="empty-list">No hay tareas asignadas.</p>';return;}
+  div.innerHTML=entries.map(function(e){
+    var key=e[0],t=e[1];
+    var cfg=TIPO_CONFIG[t.tipo]||TIPO_CONFIG['tarea'];
+    return '<div class="list-item"><div class="list-item-info"><strong>'+t.nombre+'</strong> — '+t.dia+' ('+cfg.label+')<div class="list-item-sub">'+t.texto+'</div></div><button class="del-btn" onclick="deleteTarea(\''+key+'\')"><i class="ti ti-trash"></i></button></div>';
+  }).join('');
+}
+
+function renderPendientesList(){
+  var div=document.getElementById('pendientesList');
+  if(!div) return;
+  var entries=Object.entries(pendientes);
+  if(!entries.length){div.innerHTML='<p class="empty-list">No hay pendientes.</p>';return;}
+  div.innerHTML=entries.map(function(e){
+    var key=e[0],p=e[1];
+    return '<div class="list-item"><div class="list-item-info">'+p.dia+' — '+p.area+'<div class="list-item-sub">'+p.horario+(p.cubiertoPor?' · Cubierto por: '+p.cubiertoPor:' · Sin cubrir')+'</div></div><button class="del-btn" onclick="deletePendiente(\''+key+'\')"><i class="ti ti-trash"></i></button></div>';
+  }).join('');
+}
+
+window.deleteBloque=function(key){db.ref('bloques/'+key).remove();};
+window.deleteTarea=function(key){db.ref('tareas/'+key).remove();};
+window.deletePendiente=function(key){db.ref('pendientes/'+key).remove();};
+
+document.getElementById('nameSelect').addEventListener('change',function(e){
+  currentNombre=e.target.value;
+  renderResults(currentNombre);
+});
+
+document.getElementById('adminBtn').addEventListener('click',function(){
+  var panel=document.getElementById('adminPanel');
+  if(panel.classList.contains('open')){panel.classList.remove('open');return;}
+  var overlay=document.createElement('div');
+  overlay.className='pin-overlay';
+  overlay.innerHTML='<div class="pin-box"><h3><i class="ti ti-lock" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Acceso admin</h3><input type="password" id="pinInput" placeholder="····" maxlength="4"><div style="display:flex;gap:8px;margin-top:8px"><button onclick="document.body.removeChild(this.closest(\'.pin-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="pinOk" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px">Entrar</button></div><div class="pin-error" id="pinError">Clave incorrecta</div></div>';
+  document.body.appendChild(overlay);
+  setTimeout(function(){overlay.querySelector('#pinInput').focus();},100);
+  overlay.querySelector('#pinOk').addEventListener('click',function(){
+    if(overlay.querySelector('#pinInput').value===PIN){
+      document.body.removeChild(overlay);
+      panel.classList.add('open');
+      renderPendientesList();
+    } else {
+      overlay.querySelector('#pinError').style.display='block';
+      overlay.querySelector('#pinInput').value='';
+    }
+  });
+  overlay.querySelector('#pinInput').addEventListener('keydown',function(e){
+    if(e.key==='Enter') overlay.querySelector('#pinOk').click();
+  });
+});
+
+document.getElementById('saveSemanaBtn').addEventListener('click',function(){
+  var val=document.getElementById('semanaTexto').value.trim();
+  if(!val) return;
+  db.ref('semana').set(val).then(function(){showSaved('semanaSaved');});
+});
+
+document.getElementById('saveBulkBtn').addEventListener('click',function(){
+  var rows=document.querySelectorAll('#bulkBody tr');
+  var nuevos=[];
+  rows.forEach(function(row){
+    var sels=row.querySelectorAll('select');
+    var dia=sels[0].value,nombre=sels[1].value,area=sels[2].value,horario=sels[3].value;
+    if(dia&&nombre&&area&&horario) nuevos.push({dia:dia,nombre:nombre,area:area,horario:horario});
+  });
+  if(!nuevos.length) return;
+  Promise.all(nuevos.map(function(b){return db.ref('bloques').push(b);})).then(function(){
+    document.getElementById('bulkBody').innerHTML='';
+    addBulkRow();
+    showSaved('bulkSaved');
+  });
+});
+
+document.getElementById('addTareaBtn').addEventListener('click',function(){
+  var dia=document.getElementById('tDia').value;
+  var nombre=document.getElementById('tNombre').value;
+  var tipo=document.getElementById('tTipo').value;
+  var texto=document.getElementById('tTexto').value.trim();
+  if(!dia||!nombre||!tipo||!texto) return;
+  db.ref('tareas').push({dia:dia,nombre:nombre,tipo:tipo,texto:texto}).then(function(){
+    ['tDia','tNombre','tTipo'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('tTexto').value='';
+    showSaved('tareaSaved');
+  });
+});
+
+document.getElementById('addPendienteBtn').addEventListener('click',function(){
+  var dia=document.getElementById('pDia').value;
+  var area=document.getElementById('pArea').value;
+  var horario=document.getElementById('pHorario').value;
+  if(!dia||!area||!horario) return;
+  db.ref('pendientes').push({dia:dia,area:area,horario:horario}).then(function(){
+    ['pDia','pArea','pHorario'].forEach(function(id){document.getElementById(id).value='';});
+    showSaved('pendienteSaved');
+    renderPendientesList();
+  });
+});
+
+document.getElementById('clearBtn').addEventListener('click',function(){
+  if(!confirm('¿Seguro que quieres borrar todos los bloques, tareas y pendientes?')) return;
+  db.ref('bloques').remove();
+  db.ref('tareas').remove();
+  db.ref('pendientes').remove();
+  alertaMostrada=false;
+});
+</script>
+</body>
+</html>
