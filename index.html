@@ -9,229 +9,261 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
-.container { padding: 1.5rem 1rem; max-width: 100%; }
-.inner { max-width: 480px; margin: 0 auto; }
-.header { text-align: center; margin-bottom: 1.25rem; }
-.header h1 { font-size: 18px; font-weight: 600; }
-.header p { font-size: 13px; color: #666; margin-top: 4px; }
-.logo { font-size: 13px; color: #999; text-align: center; margin-bottom: 1rem; font-weight: 500; letter-spacing: 0.5px; }
-.sede-selector { background: #fff; border-radius: 12px; border: 1px solid #e8e8e8; padding: 1.5rem 1.25rem; margin-bottom: 1.5rem; }
-.sede-selector h2 { font-size: 15px; font-weight: 600; margin-bottom: 1rem; text-align: center; }
-.sede-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.sede-btn { padding: 12px 8px; font-size: 13px; font-weight: 500; border-radius: 8px; border: 1.5px solid #e8e8e8; background: #fff; cursor: pointer; text-align: center; transition: all 0.15s; }
-.sede-btn:hover { border-color: #1a1a1a; background: #f5f5f5; }
-.sede-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-.sede-name { font-size: 13px; font-weight: 600; color: #1a5ca8; background: #e8f1fc; padding: 4px 10px; border-radius: 20px; }
-.sede-change { font-size: 11px; color: #999; background: none; border: none; cursor: pointer; padding: 4px 8px; width: auto; }
-select, textarea, button, input[type=text], input[type=password] { font-family: inherit; font-size: 14px; border-radius: 8px; border: 1px solid #ddd; padding: 10px 12px; width: 100%; background: #fff; color: #1a1a1a; }
-select:focus, textarea:focus, input:focus { outline: none; border-color: #888; }
-button { cursor: pointer; background: #fff; border: 1px solid #ddd; width: auto; padding: 8px 16px; transition: background 0.15s; }
-button:hover { background: #f0f0f0; }
-.aviso-banner { background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 10px; padding: 10px 14px; margin-bottom: 1rem; display: flex; gap: 10px; align-items: flex-start; }
-.aviso-banner-icon { font-size: 18px; color: #d97706; flex-shrink: 0; margin-top: 1px; }
-.aviso-banner-text { font-size: 13px; color: #92400e; line-height: 1.5; flex: 1; }
-.aviso-banner-title { font-weight: 600; font-size: 12px; color: #b45309; margin-bottom: 2px; }
-.tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; flex-wrap: wrap; }
-.tab { flex: 1; min-width: 60px; padding: 8px 4px; font-size: 11px; border-radius: 8px; border: 1px solid #ddd; background: #fff; color: #666; text-align: center; cursor: pointer; }
-.tab.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-.panorama-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.panorama-nav button { padding: 6px 12px; font-size: 13px; width: auto; }
-.panorama-day { font-size: 15px; font-weight: 600; }
-.panorama-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.panorama-table { border-collapse: collapse; font-size: 11px; min-width: 600px; width: 100%; }
-.panorama-table th { background: #1a1a1a; color: #fff; padding: 7px 6px; text-align: center; font-size: 11px; font-weight: 500; white-space: nowrap; border: 1px solid #333; }
-.panorama-table th.franja-th { background: #333; min-width: 70px; }
-.panorama-table td { padding: 5px; border: 1px solid #e8e8e8; vertical-align: top; min-width: 90px; background: #fff; }
-.panorama-table td.franja-td { background: #f5f5f5; font-weight: 600; font-size: 10px; color: #555; text-align: center; white-space: nowrap; }
-.panorama-table td.empty { background: #fafafa; }
-.persona-chip { display: inline-block; background: #e8f1fc; color: #1a5ca8; border-radius: 4px; padding: 2px 5px; margin: 1px; font-size: 10px; font-weight: 500; white-space: nowrap; }
-.persona-chip.presente { background: #dcfce7; color: #15803d; }
-.subarea-tag { display: block; font-size: 9px; color: #888; margin-top: 2px; line-height: 1.3; }
-.asistencia-panel { background: #f0faf5; border: 1px solid #86efac; border-radius: 10px; padding: 10px 14px; margin-bottom: 1rem; }
-.asistencia-title { font-size: 12px; font-weight: 600; color: #15803d; margin-bottom: 8px; }
-.asistencia-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
-.asistencia-hora { font-size: 11px; color: #15803d; font-weight: 500; }
-.asistencia-pendiente { font-size: 11px; color: #aaa; }
-.select-wrap { margin-bottom: 1rem; }
-.day-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 10px; }
-.day-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.day-name { font-size: 15px; font-weight: 600; }
-.bloque-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-top: 1px solid #f0f0f0; }
-.bloque-area { font-size: 12px; color: #666; min-width: 95px; padding-top: 3px; }
-.badge { font-size: 11px; padding: 3px 9px; border-radius: 6px; background: #e8f1fc; color: #1a5ca8; display: inline-block; font-weight: 500; }
-.badge.colacion { background: #fef3e2; color: #8a5100; }
-.badge.pabellon { background: #dbeafe; color: #1d4ed8; }
-.badge.extra { background: #fee2e2; color: #dc2626; }
-.subarea-info { font-size: 10px; color: #888; margin-top: 3px; line-height: 1.4; }
-.tarea-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-top: 1px solid #f0f0f0; }
-.tarea-icon { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
-.tarea-icon.pabellon { background: #dbeafe; color: #1d4ed8; }
-.tarea-icon.pedido { background: #ffedd5; color: #c2410c; }
-.tarea-icon.consentimiento { background: #ede9fe; color: #7c3aed; }
-.tarea-icon.tarea { background: #dcfce7; color: #15803d; }
-.tarea-content { flex: 1; font-size: 12px; padding-top: 2px; }
-.tarea-tipo { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-.tarea-tipo.pabellon { color: #1d4ed8; }
-.tarea-tipo.pedido { color: #c2410c; }
-.tarea-tipo.consentimiento { color: #7c3aed; }
-.tarea-tipo.tarea { color: #15803d; }
-.visto-btn { font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid #ddd; background: #fff; color: #888; margin-top: 4px; width: auto; }
-.visto-btn.leido { background: #dcfce7; color: #15803d; border-color: #86efac; }
-.turno-actions { display: flex; gap: 6px; margin-top: 10px; border-top: 1px solid #f0f0f0; padding-top: 10px; flex-wrap: wrap; }
-.btn-llegada { flex: 1; padding: 8px; font-size: 12px; background: #1a1a1a; color: #fff; border: none; border-radius: 7px; font-weight: 500; min-width: 120px; }
-.btn-llegada.presente { background: #15803d; }
-.btn-nota { flex: 1; padding: 8px; font-size: 12px; background: #fff; color: #1a1a1a; border: 1px solid #ddd; border-radius: 7px; min-width: 100px; }
-.btn-cambio { flex: 1; padding: 8px; font-size: 12px; background: #fff; color: #7c3aed; border: 1px solid #ede9fe; border-radius: 7px; min-width: 100px; }
-.nota-box { margin-top: 8px; padding: 8px 10px; background: #f5f5f5; border-radius: 8px; font-size: 12px; color: #555; border-left: 3px solid #999; }
-.no-result { text-align: center; padding: 2rem; color: #888; font-size: 14px; }
-.pendientes-section { margin-top: 1rem; }
-.pendientes-title { font-size: 14px; font-weight: 600; color: #dc2626; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.pendiente-card { background: #fff; border: 1.5px dashed #f87171; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
-.pendiente-card.cubierto { background: #dc2626; border: none; }
-.pendiente-card.auto { border-color: #f97316; }
-.pendiente-info { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
-.pendiente-card.cubierto .pendiente-info { color: #fff; }
-.pendiente-sub { font-size: 11px; color: #888; }
-.pendiente-card.cubierto .pendiente-sub { color: #fecaca; }
-.pendiente-badge-auto { font-size: 10px; background: #fff7ed; color: #c2410c; border-radius: 4px; padding: 2px 6px; font-weight: 600; display: inline-block; margin-bottom: 4px; }
-.pendiente-btn { margin-top: 8px; width: 100%; padding: 7px; font-size: 12px; background: #dc2626; color: #fff; border: none; border-radius: 7px; font-weight: 500; }
-/* Cambios de turno */
-.cambio-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
-.cambio-header { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
-.cambio-sub { font-size: 11px; color: #666; margin-bottom: 8px; }
-.cambio-actions { display: flex; gap: 6px; }
-.btn-aceptar { flex: 1; padding: 7px; font-size: 12px; background: #15803d; color: #fff; border: none; border-radius: 6px; }
-.btn-rechazar { flex: 1; padding: 7px; font-size: 12px; background: #fff; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; }
-.btn-aprobar { flex: 1; padding: 7px; font-size: 12px; background: #1a1a1a; color: #fff; border: none; border-radius: 6px; }
-.estado-badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; display: inline-block; margin-left: 6px; }
-.estado-badge.pendiente { background: #fef9c3; color: #854d0e; }
-.estado-badge.aceptado { background: #dcfce7; color: #15803d; }
-.estado-badge.rechazado { background: #fee2e2; color: #dc2626; }
-.estado-badge.aprobado { background: #e0e7ff; color: #3730a3; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+.wrap{padding:1.5rem 1rem;max-width:480px;margin:0 auto}
+.logo{font-size:12px;color:#999;text-align:center;margin-bottom:.75rem;font-weight:500;letter-spacing:.5px}
+.header{text-align:center;margin-bottom:1.25rem}
+.header h1{font-size:18px;font-weight:600}
+.header p{font-size:13px;color:#666;margin-top:4px}
+/* Sede */
+.sede-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sede-btn{padding:12px 8px;font-size:13px;font-weight:500;border-radius:8px;border:1.5px solid #e8e8e8;background:#fff;cursor:pointer;text-align:center}
+.sede-btn:hover{border-color:#1a1a1a;background:#f5f5f5}
+.sede-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.sede-tag{font-size:13px;font-weight:600;color:#1a5ca8;background:#e8f1fc;padding:4px 10px;border-radius:20px}
+.sede-change{font-size:11px;color:#999;background:none;border:none;cursor:pointer;padding:4px 8px;width:auto}
+/* Inputs */
+select,textarea,button,input[type=text],input[type=password],input[type=date]{font-family:inherit;font-size:14px;border-radius:8px;border:1px solid #ddd;padding:10px 12px;width:100%;background:#fff;color:#1a1a1a}
+select:focus,textarea:focus,input:focus{outline:none;border-color:#888}
+button{cursor:pointer;background:#fff;border:1px solid #ddd;width:auto;padding:8px 16px;transition:background .15s}
+button:hover{background:#f0f0f0}
+/* Aviso */
+.aviso{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:1rem;display:flex;gap:10px}
+.aviso-icon{font-size:18px;color:#d97706;flex-shrink:0;margin-top:1px}
+.aviso-body{font-size:13px;color:#92400e;line-height:1.5;flex:1}
+.aviso-title{font-weight:600;font-size:12px;color:#b45309;margin-bottom:2px}
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:1.25rem;flex-wrap:wrap}
+.tab{flex:1;min-width:50px;padding:7px 3px;font-size:11px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;text-align:center;cursor:pointer}
+.tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* Panorama */
+.pan-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pan-nav button{padding:6px 12px;font-size:13px;width:auto}
+.pan-day{font-size:15px;font-weight:600}
+.pan-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pan-table{border-collapse:collapse;font-size:11px;min-width:580px;width:100%}
+.pan-table th{background:#1a1a1a;color:#fff;padding:7px 5px;text-align:center;font-size:11px;font-weight:500;white-space:nowrap;border:1px solid #333}
+.pan-table th.fth{background:#333;min-width:70px}
+.pan-table td{padding:5px;border:1px solid #e8e8e8;vertical-align:top;min-width:85px;background:#fff}
+.pan-table td.ftd{background:#f5f5f5;font-weight:600;font-size:10px;color:#555;text-align:center;white-space:nowrap}
+.pan-table td.empty{background:#fafafa}
+.chip{display:inline-block;background:#e8f1fc;color:#1a5ca8;border-radius:4px;padding:2px 5px;margin:1px;font-size:10px;font-weight:500;white-space:nowrap}
+.chip.ok{background:#dcfce7;color:#15803d}
+.chip.llamado{background:#fef9c3;color:#854d0e;border:1px dashed #d97706}
+.sub{display:block;font-size:9px;color:#888;margin-top:2px;line-height:1.3}
+/* Mis turnos */
+.sel-wrap{margin-bottom:1rem}
+.day-card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px}
+.day-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.day-name{font-size:15px;font-weight:600}
+.brow{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid #f0f0f0}
+.barea{font-size:12px;color:#666;min-width:95px;padding-top:3px}
+.bdg{font-size:11px;padding:3px 9px;border-radius:6px;background:#e8f1fc;color:#1a5ca8;display:inline-block;font-weight:500}
+.bdg.col{background:#fef3e2;color:#8a5100}
+.bdg.pab{background:#dbeafe;color:#1d4ed8}
+.sub2{font-size:10px;color:#888;margin-top:3px;line-height:1.4}
+.trow{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-top:1px solid #f0f0f0}
+.tico{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.tico.pabellon{background:#dbeafe;color:#1d4ed8}
+.tico.pedido{background:#ffedd5;color:#c2410c}
+.tico.consentimiento{background:#ede9fe;color:#7c3aed}
+.tico.tarea{background:#dcfce7;color:#15803d}
+.tcont{flex:1;font-size:12px;padding-top:2px}
+.ttipo{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.ttipo.pabellon{color:#1d4ed8}.ttipo.pedido{color:#c2410c}.ttipo.consentimiento{color:#7c3aed}.ttipo.tarea{color:#15803d}
+.vbtn{font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid #ddd;background:#fff;color:#888;margin-top:4px;width:auto}
+.vbtn.leido{background:#dcfce7;color:#15803d;border-color:#86efac}
+.tactions{display:flex;gap:6px;margin-top:10px;border-top:1px solid #f0f0f0;padding-top:10px;flex-wrap:wrap}
+.btn-ll{flex:1;padding:8px;font-size:12px;background:#1a1a1a;color:#fff;border:none;border-radius:7px;font-weight:500;min-width:100px}
+.btn-ll.ok{background:#15803d}
+.btn-nota{flex:1;padding:8px;font-size:12px;background:#fff;color:#1a1a1a;border:1px solid #ddd;border-radius:7px;min-width:90px}
+.btn-ct{flex:1;padding:8px;font-size:12px;background:#fff;color:#7c3aed;border:1px solid #ede9fe;border-radius:7px;min-width:90px}
+.nota-box{margin-top:8px;padding:8px 10px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#555;border-left:3px solid #999}
+.no-result{text-align:center;padding:2rem;color:#888;font-size:14px}
+/* Asistencia */
+.asist-card{background:#f0faf5;border:1px solid #86efac;border-radius:10px;padding:10px 14px;margin-bottom:1rem}
+.asist-title{font-size:12px;font-weight:600;color:#15803d;margin-bottom:8px}
+.asist-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.asist-ok{font-size:11px;color:#15803d;font-weight:500}
+.asist-no{font-size:11px;color:#aaa}
+/* Cambios */
+.cambio-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.cambio-hdr{font-size:12px;font-weight:600;margin-bottom:4px}
+.cambio-sub{font-size:11px;color:#666;margin-bottom:8px}
+.cambio-acts{display:flex;gap:6px}
+.btn-ac{flex:1;padding:7px;font-size:12px;background:#15803d;color:#fff;border:none;border-radius:6px}
+.btn-re{flex:1;padding:7px;font-size:12px;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:6px}
+.btn-ap{flex:1;padding:7px;font-size:12px;background:#1a1a1a;color:#fff;border:none;border-radius:6px}
+.ebdg{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;display:inline-block;margin-left:6px}
+.ebdg.pendiente{background:#fef9c3;color:#854d0e}
+.ebdg.aceptado{background:#dcfce7;color:#15803d}
+.ebdg.rechazado{background:#fee2e2;color:#dc2626}
+.ebdg.aprobado{background:#e0e7ff;color:#3730a3}
 /* Resumen */
-.resumen-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 1rem; margin-bottom: 10px; }
-.resumen-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #1a1a1a; }
-.cobertura-bar { height: 8px; background: #e8e8e8; border-radius: 4px; margin-top: 4px; overflow: hidden; }
-.cobertura-fill { height: 100%; border-radius: 4px; background: #1D9E75; transition: width 0.3s; }
-.cobertura-fill.warning { background: #f59e0b; }
-.cobertura-fill.danger { background: #dc2626; }
-.stat-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 5px 0; border-top: 1px solid #f0f0f0; }
-.stat-val { font-weight: 600; }
-.stat-val.warning { color: #dc2626; }
-.chart-container { position: relative; height: 200px; margin-top: 10px; }
+.res-card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1rem;margin-bottom:10px}
+.res-card h3{font-size:13px;font-weight:600;margin-bottom:10px}
+.cob-bar{height:8px;background:#e8e8e8;border-radius:4px;margin-top:4px;overflow:hidden}
+.cob-fill{height:100%;border-radius:4px;background:#1D9E75;transition:width .3s}
+.cob-fill.warn{background:#f59e0b}
+.cob-fill.dang{background:#dc2626}
+.stat-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-top:1px solid #f0f0f0}
+.stat-val{font-weight:600}
+.stat-val.warn{color:#dc2626}
+.ch-wrap{position:relative;height:200px;margin-top:10px}
+/* Estado */
+.estado-card{background:#fef9c3;border:1.5px dashed #d97706;border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.estado-card-title{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.estado-card-sub{font-size:12px;color:#92400e}
+.estado-card-note{font-size:11px;color:#b45309;margin-top:4px}
+/* Pendientes */
+.pend-section{margin-top:1rem}
+.pend-title{font-size:14px;font-weight:600;color:#dc2626;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.pend-card{background:#fff;border:1.5px dashed #f87171;border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.pend-card.cubierto{background:#dc2626;border:none}
+.pend-card.auto{border-color:#f97316}
+.pend-info{font-size:13px;font-weight:500;margin-bottom:4px}
+.pend-card.cubierto .pend-info{color:#fff}
+.pend-sub{font-size:11px;color:#888}
+.pend-card.cubierto .pend-sub{color:#fecaca}
+.pend-auto{font-size:10px;background:#fff7ed;color:#c2410c;border-radius:4px;padding:2px 6px;font-weight:600;display:inline-block;margin-bottom:4px}
+.pend-btn{margin-top:8px;width:100%;padding:7px;font-size:12px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-weight:500}
+/* Ausencias */
 /* Admin */
-.admin-toggle { text-align: center; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-.admin-toggle button { font-size: 12px; color: #999; background: #fff; border: 1px solid #e0e0e0; border-radius: 20px; padding: 5px 14px; width: auto; }
-.admin-panel { display: none; border: 1px solid #e8e8e8; border-radius: 12px; padding: 1rem 1.25rem; margin-top: 0.5rem; background: #fff; }
-.admin-panel.open { display: block; }
-.admin-section { margin-bottom: 1.25rem; }
-.admin-section-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; }
-.flex-row { display: flex; gap: 6px; margin-bottom: 6px; }
-.flex-row select, .flex-row input { flex: 1; font-size: 13px; padding: 8px 10px; }
-textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: vertical; min-height: 52px; border: 1px solid #ddd; border-radius: 8px; }
-.btn-add { width: 100%; padding: 9px; font-size: 13px; margin-top: 6px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-weight: 500; }
-.btn-secondary { width: 100%; padding: 9px; font-size: 13px; margin-top: 6px; background: #fff; color: #1a1a1a; border: 1px solid #ddd; border-radius: 8px; }
-.btn-danger { width: 100%; padding: 9px; font-size: 13px; margin-top: 6px; background: #fff; color: #c0392b; border: 1px solid #e8e8e8; border-radius: 8px; }
-.items-list { margin-top: 10px; }
-.list-item { display: flex; align-items: flex-start; gap: 6px; padding: 7px 0; border-top: 1px solid #f0f0f0; font-size: 12px; }
-.list-item-info { flex: 1; }
-.list-item-sub { color: #888; font-size: 11px; margin-top: 1px; }
-.del-btn { background: none; border: none; cursor: pointer; color: #bbb; padding: 2px 4px; font-size: 14px; width: auto; flex-shrink: 0; }
-.del-btn:hover { color: #c0392b; background: none; }
-.empty-list { font-size: 12px; color: #aaa; text-align: center; padding: 8px 0; }
-.saved-ok { font-size: 11px; color: #1D9E75; text-align: center; margin-top: 4px; display: none; }
-.deficit-summary { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 12px; color: #9a3412; }
-.deficit-summary ul { margin-top: 4px; padding-left: 16px; }
-.deficit-summary li { margin-bottom: 2px; }
-.pin-overlay,.modal-overlay,.alerta-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.alerta-overlay { background: rgba(0,0,0,0.45); z-index: 99; }
-.pin-box,.modal-box { background: #fff; border-radius: 12px; padding: 1.5rem; width: 290px; }
-.pin-box { text-align: center; }
-.pin-box h3,.modal-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
-.pin-box input { text-align: center; font-size: 20px; letter-spacing: 8px; margin-bottom: 10px; }
-.pin-error { font-size: 12px; color: #c0392b; margin-top: 6px; display: none; }
-.alerta-box { background: #fff; border-radius: 14px; padding: 1.5rem; width: 300px; text-align: center; border-top: 4px solid #dc2626; }
-.alerta-box h3 { font-size: 15px; font-weight: 600; color: #dc2626; margin-bottom: 8px; }
-.alerta-box p { font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 1rem; }
-.alerta-btns { display: flex; gap: 8px; }
-.alerta-btns button { flex: 1; padding: 9px; font-size: 13px; border-radius: 8px; }
-.btn-ver { background: #dc2626; color: #fff; border: none; font-weight: 500; }
-.bulk-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
-.bulk-table th { background: #f5f5f5; padding: 6px 4px; font-weight: 600; border: 1px solid #e8e8e8; font-size: 11px; }
-.bulk-table td { padding: 3px; border: 1px solid #f0f0f0; }
-.bulk-table select { font-size: 11px; padding: 4px; border-radius: 4px; width: 100%; }
-.bulk-row-add { font-size: 12px; color: #1a5ca8; background: none; border: none; cursor: pointer; margin-top: 6px; width: auto; padding: 4px 0; }
+.atoggle{text-align:center;margin-top:1.5rem;margin-bottom:.5rem}
+.atoggle button{font-size:12px;color:#999;background:#fff;border:1px solid #e0e0e0;border-radius:20px;padding:5px 14px;width:auto}
+.apanel{display:none;border:1px solid #e8e8e8;border-radius:12px;padding:1rem 1.25rem;margin-top:.5rem;background:#fff}
+.apanel.open{display:block}
+.asec{margin-bottom:1.25rem}
+.asec-title{font-size:13px;font-weight:600;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
+.frow{display:flex;gap:6px;margin-bottom:6px}
+.frow select,.frow input{flex:1;font-size:13px;padding:8px 10px}
+textarea.atxt{width:100%;font-size:13px;padding:8px 10px;resize:vertical;min-height:52px;border:1px solid #ddd;border-radius:8px}
+.btn-add{width:100%;padding:9px;font-size:13px;margin-top:6px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:500}
+.btn-add:hover{background:#333}
+.btn-sec{width:100%;padding:9px;font-size:13px;margin-top:6px;background:#fff;color:#1a1a1a;border:1px solid #ddd;border-radius:8px}
+.btn-dng{width:100%;padding:9px;font-size:13px;margin-top:6px;background:#fff;color:#c0392b;border:1px solid #e8e8e8;border-radius:8px}
+.ilist{margin-top:10px}
+.iitem{display:flex;align-items:flex-start;gap:6px;padding:7px 0;border-top:1px solid #f0f0f0;font-size:12px}
+.iitem-info{flex:1}
+.iitem-sub{color:#888;font-size:11px;margin-top:1px}
+.del-btn{background:none;border:none;cursor:pointer;color:#bbb;padding:2px 4px;font-size:14px;width:auto;flex-shrink:0}
+.del-btn:hover{color:#c0392b;background:none}
+.empty{font-size:12px;color:#aaa;text-align:center;padding:8px 0}
+.saved{font-size:11px;color:#1D9E75;text-align:center;margin-top:4px;display:none}
+.def-sum{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:#9a3412}
+.def-sum ul{margin-top:4px;padding-left:16px}
+.def-sum li{margin-bottom:2px}
+/* Overlays */
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100}
+.obox{background:#fff;border-radius:12px;padding:1.5rem;width:290px}
+.obox.center{text-align:center}
+.obox h3{font-size:15px;font-weight:600;margin-bottom:12px}
+.obox input[type=password]{text-align:center;font-size:20px;letter-spacing:8px;margin-bottom:10px}
+.pin-err{font-size:12px;color:#c0392b;margin-top:6px;display:none}
+.alert-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99}
+.alert-box{background:#fff;border-radius:14px;padding:1.5rem;width:300px;text-align:center;border-top:4px solid #dc2626}
+.alert-box h3{font-size:15px;font-weight:600;color:#dc2626;margin-bottom:8px}
+.alert-box p{font-size:13px;color:#555;line-height:1.5;margin-bottom:1rem}
+.alert-btns{display:flex;gap:8px}
+.alert-btns button{flex:1;padding:9px;font-size:13px;border-radius:8px}
+.btn-ver{background:#dc2626;color:#fff;border:none;font-weight:500}
+/* Bulk */
+.bulk-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.bulk-tbl th{background:#f5f5f5;padding:6px 4px;font-weight:600;border:1px solid #e8e8e8;font-size:11px}
+.bulk-tbl td{padding:3px;border:1px solid #f0f0f0}
+.bulk-tbl select{font-size:11px;padding:4px;border-radius:4px;width:100%}
+.bulk-add{font-size:12px;color:#1a5ca8;background:none;border:none;cursor:pointer;margin-top:6px;width:auto;padding:4px 0}
 </style>
 </head>
 <body>
-<div class="container"><div class="inner">
+<div class="wrap">
   <div class="logo">USS — RED DE SALUD</div>
   <div class="header">
     <h1><i class="ti ti-calendar-week" style="font-size:20px;vertical-align:-3px;margin-right:6px"></i>Turnos equipo clínico</h1>
     <p id="semanaLabel">Cargando...</p>
   </div>
 
-  <div id="sedeSelectorView">
-    <div class="sede-selector">
-      <h2><i class="ti ti-building-hospital" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Selecciona tu sede</h2>
+  <!-- SEDE SELECTOR -->
+  <div id="sedeView">
+    <div style="background:#fff;border-radius:12px;border:1px solid #e8e8e8;padding:1.5rem 1.25rem;margin-bottom:1.5rem">
+      <h2 style="font-size:15px;font-weight:600;margin-bottom:1rem;text-align:center"><i class="ti ti-building-hospital" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Selecciona tu sede</h2>
       <div class="sede-grid">
-        <button class="sede-btn" onclick="seleccionarSede('Valdivia')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Valdivia</button>
-        <button class="sede-btn" onclick="seleccionarSede('Patagonia')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Patagonia</button>
-        <button class="sede-btn" onclick="seleccionarSede('Bellavista')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Bellavista</button>
-        <button class="sede-btn" onclick="seleccionarSede('Los Leones')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Los Leones</button>
-        <button class="sede-btn" style="grid-column:1/-1" onclick="seleccionarSede('Concepción')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Concepción</button>
+        <button class="sede-btn" onclick="setSede('Valdivia')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Valdivia</button>
+        <button class="sede-btn" onclick="setSede('Patagonia')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Patagonia</button>
+        <button class="sede-btn" onclick="setSede('Bellavista')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Bellavista</button>
+        <button class="sede-btn" onclick="setSede('Los Leones')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Los Leones</button>
+        <button class="sede-btn" style="grid-column:1/-1" onclick="setSede('Concepción')"><i class="ti ti-map-pin" style="font-size:12px;margin-right:4px"></i>Concepción</button>
       </div>
     </div>
   </div>
 
+  <!-- MAIN -->
   <div id="mainView" style="display:none">
     <div class="sede-header">
-      <span class="sede-name" id="sedeLabel"></span>
-      <button class="sede-change" onclick="cambiarSede()"><i class="ti ti-refresh" style="font-size:12px;margin-right:3px"></i>Cambiar sede</button>
+      <span class="sede-tag" id="sedeTag"></span>
+      <button class="sede-change" onclick="changeSede()"><i class="ti ti-refresh" style="font-size:12px;margin-right:3px"></i>Cambiar sede</button>
     </div>
 
     <div id="avisoBanner"></div>
 
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('panorama')"><i class="ti ti-layout-grid" style="font-size:12px"></i><br>Panorama</button>
-      <button class="tab" onclick="switchTab('mis-turnos')"><i class="ti ti-user" style="font-size:12px"></i><br>Mis turnos</button>
-      <button class="tab" onclick="switchTab('asistencia')"><i class="ti ti-check" style="font-size:12px"></i><br>Asistencia</button>
-      <button class="tab" onclick="switchTab('cambios')"><i class="ti ti-switch-horizontal" style="font-size:12px"></i><br>Cambios</button>
-      <button class="tab" onclick="switchTab('resumen')"><i class="ti ti-chart-bar" style="font-size:12px"></i><br>Resumen</button>
+    <div class="tabs" id="tabsRow">
+      <button class="tab active" onclick="goTab('panorama')"><i class="ti ti-layout-grid" style="font-size:11px"></i><br>Panorama</button>
+      <button class="tab" onclick="goTab('mis-turnos')"><i class="ti ti-user" style="font-size:11px"></i><br>Mis turnos</button>
+      <button class="tab" onclick="goTab('asistencia')"><i class="ti ti-check" style="font-size:11px"></i><br>Asistencia</button>
+      <button class="tab" onclick="goTab('estado')"><i class="ti ti-activity" style="font-size:11px"></i><br>Estado</button>
+    </div>
+    <div class="tabs" id="tabsRow2" style="margin-top:-8px">
+      <button class="tab" onclick="goTab('cambios')"><i class="ti ti-switch-horizontal" style="font-size:11px"></i><br>Cambios</button>
+      <button class="tab" onclick="goTab('ausencias')"><i class="ti ti-calendar-off" style="font-size:11px"></i><br>Ausencias</button>
+      <button class="tab" onclick="goTab('resumen')"><i class="ti ti-chart-bar" style="font-size:11px"></i><br>Resumen</button>
     </div>
 
     <!-- PANORAMA -->
     <div class="tab-content active" id="tab-panorama">
-      <div class="panorama-nav">
-        <button onclick="cambiarDia(-1)"><i class="ti ti-chevron-left"></i></button>
-        <span class="panorama-day" id="panoramaDayLabel">Lunes</span>
-        <button onclick="cambiarDia(1)"><i class="ti ti-chevron-right"></i></button>
+      <div class="pan-nav">
+        <button onclick="chDay(-1)"><i class="ti ti-chevron-left"></i></button>
+        <span class="pan-day" id="panDay">Lunes</span>
+        <button onclick="chDay(1)"><i class="ti ti-chevron-right"></i></button>
       </div>
-      <div class="panorama-wrap"><table class="panorama-table" id="panoramaTable"></table></div>
+      <div class="pan-wrap"><table class="pan-table" id="panTable"></table></div>
     </div>
 
     <!-- MIS TURNOS -->
     <div class="tab-content" id="tab-mis-turnos">
-      <div class="select-wrap"><select id="nameSelect"><option value="">— Selecciona tu nombre —</option></select></div>
+      <div class="sel-wrap"><select id="nameSelect"><option value="">— Selecciona tu nombre —</option></select></div>
       <div id="results"></div>
     </div>
 
     <!-- ASISTENCIA -->
     <div class="tab-content" id="tab-asistencia">
-      <div id="asistenciaView"><p style="text-align:center;color:#aaa;font-size:13px;padding:2rem">Cargando...</p></div>
+      <div id="asistView"><p style="text-align:center;color:#aaa;font-size:13px;padding:2rem">Cargando...</p></div>
     </div>
 
-    <!-- CAMBIOS DE TURNO -->
+    <!-- ESTADO -->
+    <div class="tab-content" id="tab-estado">
+      <div class="sel-wrap"><select id="estadoSelect"><option value="">— Selecciona tu nombre —</option></select></div>
+      <div id="estadoView"><p style="text-align:center;color:#aaa;font-size:13px;padding:2rem">Selecciona tu nombre para ver tu estado.</p></div>
+    </div>
+
+    <!-- CAMBIOS -->
     <div class="tab-content" id="tab-cambios">
       <div style="margin-bottom:12px">
-        <select id="cambioSolicitante" style="margin-bottom:6px"><option value="">Soy...</option></select>
-        <button class="btn-add" onclick="mostrarFormCambio()" style="margin-top:4px"><i class="ti ti-plus" style="font-size:13px;margin-right:4px"></i>Proponer cambio de turno</button>
+        <select id="cambioSol" style="margin-bottom:6px"><option value="">Soy...</option></select>
+        <button class="btn-add" onclick="formCambio()" style="margin-top:4px"><i class="ti ti-plus" style="font-size:13px;margin-right:4px"></i>Proponer cambio de turno</button>
       </div>
       <div id="cambiosList"></div>
+    </div>
+
+    <!-- AUSENCIAS -->
+    <div class="tab-content" id="tab-ausencias">
+      <div style="margin-bottom:12px">
+        <select id="ausenciaSol" style="margin-bottom:6px"><option value="">Soy...</option></select>
+        <button class="btn-add" onclick="formAusencia()" style="margin-top:4px"><i class="ti ti-plus" style="font-size:13px;margin-right:4px"></i>Solicitar permiso o vacaciones</button>
+      </div>
+      <div id="ausenciasList"></div>
     </div>
 
     <!-- RESUMEN -->
@@ -241,829 +273,466 @@ textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: ve
 
     <div id="pendientesSection"></div>
 
-    <div class="admin-toggle">
-      <button id="adminBtn"><i class="ti ti-settings" style="font-size:12px;margin-right:4px"></i>Admin</button>
-    </div>
+    <div class="atoggle"><button id="adminBtn"><i class="ti ti-settings" style="font-size:12px;margin-right:4px"></i>Admin</button></div>
 
-    <div class="admin-panel" id="adminPanel">
+    <div class="apanel" id="adminPanel">
 
-      <div class="admin-section">
-        <p class="admin-section-title"><i class="ti ti-speakerphone" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Aviso general</p>
-        <textarea class="admin-txt" id="avisoTexto" placeholder="Ej: Reunión el miércoles a las 8:00..."></textarea>
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-speakerphone" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Aviso general</p>
+        <textarea class="atxt" id="avisoTxt" placeholder="Ej: Reunión el miércoles a las 8:00..."></textarea>
         <button class="btn-add" id="saveAvisoBtn"><i class="ti ti-device-floppy" style="font-size:13px;margin-right:3px"></i>Publicar</button>
-        <button class="btn-danger" id="clearAvisoBtn" style="margin-top:4px"><i class="ti ti-x" style="font-size:13px;margin-right:3px"></i>Eliminar aviso</button>
-        <div class="saved-ok" id="avisoSaved">✓ Publicado</div>
+        <button class="btn-dng" id="clearAvisoBtn" style="margin-top:4px"><i class="ti ti-x" style="font-size:13px;margin-right:3px"></i>Eliminar aviso</button>
+        <div class="saved" id="avisoSaved">✓ Publicado</div>
       </div>
 
-      <div class="admin-section">
-        <p class="admin-section-title"><i class="ti ti-calendar" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Nombre de la semana</p>
-        <input type="text" id="semanaTexto" placeholder="Ej: Semana 22 – 27 junio 2025" style="font-size:13px;padding:8px 10px;margin-bottom:4px">
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-calendar" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Nombre de la semana</p>
+        <input type="text" id="semanaTxt" placeholder="Ej: Semana 22 – 27 junio 2025" style="font-size:13px;padding:8px 10px;margin-bottom:4px">
         <button class="btn-add" id="saveSemanaBtn"><i class="ti ti-device-floppy" style="font-size:13px;margin-right:3px"></i>Guardar</button>
-        <div class="saved-ok" id="semanaSaved">✓ Guardado</div>
+        <div class="saved" id="semanaSaved">✓ Guardado</div>
       </div>
 
-      <div class="admin-section">
-        <p class="admin-section-title"><i class="ti ti-users" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Personal de esta sede</p>
-        <div class="flex-row">
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-users" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Personal de esta sede</p>
+        <div class="frow">
           <input type="text" id="nuevoNombre" placeholder="Nombre del colaborador" style="font-size:13px;padding:8px 10px">
           <button class="btn-add" id="addNombreBtn" style="width:auto;margin-top:0;padding:8px 12px">+</button>
         </div>
-        <div class="items-list" id="nombresList"></div>
+        <div class="ilist" id="nombresList"></div>
       </div>
 
-      <div class="admin-section">
-        <p class="admin-section-title"><i class="ti ti-table-import" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Carga masiva de turnos</p>
-        <table class="bulk-table">
-          <thead><tr><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th></th></tr></thead>
-          <tbody id="bulkBody"></tbody>
-        </table>
-        <button class="bulk-row-add" id="addRowBtn"><i class="ti ti-plus" style="font-size:12px"></i> Agregar fila</button>
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-table-import" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Carga masiva de turnos</p>
+        <table class="bulk-tbl"><thead><tr><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th></th></tr></thead><tbody id="bulkBody"></tbody></table>
+        <button class="bulk-add" id="addRowBtn"><i class="ti ti-plus" style="font-size:12px;vertical-align:-1px"></i> Agregar fila</button>
         <button class="btn-add" id="saveBulkBtn" style="margin-top:10px"><i class="ti ti-device-floppy" style="font-size:13px;margin-right:3px"></i>Guardar todos los turnos</button>
-        <div class="saved-ok" id="bulkSaved">✓ Guardado</div>
-        <button class="btn-secondary" id="verificarBtn" style="margin-top:6px"><i class="ti ti-search" style="font-size:13px;margin-right:3px"></i>Verificar cobertura</button>
-        <div id="deficitSummary"></div>
+        <div class="saved" id="bulkSaved">✓ Guardado</div>
+        <button class="btn-sec" id="verificarBtn" style="margin-top:6px"><i class="ti ti-search" style="font-size:13px;margin-right:3px"></i>Verificar cobertura</button>
+        <div id="deficitDiv"></div>
       </div>
 
-      <div class="admin-section">
-        <p class="admin-section-title"><i class="ti ti-switch-horizontal" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Solicitudes de cambio pendientes</p>
-        <div id="cambiosAdminList"></div>
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-phone-call" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Asignar estado — De llamado</p>
+        <p style="font-size:12px;color:#888;margin-bottom:8px">Opcional. La persona cubre un servicio de llamado y el sistema la cuenta como cobertura válida.</p>
+        <div class="frow">
+          <select id="llNombre"><option value="">Persona</option></select>
+          <select id="llDia"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
+        </div>
+        <div class="frow">
+          <select id="llArea"><option value="">Área</option><option>Esterilización</option><option>Rayos</option><option>Pabellón</option><option>Dispensario 1</option><option>Dispensario 2</option></select>
+          <select id="llHorario"><option value="">Horario</option></select>
+        </div>
+        <button class="btn-add" id="addLlamadoBtn"><i class="ti ti-plus" style="font-size:13px;margin-right:3px"></i>Asignar</button>
+        <div class="saved" id="llamadoSaved">✓ Asignado</div>
+        <div class="ilist" id="llamadosList"></div>
       </div>
 
-      <div class="admin-section">
-        <p class="admin-section-title"><i class="ti ti-clipboard-list" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Asignar tarea / aviso</p>
-        <div class="flex-row">
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-clipboard-list" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Asignar tarea / aviso</p>
+        <div class="frow">
           <select id="tDia"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
           <select id="tNombre"><option value="">Persona</option></select>
         </div>
-        <div class="flex-row">
+        <div class="frow">
           <select id="tTipo"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
         </div>
-        <textarea class="admin-txt" id="tTexto" placeholder="Descripción..."></textarea>
+        <textarea class="atxt" id="tTexto" placeholder="Descripción..."></textarea>
         <button class="btn-add" id="addTareaBtn"><i class="ti ti-plus" style="font-size:13px;margin-right:3px"></i>Agregar</button>
-        <div class="saved-ok" id="tareaSaved">✓ Guardado</div>
-        <div class="items-list" id="tareasList"></div>
+        <div class="saved" id="tareaSaved">✓ Guardado</div>
+        <div class="ilist" id="tareasList"></div>
       </div>
 
-      <div class="admin-section">
-        <p class="admin-section-title"><i class="ti ti-user-plus" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Turno pendiente manual</p>
-        <div class="flex-row">
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-user-plus" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Turno pendiente manual</p>
+        <div class="frow">
           <select id="pDia"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
           <select id="pArea"><option value="">Área</option><option>Esterilización</option><option>Rayos</option><option>Pabellón</option><option>Dispensario 1</option><option>Dispensario 2</option></select>
         </div>
-        <div class="flex-row"><select id="pHorario"><option value="">Horario</option></select></div>
-        <button class="btn-add" id="addPendienteBtn"><i class="ti ti-plus" style="font-size:13px;margin-right:3px"></i>Agregar pendiente</button>
-        <div class="saved-ok" id="pendienteSaved">✓ Guardado</div>
-        <div class="items-list" id="pendientesList"></div>
+        <div class="frow"><select id="pHorario"><option value="">Horario</option></select></div>
+        <button class="btn-add" id="addPendBtn"><i class="ti ti-plus" style="font-size:13px;margin-right:3px"></i>Agregar pendiente</button>
+        <div class="saved" id="pendSaved">✓ Guardado</div>
+        <div class="ilist" id="pendientesList"></div>
       </div>
 
-      <div class="admin-section">
-        <p class="admin-section-title"><i class="ti ti-list" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Bloques cargados</p>
-        <div class="items-list" id="bloquesList"></div>
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-calendar-off" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Licencias médicas</p>
+        <p style="font-size:12px;color:#888;margin-bottom:8px">Solo el jefe puede ingresar licencias médicas.</p>
+        <div class="frow"><select id="licNombre"><option value="">Persona</option></select></div>
+        <div class="frow">
+          <div style="flex:1"><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Fecha inicio</label><input type="date" id="licInicio" style="font-size:13px;padding:8px 10px"></div>
+          <div style="flex:1"><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Fecha fin</label><input type="date" id="licFin" style="font-size:13px;padding:8px 10px"></div>
+        </div>
+        <button class="btn-add" id="addLicBtn"><i class="ti ti-plus" style="font-size:13px;margin-right:3px"></i>Registrar licencia</button>
+        <div class="saved" id="licSaved">✓ Registrada</div>
       </div>
 
-      <div class="admin-section">
-        <p class="admin-section-title" style="color:#c0392b"><i class="ti ti-trash" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Limpiar semana</p>
-        <p style="font-size:12px;color:#888;margin-bottom:8px">Borra bloques, tareas, pendientes y asistencia.</p>
-        <button class="btn-danger" id="clearBtn"><i class="ti ti-refresh" style="font-size:13px;margin-right:3px"></i>Limpiar todo</button>
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-switch-horizontal" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Solicitudes de cambio pendientes</p>
+        <div class="ilist" id="cambiosAdminList"></div>
+      </div>
+
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-list" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Ausencias activas</p>
+        <div class="ilist" id="ausenciasActivasList"></div>
+      </div>
+
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-list" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Solicitudes ausencia pendientes</p>
+        <div class="ilist" id="ausenciasAdminList"></div>
+      </div>
+
+      <div class="asec">
+        <p class="asec-title"><i class="ti ti-list" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Bloques cargados</p>
+        <div class="ilist" id="bloquesList"></div>
+      </div>
+
+      <div class="asec">
+        <p class="asec-title" style="color:#c0392b"><i class="ti ti-trash" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Limpiar semana</p>
+        <p style="font-size:12px;color:#888;margin-bottom:8px">Borra bloques, tareas, pendientes, asistencia y llamados.</p>
+        <button class="btn-dng" id="clearBtn"><i class="ti ti-refresh" style="font-size:13px;margin-right:3px"></i>Limpiar todo</button>
       </div>
 
     </div>
   </div>
-</div></div>
+</div>
 
 <script>
 firebase.initializeApp({apiKey:"AIzaSyDrm0TlQ0fNK57xIFSVX82L1qdMbyBU8Ng",authDomain:"turnos-equipo-cl.firebaseapp.com",databaseURL:"https://turnos-equipo-cl-default-rtdb.firebaseio.com",projectId:"turnos-equipo-cl",storageBucket:"turnos-equipo-cl.firebasestorage.app",messagingSenderId:"313100676497",appId:"1:313100676497:web:5edc3746bc1be66758be30"});
 var db=firebase.database();
 
+// ── CONSTANTES ──
 var SEDES={'Valdivia':{pin:'2715'},'Patagonia':{pin:'1234'},'Bellavista':{pin:'5678'},'Los Leones':{pin:'9012'},'Concepción':{pin:'3456'}};
 var COLACION={'07:45':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
-function getColacion(h){return COLACION[h.split('–')[0]]||null;}
-var dias=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-var areas=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
-var TIPO_CONFIG={pabellon:{icon:'ti-building-hospital',label:'Pabellón',cls:'pabellon'},pedido:{icon:'ti-shopping-cart',label:'Pedido',cls:'pedido'},consentimiento:{icon:'ti-file-text',label:'Consentimientos',cls:'consentimiento'},tarea:{icon:'ti-clipboard-check',label:'Tarea especial',cls:'tarea'}};
+var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+var AREAS=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
+var TIPOS={pabellon:{icon:'ti-building-hospital',label:'Pabellón',cls:'pabellon'},pedido:{icon:'ti-shopping-cart',label:'Pedido',cls:'pedido'},consentimiento:{icon:'ti-file-text',label:'Consentimientos',cls:'consentimiento'},tarea:{icon:'ti-clipboard-check',label:'Tarea especial',cls:'tarea'}};
 var SUBAREAS={'07:45':'Empaque · Autoclave · Almacenamiento · Entrega','09:00':'Empaque · Autoclave · Almacenamiento · Entrega','10:00':'Recepción · Lavado · Secado','11:00':'Recepción · Lavado · Secado'};
-function getSubarea(h,a){if(a!=='Esterilización')return null;return SUBAREAS[h.split('–')[0].trim()]||null;}
-var FRANJAS=['07:45–10:00','07:45–11:00','07:45–13:00','07:45–17:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','14:00–20:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
-var REGLAS=[{dias:['Lunes','Martes'],area:'Esterilización',inicio:'07:45',fin:'10:00',min:2},{dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',inicio:'07:45',fin:'11:00',min:2},{dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',inicio:'07:45',fin:'13:00',min:1},{dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',inicio:'14:00',fin:'20:00',min:1},{dias:['Sábado'],area:'Rayos',inicio:'09:00',fin:'14:00',min:1},{dias:['Miércoles','Jueves'],area:'Dispensario 1',inicio:'07:45',fin:'13:00',min:1},{dias:['Lunes','Martes','Miércoles','Jueves'],area:'Dispensario 1',inicio:'14:00',fin:'20:00',min:1},{dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',inicio:'07:45',fin:'13:00',min:1},{dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',inicio:'14:00',fin:'20:00',min:1},{dias:['Sábado'],area:'Dispensario 2',inicio:'09:00',fin:'14:00',min:1}];
-function timeToMin(t){var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
-function horasDeHorario(h){var p=h.split('–');return (timeToMin(p[1].trim())-timeToMin(p[0].trim()))/60;}
-function bloqueCobreRegla(b,r){var bp=b.horario.split('–');return timeToMin(bp[0].trim())<=timeToMin(r.inicio)&&timeToMin(bp[1].trim())>=timeToMin(r.fin);}
-function bloqueSolapaFranja(h,f){var bp=h.split('–'),fp=f.split('–');return timeToMin(bp[0].trim())<=timeToMin(fp[0].trim())&&timeToMin(bp[1].trim())>=timeToMin(fp[1].trim());}
+var FRANJAS=['07:45–10:00','07:45–11:00','07:45–13:00','07:45–17:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','14:00–20:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
+var REGLAS=[{dias:['Lunes','Martes'],area:'Esterilización',ini:'07:45',fin:'10:00',min:2},{dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',ini:'07:45',fin:'11:00',min:2},{dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'07:45',fin:'13:00',min:1},{dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'14:00',fin:'20:00',min:1},{dias:['Sábado'],area:'Rayos',ini:'09:00',fin:'14:00',min:1},{dias:['Miércoles','Jueves'],area:'Dispensario 1',ini:'07:45',fin:'13:00',min:1},{dias:['Lunes','Martes','Miércoles','Jueves'],area:'Dispensario 1',ini:'14:00',fin:'20:00',min:1},{dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'07:45',fin:'13:00',min:1},{dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'14:00',fin:'20:00',min:1},{dias:['Sábado'],area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1}];
 
-var horarios=['07:45–13:00','07:45–17:00','09:00–14:00','10:00–14:00','10:00–20:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','14:00–20:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
+var HORARIOS=['07:45–13:00','07:45–17:00','09:00–14:00','10:00–14:00','10:00–20:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','14:00–20:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 function pad(n){return n<10?'0'+n:String(n);}
-for(var h=8;h<20;h++){var hs=pad(h)+':00–'+pad(h+1)+':00',hm=pad(h)+':30–'+pad(h+1)+':30';if(horarios.indexOf(hs)===-1)horarios.push(hs);if(h<19&&horarios.indexOf(hm)===-1)horarios.push(hm);}
-if(horarios.indexOf('19:30–20:00')===-1)horarios.push('19:30–20:00');
-var pHorarioSel=document.getElementById('pHorario');
-horarios.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;pHorarioSel.appendChild(o);});
+for(var _h=8;_h<20;_h++){var _hs=pad(_h)+':00–'+pad(_h+1)+':00',_hm=pad(_h)+':30–'+pad(_h+1)+':30';if(HORARIOS.indexOf(_hs)===-1)HORARIOS.push(_hs);if(_h<19&&HORARIOS.indexOf(_hm)===-1)HORARIOS.push(_hm);}
+if(HORARIOS.indexOf('19:30–20:00')===-1)HORARIOS.push('19:30–20:00');
 
-var currentSede='',bloques={},tareas={},pendientes={},nombresEquipo=[],asistencia={},notas={},visto={},cambios={},currentNombre='',alertaMostrada=false,panoramaDiaIdx=0;
+// Populate pHorario and llHorario
+['pHorario','llHorario'].forEach(function(id){var s=document.getElementById(id);HORARIOS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;s.appendChild(o);});});
+
+// ── HELPERS ──
+function t2m(t){var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
+function horas(h){var p=h.split('–');return(t2m(p[1].trim())-t2m(p[0].trim()))/60;}
+function covers(h,ini,fin){var p=h.split('–');return t2m(p[0].trim())<=t2m(ini)&&t2m(p[1].trim())>=t2m(fin);}
+function overlaps(h,f){var p=h.split('–'),q=f.split('–');return t2m(p[0].trim())<=t2m(q[0].trim())&&t2m(p[1].trim())>=t2m(q[1].trim());}
+function getSub(h,a){if(a!=='Esterilización')return null;return SUBAREAS[h.split('–')[0].trim()]||null;}
+function getCol(h){return COLACION[h.split('–')[0]]||null;}
+function mkOpts(arr,ph){return '<option value="">'+ph+'</option>'+arr.map(function(o){return '<option>'+o+'</option>';}).join('');}
+function showSaved(id){var e=document.getElementById(id);e.style.display='block';setTimeout(function(){e.style.display='none';},2000);}
+function sRef(p){return db.ref('sedes/'+S+'/'+p);}
+function fechasRango(a,b){var r=[],c=new Date(a+'T12:00:00'),e=new Date(b+'T12:00:00');while(c<=e){r.push(c.toISOString().split('T')[0]);c.setDate(c.getDate()+1);}return r;}
+function diaDeDate(s){return['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][new Date(s+'T12:00:00').getDay()];}
+
+// ── STATE ──
+var S='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={};
+var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null;
 var listeners=[];
-var chartHoras=null,chartExtra=null;
 
-function makeOpts(arr,ph){return '<option value="">'+ph+'</option>'+arr.map(function(o){return '<option>'+o+'</option>';}).join('');}
-function sedeRef(p){return db.ref('sedes/'+currentSede+'/'+p);}
-function detachListeners(){listeners.forEach(function(l){l.ref.off('value',l.fn);});listeners=[];}
+function detach(){listeners.forEach(function(l){l.ref.off('value',l.fn);});listeners=[];}
+function on(path,cb){var fn=function(s){cb(s.val()||{});};sRef(path).on('value',fn);listeners.push({ref:sRef(path),fn:fn});}
 
-function attachListeners(){
-  detachListeners();
-  function on(path,cb){var fn=function(s){cb(s);};sedeRef(path).on('value',fn);listeners.push({ref:sedeRef(path),fn:fn});}
-  on('semana',function(s){var v=s.val();document.getElementById('semanaLabel').textContent=v||'Semana actual';var si=document.getElementById('semanaTexto');if(si&&!si.value)si.value=v||'';});
-  on('aviso',function(s){renderAviso(s.val());});
-  on('bloques',function(s){bloques=s.val()||{};if(currentNombre)renderResults(currentNombre);renderBloquesList();renderPanorama();renderResumen();});
-  on('tareas',function(s){tareas=s.val()||{};if(currentNombre)renderResults(currentNombre);renderTareasList();});
-  on('pendientes',function(s){pendientes=s.val()||{};renderPendientes();renderPendientesList();checkAndShowAlerta();});
-  on('nombres',function(s){nombresEquipo=s.val()||[];renderNombresList();updateNameSelects();renderResumen();renderAsistenciaTab();});
-  on('asistencia',function(s){asistencia=s.val()||{};renderAsistenciaTab();if(currentNombre)renderResults(currentNombre);renderPanorama();});
-  on('notas',function(s){notas=s.val()||{};if(currentNombre)renderResults(currentNombre);});
-  on('visto',function(s){visto=s.val()||{};if(currentNombre)renderResults(currentNombre);});
-  on('cambios',function(s){cambios=s.val()||{};renderCambios();renderCambiosAdmin();});
-  on('extras',function(s){renderResumen();});
+function attach(){
+  detach();
+  on('semana',function(v){document.getElementById('semanaLabel').textContent=v||'Semana actual';var si=document.getElementById('semanaTxt');if(si&&!si.value)si.value=v||'';});
+  on('aviso',function(v){renderAviso(v);});
+  on('bloques',function(v){bloques=v;if(curNombre)renderMisTurnos(curNombre);renderBloquesList();renderPanorama();renderResumen();});
+  on('tareas',function(v){tareas=v;if(curNombre)renderMisTurnos(curNombre);renderTareasList();});
+  on('pendientes',function(v){pendientes=v;renderPendientes();renderPendientesList();checkAlerta();});
+  on('nombres',function(v){nombres=Array.isArray(v)?v:Object.values(v||{});updateSelects();renderNombresList();renderAsist();renderResumen();});
+  on('asistencia',function(v){asistencia=v;renderAsist();if(curNombre)renderMisTurnos(curNombre);renderPanorama();});
+  on('notas',function(v){notas=v;if(curNombre)renderMisTurnos(curNombre);});
+  on('visto',function(v){visto=v;if(curNombre)renderMisTurnos(curNombre);});
+  on('cambios',function(v){cambios=v;renderCambios();renderCambiosAdmin();});
+  on('ausencias',function(v){ausencias=v;renderAusencias();renderAusenciasAdmin();if(curNombre)renderMisTurnos(curNombre);});
+  on('llamados',function(v){llamados=v;renderLlamadosList();renderPanorama();renderEstado();});
 }
 
-function renderAviso(texto){var div=document.getElementById('avisoBanner');if(!texto){div.innerHTML='';return;}div.innerHTML='<div class="aviso-banner"><i class="ti ti-speakerphone aviso-banner-icon"></i><div class="aviso-banner-text"><div class="aviso-banner-title">Aviso de la semana</div>'+texto+'</div></div>';}
-
-window.seleccionarSede=function(sede){
-  currentSede=sede;alertaMostrada=false;bloques={};tareas={};pendientes={};nombresEquipo=[];asistencia={};notas={};visto={};cambios={};currentNombre='';
-  document.getElementById('sedeSelectorView').style.display='none';
+// ── SEDE ──
+window.setSede=function(sede){
+  S=sede;alertaMostrada=false;bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};curNombre='';
+  document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
-  document.getElementById('sedeLabel').textContent=sede;
-  document.getElementById('semanaTexto').value='';
+  document.getElementById('sedeTag').textContent=sede;
+  document.getElementById('semanaLabel').textContent='Cargando...';
   document.getElementById('results').innerHTML='';
-  document.getElementById('nameSelect').innerHTML='<option value="">— Selecciona tu nombre —</option>';
-  attachListeners();
+  document.getElementById('semanaTxt').value='';
+  attach();
 };
-window.cambiarSede=function(){detachListeners();currentSede='';alertaMostrada=false;document.getElementById('adminPanel').classList.remove('open');document.getElementById('mainView').style.display='none';document.getElementById('sedeSelectorView').style.display='block';document.getElementById('semanaTexto').value='';};
+window.changeSede=function(){detach();S='';alertaMostrada=false;document.getElementById('adminPanel').classList.remove('open');document.getElementById('mainView').style.display='none';document.getElementById('sedeView').style.display='block';document.getElementById('semanaTxt').value='';};
 
-function updateNameSelects(){
-  ['nameSelect','cambioSolicitante'].forEach(function(id){
-    var sel=document.getElementById(id),cur=sel.value;
-    sel.innerHTML='<option value="">'+(id==='nameSelect'?'— Selecciona tu nombre —':'Soy...')+'</option>';
-    nombresEquipo.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
-    if(cur)sel.value=cur;
+function updateSelects(){
+  var maps={'nameSelect':'— Selecciona tu nombre —','estadoSelect':'— Selecciona tu nombre —','cambioSol':'Soy...','ausenciaSol':'Soy...','tNombre':'Persona','llNombre':'Persona','licNombre':'Persona'};
+  Object.keys(maps).forEach(function(id){
+    var s=document.getElementById(id);if(!s)return;
+    var cur=s.value;
+    s.innerHTML='<option value="">'+maps[id]+'</option>';
+    nombres.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;s.appendChild(o);});
+    if(cur)s.value=cur;
   });
-  var tSel=document.getElementById('tNombre'),tCur=tSel.value;
-  tSel.innerHTML='<option value="">Persona</option>';
-  nombresEquipo.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;tSel.appendChild(o);});
-  if(tCur)tSel.value=tCur;
 }
 
-function renderNombresList(){var div=document.getElementById('nombresList');if(!div)return;if(!nombresEquipo.length){div.innerHTML='<p class="empty-list">No hay personal registrado.</p>';return;}div.innerHTML=nombresEquipo.map(function(n,i){return '<div class="list-item"><div class="list-item-info">'+n+'</div><button class="del-btn" onclick="deleteNombre('+i+')"><i class="ti ti-trash"></i></button></div>';}).join('');}
-window.deleteNombre=function(i){var arr=nombresEquipo.slice();arr.splice(i,1);sedeRef('nombres').set(arr);};
-
-function renderAsistenciaTab(){
-  var div=document.getElementById('asistenciaView');
-  if(!nombresEquipo.length){div.innerHTML='<p style="text-align:center;color:#aaa;font-size:13px;padding:2rem">Sin personal registrado.</p>';return;}
-  var presentes=nombresEquipo.filter(function(n){return asistencia[n.replace(/\s/g,'_')];}).length;
-  var pct=nombresEquipo.length?Math.round(presentes/nombresEquipo.length*100):0;
-  var html='<div class="resumen-card"><h3><i class="ti ti-users" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Asistencia hoy — '+presentes+'/'+nombresEquipo.length+' presentes</h3>';
-  html+='<div class="cobertura-bar"><div class="cobertura-fill" style="width:'+pct+'%"></div></div>';
-  html+='<p style="font-size:11px;color:#888;margin-top:4px;text-align:right">'+pct+'% del equipo presente</p>';
-  html+='<div style="margin-top:10px">';
-  nombresEquipo.forEach(function(n){
-    var reg=asistencia[n.replace(/\s/g,'_')];
-    html+='<div class="asistencia-item"><span>'+n+'</span>';
-    if(reg)html+='<span class="asistencia-hora"><i class="ti ti-check" style="font-size:12px;margin-right:3px"></i>'+reg+'</span>';
-    else html+='<span class="asistencia-pendiente">Sin registrar</span>';
-    html+='</div>';
+// ── TABS ──
+var ALL_TABS=['panorama','mis-turnos','asistencia','estado','cambios','ausencias','resumen'];
+window.goTab=function(tab){
+  document.querySelectorAll('.tab').forEach(function(t){
+    var tabId=t.getAttribute('onclick').match(/goTab\('([^']+)'\)/);
+    if(tabId)t.classList.toggle('active',tabId[1]===tab);
   });
-  html+='</div></div>';
-  div.innerHTML=html;
-}
-
-// HORAS POR PERSONA
-function calcularHoras(){
-  var horas={};
-  nombresEquipo.forEach(function(n){horas[n]=0;});
-  Object.values(bloques).forEach(function(b){if(horas[b.nombre]!==undefined)horas[b.nombre]+=horasDeHorario(b.horario);});
-  return horas;
-}
-
-function calcularExtras(){
-  // Extras = horas de bloques cubiertos como turno extra
-  var extras={};
-  nombresEquipo.forEach(function(n){extras[n]=0;});
-  Object.values(pendientes).forEach(function(p){
-    if(p.cubiertoPor&&extras[p.cubiertoPor]!==undefined){
-      extras[p.cubiertoPor]+=horasDeHorario(p.horario);
-    }
+  ALL_TABS.forEach(function(id){
+    var el=document.getElementById('tab-'+id);
+    if(el)el.classList.toggle('active',id===tab);
   });
-  return extras;
-}
-
-function calcularCobertura(){
-  var total=0,cubiertos=0;
-  REGLAS.forEach(function(r){
-    r.dias.forEach(function(dia){
-      total+=r.min;
-      var cob=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area&&bloqueCobreRegla(b,r);}).length;
-      cubiertos+=Math.min(cob,r.min);
-    });
-  });
-  return total?Math.round(cubiertos/total*100):100;
-}
-
-function renderResumen(){
-  var div=document.getElementById('resumenView');if(!div)return;
-  if(!nombresEquipo.length){div.innerHTML='<p style="text-align:center;color:#aaa;font-size:13px;padding:2rem">Sin personal registrado.</p>';return;}
-  var horas=calcularHoras();
-  var extras=calcularExtras();
-  var cobertura=calcularCobertura();
-  var cobColor=cobertura>=80?'':'cobertura>=60?warning:danger';
-  if(cobertura<60)cobColor='danger';else if(cobertura<80)cobColor='warning';else cobColor='';
-
-  var html='<div class="resumen-card"><h3><i class="ti ti-chart-bar" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Cobertura semanal</h3>';
-  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:#555">Turnos requeridos cubiertos</span><span style="font-size:20px;font-weight:700;color:'+(cobertura<60?'#dc2626':cobertura<80?'#f59e0b':'#15803d')+'">'+cobertura+'%</span></div>';
-  html+='<div class="cobertura-bar"><div class="cobertura-fill '+cobColor+'" style="width:'+cobertura+'%"></div></div></div>';
-
-  html+='<div class="resumen-card"><h3><i class="ti ti-clock" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Horas por persona esta semana</h3>';
-  nombresEquipo.forEach(function(n){
-    var h=horas[n]||0;
-    var e=extras[n]||0;
-    var excedeExtra=e>2;
-    html+='<div class="stat-row"><span>'+n+'</span><span class="stat-val'+(excedeExtra?' warning':'')+'">'+h.toFixed(1)+'h'+(e>0?' <span style="font-size:10px;background:#fee2e2;color:#dc2626;padding:1px 5px;border-radius:4px">+'+e.toFixed(1)+'h extra'+(excedeExtra?' ⚠':'')+'</span>':'')+'</span></div>';
-  });
-  html+='<p style="font-size:10px;color:#aaa;margin-top:6px">⚠ = supera límite de 2h extra diarias</p></div>';
-
-  html+='<div class="resumen-card"><h3><i class="ti ti-chart-bar" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Horas trabajadas</h3><div class="chart-container"><canvas id="chartHoras"></canvas></div></div>';
-  html+='<div class="resumen-card"><h3><i class="ti ti-star" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Turnos extra cubiertos</h3><div class="chart-container"><canvas id="chartExtra"></canvas></div></div>';
-
-  div.innerHTML=html;
-
-  // Charts
-  setTimeout(function(){
-    var labels=nombresEquipo;
-    var dataHoras=nombresEquipo.map(function(n){return horas[n]||0;});
-    var dataExtras=nombresEquipo.map(function(n){return extras[n]||0;});
-
-    if(chartHoras)chartHoras.destroy();
-    var ctx1=document.getElementById('chartHoras');
-    if(ctx1)chartHoras=new Chart(ctx1,{type:'bar',data:{labels:labels,datasets:[{label:'Horas',data:dataHoras,backgroundColor:'#1a5ca8',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}}},x:{ticks:{font:{size:10}}}}});
-
-    if(chartExtra)chartExtra.destroy();
-    var ctx2=document.getElementById('chartExtra');
-    if(ctx2)chartExtra=new Chart(ctx2,{type:'bar',data:{labels:labels,datasets:[{label:'Horas extra',data:dataExtras,backgroundColor:dataExtras.map(function(v){return v>2?'#dc2626':'#1D9E75';}),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}}}}});
-  },100);
-}
-
-function addBulkRow(){var tr=document.createElement('tr');tr.innerHTML='<td><select>'+makeOpts(dias,'Día')+'</select></td><td><select>'+makeOpts(nombresEquipo,'Persona')+'</select></td><td><select>'+makeOpts(areas,'Área')+'</select></td><td><select>'+makeOpts(horarios,'Horario')+'</select></td><td><button class="del-btn" onclick="this.closest(\'tr\').remove()"><i class="ti ti-x"></i></button></td>';document.getElementById('bulkBody').appendChild(tr);}
-document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
-
-window.switchTab=function(tab){
-  var tabIds=['panorama','mis-turnos','asistencia','cambios','resumen'];
-  document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',tabIds[i]===tab);});
-  tabIds.forEach(function(id){document.getElementById('tab-'+id).classList.toggle('active',id===tab);});
   if(tab==='resumen')renderResumen();
+  if(tab==='estado')renderEstado();
   if(tab==='cambios')renderCambios();
+  if(tab==='ausencias')renderAusencias();
 };
 
-window.cambiarDia=function(dir){panoramaDiaIdx=Math.max(0,Math.min(dias.length-1,panoramaDiaIdx+dir));renderPanorama();};
+// ── AVISO ──
+function renderAviso(txt){var d=document.getElementById('avisoBanner');if(!txt||typeof txt!=='string'){d.innerHTML='';return;}d.innerHTML='<div class="aviso"><i class="ti ti-speakerphone aviso-icon"></i><div class="aviso-body"><div class="aviso-title">Aviso de la semana</div>'+txt+'</div></div>';}
 
+// ── NOMBRES ──
+function renderNombresList(){var d=document.getElementById('nombresList');if(!d)return;if(!nombres.length){d.innerHTML='<p class="empty">No hay personal registrado.</p>';return;}d.innerHTML=nombres.map(function(n,i){return '<div class="iitem"><div class="iitem-info">'+n+'</div><button class="del-btn" onclick="delNombre('+i+')"><i class="ti ti-trash"></i></button></div>';}).join('');}
+window.delNombre=function(i){var a=nombres.slice();a.splice(i,1);sRef('nombres').set(a);};
+
+// ── PANORAMA ──
+window.chDay=function(d){panIdx=Math.max(0,Math.min(DIAS.length-1,panIdx+d));renderPanorama();};
 function renderPanorama(){
-  var dia=dias[panoramaDiaIdx];
-  document.getElementById('panoramaDayLabel').textContent=dia;
-  var table=document.getElementById('panoramaTable');
-  var fa=FRANJAS.filter(function(f){return Object.values(bloques).some(function(b){return b.dia===dia&&bloqueSolapaFranja(b.horario,f);});});
-  if(!fa.length){table.innerHTML='<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:#aaa;font-size:13px">Sin turnos cargados para este día</td></tr>';return;}
-  var html='<tr><th class="franja-th">Horario</th>';
-  areas.forEach(function(a){html+='<th>'+a+'</th>';});html+='</tr>';
+  var dia=DIAS[panIdx];document.getElementById('panDay').textContent=dia;
+  var tbl=document.getElementById('panTable');
+  var fa=FRANJAS.filter(function(f){return Object.values(bloques).some(function(b){return b.dia===dia&&overlaps(b.horario,f);})||Object.values(llamados).some(function(l){return l.dia===dia&&overlaps(l.horario,f);});});
+  if(!fa.length){tbl.innerHTML='<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:#aaa;font-size:13px">Sin turnos para este día</td></tr>';return;}
+  var html='<tr><th class="fth">Horario</th>';AREAS.forEach(function(a){html+='<th>'+a+'</th>';});html+='</tr>';
   fa.forEach(function(f){
-    html+='<tr><td class="franja-td">'+f+'</td>';
-    areas.forEach(function(area){
-      var personas=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===area&&bloqueSolapaFranja(b.horario,f);});
-      if(!personas.length){html+='<td class="empty"></td>';return;}
+    html+='<tr><td class="ftd">'+f+'</td>';
+    AREAS.forEach(function(area){
+      var ps=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===area&&overlaps(b.horario,f);});
+      var ls=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===area&&overlaps(l.horario,f);});
+      if(!ps.length&&!ls.length){html+='<td class="empty"></td>';return;}
       var cell='';
-      personas.forEach(function(b){var sub=getSubarea(b.horario,area);var presente=asistencia[b.nombre.replace(/\s/g,'_')];cell+='<span class="persona-chip'+(presente?' presente':'')+'">'+b.nombre+'</span>';if(sub)cell+='<span class="subarea-tag">'+sub+'</span>';});
+      ps.forEach(function(b){var sb=getSub(b.horario,area);var pr=asistencia[b.nombre.replace(/\s/g,'_')];cell+='<span class="chip'+(pr?' ok':'')+'">'+b.nombre+'</span>';if(sb)cell+='<span class="sub">'+sb+'</span>';});
+      ls.forEach(function(l){cell+='<span class="chip llamado"><i class="ti ti-phone-call" style="font-size:9px;margin-right:2px"></i>'+l.nombre+'</span>';});
       html+='<td>'+cell+'</td>';
     });
     html+='</tr>';
   });
-  table.innerHTML=html;
+  tbl.innerHTML=html;
 }
 
-// CAMBIOS DE TURNO
-window.mostrarFormCambio=function(){
-  var sol=document.getElementById('cambioSolicitante').value;
-  if(!sol){alert('Selecciona tu nombre primero.');return;}
-  var modal=document.createElement('div');modal.className='modal-overlay';
-  var otrosOpts=makeOpts(nombresEquipo.filter(function(n){return n!==sol;}),'Con quién cambiar');
-  var diasOpts=makeOpts(dias,'Día');
-  var horOpts=makeOpts(horarios,'Horario');
-  modal.innerHTML='<div class="modal-box" style="width:320px"><h3><i class="ti ti-switch-horizontal" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Proponer cambio de turno</h3><p style="font-size:12px;color:#666;margin-bottom:10px">Solicitas cambiar tu turno con otro compañero.</p><select id="cCon" style="margin-bottom:6px">'+otrosOpts+'</select><select id="cDia" style="margin-bottom:6px">'+diasOpts+'</select><select id="cHorario" style="margin-bottom:6px">'+horOpts+'</select><textarea id="cNota" style="font-size:13px;min-height:50px;margin-bottom:8px" placeholder="Motivo (opcional)..."></textarea><div style="display:flex;gap:8px"><button onclick="document.body.removeChild(this.closest(\'.modal-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="cEnviar" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:500">Enviar solicitud</button></div></div>';
-  document.body.appendChild(modal);
-  modal.querySelector('#cEnviar').addEventListener('click',function(){
-    var con=modal.querySelector('#cCon').value,dia=modal.querySelector('#cDia').value,horario=modal.querySelector('#cHorario').value,nota=modal.querySelector('#cNota').value.trim();
-    if(!con||!dia||!horario){alert('Completa todos los campos.');return;}
-    sedeRef('cambios').push({solicitante:sol,con:con,dia:dia,horario:horario,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){document.body.removeChild(modal);});
-  });
-};
-
-function renderCambios(){
-  var div=document.getElementById('cambiosList');if(!div)return;
-  var sol=document.getElementById('cambioSolicitante').value;
-  var entries=Object.entries(cambios);
-  if(!entries.length){div.innerHTML='<p class="empty-list" style="padding:1rem">No hay solicitudes de cambio.</p>';return;}
-  var relevantes=entries.filter(function(e){return !sol||(e[1].solicitante===sol||e[1].con===sol);});
-  if(!relevantes.length){div.innerHTML='<p class="empty-list" style="padding:1rem">No tienes solicitudes de cambio.</p>';return;}
-  var html='';
-  relevantes.forEach(function(e){
-    var key=e[0],c=e[1];
-    var estadoBadge='<span class="estado-badge '+c.estado+'">'+c.estado+'</span>';
-    html+='<div class="cambio-card"><div class="cambio-header">'+c.solicitante+' → '+c.con+estadoBadge+'</div>';
-    html+='<div class="cambio-sub">'+c.dia+' · '+c.horario+(c.nota?' · '+c.nota:'')+'</div>';
-    if(c.estado==='pendiente'&&sol===c.con){
-      html+='<div class="cambio-actions"><button class="btn-aceptar" onclick="responderCambio(\''+key+'\',\'aceptado\')"><i class="ti ti-check" style="font-size:12px;margin-right:4px"></i>Aceptar</button><button class="btn-rechazar" onclick="responderCambio(\''+key+'\',\'rechazado\')"><i class="ti ti-x" style="font-size:12px;margin-right:4px"></i>Rechazar</button></div>';
-    }
-    html+='</div>';
-  });
-  div.innerHTML=html;
-}
-
-function renderCambiosAdmin(){
-  var div=document.getElementById('cambiosAdminList');if(!div)return;
-  var entries=Object.entries(cambios).filter(function(e){return e[1].estado==='aceptado';});
-  if(!entries.length){div.innerHTML='<p class="empty-list">No hay solicitudes para aprobar.</p>';return;}
-  var html='';
-  entries.forEach(function(e){
-    var key=e[0],c=e[1];
-    html+='<div class="cambio-card"><div class="cambio-header">'+c.solicitante+' ↔ '+c.con+'<span class="estado-badge aceptado">aceptado por par</span></div>';
-    html+='<div class="cambio-sub">'+c.dia+' · '+c.horario+'</div>';
-    html+='<div class="cambio-actions"><button class="btn-aprobar" onclick="aprobarCambio(\''+key+'\')"><i class="ti ti-check" style="font-size:12px;margin-right:4px"></i>Aprobar y ejecutar</button><button class="btn-rechazar" onclick="responderCambio(\''+key+'\',\'rechazado\')"><i class="ti ti-x" style="font-size:12px;margin-right:4px"></i>Rechazar</button></div></div>';
-  });
-  div.innerHTML=html;
-}
-
-window.responderCambio=function(key,estado){sedeRef('cambios/'+key+'/estado').set(estado);};
-
-window.aprobarCambio=function(key){
-  var c=cambios[key];
-  if(!c)return;
-  // Intercambiar bloques
-  var bSol=Object.entries(bloques).filter(function(e){return e[1].nombre===c.solicitante&&e[1].dia===c.dia;});
-  var bCon=Object.entries(bloques).filter(function(e){return e[1].nombre===c.con&&e[1].dia===c.dia;});
-  var updates={};
-  bSol.forEach(function(e){updates['sedes/'+currentSede+'/bloques/'+e[0]+'/nombre']=c.con;});
-  bCon.forEach(function(e){updates['sedes/'+currentSede+'/bloques/'+e[0]+'/nombre']=c.solicitante;});
-  updates['sedes/'+currentSede+'/cambios/'+key+'/estado']='aprobado';
-  db.ref().update(updates);
-};
-
-document.getElementById('cambioSolicitante').addEventListener('change',function(){renderCambios();});
-
-function verificarCobertura(){var deficit=[];REGLAS.forEach(function(r){r.dias.forEach(function(dia){var c=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area&&bloqueCobreRegla(b,r);}).length;if(c<r.min)deficit.push({dia:dia,area:r.area,horario:r.inicio+'–'+r.fin,falta:r.min-c});});});return deficit;}
-
-function generarPendientesAutomaticos(cb){
-  var deficit=verificarCobertura();
-  sedeRef('pendientes').once('value',function(s){
-    var todos=s.val()||{},promises=[];
-    Object.entries(todos).forEach(function(e){if(e[1].auto&&!e[1].cubiertoPor)promises.push(sedeRef('pendientes/'+e[0]).remove());});
-    Promise.all(promises).then(function(){Promise.all(deficit.map(function(d){return sedeRef('pendientes').push({dia:d.dia,area:d.area,horario:d.horario,auto:true});})).then(function(){if(cb)cb(deficit);});});
-  });
-}
-
-function checkAndShowAlerta(){
-  if(alertaMostrada)return;
-  var s=Object.values(pendientes).filter(function(p){return !p.cubiertoPor;});
-  if(!s.length)return;
-  alertaMostrada=true;
-  var o=document.createElement('div');o.className='alerta-overlay';
-  o.innerHTML='<div class="alerta-box"><h3><i class="ti ti-alert-triangle" style="font-size:18px;vertical-align:-3px;margin-right:6px"></i>Turnos sin cubrir</h3><p>Esta semana hay <strong>'+s.length+' turno'+(s.length>1?'s':'')+' pendiente'+(s.length>1?'s':'')+' de cubrir</strong>.<br><br>Si deseas hacer turno extra, regístrate en <strong>Pendientes por cubrir</strong>.</p><div class="alerta-btns"><button onclick="document.body.removeChild(this.closest(\'.alerta-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cerrar</button><button class="btn-ver" onclick="verPendientes(this)">Ver pendientes</button></div></div>';
-  document.body.appendChild(o);
-}
-window.verPendientes=function(btn){document.body.removeChild(btn.closest('.alerta-overlay'));document.getElementById('pendientesSection').scrollIntoView({behavior:'smooth'});};
-
-function renderResults(nombre){
-  var div=document.getElementById('results');
-  if(!nombre){div.innerHTML='';return;}
+// ── MIS TURNOS ──
+document.getElementById('nameSelect').addEventListener('change',function(e){curNombre=e.target.value;renderMisTurnos(curNombre);});
+function renderMisTurnos(nombre){
+  var d=document.getElementById('results');
+  if(!nombre){d.innerHTML='';return;}
   var html='',found=false;
+  // Ausencias badge
+  var misAus=Object.values(ausencias).filter(function(a){return a.nombre===nombre&&a.estado==='aprobado';});
+  misAus.forEach(function(a){
+    var tc=a.tipo==='licencia'?'#7c3aed':a.tipo==='vacaciones'?'#1d4ed8':'#15803d';
+    var tb=a.tipo==='licencia'?'#ede9fe':a.tipo==='vacaciones'?'#dbeafe':'#dcfce7';
+    html+='<div style="background:'+tb+';border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:'+tc+';font-weight:500"><i class="ti ti-calendar-off" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>'+(a.tipoLabel||a.tipo)+' · '+a.inicio+(a.inicio!==a.fin?' → '+a.fin:'')+'</div>';
+  });
+  // Llamados badge
+  var misLl=Object.values(llamados).filter(function(l){return l.nombre===nombre;});
+  misLl.forEach(function(l){html+='<div class="estado-card"><div class="estado-card-title"><i class="ti ti-phone-call" style="font-size:18px;color:#d97706"></i><span style="font-size:14px;font-weight:600;color:#854d0e">De llamado</span></div><div class="estado-card-sub">'+l.dia+' · '+l.area+' · '+l.horario+'</div><div class="estado-card-note">Estás cubriendo este servicio de llamado. El sistema te registra como cobertura activa.</div></div>';});
   var reg=asistencia[nombre.replace(/\s/g,'_')];
-  var btnLlegada=reg?'<button class="btn-llegada presente" disabled><i class="ti ti-check" style="font-size:13px;margin-right:4px"></i>Llegué a las '+reg+'</button>':'<button class="btn-llegada" onclick="marcarLlegada(\''+nombre+'\')"><i class="ti ti-map-pin" style="font-size:13px;margin-right:4px"></i>Marcar mi llegada</button>';
-  dias.forEach(function(dia){
-    var propios=Object.values(bloques).filter(function(b){return b.dia===dia&&b.nombre===nombre;});
-    if(!propios.length)return;
-    found=true;
-    var cols=new Set();propios.forEach(function(b){var c=getColacion(b.horario);if(c)cols.add(c);});
-    var td=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
-    var notaDia=notas[nombre.replace(/\s/g,'_')+'_'+dia];
-    html+='<div class="day-card"><div class="day-header"><i class="ti ti-calendar-event" style="font-size:16px;color:#888"></i><span class="day-name">'+dia+'</span></div>';
-    propios.forEach(function(b){var isPab=b.area==='Pabellón';var sub=getSubarea(b.horario,b.area);html+='<div class="bloque-row"><span class="bloque-area"><i class="ti ti-building-hospital" style="font-size:12px;vertical-align:-1px;margin-right:3px'+(isPab?';color:#1d4ed8':'')+'" ></i>'+b.area+'</span><div><span class="badge'+(isPab?' pabellon':'')+'">'+b.horario+'</span>'+(sub?'<div class="subarea-info">'+sub+'</div>':'')+'</div></div>';});
-    cols.forEach(function(c){html+='<div class="bloque-row"><span class="bloque-area" style="color:#8a5100"><i class="ti ti-tools-kitchen-2" style="font-size:12px;vertical-align:-1px;margin-right:3px"></i>Colación</span><div><span class="badge colacion">'+c+'</span></div></div>';});
-    td.forEach(function(t){var cfg=TIPO_CONFIG[t.tipo]||TIPO_CONFIG['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yaVisto=visto[vk];html+='<div class="tarea-row"><div class="tarea-icon '+cfg.cls+'"><i class="ti '+cfg.icon+'"></i></div><div class="tarea-content"><div class="tarea-tipo '+cfg.cls+'">'+cfg.label+'</div>'+t.texto+'<br><button class="visto-btn'+(yaVisto?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yaVisto?'✓ Leído':'Marcar como leído')+'</button></div></div>';});
-    if(notaDia)html+='<div class="nota-box"><i class="ti ti-notes" style="font-size:12px;margin-right:4px"></i>'+notaDia+'</div>';
-    html+='<div class="turno-actions">'+btnLlegada+'<button class="btn-nota" onclick="dejarNota(\''+nombre+'\',\''+dia+'\')"><i class="ti ti-pencil" style="font-size:13px;margin-right:4px"></i>Nota de turno</button><button class="btn-cambio" onclick="document.getElementById(\'cambioSolicitante\').value=\''+nombre+'\';switchTab(\'cambios\')"><i class="ti ti-switch-horizontal" style="font-size:13px;margin-right:4px"></i>Cambio turno</button></div>';
+  var btnLl=reg?'<button class="btn-ll ok" disabled><i class="ti ti-check" style="font-size:13px;margin-right:4px"></i>Llegué a las '+reg+'</button>':'<button class="btn-ll" onclick="marcarLl(\''+nombre+'\')"><i class="ti ti-map-pin" style="font-size:13px;margin-right:4px"></i>Marcar mi llegada</button>';
+  DIAS.forEach(function(dia){
+    var ps=Object.values(bloques).filter(function(b){return b.dia===dia&&b.nombre===nombre;});
+    if(!ps.length)return;found=true;
+    var cols=new Set();ps.forEach(function(b){var c=getCol(b.horario);if(c)cols.add(c);});
+    var tds=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
+    var nota=notas[nombre.replace(/\s/g,'_')+'_'+dia];
+    html+='<div class="day-card"><div class="day-hdr"><i class="ti ti-calendar-event" style="font-size:16px;color:#888"></i><span class="day-name">'+dia+'</span></div>';
+    ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=getSub(b.horario,b.area);html+='<div class="brow"><span class="barea"><i class="ti ti-building-hospital" style="font-size:12px;vertical-align:-1px;margin-right:3px'+(isPab?';color:#1d4ed8':'')+'" ></i>'+b.area+'</span><div><span class="bdg'+(isPab?' pab':'')+'">'+b.horario+'</span>'+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
+    cols.forEach(function(c){html+='<div class="brow"><span class="barea" style="color:#8a5100"><i class="ti ti-tools-kitchen-2" style="font-size:12px;vertical-align:-1px;margin-right:3px"></i>Colación</span><div><span class="bdg col">'+c+'</span></div></div>';});
+    tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];html+='<div class="trow"><div class="tico '+cfg.cls+'"><i class="ti '+cfg.icon+'"></i></div><div class="tcont"><div class="ttipo '+cfg.cls+'">'+cfg.label+'</div>'+t.texto+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar como leído')+'</button></div></div>';});
+    if(nota)html+='<div class="nota-box"><i class="ti ti-notes" style="font-size:12px;margin-right:4px"></i>'+nota+'</div>';
+    html+='<div class="tactions">'+btnLl+'<button class="btn-nota" onclick="dejarNota(\''+nombre+'\',\''+dia+'\')"><i class="ti ti-pencil" style="font-size:13px;margin-right:4px"></i>Nota</button><button class="btn-ct" onclick="document.getElementById(\'cambioSol\').value=\''+nombre+'\';goTab(\'cambios\')"><i class="ti ti-switch-horizontal" style="font-size:13px;margin-right:4px"></i>Cambio</button></div>';
     html+='</div>';
   });
-  if(!found)html='<div class="no-result"><i class="ti ti-user-x" style="font-size:32px;color:#bbb;display:block;margin-bottom:8px"></i><p>Sin turnos asignados esta semana.</p></div>';
-  div.innerHTML=html;
+  if(!found)html+='<div class="no-result"><i class="ti ti-user-x" style="font-size:32px;color:#bbb;display:block;margin-bottom:8px"></i><p>Sin turnos asignados esta semana.</p></div>';
+  d.innerHTML=html;
+}
+window.marcarLl=function(n){var now=new Date();sRef('asistencia/'+n.replace(/\s/g,'_')).set(pad(now.getHours())+':'+pad(now.getMinutes()));};
+window.marcarVisto=function(k,btn){sRef('visto/'+k).set(true).then(function(){btn.textContent='✓ Leído';btn.classList.add('leido');});};
+window.dejarNota=function(n,dia){
+  var m=mkOverlay();var nk=n.replace(/\s/g,'_')+'_'+dia;var ac=notas[nk]||'';
+  m.innerHTML='<div class="obox"><h3><i class="ti ti-notes" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Nota de turno — '+dia+'</h3><textarea id="notaIn" style="margin-bottom:10px;min-height:80px">'+ac+'</textarea><div style="display:flex;gap:8px"><button onclick="this.closest(\'.overlay\').remove()" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="notaOk" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:500">Guardar</button></div></div>';
+  document.body.appendChild(m);
+  m.querySelector('#notaOk').addEventListener('click',function(){var t=m.querySelector('#notaIn').value.trim();if(!t)return;sRef('notas/'+nk).set(t).then(function(){m.remove();});});
+};
+
+// ── ASISTENCIA ──
+function renderAsist(){
+  var d=document.getElementById('asistView');if(!d)return;
+  if(!nombres.length){d.innerHTML='<p style="text-align:center;color:#aaa;font-size:13px;padding:2rem">Sin personal registrado.</p>';return;}
+  var pr=nombres.filter(function(n){return asistencia[n.replace(/\s/g,'_')];}).length;
+  var pct=nombres.length?Math.round(pr/nombres.length*100):0;
+  var html='<div class="asist-card"><div class="asist-title"><i class="ti ti-users" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Asistencia hoy — '+pr+'/'+nombres.length+' presentes</div>';
+  html+='<div class="cob-bar"><div class="cob-fill" style="width:'+pct+'%"></div></div>';
+  html+='<p style="font-size:11px;color:#888;margin-top:4px;text-align:right">'+pct+'% del equipo presente</p><div style="margin-top:10px">';
+  nombres.forEach(function(n){var r=asistencia[n.replace(/\s/g,'_')];html+='<div class="asist-row"><span>'+n+'</span>'+(r?'<span class="asist-ok"><i class="ti ti-check" style="font-size:12px;margin-right:3px"></i>'+r+'</span>':'<span class="asist-no">Sin registrar</span>')+'</div>';});
+  html+='</div></div>';d.innerHTML=html;
 }
 
-window.marcarLlegada=function(nombre){var now=new Date();var hora=pad(now.getHours())+':'+pad(now.getMinutes());sedeRef('asistencia/'+nombre.replace(/\s/g,'_')).set(hora);};
-window.marcarVisto=function(key,btn){sedeRef('visto/'+key).set(true).then(function(){btn.textContent='✓ Leído';btn.classList.add('leido');});};
-window.dejarNota=function(nombre,dia){
-  var modal=document.createElement('div');modal.className='modal-overlay';
-  var nk=nombre.replace(/\s/g,'_')+'_'+dia;
-  var actual=notas[nk]||'';
-  modal.innerHTML='<div class="modal-box"><h3><i class="ti ti-notes" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Nota de turno — '+dia+'</h3><textarea id="notaInput" style="margin-bottom:10px;min-height:80px">'+actual+'</textarea><div style="display:flex;gap:8px"><button onclick="document.body.removeChild(this.closest(\'.modal-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="notaOk" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:500">Guardar</button></div></div>';
-  document.body.appendChild(modal);
-  modal.querySelector('#notaOk').addEventListener('click',function(){var texto=modal.querySelector('#notaInput').value.trim();if(!texto)return;sedeRef('notas/'+nk).set(texto).then(function(){document.body.removeChild(modal);});});
+// ── ESTADO ──
+document.getElementById('estadoSelect').addEventListener('change',function(){renderEstado();});
+function renderEstado(){
+  var d=document.getElementById('estadoView');if(!d)return;
+  var n=document.getElementById('estadoSelect').value;
+  if(!n){d.innerHTML='<p style="text-align:center;color:#aaa;font-size:13px;padding:2rem">Selecciona tu nombre para ver tu estado.</p>';return;}
+  var ml=Object.values(llamados).filter(function(l){return l.nombre===n;});
+  if(!ml.length){d.innerHTML='<div style="text-align:center;padding:2rem"><i class="ti ti-circle-check" style="font-size:36px;color:#86efac;display:block;margin-bottom:8px"></i><p style="font-size:14px;color:#555">Sin estado especial asignado esta semana.</p></div>';return;}
+  var html='<div style="margin-bottom:8px;font-size:13px;color:#555;font-weight:500">Estado asignado esta semana:</div>';
+  ml.forEach(function(l){html+='<div class="estado-card"><div class="estado-card-title"><i class="ti ti-phone-call" style="font-size:18px;color:#d97706"></i><span style="font-size:14px;font-weight:600;color:#854d0e">De llamado</span></div><div class="estado-card-sub"><strong>'+l.dia+'</strong> · '+l.area+' · '+l.horario+'</div><div class="estado-card-note">Estás cubriendo este servicio de llamado. El sistema te registra como cobertura activa.</div></div>';});
+  d.innerHTML=html;
+}
+
+// ── CAMBIOS ──
+window.formCambio=function(){
+  var sol=document.getElementById('cambioSol').value;if(!sol){alert('Selecciona tu nombre primero.');return;}
+  var m=mkOverlay();
+  m.innerHTML='<div class="obox" style="width:320px"><h3><i class="ti ti-switch-horizontal" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Proponer cambio</h3><select id="cCon" style="margin-bottom:6px">'+mkOpts(nombres.filter(function(n){return n!==sol;}),'Con quién')+'</select><select id="cDia" style="margin-bottom:6px">'+mkOpts(DIAS,'Día')+'</select><select id="cHor" style="margin-bottom:6px">'+mkOpts(HORARIOS,'Horario')+'</select><textarea id="cNota" style="font-size:13px;min-height:50px;margin-bottom:8px" placeholder="Motivo (opcional)..."></textarea><div style="display:flex;gap:8px"><button onclick="this.closest(\'.overlay\').remove()" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="cEnviar" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:500">Enviar</button></div></div>';
+  document.body.appendChild(m);
+  m.querySelector('#cEnviar').addEventListener('click',function(){var con=m.querySelector('#cCon').value,dia=m.querySelector('#cDia').value,hor=m.querySelector('#cHor').value,nota=m.querySelector('#cNota').value.trim();if(!con||!dia||!hor){alert('Completa todos los campos.');return;}sRef('cambios').push({solicitante:sol,con:con,dia:dia,horario:hor,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){m.remove();});});
 };
+document.getElementById('cambioSol').addEventListener('change',function(){renderCambios();});
+function renderCambios(){
+  var d=document.getElementById('cambiosList');if(!d)return;
+  var sol=document.getElementById('cambioSol').value;
+  var en=Object.entries(cambios);
+  var rel=sol?en.filter(function(e){return e[1].solicitante===sol||e[1].con===sol;}):en;
+  if(!rel.length){d.innerHTML='<p class="empty" style="padding:1rem">No hay solicitudes de cambio.</p>';return;}
+  d.innerHTML=rel.map(function(e){var k=e[0],c=e[1];var eb='<span class="ebdg '+c.estado+'">'+c.estado+'</span>';var btns='';if(c.estado==='pendiente'&&sol===c.con)btns='<div class="cambio-acts"><button class="btn-ac" onclick="resCambio(\''+k+'\',\'aceptado\')"><i class="ti ti-check" style="font-size:12px;margin-right:4px"></i>Aceptar</button><button class="btn-re" onclick="resCambio(\''+k+'\',\'rechazado\')"><i class="ti ti-x" style="font-size:12px;margin-right:4px"></i>Rechazar</button></div>';return '<div class="cambio-card"><div class="cambio-hdr">'+c.solicitante+' → '+c.con+eb+'</div><div class="cambio-sub">'+c.dia+' · '+c.horario+(c.nota?' · '+c.nota:'')+'</div>'+btns+'</div>';}).join('');
+}
+function renderCambiosAdmin(){
+  var d=document.getElementById('cambiosAdminList');if(!d)return;
+  var en=Object.entries(cambios).filter(function(e){return e[1].estado==='aceptado';});
+  if(!en.length){d.innerHTML='<p class="empty">No hay solicitudes para aprobar.</p>';return;}
+  d.innerHTML=en.map(function(e){var k=e[0],c=e[1];return '<div class="cambio-card"><div class="cambio-hdr">'+c.solicitante+' ↔ '+c.con+'<span class="ebdg aceptado">aceptado por par</span></div><div class="cambio-sub">'+c.dia+' · '+c.horario+'</div><div class="cambio-acts" style="margin-top:6px"><button class="btn-ap" onclick="aprCambio(\''+k+'\')"><i class="ti ti-check" style="font-size:12px;margin-right:4px"></i>Aprobar</button><button class="btn-re" onclick="resCambio(\''+k+'\',\'rechazado\')"><i class="ti ti-x" style="font-size:12px;margin-right:4px"></i>Rechazar</button></div></div>';}).join('');
+}
+window.resCambio=function(k,e){sRef('cambios/'+k+'/estado').set(e);};
+window.aprCambio=function(k){var c=cambios[k];if(!c)return;var bSol=Object.entries(bloques).filter(function(e){return e[1].nombre===c.solicitante&&e[1].dia===c.dia;});var bCon=Object.entries(bloques).filter(function(e){return e[1].nombre===c.con&&e[1].dia===c.dia;});var upd={};bSol.forEach(function(e){upd['sedes/'+S+'/bloques/'+e[0]+'/nombre']=c.con;});bCon.forEach(function(e){upd['sedes/'+S+'/bloques/'+e[0]+'/nombre']=c.solicitante;});upd['sedes/'+S+'/cambios/'+k+'/estado']='aprobado';db.ref().update(upd);};
 
-function renderPendientes(){var div=document.getElementById('pendientesSection');var entries=Object.entries(pendientes);if(!entries.length){div.innerHTML='';return;}var html='<div class="pendientes-section"><div class="pendientes-title"><i class="ti ti-alert-triangle" style="font-size:15px"></i>Pendientes por cubrir</div>';entries.forEach(function(e){var key=e[0],p=e[1];if(p.cubiertoPor){html+='<div class="pendiente-card cubierto"><div class="pendiente-info"><i class="ti ti-check" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>'+p.dia+' — '+p.area+' — '+p.horario+'</div><div class="pendiente-sub">Cubierto por: <strong style="color:#fff">'+p.cubiertoPor+'</strong></div></div>';}else{var ea=p.auto?'<div class="pendiente-badge-auto">⚠ Déficit detectado</div>':'';html+='<div class="pendiente-card'+(p.auto?' auto':'')+'">' +ea+'<div class="pendiente-info"><i class="ti ti-calendar-x" style="font-size:13px;vertical-align:-1px;margin-right:4px;color:#dc2626"></i>'+p.dia+' — '+p.area+'</div><div class="pendiente-sub">Horario: '+p.horario+'</div><button class="pendiente-btn" onclick="anotarme(\''+key+'\')"><i class="ti ti-hand-stop" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Puedo cubrir este turno</button></div>';}});html+='</div>';div.innerHTML=html;}
-
-window.anotarme=function(key){
-  var p=pendientes[key];
-  if(!p)return;
-  // Verificar límite 2h extra diarias
-  var extras=calcularExtras();
-  var modal=document.createElement('div');modal.className='modal-overlay';
-  modal.innerHTML='<div class="modal-box"><h3><i class="ti ti-user-check" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Confirmar turno extra</h3><p style="font-size:13px;color:#666;margin-bottom:12px">Selecciona tu nombre.</p><select id="nombreExtra" style="margin-bottom:6px">'+makeOpts(nombresEquipo,'Selecciona tu nombre')+'</select><div id="extraWarning" style="font-size:11px;color:#dc2626;margin-bottom:6px;display:none">⚠ Este turno supera el límite de 2h extra diarias.</div><div style="display:flex;gap:8px;margin-top:8px"><button onclick="document.body.removeChild(this.closest(\'.modal-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="confirmarBtn" style="flex:1;padding:9px;font-size:13px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:500">Confirmar</button></div></div>';
-  document.body.appendChild(modal);
-  modal.querySelector('#nombreExtra').addEventListener('change',function(){
-    var n=this.value;
-    var hExtra=extras[n]||0;
-    var hPendiente=horasDeHorario(p.horario);
-    modal.querySelector('#extraWarning').style.display=(hExtra+hPendiente>2)?'block':'none';
-  });
-  modal.querySelector('#confirmarBtn').addEventListener('click',function(){
-    var nombre=modal.querySelector('#nombreExtra').value;
-    if(!nombre)return;
-    sedeRef('pendientes/'+key).update({cubiertoPor:nombre}).then(function(){document.body.removeChild(modal);});
-  });
+// ── AUSENCIAS ──
+window.formAusencia=function(){
+  var sol=document.getElementById('ausenciaSol').value;if(!sol){alert('Selecciona tu nombre primero.');return;}
+  var hoy=new Date().toISOString().split('T')[0];
+  var m=mkOverlay();
+  m.innerHTML='<div class="obox" style="width:320px"><h3><i class="ti ti-calendar-off" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Solicitar ausencia</h3><select id="ausType" style="margin-bottom:8px"><option value="permiso_medio">Permiso medio día</option><option value="permiso_dia">Permiso día completo</option><option value="vacaciones">Vacaciones</option></select><div style="display:flex;gap:6px;margin-bottom:8px"><div style="flex:1"><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Fecha inicio</label><input type="date" id="ausIni" value="'+hoy+'" style="font-size:13px;padding:8px 10px"></div><div style="flex:1" id="ausFinWrap"><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Fecha fin</label><input type="date" id="ausFin" value="'+hoy+'" style="font-size:13px;padding:8px 10px"></div></div><textarea id="ausMot" style="font-size:13px;min-height:60px;margin-bottom:8px" placeholder="Motivo (opcional)..."></textarea><div style="display:flex;gap:8px"><button onclick="this.closest(\'.overlay\').remove()" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="ausEnv" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:500">Enviar</button></div></div>';
+  document.body.appendChild(m);
+  m.querySelector('#ausType').addEventListener('change',function(){var medio=this.value==='permiso_medio';m.querySelector('#ausFinWrap').style.display=medio?'none':'flex';if(medio)m.querySelector('#ausFin').value=m.querySelector('#ausIni').value;});
+  m.querySelector('#ausIni').addEventListener('change',function(){var t=m.querySelector('#ausType').value;if(t!=='vacaciones')m.querySelector('#ausFin').value=this.value;});
+  m.querySelector('#ausEnv').addEventListener('click',function(){var tipo=m.querySelector('#ausType').value,ini=m.querySelector('#ausIni').value,fin=m.querySelector('#ausFin').value||ini,mot=m.querySelector('#ausMot').value.trim();if(!ini){alert('Selecciona una fecha.');return;}var lab={permiso_medio:'Permiso medio día',permiso_dia:'Permiso día completo',vacaciones:'Vacaciones'}[tipo];sRef('ausencias').push({nombre:sol,tipo:tipo,tipoLabel:lab,inicio:ini,fin:fin,motivo:mot,estado:'pendiente',ts:Date.now()}).then(function(){m.remove();});});
 };
+function renderAusencias(){
+  var d=document.getElementById('ausenciasList');if(!d)return;
+  var sol=document.getElementById('ausenciaSol').value;
+  var en=Object.entries(ausencias);var rel=sol?en.filter(function(e){return e[1].nombre===sol;}):en;
+  if(!rel.length){d.innerHTML='<p class="empty" style="padding:1rem">No hay solicitudes.</p>';return;}
+  var ecol={pendiente:'#854d0e',aprobado:'#15803d',rechazado:'#dc2626'};var ebg={pendiente:'#fef9c3',aprobado:'#dcfce7',rechazado:'#fee2e2'};
+  d.innerHTML=rel.sort(function(a,b){return(b[1].ts||0)-(a[1].ts||0);}).map(function(e){var k=e[0],a=e[1];var fs=a.inicio===a.fin?a.inicio:a.inicio+' → '+a.fin;return '<div class="cambio-card"><div class="cambio-hdr">'+(a.tipoLabel||a.tipo)+' <span class="ebdg" style="background:'+ebg[a.estado]+';color:'+ecol[a.estado]+'">'+a.estado+'</span></div><div class="cambio-sub">'+a.nombre+' · '+fs+(a.motivo?' · '+a.motivo:'')+'</div></div>';}).join('');
+}
+function renderAusenciasAdmin(){
+  // Pendientes
+  var dp=document.getElementById('ausenciasAdminList');
+  if(dp){var pend=Object.entries(ausencias).filter(function(e){return e[1].estado==='pendiente';});if(!pend.length){dp.innerHTML='<p class="empty">No hay solicitudes pendientes.</p>';}else{dp.innerHTML=pend.map(function(e){var k=e[0],a=e[1];var fs=a.inicio===a.fin?a.inicio:a.inicio+' → '+a.fin;return '<div class="cambio-card"><div class="cambio-hdr">'+a.nombre+' — '+(a.tipoLabel||a.tipo)+'</div><div class="cambio-sub">'+fs+(a.motivo?' · '+a.motivo:'')+'</div><div class="cambio-acts" style="margin-top:6px"><button class="btn-ac" onclick="aprAus(\''+k+'\')"><i class="ti ti-check" style="font-size:12px;margin-right:4px"></i>Aprobar</button><button class="btn-re" onclick="sRef(\'ausencias/'+k+'/estado\').set(\'rechazado\')"><i class="ti ti-x" style="font-size:12px;margin-right:4px"></i>Rechazar</button></div></div>';}).join('');}}
+  // Activas
+  var da=document.getElementById('ausenciasActivasList');
+  if(da){var act=Object.entries(ausencias).filter(function(e){return e[1].estado==='aprobado';});if(!act.length){da.innerHTML='<p class="empty">No hay ausencias activas.</p>';}else{da.innerHTML=act.map(function(e){var k=e[0],a=e[1];var fs=a.inicio===a.fin?a.inicio:a.inicio+' → '+a.fin;var tc=a.tipo==='licencia'?'#7c3aed':a.tipo==='vacaciones'?'#1d4ed8':'#15803d';var tb=a.tipo==='licencia'?'#ede9fe':a.tipo==='vacaciones'?'#dbeafe':'#dcfce7';return '<div class="iitem"><div class="iitem-info"><strong>'+a.nombre+'</strong> <span style="font-size:10px;background:'+tb+';color:'+tc+';padding:1px 6px;border-radius:4px;margin-left:4px">'+(a.tipoLabel||a.tipo)+'</span><div class="iitem-sub">'+fs+'</div></div><button class="del-btn" onclick="sRef(\'ausencias/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}}
+}
+window.aprAus=function(k){var a=ausencias[k];if(!a)return;sRef('ausencias/'+k+'/estado').set('aprobado').then(function(){var fechas=fechasRango(a.inicio,a.fin);var dAus=fechas.map(function(f){return diaDeDate(f);});var toDel=Object.entries(bloques).filter(function(e){return e[1].nombre===a.nombre&&dAus.indexOf(e[1].dia)!==-1;});Promise.all(toDel.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});});};
 
-function showSaved(id){var el=document.getElementById(id);el.style.display='block';setTimeout(function(){el.style.display='none';},2000);}
-function renderBloquesList(){var div=document.getElementById('bloquesList');if(!div)return;var e=Object.entries(bloques);if(!e.length){div.innerHTML='<p class="empty-list">No hay bloques cargados.</p>';return;}div.innerHTML=e.map(function(e){var k=e[0],b=e[1];return '<div class="list-item"><div class="list-item-info"><strong>'+b.nombre+'</strong> — '+b.dia+'<div class="list-item-sub">'+b.area+' · '+b.horario+'</div></div><button class="del-btn" onclick="deleteBloque(\''+k+'\')"><i class="ti ti-trash"></i></button></div>';}).join('');}
-function renderTareasList(){var div=document.getElementById('tareasList');if(!div)return;var e=Object.entries(tareas);if(!e.length){div.innerHTML='<p class="empty-list">No hay tareas asignadas.</p>';return;}div.innerHTML=e.map(function(e){var k=e[0],t=e[1];var cfg=TIPO_CONFIG[t.tipo]||TIPO_CONFIG['tarea'];return '<div class="list-item"><div class="list-item-info"><strong>'+t.nombre+'</strong> — '+t.dia+' ('+cfg.label+')<div class="list-item-sub">'+t.texto+'</div></div><button class="del-btn" onclick="deleteTarea(\''+k+'\')"><i class="ti ti-trash"></i></button></div>';}).join('');}
-function renderPendientesList(){var div=document.getElementById('pendientesList');if(!div)return;var e=Object.entries(pendientes);if(!e.length){div.innerHTML='<p class="empty-list">No hay pendientes.</p>';return;}div.innerHTML=e.map(function(e){var k=e[0],p=e[1];return '<div class="list-item"><div class="list-item-info">'+(p.auto?'⚠ ':'')+p.dia+' — '+p.area+'<div class="list-item-sub">'+p.horario+(p.cubiertoPor?' · Cubierto: '+p.cubiertoPor:' · Sin cubrir')+'</div></div><button class="del-btn" onclick="deletePendiente(\''+k+'\')"><i class="ti ti-trash"></i></button></div>';}).join('');}
+// ── LLAMADOS ──
+function renderLlamadosList(){var d=document.getElementById('llamadosList');if(!d)return;var en=Object.entries(llamados);if(!en.length){d.innerHTML='<p class="empty">No hay estados asignados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],l=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+l.nombre+'</strong> — '+l.dia+'<div class="iitem-sub">'+l.area+' · '+l.horario+'</div></div><button class="del-btn" onclick="sRef(\'llamados/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}
 
-window.deleteBloque=function(k){sedeRef('bloques/'+k).remove();};
-window.deleteTarea=function(k){sedeRef('tareas/'+k).remove();};
-window.deletePendiente=function(k){sedeRef('pendientes/'+k).remove();};
+// ── PENDIENTES ──
+function verificar(){var def=[];REGLAS.forEach(function(r){r.dias.forEach(function(dia){var cob=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area&&covers(b.horario,r.ini,r.fin);}).length;var cll=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===r.area&&covers(l.horario,r.ini,r.fin);}).length;if(cob+cll<r.min)def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:r.min-cob-cll});});});return def;}
+function genPendientes(cb){var def=verificar();sRef('pendientes').once('value',function(s){var todos=s.val()||{};var pr=[];Object.entries(todos).forEach(function(e){if(e[1].auto&&!e[1].cubiertoPor)pr.push(sRef('pendientes/'+e[0]).remove());});Promise.all(pr).then(function(){Promise.all(def.map(function(d){return sRef('pendientes').push({dia:d.dia,area:d.area,horario:d.horario,auto:true});})).then(function(){if(cb)cb(def);});});});}
+function checkAlerta(){if(alertaMostrada)return;var s=Object.values(pendientes).filter(function(p){return!p.cubiertoPor;});if(!s.length)return;alertaMostrada=true;var o=document.createElement('div');o.className='alert-overlay';o.innerHTML='<div class="alert-box"><h3><i class="ti ti-alert-triangle" style="font-size:18px;vertical-align:-3px;margin-right:6px"></i>Turnos sin cubrir</h3><p>Esta semana hay <strong>'+s.length+' turno'+(s.length>1?'s':'')+' pendiente'+(s.length>1?'s':'')+' de cubrir</strong>.<br><br>Si deseas hacer turno extra, regístrate en <strong>Pendientes por cubrir</strong>.</p><div class="alert-btns"><button onclick="this.closest(\'.alert-overlay\').remove()" style="flex:1;padding:9px;font-size:13px">Cerrar</button><button class="btn-ver" onclick="verPend(this)">Ver pendientes</button></div></div>';document.body.appendChild(o);}
+window.verPend=function(btn){btn.closest('.alert-overlay').remove();document.getElementById('pendientesSection').scrollIntoView({behavior:'smooth'});};
+function renderPendientes(){var d=document.getElementById('pendientesSection');var en=Object.entries(pendientes);if(!en.length){d.innerHTML='';return;}var html='<div class="pend-section"><div class="pend-title"><i class="ti ti-alert-triangle" style="font-size:15px"></i>Pendientes por cubrir</div>';en.forEach(function(e){var k=e[0],p=e[1];if(p.cubiertoPor){html+='<div class="pend-card cubierto"><div class="pend-info"><i class="ti ti-check" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>'+p.dia+' — '+p.area+' — '+p.horario+'</div><div class="pend-sub">Cubierto por: <strong style="color:#fff">'+p.cubiertoPor+'</strong></div></div>';}else{var ea=p.auto?'<div class="pend-auto">⚠ Déficit detectado</div>':'';html+='<div class="pend-card'+(p.auto?' auto':'')+'">' +ea+'<div class="pend-info"><i class="ti ti-calendar-x" style="font-size:13px;vertical-align:-1px;margin-right:4px;color:#dc2626"></i>'+p.dia+' — '+p.area+'</div><div class="pend-sub">Horario: '+p.horario+'</div><button class="pend-btn" onclick="anotarme(\''+k+'\')"><i class="ti ti-hand-stop" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Puedo cubrir este turno</button></div>';}});html+='</div>';d.innerHTML=html;}
+function renderPendientesList(){var d=document.getElementById('pendientesList');if(!d)return;var en=Object.entries(pendientes);if(!en.length){d.innerHTML='<p class="empty">No hay pendientes.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],p=e[1];return '<div class="iitem"><div class="iitem-info">'+(p.auto?'⚠ ':'')+p.dia+' — '+p.area+'<div class="iitem-sub">'+p.horario+(p.cubiertoPor?' · Cubierto: '+p.cubiertoPor:' · Sin cubrir')+'</div></div><button class="del-btn" onclick="sRef(\'pendientes/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}
+window.anotarme=function(k){var p=pendientes[k];if(!p)return;var extrs={};nombres.forEach(function(n){extrs[n]=0;});Object.values(pendientes).forEach(function(x){if(x.cubiertoPor&&extrs[x.cubiertoPor]!==undefined)extrs[x.cubiertoPor]+=horas(x.horario);});var m=mkOverlay();m.innerHTML='<div class="obox"><h3><i class="ti ti-user-check" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Confirmar turno extra</h3><p style="font-size:13px;color:#666;margin-bottom:12px">Selecciona tu nombre.</p><select id="nomExtra" style="margin-bottom:6px">'+mkOpts(nombres,'Selecciona tu nombre')+'</select><div id="extraWarn" style="font-size:11px;color:#dc2626;margin-bottom:6px;display:none">⚠ Supera el límite de 2h extra diarias.</div><div style="display:flex;gap:8px;margin-top:8px"><button onclick="this.closest(\'.overlay\').remove()" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="confBtn" style="flex:1;padding:9px;font-size:13px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:500">Confirmar</button></div></div>';document.body.appendChild(m);m.querySelector('#nomExtra').addEventListener('change',function(){var n=this.value;m.querySelector('#extraWarn').style.display=(extrs[n]||0)+horas(p.horario)>2?'block':'none';});m.querySelector('#confBtn').addEventListener('click',function(){var n=m.querySelector('#nomExtra').value;if(!n)return;sRef('pendientes/'+k).update({cubiertoPor:n}).then(function(){m.remove();});});};
 
-document.getElementById('nameSelect').addEventListener('change',function(e){currentNombre=e.target.value;renderResults(currentNombre);});
+// ── RESUMEN ──
+function calcHoras(){var h={};nombres.forEach(function(n){h[n]=0;});Object.values(bloques).forEach(function(b){if(h[b.nombre]!==undefined)h[b.nombre]+=horas(b.horario);});return h;}
+function calcExtras(){var e={};nombres.forEach(function(n){e[n]=0;});Object.values(pendientes).forEach(function(p){if(p.cubiertoPor&&e[p.cubiertoPor]!==undefined)e[p.cubiertoPor]+=horas(p.horario);});return e;}
+function calcCob(){var t=0,c=0;REGLAS.forEach(function(r){r.dias.forEach(function(dia){t+=r.min;var cv=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area&&covers(b.horario,r.ini,r.fin);}).length;var cl=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===r.area&&covers(l.horario,r.ini,r.fin);}).length;c+=Math.min(cv+cl,r.min);});});return t?Math.round(c/t*100):100;}
+function renderResumen(){
+  var d=document.getElementById('resumenView');if(!d)return;
+  if(!nombres.length){d.innerHTML='<p style="text-align:center;color:#aaa;font-size:13px;padding:2rem">Sin personal registrado.</p>';return;}
+  var h=calcHoras(),e=calcExtras(),cob=calcCob();
+  var cc=cob<60?'dang':cob<80?'warn':'';
+  var cv=cob<60?'#dc2626':cob<80?'#f59e0b':'#15803d';
+  var html='<div class="res-card"><h3><i class="ti ti-chart-bar" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Cobertura semanal</h3>';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:#555">Turnos requeridos cubiertos</span><span style="font-size:20px;font-weight:700;color:'+cv+'">'+cob+'%</span></div>';
+  html+='<div class="cob-bar"><div class="cob-fill '+cc+'" style="width:'+cob+'%"></div></div></div>';
+  html+='<div class="res-card"><h3><i class="ti ti-clock" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Horas por persona esta semana</h3>';
+  nombres.forEach(function(n){var hh=h[n]||0,ee=e[n]||0,ex=ee>2;html+='<div class="stat-row"><span>'+n+'</span><span class="stat-val'+(ex?' warn':'')+'">'+hh.toFixed(1)+'h'+(ee>0?' <span style="font-size:10px;background:#fee2e2;color:#dc2626;padding:1px 5px;border-radius:4px">+'+ee.toFixed(1)+'h extra'+(ex?' ⚠':'')+'</span>':'')+'</span></div>';});
+  html+='<p style="font-size:10px;color:#aaa;margin-top:6px">⚠ = supera límite de 2h extra diarias</p></div>';
+  html+='<div class="res-card"><h3><i class="ti ti-chart-bar" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Horas trabajadas</h3><div class="ch-wrap"><canvas id="chH"></canvas></div></div>';
+  html+='<div class="res-card"><h3><i class="ti ti-star" style="font-size:14px;vertical-align:-2px;margin-right:5px"></i>Turnos extra cubiertos</h3><div class="ch-wrap"><canvas id="chE"></canvas></div></div>';
+  d.innerHTML=html;
+  setTimeout(function(){
+    if(chartH)chartH.destroy();if(chartE)chartE.destroy();
+    var c1=document.getElementById('chH');if(c1)chartH=new Chart(c1,{type:'bar',data:{labels:nombres,datasets:[{label:'Horas',data:nombres.map(function(n){return h[n]||0;}),backgroundColor:'#1a5ca8',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}}}}});
+    var c2=document.getElementById('chE');if(c2){var ed=nombres.map(function(n){return e[n]||0;});chartE=new Chart(c2,{type:'bar',data:{labels:nombres,datasets:[{label:'Horas extra',data:ed,backgroundColor:ed.map(function(v){return v>2?'#dc2626':'#1D9E75';}),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}}}}});}
+  },100);
+}
 
+// ── ADMIN ──
+function mkOverlay(){var o=document.createElement('div');o.className='overlay';return o;}
 document.getElementById('adminBtn').addEventListener('click',function(){
-  var panel=document.getElementById('adminPanel');
-  if(panel.classList.contains('open')){panel.classList.remove('open');return;}
-  var PIN=SEDES[currentSede].pin;
-  var o=document.createElement('div');o.className='pin-overlay';
-  o.innerHTML='<div class="pin-box"><h3><i class="ti ti-lock" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Admin — '+currentSede+'</h3><input type="password" id="pinInput" placeholder="····" maxlength="4"><div style="display:flex;gap:8px;margin-top:8px"><button onclick="document.body.removeChild(this.closest(\'.pin-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="pinOk" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px">Entrar</button></div><div class="pin-error" id="pinError">Clave incorrecta</div></div>';
+  var p=document.getElementById('adminPanel');
+  if(p.classList.contains('open')){p.classList.remove('open');return;}
+  var PIN=SEDES[S].pin;
+  var o=mkOverlay();
+  o.innerHTML='<div class="obox center"><h3><i class="ti ti-lock" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Admin — '+S+'</h3><input type="password" id="pinIn" placeholder="····" maxlength="4"><div style="display:flex;gap:8px;margin-top:8px"><button onclick="this.closest(\'.overlay\').remove()" style="flex:1;padding:9px;font-size:13px">Cancelar</button><button id="pinOk" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px">Entrar</button></div><div class="pin-err" id="pinErr">Clave incorrecta</div></div>';
   document.body.appendChild(o);
-  setTimeout(function(){o.querySelector('#pinInput').focus();},100);
-  o.querySelector('#pinOk').addEventListener('click',function(){if(o.querySelector('#pinInput').value===PIN){document.body.removeChild(o);panel.classList.add('open');renderPendientesList();renderCambiosAdmin();document.getElementById('bulkBody').innerHTML='';addBulkRow();}else{o.querySelector('#pinError').style.display='block';o.querySelector('#pinInput').value='';}});
-  o.querySelector('#pinInput').addEventListener('keydown',function(e){if(e.key==='Enter')o.querySelector('#pinOk').click();});
+  setTimeout(function(){o.querySelector('#pinIn').focus();},100);
+  o.querySelector('#pinOk').addEventListener('click',function(){if(o.querySelector('#pinIn').value===PIN){o.remove();p.classList.add('open');renderPendientesList();renderCambiosAdmin();renderAusenciasAdmin();renderLlamadosList();document.getElementById('bulkBody').innerHTML='';addBulkRow();}else{o.querySelector('#pinErr').style.display='block';o.querySelector('#pinIn').value='';}});
+  o.querySelector('#pinIn').addEventListener('keydown',function(e){if(e.key==='Enter')o.querySelector('#pinOk').click();});
 });
 
-document.getElementById('saveAvisoBtn').addEventListener('click',function(){var v=document.getElementById('avisoTexto').value.trim();if(!v)return;sedeRef('aviso').set(v).then(function(){showSaved('avisoSaved');});});
-document.getElementById('clearAvisoBtn').addEventListener('click',function(){sedeRef('aviso').remove();document.getElementById('avisoTexto').value='';});
-document.getElementById('saveSemanaBtn').addEventListener('click',function(){var v=document.getElementById('semanaTexto').value.trim();if(!v)return;sedeRef('semana').set(v).then(function(){showSaved('semanaSaved');});});
-document.getElementById('addNombreBtn').addEventListener('click',function(){var v=document.getElementById('nuevoNombre').value.trim();if(!v)return;var arr=nombresEquipo.slice();if(arr.indexOf(v)===-1)arr.push(v);sedeRef('nombres').set(arr).then(function(){document.getElementById('nuevoNombre').value='';});});
+document.getElementById('saveAvisoBtn').addEventListener('click',function(){var v=document.getElementById('avisoTxt').value.trim();if(!v)return;sRef('aviso').set(v).then(function(){showSaved('avisoSaved');});});
+document.getElementById('clearAvisoBtn').addEventListener('click',function(){sRef('aviso').remove();document.getElementById('avisoTxt').value='';});
+document.getElementById('saveSemanaBtn').addEventListener('click',function(){var v=document.getElementById('semanaTxt').value.trim();if(!v)return;sRef('semana').set(v).then(function(){showSaved('semanaSaved');});});
+document.getElementById('addNombreBtn').addEventListener('click',function(){var v=document.getElementById('nuevoNombre').value.trim();if(!v)return;var a=nombres.slice();if(a.indexOf(v)===-1)a.push(v);sRef('nombres').set(a).then(function(){document.getElementById('nuevoNombre').value='';});});
 
-document.getElementById('saveBulkBtn').addEventListener('click',function(){
-  var rows=document.querySelectorAll('#bulkBody tr'),nuevos=[];
-  rows.forEach(function(r){var s=r.querySelectorAll('select');var d=s[0].value,n=s[1].value,a=s[2].value,h=s[3].value;if(d&&n&&a&&h)nuevos.push({dia:d,nombre:n,area:a,horario:h});});
-  if(!nuevos.length)return;
-  Promise.all(nuevos.map(function(b){return sedeRef('bloques').push(b);})).then(function(){document.getElementById('bulkBody').innerHTML='';addBulkRow();showSaved('bulkSaved');setTimeout(function(){generarPendientesAutomaticos(function(deficit){var div=document.getElementById('deficitSummary');if(!deficit.length){div.innerHTML='<div class="deficit-summary" style="background:#f0faf5;border-color:#86efac;color:#15803d">✓ Cobertura completa.</div>';}else{var items=deficit.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+'): falta '+d.falta+' persona'+(d.falta>1?'s':'')+'</li>';}).join('');div.innerHTML='<div class="deficit-summary"><strong>⚠ Déficit:</strong><ul>'+items+'</ul></div>';}});},500);});
-});
+// Bulk
+function addBulkRow(){var tr=document.createElement('tr');tr.innerHTML='<td><select>'+mkOpts(DIAS,'Día')+'</select></td><td><select>'+mkOpts(nombres,'Persona')+'</select></td><td><select>'+mkOpts(AREAS,'Área')+'</select></td><td><select>'+mkOpts(HORARIOS,'Horario')+'</select></td><td><button class="del-btn" onclick="this.closest(\'tr\').remove()"><i class="ti ti-x"></i></button></td>';document.getElementById('bulkBody').appendChild(tr);}
+document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
+document.getElementById('saveBulkBtn').addEventListener('click',function(){var rows=document.querySelectorAll('#bulkBody tr'),nv=[];rows.forEach(function(r){var s=r.querySelectorAll('select');var d=s[0].value,n=s[1].value,a=s[2].value,h=s[3].value;if(d&&n&&a&&h)nv.push({dia:d,nombre:n,area:a,horario:h});});if(!nv.length)return;Promise.all(nv.map(function(b){return sRef('bloques').push(b);})).then(function(){document.getElementById('bulkBody').innerHTML='';addBulkRow();showSaved('bulkSaved');setTimeout(function(){genPendientes(function(def){var dv=document.getElementById('deficitDiv');if(!def.length){dv.innerHTML='<div class="def-sum" style="background:#f0faf5;border-color:#86efac;color:#15803d">✓ Cobertura completa.</div>';}else{var it=def.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+'): falta '+d.falta+'</li>';}).join('');dv.innerHTML='<div class="def-sum"><strong>⚠ Déficit:</strong><ul>'+it+'</ul></div>';}});},500);});});
+document.getElementById('verificarBtn').addEventListener('click',function(){genPendientes(function(def){var dv=document.getElementById('deficitDiv');if(!def.length){dv.innerHTML='<div class="def-sum" style="background:#f0faf5;border-color:#86efac;color:#15803d">✓ Cobertura completa.</div>';}else{var it=def.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+'): falta '+d.falta+'</li>';}).join('');dv.innerHTML='<div class="def-sum"><strong>⚠ Déficit:</strong><ul>'+it+'</ul></div>';}});});
 
-document.getElementById('verificarBtn').addEventListener('click',function(){generarPendientesAutomaticos(function(deficit){var div=document.getElementById('deficitSummary');if(!deficit.length){div.innerHTML='<div class="deficit-summary" style="background:#f0faf5;border-color:#86efac;color:#15803d">✓ Cobertura completa.</div>';}else{var items=deficit.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+'): falta '+d.falta+' persona'+(d.falta>1?'s':'')+'</li>';}).join('');div.innerHTML='<div class="deficit-summary"><strong>⚠ Déficit:</strong><ul>'+items+'</ul></div>';}});});
+// Llamado
+document.getElementById('addLlamadoBtn').addEventListener('click',function(){var n=document.getElementById('llNombre').value,d=document.getElementById('llDia').value,a=document.getElementById('llArea').value,h=document.getElementById('llHorario').value;if(!n||!d||!a||!h){alert('Completa todos los campos.');return;}sRef('llamados').push({nombre:n,dia:d,area:a,horario:h}).then(function(){['llNombre','llDia','llArea','llHorario'].forEach(function(id){document.getElementById(id).value='';});showSaved('llamadoSaved');});});
 
-document.getElementById('addTareaBtn').addEventListener('click',function(){var d=document.getElementById('tDia').value,n=document.getElementById('tNombre').value,t=document.getElementById('tTipo').value,x=document.getElementById('tTexto').value.trim();if(!d||!n||!t||!x)return;sedeRef('tareas').push({dia:d,nombre:n,tipo:t,texto:x}).then(function(){['tDia','tNombre','tTipo'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('tTexto').value='';showSaved('tareaSaved');});});
-document.getElementById('addPendienteBtn').addEventListener('click',function(){var d=document.getElementById('pDia').value,a=document.getElementById('pArea').value,h=document.getElementById('pHorario').value;if(!d||!a||!h)return;sedeRef('pendientes').push({dia:d,area:a,horario:h,auto:false}).then(function(){['pDia','pArea','pHorario'].forEach(function(id){document.getElementById(id).value='';});showSaved('pendienteSaved');renderPendientesList();});});
-document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Seguro que quieres borrar todo en '+currentSede+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios'].forEach(function(p){sedeRef(p).remove();});document.getElementById('deficitSummary').innerHTML='';alertaMostrada=false;if(chartHoras)chartHoras.destroy();if(chartExtra)chartExtra.destroy();chartHoras=null;chartExtra=null;});
+// Tareas
+document.getElementById('addTareaBtn').addEventListener('click',function(){var d=document.getElementById('tDia').value,n=document.getElementById('tNombre').value,t=document.getElementById('tTipo').value,x=document.getElementById('tTexto').value.trim();if(!d||!n||!t||!x)return;sRef('tareas').push({dia:d,nombre:n,tipo:t,texto:x}).then(function(){['tDia','tNombre','tTipo'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('tTexto').value='';showSaved('tareaSaved');});});
+function renderTareasList(){var d=document.getElementById('tareasList');if(!d)return;var en=Object.entries(tareas);if(!en.length){d.innerHTML='<p class="empty">No hay tareas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],t=e[1];var cfg=TIPOS[t.tipo]||TIPOS['tarea'];return '<div class="iitem"><div class="iitem-info"><strong>'+t.nombre+'</strong> — '+t.dia+' ('+cfg.label+')<div class="iitem-sub">'+t.texto+'</div></div><button class="del-btn" onclick="sRef(\'tareas/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}
+
+// Pendiente manual
+document.getElementById('addPendBtn').addEventListener('click',function(){var d=document.getElementById('pDia').value,a=document.getElementById('pArea').value,h=document.getElementById('pHorario').value;if(!d||!a||!h)return;sRef('pendientes').push({dia:d,area:a,horario:h,auto:false}).then(function(){['pDia','pArea','pHorario'].forEach(function(id){document.getElementById(id).value='';});showSaved('pendSaved');renderPendientesList();});});
+
+// Licencias
+document.getElementById('addLicBtn').addEventListener('click',function(){var n=document.getElementById('licNombre').value,ini=document.getElementById('licInicio').value,fin=document.getElementById('licFin').value;if(!n||!ini||!fin){alert('Completa todos los campos.');return;}if(ini>fin){alert('La fecha inicio debe ser antes que la fecha fin.');return;}sRef('ausencias').push({nombre:n,tipo:'licencia',tipoLabel:'Licencia médica',inicio:ini,fin:fin,motivo:'Licencia médica',estado:'aprobado',ts:Date.now()}).then(function(){var fechas=fechasRango(ini,fin);var dAus=fechas.map(function(f){return diaDeDate(f);});var toDel=Object.entries(bloques).filter(function(e){return e[1].nombre===n&&dAus.indexOf(e[1].dia)!==-1;});Promise.all(toDel.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});document.getElementById('licNombre').value='';document.getElementById('licInicio').value='';document.getElementById('licFin').value='';showSaved('licSaved');});});
+
+// Bloques
+function renderBloquesList(){var d=document.getElementById('bloquesList');if(!d)return;var en=Object.entries(bloques);if(!en.length){d.innerHTML='<p class="empty">No hay bloques cargados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],b=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+b.nombre+'</strong> — '+b.dia+'<div class="iitem-sub">'+b.area+' · '+b.horario+'</div></div><button class="del-btn" onclick="sRef(\'bloques/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}
+
+// Clear
+document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Seguro que quieres borrar todo en '+S+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;});
 </script>
 </body>
 </html>
-<!-- AUSENCIAS PATCH - se inyecta via script -->
-<script>
-// ===================== MÓDULO AUSENCIAS =====================
-// Inyectar pestaña Ausencias en tabs
-document.addEventListener('DOMContentLoaded', function() {
-  // Agregar tab
-  var tabsDiv = document.querySelector('.tabs');
-  var newTab = document.createElement('button');
-  newTab.className = 'tab';
-  newTab.innerHTML = '<i class="ti ti-calendar-off" style="font-size:12px"></i><br>Ausencias';
-  newTab.onclick = function(){ switchTab('ausencias'); };
-  tabsDiv.appendChild(newTab);
-
-  // Agregar contenido tab
-  var pendientesSection = document.getElementById('pendientesSection');
-  var ausenciasTab = document.createElement('div');
-  ausenciasTab.className = 'tab-content';
-  ausenciasTab.id = 'tab-ausencias';
-  ausenciasTab.innerHTML = `
-    <div style="margin-bottom:12px">
-      <select id="ausenciaSolicitante" style="margin-bottom:6px"><option value="">Soy...</option></select>
-      <button class="btn-add" onclick="mostrarFormAusencia()" style="margin-top:4px">
-        <i class="ti ti-plus" style="font-size:13px;margin-right:4px"></i>Solicitar permiso o vacaciones
-      </button>
-    </div>
-    <div id="ausenciasList"></div>`;
-  pendientesSection.parentNode.insertBefore(ausenciasTab, pendientesSection);
-
-  // Agregar sección admin para ausencias
-  var clearSection = document.querySelector('#adminPanel .admin-section:last-child');
-  var ausenciasAdminSection = document.createElement('div');
-  ausenciasAdminSection.className = 'admin-section';
-  ausenciasAdminSection.innerHTML = `
-    <p class="admin-section-title"><i class="ti ti-calendar-off" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Licencias médicas</p>
-    <p style="font-size:12px;color:#888;margin-bottom:8px">Solo el jefe puede ingresar licencias médicas.</p>
-    <div class="flex-row">
-      <select id="licNombre"><option value="">Persona</option></select>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
-      <div style="flex:1"><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Fecha inicio</label><input type="date" id="licInicio" style="font-size:13px;padding:8px 10px"></div>
-      <div style="flex:1"><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Fecha fin</label><input type="date" id="licFin" style="font-size:13px;padding:8px 10px"></div>
-    </div>
-    <button class="btn-add" id="addLicenciaBtn"><i class="ti ti-plus" style="font-size:13px;margin-right:3px"></i>Registrar licencia</button>
-    <div class="saved-ok" id="licenciaSaved">✓ Licencia registrada</div>
-    <div class="admin-section-title" style="margin-top:12px;font-size:12px">Solicitudes de permiso / vacaciones pendientes</div>
-    <div class="items-list" id="ausenciasAdminList"></div>
-    <div class="admin-section-title" style="margin-top:12px;font-size:12px">Ausencias activas</div>
-    <div class="items-list" id="ausenciasActivasList"></div>`;
-  clearSection.parentNode.insertBefore(ausenciasAdminSection, clearSection);
-
-  // Poblar selects de licencia con nombres
-  function updateLicNombre() {
-    var sel = document.getElementById('licNombre');
-    var cur = sel.value;
-    sel.innerHTML = '<option value="">Persona</option>';
-    nombresEquipo.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
-    if (cur) sel.value = cur;
-    var ausSel = document.getElementById('ausenciaSolicitante');
-    var ausCur = ausSel.value;
-    ausSel.innerHTML = '<option value="">Soy...</option>';
-    nombresEquipo.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n; ausSel.appendChild(o); });
-    if (ausCur) ausSel.value = ausCur;
-  }
-
-  // Override updateNameSelects para incluir ausencias
-  var origUpdateNameSelects = window.updateNameSelects || function(){};
-  window.updateNameSelects = function() {
-    origUpdateNameSelects();
-    updateLicNombre();
-  };
-
-  // Registrar licencia
-  document.getElementById('addLicenciaBtn').addEventListener('click', function() {
-    var nombre = document.getElementById('licNombre').value;
-    var inicio = document.getElementById('licInicio').value;
-    var fin = document.getElementById('licFin').value;
-    if (!nombre || !inicio || !fin) return;
-    if (inicio > fin) { alert('La fecha de inicio debe ser antes que la fecha fin.'); return; }
-    sedeRef('ausencias').push({
-      nombre: nombre, tipo: 'licencia', inicio: inicio, fin: fin,
-      estado: 'aprobado', motivo: 'Licencia médica', ts: Date.now()
-    }).then(function() {
-      aplicarAusenciaABloques(nombre, inicio, fin);
-      document.getElementById('licNombre').value = '';
-      document.getElementById('licInicio').value = '';
-      document.getElementById('licFin').value = '';
-      showSaved('licenciaSaved');
-    });
-  });
-
-  // Escuchar ausencias en Firebase
-  function onAusencias(snap) {
-    window.ausencias = snap.val() || {};
-    renderAusenciasList();
-    renderAusenciasAdmin();
-    if (currentNombre) renderResults(currentNombre);
-  }
-
-  var origAttachListeners = window.attachListeners;
-  window.attachListeners = function() {
-    origAttachListeners();
-    sedeRef('ausencias').on('value', onAusencias);
-  };
-
-  window.ausencias = {};
-});
-
-// Calcular fechas entre inicio y fin
-function fechasEnRango(inicio, fin) {
-  var fechas = [];
-  var current = new Date(inicio + 'T12:00:00');
-  var endDate = new Date(fin + 'T12:00:00');
-  while (current <= endDate) {
-    fechas.push(current.toISOString().split('T')[0]);
-    current.setDate(current.getDate() + 1);
-  }
-  return fechas;
-}
-
-function diaDeSemanaDeDate(fechaStr) {
-  var d = new Date(fechaStr + 'T12:00:00');
-  var map = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  return map[d.getDay()];
-}
-
-function aplicarAusenciaABloques(nombre, inicio, fin) {
-  // Eliminar bloques de la persona en los días del rango que coincidan con días cargados
-  var fechas = fechasEnRango(inicio, fin);
-  var diasAusencia = fechas.map(function(f) { return diaDeSemanaDeDate(f); });
-  var toDelete = Object.entries(bloques).filter(function(e) {
-    return e[1].nombre === nombre && diasAusencia.indexOf(e[1].dia) !== -1;
-  });
-  var promises = toDelete.map(function(e) { return sedeRef('bloques/' + e[0]).remove(); });
-  Promise.all(promises).then(function() {
-    setTimeout(function() { generarPendientesAutomaticos(function() {}); }, 500);
-  });
-}
-
-// Formulario solicitud permiso/vacaciones
-window.mostrarFormAusencia = function() {
-  var sol = document.getElementById('ausenciaSolicitante').value;
-  if (!sol) { alert('Selecciona tu nombre primero.'); return; }
-  var modal = document.createElement('div');
-  modal.className = 'modal-overlay';
-  var hoy = new Date().toISOString().split('T')[0];
-  modal.innerHTML = `
-    <div class="modal-box" style="width:320px">
-      <h3><i class="ti ti-calendar-off" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Solicitar ausencia</h3>
-      <div class="flex-row" style="margin-bottom:8px">
-        <select id="ausType">
-          <option value="permiso_medio">Permiso medio día</option>
-          <option value="permiso_dia">Permiso día completo</option>
-          <option value="vacaciones">Vacaciones</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:6px;margin-bottom:8px">
-        <div style="flex:1"><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Fecha inicio</label><input type="date" id="ausInicio" value="${hoy}" style="font-size:13px;padding:8px 10px"></div>
-        <div style="flex:1" id="ausFinWrap"><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Fecha fin</label><input type="date" id="ausFin" value="${hoy}" style="font-size:13px;padding:8px 10px"></div>
-      </div>
-      <textarea id="ausMotivo" style="font-size:13px;min-height:60px;margin-bottom:8px" placeholder="Motivo (opcional)..."></textarea>
-      <div style="display:flex;gap:8px">
-        <button onclick="document.body.removeChild(this.closest('.modal-overlay'))" style="flex:1;padding:9px;font-size:13px">Cancelar</button>
-        <button id="ausEnviar" style="flex:1;padding:9px;font-size:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:500">Enviar solicitud</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-
-  // Si es permiso medio día, ocultar fecha fin
-  modal.querySelector('#ausType').addEventListener('change', function() {
-    var isMedio = this.value === 'permiso_medio';
-    modal.querySelector('#ausFinWrap').style.display = isMedio ? 'none' : 'flex';
-    if (isMedio) modal.querySelector('#ausFin').value = modal.querySelector('#ausInicio').value;
-  });
-  modal.querySelector('#ausInicio').addEventListener('change', function() {
-    var tipo = modal.querySelector('#ausType').value;
-    if (tipo === 'permiso_medio' || tipo === 'permiso_dia') {
-      modal.querySelector('#ausFin').value = this.value;
-    }
-  });
-
-  modal.querySelector('#ausEnviar').addEventListener('click', function() {
-    var tipo = modal.querySelector('#ausType').value;
-    var inicio = modal.querySelector('#ausInicio').value;
-    var fin = modal.querySelector('#ausFin').value || inicio;
-    var motivo = modal.querySelector('#ausMotivo').value.trim();
-    if (!inicio) { alert('Selecciona una fecha.'); return; }
-    if (inicio > fin) { alert('La fecha inicio debe ser antes que la fecha fin.'); return; }
-    var tipoLabel = { permiso_medio: 'Permiso medio día', permiso_dia: 'Permiso día completo', vacaciones: 'Vacaciones' }[tipo];
-    sedeRef('ausencias').push({
-      nombre: sol, tipo: tipo, tipoLabel: tipoLabel,
-      inicio: inicio, fin: fin, motivo: motivo,
-      estado: 'pendiente', ts: Date.now()
-    }).then(function() { document.body.removeChild(modal); });
-  });
-};
-
-function renderAusenciasList() {
-  var div = document.getElementById('ausenciasList');
-  if (!div) return;
-  var sol = document.getElementById('ausenciaSolicitante') ? document.getElementById('ausenciaSolicitante').value : '';
-  var entries = Object.entries(window.ausencias || {});
-  var relevantes = sol ? entries.filter(function(e) { return e[1].nombre === sol; }) : entries;
-  if (!relevantes.length) { div.innerHTML = '<p class="empty-list" style="padding:1rem">No hay solicitudes.</p>'; return; }
-  var estadoColors = { pendiente: '#854d0e', aprobado: '#15803d', rechazado: '#dc2626' };
-  var estadoBg = { pendiente: '#fef9c3', aprobado: '#dcfce7', rechazado: '#fee2e2' };
-  var html = '';
-  relevantes.sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);}).forEach(function(e) {
-    var k = e[0], a = e[1];
-    var fechaStr = a.inicio === a.fin ? a.inicio : a.inicio + ' → ' + a.fin;
-    html += '<div class="cambio-card">';
-    html += '<div class="cambio-header">' + (a.tipoLabel || a.tipo) + ' <span class="estado-badge" style="background:' + estadoBg[a.estado] + ';color:' + estadoColors[a.estado] + '">' + a.estado + '</span></div>';
-    html += '<div class="cambio-sub">' + a.nombre + ' · ' + fechaStr + (a.motivo ? ' · ' + a.motivo : '') + '</div>';
-    html += '</div>';
-  });
-  div.innerHTML = html;
-}
-
-function renderAusenciasAdmin() {
-  // Pendientes
-  var divPend = document.getElementById('ausenciasAdminList');
-  if (divPend) {
-    var pendientes = Object.entries(window.ausencias || {}).filter(function(e) { return e[1].estado === 'pendiente'; });
-    if (!pendientes.length) { divPend.innerHTML = '<p class="empty-list">No hay solicitudes pendientes.</p>'; }
-    else {
-      divPend.innerHTML = pendientes.map(function(e) {
-        var k = e[0], a = e[1];
-        var fechaStr = a.inicio === a.fin ? a.inicio : a.inicio + ' → ' + a.fin;
-        return '<div class="cambio-card">' +
-          '<div class="cambio-header">' + a.nombre + ' — ' + (a.tipoLabel || a.tipo) + '</div>' +
-          '<div class="cambio-sub">' + fechaStr + (a.motivo ? ' · ' + a.motivo : '') + '</div>' +
-          '<div class="cambio-actions" style="margin-top:6px">' +
-          '<button class="btn-aceptar" onclick="aprobarAusencia(\'' + k + '\')"><i class="ti ti-check" style="font-size:12px;margin-right:4px"></i>Aprobar</button>' +
-          '<button class="btn-rechazar" onclick="rechazarAusencia(\'' + k + '\')"><i class="ti ti-x" style="font-size:12px;margin-right:4px"></i>Rechazar</button>' +
-          '</div></div>';
-      }).join('');
-    }
-  }
-  // Activas
-  var divAct = document.getElementById('ausenciasActivasList');
-  if (divAct) {
-    var activas = Object.entries(window.ausencias || {}).filter(function(e) { return e[1].estado === 'aprobado'; });
-    if (!activas.length) { divAct.innerHTML = '<p class="empty-list">No hay ausencias activas.</p>'; }
-    else {
-      divAct.innerHTML = activas.map(function(e) {
-        var k = e[0], a = e[1];
-        var fechaStr = a.inicio === a.fin ? a.inicio : a.inicio + ' → ' + a.fin;
-        var tipoColor = a.tipo === 'licencia' ? '#7c3aed' : a.tipo === 'vacaciones' ? '#1d4ed8' : '#15803d';
-        var tipoBg = a.tipo === 'licencia' ? '#ede9fe' : a.tipo === 'vacaciones' ? '#dbeafe' : '#dcfce7';
-        return '<div class="list-item">' +
-          '<div class="list-item-info"><strong>' + a.nombre + '</strong> <span style="font-size:10px;background:' + tipoBg + ';color:' + tipoColor + ';padding:1px 6px;border-radius:4px;margin-left:4px">' + (a.tipoLabel || a.tipo) + '</span>' +
-          '<div class="list-item-sub">' + fechaStr + '</div></div>' +
-          '<button class="del-btn" onclick="eliminarAusencia(\'' + k + '\',\'' + a.nombre + '\',\'' + a.inicio + '\',\'' + a.fin + '\')"><i class="ti ti-trash"></i></button>' +
-          '</div>';
-      }).join('');
-    }
-  }
-}
-
-window.aprobarAusencia = function(key) {
-  var a = (window.ausencias || {})[key];
-  if (!a) return;
-  sedeRef('ausencias/' + key + '/estado').set('aprobado').then(function() {
-    aplicarAusenciaABloques(a.nombre, a.inicio, a.fin);
-  });
-};
-
-window.rechazarAusencia = function(key) {
-  sedeRef('ausencias/' + key + '/estado').set('rechazado');
-};
-
-window.eliminarAusencia = function(key, nombre, inicio, fin) {
-  if (!confirm('¿Eliminar esta ausencia? Los bloques no se restauran automáticamente.')) return;
-  sedeRef('ausencias/' + key).remove();
-};
-
-// Mostrar badge de ausencia en vista personal
-var origRenderResults = window.renderResults;
-window.renderResults = function(nombre) {
-  origRenderResults(nombre);
-  // Agregar badges de ausencia al inicio si hay ausencias aprobadas
-  var ausenciasPersona = Object.values(window.ausencias || {}).filter(function(a) {
-    return a.nombre === nombre && a.estado === 'aprobado';
-  });
-  if (!ausenciasPersona.length) return;
-  var div = document.getElementById('results');
-  var badge = document.createElement('div');
-  badge.style.cssText = 'margin-bottom:10px';
-  var html = '';
-  ausenciasPersona.forEach(function(a) {
-    var tipoColor = a.tipo === 'licencia' ? '#7c3aed' : a.tipo === 'vacaciones' ? '#1d4ed8' : '#15803d';
-    var tipoBg = a.tipo === 'licencia' ? '#ede9fe' : a.tipo === 'vacaciones' ? '#dbeafe' : '#dcfce7';
-    var fechaStr = a.inicio === a.fin ? a.inicio : a.inicio + ' → ' + a.fin;
-    html += '<div style="background:' + tipoBg + ';border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;color:' + tipoColor + ';font-weight:500">' +
-      '<i class="ti ti-calendar-off" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>' +
-      (a.tipoLabel || a.tipo) + ' · ' + fechaStr + '</div>';
-  });
-  badge.innerHTML = html;
-  div.insertBefore(badge, div.firstChild);
-};
-
-// Agregar ausencias al switchTab
-var origSwitchTab = window.switchTab;
-window.switchTab = function(tab) {
-  origSwitchTab(tab);
-  var ausTab = document.getElementById('tab-ausencias');
-  if (ausTab) ausTab.classList.toggle('active', tab === 'ausencias');
-  // Actualizar tab button
-  document.querySelectorAll('.tab').forEach(function(t) {
-    if (t.innerHTML.indexOf('Ausencias') !== -1) t.classList.toggle('active', tab === 'ausencias');
-  });
-  if (tab === 'ausencias') renderAusenciasList();
-};
-
-// Actualizar select de ausencias cuando cambian nombres
-var origUpdateNameSelects2 = window.updateNameSelects;
-window.updateNameSelects = function() {
-  origUpdateNameSelects2();
-  var ausSel = document.getElementById('ausenciaSolicitante');
-  if (ausSel) {
-    var cur = ausSel.value;
-    ausSel.innerHTML = '<option value="">Soy...</option>';
-    nombresEquipo.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n; ausSel.appendChild(o); });
-    if (cur) ausSel.value = cur;
-    var licSel = document.getElementById('licNombre');
-    if (licSel) {
-      var licCur = licSel.value;
-      licSel.innerHTML = '<option value="">Persona</option>';
-      nombresEquipo.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n; licSel.appendChild(o); });
-      if (licCur) licSel.value = licCur;
-    }
-  }
-};
-</script>
