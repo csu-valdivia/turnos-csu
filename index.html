@@ -656,7 +656,24 @@ window.aprAus=function(k){var a=ausencias[k];if(!a)return;sRef('ausencias/'+k+'/
 function renderLlamadosList(){var d=document.getElementById('llamadosList');if(!d)return;var en=Object.entries(llamados);if(!en.length){d.innerHTML='<p class="empty">No hay estados asignados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],l=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+l.nombre+'</strong> — '+l.dia+'<div class="iitem-sub">'+l.area+' · '+l.horario+'</div></div><button class="del-btn" onclick="sRef(\'llamados/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}
 
 // ── PENDIENTES ──
-function verificar(){var def=[];REGLAS.forEach(function(r){r.dias.forEach(function(dia){var cob=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area&&covers(b.horario,r.ini,r.fin);}).length;var cll=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===r.area&&covers(l.horario,r.ini,r.fin);}).length;if(cob+cll<r.min)def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:r.min-cob-cll});});});return def;}
+function minutosEnFranja(items,dia,area,ini,fin){
+  // Calcula cuántos "slots" de minutos están cubiertos en la franja [ini,fin]
+  var iniM=t2m(ini),finM=t2m(fin);
+  var covered=new Array(finM-iniM).fill(false);
+  items.forEach(function(b){
+    if(b.dia!==dia||b.area!==area)return;
+    var p=b.horario.split('–');
+    var bIni=t2m(p[0].trim()),bFin=t2m(p[1].trim());
+    for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++)covered[m-iniM]=true;
+  });
+  return covered.every(function(v){return v;});
+}
+function verificar(){var def=[];REGLAS.forEach(function(r){r.dias.forEach(function(dia){
+  var bDia=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area;});
+  var lDia=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===r.area;});
+  var cubierto=minutosEnFranja(bDia.concat(lDia),dia,r.area,r.ini,r.fin);
+  if(!cubierto)def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:1});
+});});return def;}
 function genPendientes(cb){var def=verificar();sRef('pendientes').once('value',function(s){var todos=s.val()||{};var pr=[];Object.entries(todos).forEach(function(e){if(e[1].auto&&!e[1].cubiertoPor)pr.push(sRef('pendientes/'+e[0]).remove());});Promise.all(pr).then(function(){Promise.all(def.map(function(d){return sRef('pendientes').push({dia:d.dia,area:d.area,horario:d.horario,auto:true});})).then(function(){if(cb)cb(def);});});});}
 function checkAlerta(){if(alertaMostrada)return;var s=Object.values(pendientes).filter(function(p){return!p.cubiertoPor;});if(!s.length)return;alertaMostrada=true;var o=document.createElement('div');o.className='alert-overlay';o.innerHTML='<div class="alert-box"><h3><i class="ti ti-alert-triangle" style="font-size:18px;vertical-align:-3px;margin-right:6px"></i>Turnos sin cubrir</h3><p>Esta semana hay <strong>'+s.length+' turno'+(s.length>1?'s':'')+' pendiente'+(s.length>1?'s':'')+' de cubrir</strong>.<br><br>Si deseas hacer turno extra, regístrate en <strong>Pendientes por cubrir</strong>.</p><div class="alert-btns"><button onclick="this.closest(\'.alert-overlay\').remove()" style="flex:1;padding:9px;font-size:13px">Cerrar</button><button class="btn-ver" onclick="verPend(this)">Ver pendientes</button></div></div>';document.body.appendChild(o);}
 window.verPend=function(btn){btn.closest('.alert-overlay').remove();document.getElementById('pendientesSection').scrollIntoView({behavior:'smooth'});};
