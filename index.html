@@ -45,10 +45,12 @@ button:hover { background: #f0f0f0; }
 .pendientes-title { font-size: 14px; font-weight: 600; color: #dc2626; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
 .pendiente-card { background: #fff; border: 1.5px dashed #f87171; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
 .pendiente-card.cubierto { background: #dc2626; border: none; }
+.pendiente-card.auto { border-color: #f97316; }
 .pendiente-info { font-size: 13px; color: #1a1a1a; font-weight: 500; margin-bottom: 4px; }
 .pendiente-card.cubierto .pendiente-info { color: #fff; }
 .pendiente-sub { font-size: 11px; color: #888; }
 .pendiente-card.cubierto .pendiente-sub { color: #fecaca; }
+.pendiente-badge-auto { font-size: 10px; background: #fff7ed; color: #c2410c; border-radius: 4px; padding: 2px 6px; font-weight: 600; display: inline-block; margin-bottom: 4px; }
 .pendiente-btn { margin-top: 8px; width: 100%; padding: 7px; font-size: 12px; background: #dc2626; color: #fff; border: none; border-radius: 7px; font-weight: 500; }
 .pendiente-btn:hover { background: #b91c1c; }
 .admin-toggle { text-align: center; margin-top: 1.5rem; margin-bottom: 0.5rem; }
@@ -63,6 +65,8 @@ button:hover { background: #f0f0f0; }
 textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: vertical; min-height: 52px; border: 1px solid #ddd; border-radius: 8px; }
 .btn-add { width: 100%; padding: 9px; font-size: 13px; margin-top: 6px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-weight: 500; }
 .btn-add:hover { background: #333; }
+.btn-secondary { width: 100%; padding: 9px; font-size: 13px; margin-top: 6px; background: #fff; color: #1a1a1a; border: 1px solid #ddd; border-radius: 8px; }
+.btn-secondary:hover { background: #f5f5f5; }
 .btn-danger { width: 100%; padding: 9px; font-size: 13px; margin-top: 6px; background: #fff; color: #c0392b; border: 1px solid #e8e8e8; border-radius: 8px; }
 .btn-danger:hover { background: #fff5f5; }
 .items-list { margin-top: 10px; }
@@ -73,6 +77,9 @@ textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: ve
 .del-btn:hover { color: #c0392b; background: none; }
 .empty-list { font-size: 12px; color: #aaa; text-align: center; padding: 8px 0; }
 .saved-ok { font-size: 11px; color: #1D9E75; text-align: center; margin-top: 4px; display: none; }
+.deficit-summary { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 12px; color: #9a3412; }
+.deficit-summary ul { margin-top: 4px; padding-left: 16px; }
+.deficit-summary li { margin-bottom: 2px; }
 .pin-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .pin-box { background: #fff; border-radius: 12px; padding: 1.5rem; width: 280px; text-align: center; }
 .pin-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
@@ -104,7 +111,6 @@ textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: ve
     <h1><i class="ti ti-calendar-week" style="font-size:20px;vertical-align:-3px;margin-right:6px"></i>Turnos equipo clínico</h1>
     <p id="semanaLabel">Cargando...</p>
   </div>
-
   <div class="select-wrap">
     <select id="nameSelect">
       <option value="">— Selecciona tu nombre —</option>
@@ -112,14 +118,11 @@ textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: ve
       <option>Gisa</option><option>Jacqueline</option><option>Javiera</option><option>Marcia</option><option>Nathaly</option>
     </select>
   </div>
-
   <div id="results"></div>
   <div id="pendientesSection"></div>
-
   <div class="admin-toggle">
     <button id="adminBtn"><i class="ti ti-settings" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Admin</button>
   </div>
-
   <div class="admin-panel" id="adminPanel">
 
     <div class="admin-section">
@@ -138,6 +141,8 @@ textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: ve
       <button class="bulk-row-add" id="addRowBtn"><i class="ti ti-plus" style="font-size:12px;vertical-align:-1px"></i> Agregar fila</button>
       <button class="btn-add" id="saveBulkBtn" style="margin-top:10px"><i class="ti ti-device-floppy" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>Guardar todos los turnos</button>
       <div class="saved-ok" id="bulkSaved">✓ Turnos guardados</div>
+      <button class="btn-secondary" id="verificarBtn" style="margin-top:6px"><i class="ti ti-search" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>Verificar cobertura</button>
+      <div id="deficitSummary"></div>
     </div>
 
     <div class="admin-section">
@@ -162,7 +167,7 @@ textarea.admin-txt { width: 100%; font-size: 13px; padding: 8px 10px; resize: ve
     </div>
 
     <div class="admin-section">
-      <p class="admin-section-title"><i class="ti ti-user-plus" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Turno pendiente de cubrir</p>
+      <p class="admin-section-title"><i class="ti ti-user-plus" style="font-size:13px;vertical-align:-1px;margin-right:5px"></i>Turno pendiente manual</p>
       <div class="flex-row">
         <select id="pDia"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
         <select id="pArea"><option value="">Área</option><option>Esterilización</option><option>Rayos</option><option>Pabellón</option><option>Dispensario 1</option><option>Dispensario 2</option></select>
@@ -207,14 +212,95 @@ var dias = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var areas = ['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
 var nombres = ['Barbara','Camila','Cony','Diego','Gisa','Jacqueline','Javiera','Marcia','Nathaly'];
 var TIPO_CONFIG = {
-  pabellon:       { icon:'ti-building-hospital', label:'Pabellón',        cls:'pabellon' },
-  pedido:         { icon:'ti-shopping-cart',     label:'Pedido',          cls:'pedido' },
-  consentimiento: { icon:'ti-file-text',         label:'Consentimientos', cls:'consentimiento' },
-  tarea:          { icon:'ti-clipboard-check',   label:'Tarea especial',  cls:'tarea' }
+  pabellon:       {icon:'ti-building-hospital', label:'Pabellón',        cls:'pabellon'},
+  pedido:         {icon:'ti-shopping-cart',     label:'Pedido',          cls:'pedido'},
+  consentimiento: {icon:'ti-file-text',         label:'Consentimientos', cls:'consentimiento'},
+  tarea:          {icon:'ti-clipboard-check',   label:'Tarea especial',  cls:'tarea'}
 };
 
+// Reglas de cobertura mínima
+// formato: {dia, area, franjaInicio, franjaFin, minPersonas}
+var REGLAS = [
+  // Esterilización
+  {dias:['Lunes','Martes'],                          area:'Esterilización', inicio:'07:45', fin:'10:00', min:2},
+  {dias:['Miércoles','Jueves','Viernes'],             area:'Esterilización', inicio:'07:45', fin:'11:00', min:2},
+  // Rayos
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'], area:'Rayos', inicio:'07:45', fin:'13:00', min:1},
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'], area:'Rayos', inicio:'14:00', fin:'20:00', min:1},
+  {dias:['Sábado'],                                  area:'Rayos', inicio:'09:00', fin:'14:00', min:1},
+  // Dispensario 1
+  {dias:['Miércoles','Jueves'],                      area:'Dispensario 1', inicio:'07:45', fin:'13:00', min:1},
+  {dias:['Lunes','Martes','Miércoles','Jueves'],      area:'Dispensario 1', inicio:'14:00', fin:'20:00', min:1},
+  // Dispensario 2
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'], area:'Dispensario 2', inicio:'07:45', fin:'13:00', min:1},
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'], area:'Dispensario 2', inicio:'14:00', fin:'20:00', min:1},
+  {dias:['Sábado'],                                  area:'Dispensario 2', inicio:'09:00', fin:'14:00', min:1},
+];
+
+function timeToMin(t) {
+  var p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]);
+}
+
+function bloqueCobreRegla(bloque, regla) {
+  // Un bloque cubre una regla si su horario se superpone con la franja de la regla
+  var bp = bloque.horario.split('–');
+  var bIni = timeToMin(bp[0].trim());
+  var bFin = timeToMin(bp[1].trim());
+  var rIni = timeToMin(regla.inicio);
+  var rFin = timeToMin(regla.fin);
+  return bIni <= rIni && bFin >= rFin;
+}
+
+function verificarCobertura() {
+  var deficit = [];
+  REGLAS.forEach(function(regla) {
+    regla.dias.forEach(function(dia) {
+      var cobertura = Object.values(bloques).filter(function(b) {
+        return b.dia === dia && b.area === regla.area && bloqueCobreRegla(b, regla);
+      }).length;
+      if (cobertura < regla.min) {
+        deficit.push({
+          dia: dia,
+          area: regla.area,
+          horario: regla.inicio + '–' + regla.fin,
+          falta: regla.min - cobertura
+        });
+      }
+    });
+  });
+  return deficit;
+}
+
+function generarPendientesAutomaticos(callback) {
+  var deficit = verificarCobertura();
+  // Eliminar pendientes automáticos previos sin cubrir
+  db.ref('pendientes').once('value', function(snap) {
+    var todos = snap.val() || {};
+    var promises = [];
+    Object.entries(todos).forEach(function(e) {
+      var key=e[0], p=e[1];
+      if (p.auto && !p.cubiertoPor) {
+        promises.push(db.ref('pendientes/'+key).remove());
+      }
+    });
+    Promise.all(promises).then(function() {
+      var adds = deficit.map(function(d) {
+        return db.ref('pendientes').push({
+          dia: d.dia,
+          area: d.area,
+          horario: d.horario,
+          auto: true
+        });
+      });
+      Promise.all(adds).then(function() {
+        if (callback) callback(deficit);
+      });
+    });
+  });
+}
+
 var horarios = ['07:45–13:00','07:45–17:00','09:00–14:00','10:00–14:00','10:00–20:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','14:00–20:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
-function pad(n){ return n<10?'0'+n:String(n); }
+function pad(n){return n<10?'0'+n:String(n);}
 for(var h=8;h<20;h++){
   var hs=pad(h)+':00–'+pad(h+1)+':00';
   var hm=pad(h)+':30–'+pad(h+1)+':30';
@@ -224,11 +310,12 @@ for(var h=8;h<20;h++){
 if(horarios.indexOf('19:30–20:00')===-1) horarios.push('19:30–20:00');
 
 var pHorarioSel=document.getElementById('pHorario');
-horarios.forEach(function(h){ var o=document.createElement('option'); o.value=h; o.textContent=h; pHorarioSel.appendChild(o); });
+horarios.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;pHorarioSel.appendChild(o);});
 
 var PIN='2715';
 var bloques={}, tareas={}, pendientes={}, currentNombre='';
 var alertaMostrada=false;
+var dataLoaded={bloques:false,tareas:false,pendientes:false};
 
 function makeOpts(arr,placeholder){
   return '<option value="">'+placeholder+'</option>'+arr.map(function(o){return '<option>'+o+'</option>';}).join('');
@@ -242,14 +329,15 @@ function addBulkRow(){
 document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
 addBulkRow();
 
-function mostrarAlertaPendientes(){
-  if(alertaMostrada) return;
-  var sinCubrir=Object.values(pendientes).filter(function(p){return !p.cubiertoPor;});
-  if(!sinCubrir.length) return;
-  alertaMostrada=true;
-  var overlay=document.createElement('div');
-  overlay.className='alerta-overlay';
-  overlay.innerHTML='<div class="alerta-box"><h3><i class="ti ti-alert-triangle" style="font-size:18px;vertical-align:-3px;margin-right:6px"></i>Turnos sin cubrir</h3><p>Esta semana hay <strong>'+sinCubrir.length+' turno'+(sinCubrir.length>1?'s':'')+' pendiente'+(sinCubrir.length>1?'s':'')+' de cubrir</strong>.<br>Si deseas hacer turno extra, regístrate en la sección <strong>Pendientes por cubrir</strong>.</p><div class="alerta-btns"><button onclick="document.body.removeChild(this.closest(\'.alerta-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cerrar</button><button class="btn-ver" onclick="verPendientes(this)">Ver pendientes</button></div></div>';
+function checkAndShowAlerta() {
+  if (!dataLoaded.pendientes) return;
+  if (alertaMostrada) return;
+  var sinCubrir = Object.values(pendientes).filter(function(p){return !p.cubiertoPor;});
+  if (!sinCubrir.length) return;
+  alertaMostrada = true;
+  var overlay = document.createElement('div');
+  overlay.className = 'alerta-overlay';
+  overlay.innerHTML = '<div class="alerta-box"><h3><i class="ti ti-alert-triangle" style="font-size:18px;vertical-align:-3px;margin-right:6px"></i>Turnos sin cubrir</h3><p>Esta semana hay <strong>'+sinCubrir.length+' turno'+(sinCubrir.length>1?'s':'')+' pendiente'+(sinCubrir.length>1?'s':'')+' de cubrir</strong>.<br><br>Si deseas hacer turno extra, regístrate en la sección <strong>Pendientes por cubrir</strong>.</p><div class="alerta-btns"><button onclick="document.body.removeChild(this.closest(\'.alerta-overlay\'))" style="flex:1;padding:9px;font-size:13px">Cerrar</button><button class="btn-ver" onclick="verPendientes(this)">Ver pendientes</button></div></div>';
   document.body.appendChild(overlay);
 }
 
@@ -268,21 +356,24 @@ db.ref('semana').on('value',function(snap){
 
 db.ref('bloques').on('value',function(snap){
   bloques=snap.val()||{};
+  dataLoaded.bloques=true;
   if(currentNombre) renderResults(currentNombre);
   renderBloquesList();
 });
 
 db.ref('tareas').on('value',function(snap){
   tareas=snap.val()||{};
+  dataLoaded.tareas=true;
   if(currentNombre) renderResults(currentNombre);
   renderTareasList();
 });
 
 db.ref('pendientes').on('value',function(snap){
   pendientes=snap.val()||{};
+  dataLoaded.pendientes=true;
   renderPendientes();
   renderPendientesList();
-  if(!alertaMostrada) mostrarAlertaPendientes();
+  checkAndShowAlerta();
 });
 
 function renderResults(nombre){
@@ -324,7 +415,8 @@ function renderPendientes(){
     if(p.cubiertoPor){
       html+='<div class="pendiente-card cubierto"><div class="pendiente-info"><i class="ti ti-check" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>'+p.dia+' — '+p.area+' — '+p.horario+'</div><div class="pendiente-sub">Cubierto por: <strong style="color:#fff">'+p.cubiertoPor+'</strong></div></div>';
     } else {
-      html+='<div class="pendiente-card"><div class="pendiente-info"><i class="ti ti-calendar-x" style="font-size:13px;vertical-align:-1px;margin-right:4px;color:#dc2626"></i>'+p.dia+' — '+p.area+'</div><div class="pendiente-sub">Horario: '+p.horario+'</div><button class="pendiente-btn" onclick="anotarme(\''+key+'\')"><i class="ti ti-hand-stop" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Puedo cubrir este turno</button></div>';
+      var esAuto = p.auto ? '<div class="pendiente-badge-auto">⚠ Déficit detectado</div>' : '';
+      html+='<div class="pendiente-card'+(p.auto?' auto':'')+'">'+esAuto+'<div class="pendiente-info"><i class="ti ti-calendar-x" style="font-size:13px;vertical-align:-1px;margin-right:4px;color:#dc2626"></i>'+p.dia+' — '+p.area+'</div><div class="pendiente-sub">Horario: '+p.horario+'</div><button class="pendiente-btn" onclick="anotarme(\''+key+'\')"><i class="ti ti-hand-stop" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Puedo cubrir este turno</button></div>';
     }
   });
   html+='</div>';
@@ -381,7 +473,7 @@ function renderPendientesList(){
   if(!entries.length){div.innerHTML='<p class="empty-list">No hay pendientes.</p>';return;}
   div.innerHTML=entries.map(function(e){
     var key=e[0],p=e[1];
-    return '<div class="list-item"><div class="list-item-info">'+p.dia+' — '+p.area+'<div class="list-item-sub">'+p.horario+(p.cubiertoPor?' · Cubierto por: '+p.cubiertoPor:' · Sin cubrir')+'</div></div><button class="del-btn" onclick="deletePendiente(\''+key+'\')"><i class="ti ti-trash"></i></button></div>';
+    return '<div class="list-item"><div class="list-item-info">'+(p.auto?'⚠ ':'')+p.dia+' — '+p.area+'<div class="list-item-sub">'+p.horario+(p.cubiertoPor?' · Cubierto: '+p.cubiertoPor:' · Sin cubrir')+'</div></div><button class="del-btn" onclick="deletePendiente(\''+key+'\')"><i class="ti ti-trash"></i></button></div>';
   }).join('');
 }
 
@@ -436,6 +528,30 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){
     document.getElementById('bulkBody').innerHTML='';
     addBulkRow();
     showSaved('bulkSaved');
+    // Verificar cobertura automáticamente tras guardar
+    setTimeout(function(){
+      generarPendientesAutomaticos(function(deficit){
+        var div=document.getElementById('deficitSummary');
+        if(!deficit.length){
+          div.innerHTML='<div class="deficit-summary" style="background:#f0faf5;border-color:#86efac;color:#15803d">✓ Cobertura completa en todas las áreas.</div>';
+        } else {
+          var items=deficit.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+'): falta '+d.falta+' persona'+(d.falta>1?'s':'')+'</li>';}).join('');
+          div.innerHTML='<div class="deficit-summary"><strong>⚠ Déficit detectado:</strong><ul>'+items+'</ul><p style="margin-top:6px;font-size:11px">Se generaron pendientes automáticamente.</p></div>';
+        }
+      });
+    }, 500);
+  });
+});
+
+document.getElementById('verificarBtn').addEventListener('click',function(){
+  generarPendientesAutomaticos(function(deficit){
+    var div=document.getElementById('deficitSummary');
+    if(!deficit.length){
+      div.innerHTML='<div class="deficit-summary" style="background:#f0faf5;border-color:#86efac;color:#15803d">✓ Cobertura completa en todas las áreas.</div>';
+    } else {
+      var items=deficit.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+'): falta '+d.falta+' persona'+(d.falta>1?'s':'')+'</li>';}).join('');
+      div.innerHTML='<div class="deficit-summary"><strong>⚠ Déficit detectado:</strong><ul>'+items+'</ul><p style="margin-top:6px;font-size:11px">Se generaron pendientes automáticamente.</p></div>';
+    }
   });
 });
 
@@ -457,7 +573,7 @@ document.getElementById('addPendienteBtn').addEventListener('click',function(){
   var area=document.getElementById('pArea').value;
   var horario=document.getElementById('pHorario').value;
   if(!dia||!area||!horario) return;
-  db.ref('pendientes').push({dia:dia,area:area,horario:horario}).then(function(){
+  db.ref('pendientes').push({dia:dia,area:area,horario:horario,auto:false}).then(function(){
     ['pDia','pArea','pHorario'].forEach(function(id){document.getElementById(id).value='';});
     showSaved('pendienteSaved');
     renderPendientesList();
@@ -469,6 +585,7 @@ document.getElementById('clearBtn').addEventListener('click',function(){
   db.ref('bloques').remove();
   db.ref('tareas').remove();
   db.ref('pendientes').remove();
+  document.getElementById('deficitSummary').innerHTML='';
   alertaMostrada=false;
 });
 </script>
