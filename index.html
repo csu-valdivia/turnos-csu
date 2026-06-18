@@ -733,7 +733,37 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){var r
 document.getElementById('verificarBtn').addEventListener('click',function(){genPendientes(function(def){var dv=document.getElementById('deficitDiv');if(!def.length){dv.innerHTML='<div class="def-sum" style="background:#f0faf5;border-color:#86efac;color:#15803d">✓ Cobertura completa.</div>';}else{var it=def.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+'): falta '+d.falta+'</li>';}).join('');dv.innerHTML='<div class="def-sum"><strong>⚠ Déficit:</strong><ul>'+it+'</ul></div>';}});});
 
 // Llamado
-document.getElementById('addLlamadoBtn').addEventListener('click',function(){var n=document.getElementById('llNombre').value,d=document.getElementById('llDia').value,a=document.getElementById('llArea').value,h=document.getElementById('llHorario').value;if(!n||!d||!a||!h){alert('Completa todos los campos.');return;}sRef('llamados').push({nombre:n,dia:d,area:a,horario:h}).then(function(){['llNombre','llDia','llArea','llHorario'].forEach(function(id){document.getElementById(id).value='';});showSaved('llamadoSaved');});});
+document.getElementById('addLlamadoBtn').addEventListener('click',function(){
+  var n=document.getElementById('llNombre').value,d=document.getElementById('llDia').value,a=document.getElementById('llArea').value,h=document.getElementById('llHorario').value;
+  if(!n||!d||!a||!h){alert('Completa todos los campos.');return;}
+  sRef('llamados').push({nombre:n,dia:d,area:a,horario:h}).then(function(){
+    ['llNombre','llDia','llArea','llHorario'].forEach(function(id){document.getElementById(id).value='';});
+    showSaved('llamadoSaved');
+    // Eliminar pendientes automáticos sin cubrir que queden resueltos por este llamado
+    setTimeout(function(){
+      sRef('pendientes').once('value',function(snap){
+        var todos=snap.val()||{};
+        var promises=[];
+        Object.entries(todos).forEach(function(e){
+          var k=e[0],p=e[1];
+          if(p.auto&&!p.cubiertoPor&&p.dia===d&&p.area===a){
+            // Verificar si el llamado cubre esta franja
+            var pIni=t2m(p.horario.split('–')[0].trim());
+            var pFin=t2m(p.horario.split('–')[1].trim());
+            var lIni=t2m(h.split('–')[0].trim());
+            var lFin=t2m(h.split('–')[1].trim());
+            if(lIni<=pIni&&lFin>=pFin){
+              promises.push(sRef('pendientes/'+k).remove());
+            }
+          }
+        });
+        if(promises.length)Promise.all(promises);
+      });
+      // Regenerar pendientes con la nueva cobertura
+      genPendientes(function(){});
+    },300);
+  });
+});
 
 // Tareas
 document.getElementById('addTareaBtn').addEventListener('click',function(){var d=document.getElementById('tDia').value,n=document.getElementById('tNombre').value,t=document.getElementById('tTipo').value,x=document.getElementById('tTexto').value.trim();if(!d||!n||!t||!x)return;sRef('tareas').push({dia:d,nombre:n,tipo:t,texto:x}).then(function(){['tDia','tNombre','tTipo'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('tTexto').value='';showSaved('tareaSaved');});});
