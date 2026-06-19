@@ -984,8 +984,14 @@ function verificar(){
     var bDia=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area;});
     var lDia=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===r.area&&l.horario;});
     var pers=personasEnFranja(bDia,dia,r.area,r.ini,r.fin);
-    var lCov=lDia.filter(function(l){var p=l.horario.split('–');return t2m(p[0].trim())<=t2m(r.ini)&&t2m(p[1].trim())>=t2m(r.fin);});
-    if(pers.length+lCov.length<r.min)def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:r.min-pers.length-lCov.length});
+    var lCov=lDia.filter(function(l){
+      if(!l.horario)return true; // llamado sin horario específico cubre todo
+      var p=l.horario.split('–');
+      return t2m(p[0].trim())<=t2m(r.ini)&&t2m(p[1].trim())>=t2m(r.fin);
+    });
+    // Also check if deficit is already covered by a cubiertoPor pendiente
+    var yaCubierto=Object.values(pendientes).some(function(p){return p.cubiertoPor&&p.dia===dia&&p.area===r.area&&p.auto;});
+    if(!yaCubierto&&pers.length+lCov.length<r.min)def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:r.min-pers.length-lCov.length});
   });});
   return def;
 }
@@ -994,8 +1000,24 @@ function genPendientes(cb){
   var def=verificar();
   sRef('pendientes').once('value',function(s){
     var todos=s.val()||{},pr=[];
-    Object.entries(todos).forEach(function(e){if(e[1].auto&&!e[1].cubiertoPor)pr.push(sRef('pendientes/'+e[0]).remove());});
-    Promise.all(pr).then(function(){Promise.all(def.map(function(d){return sRef('pendientes').push({dia:d.dia,area:d.area,horario:d.horario,auto:true});})).then(function(){if(cb)cb(def);});});
+    // Remove auto pendientes that are not covered AND not already matching a deficit
+    Object.entries(todos).forEach(function(e){
+      var p=e[1];
+      if(!p.auto)return;
+      if(p.cubiertoPor)return; // keep covered ones
+      pr.push(sRef('pendientes/'+e[0]).remove());
+    });
+    Promise.all(pr).then(function(){
+      // Only add new auto pendientes that don't already have a covered entry
+      var toAdd=def.filter(function(d){
+        // Check if there's already a covered pendiente for this slot
+        var yaCubierto=Object.values(todos).some(function(p){
+          return p.cubiertoPor&&p.dia===d.dia&&p.area===d.area&&p.auto;
+        });
+        return !yaCubierto;
+      });
+      Promise.all(toAdd.map(function(d){return sRef('pendientes').push({dia:d.dia,area:d.area,horario:d.horario,auto:true});})).then(function(){if(cb)cb(def);});
+    });
   });
 }
 
