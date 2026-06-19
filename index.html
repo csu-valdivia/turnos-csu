@@ -1261,7 +1261,10 @@ function renderSSList(){
   var d=document.getElementById('ssListEl');if(!d)return;
   var en=Object.entries(sinServicios);
   if(!en.length){d.innerHTML='<p class="empty">Sin bloques sin servicio.</p>';return;}
-  d.innerHTML=en.map(function(e){var k=e[0],ss=e[1];return '<div class="iitem"><div class="iitem-info"><span style="color:#fca5a5">🚫</span> <strong>'+ss.area+'</strong> — '+ss.dia+'<div class="iitem-sub">'+ss.horario+'</div></div><button class="del-btn" onclick="sRef('sinServicios/'+k+'').remove()">🗑</button></div>';}).join('');}
+  var html=en.map(function(e){var k=e[0],ss=e[1];return '<div class="iitem"><div class="iitem-info"><span style="color:#fca5a5">🚫</span> <strong>'+ss.area+'</strong> — '+ss.dia+'<div class="iitem-sub">'+ss.horario+'</div></div><button class="del-btn" id="ssb'+k+'">🗑</button></div>';}).join('');
+  d.innerHTML=html;
+  en.forEach(function(e){var k=e[0];var b=document.getElementById('ssb'+k);if(b)b.onclick=function(){sRef('sinServicios/'+k).remove();};});
+}
 
 document.getElementById('addSSBtn').addEventListener('click',function(){
   var d=document.getElementById('ssD').value,a=document.getElementById('ssA').value,h=document.getElementById('ssH').value;
