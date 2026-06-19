@@ -767,14 +767,24 @@ function renderPanorama(){
         }
       });
       ls.forEach(function(l){cell+='<span class="chip llamado">📞 '+l.nombre+'</span>';});
-      // Show cobertura cruzada destino chips (e.g. Pabellón) even without a bloque
+      // Show cobertura cruzada destino chips
       var cobDestChips=Object.values(coberturas).filter(function(cv){return cv.dia===dia&&cv.destino===area;});
       cobDestChips.forEach(function(cv){
-        // Only show if person doesn't already have a bloque in this area
         var yaEnBloque=ps.some(function(b){return b.nombre===cv.persona;});
         if(!yaEnBloque){
           var horLabel=cv.horario?' '+cv.horario:'';
           cell+='<span class="chip cob-destino">'+cv.persona+horLabel+'</span>';
+        }
+      });
+      // Show extra coverage from pendientes cubiertos
+      var pendCubiertos=Object.values(pendientes).filter(function(p){
+        return p.cubiertoPor&&p.dia===dia&&p.area===area;
+      });
+      pendCubiertos.forEach(function(p){
+        var yaEnBloque=ps.some(function(b){return b.nombre===p.cubiertoPor;});
+        var yaEnLlamado=ls.some(function(l){return l.nombre===p.cubiertoPor;});
+        if(!yaEnBloque&&!yaEnLlamado){
+          cell+='<span class="chip" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)">+'+p.cubiertoPor+'</span>';
         }
       });
       html+='<td>'+cell+'</td>';
@@ -889,12 +899,12 @@ window.formCambio=function(){
   row.appendChild(mkBtn('Cancelar','flex:1;padding:10px;font-size:13px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.2);border-radius:10px',function(){m.remove();}));
   row.appendChild(mkBtn('Enviar','flex:1;padding:10px;font-size:13px;font-weight:700;background:var(--accent2);color:#fff;border:none;border-radius:10px',function(){var con=sel1.value,dia=sel2.value,hor=sel3.value,nota=ta.value.trim();if(!con||!dia||!hor){alert('Completa todos los campos.');return;}
   var diasSem=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  var hoyC=new Date();hoyC.setHours(0,0,0,0);
+  var hoyC=new Date();
   var diaIdx=diasSem.indexOf(dia);
   var diffC=(diaIdx-hoyC.getDay()+7)%7||7;
   var fechaTurno=new Date(hoyC);fechaTurno.setDate(hoyC.getDate()+diffC);
-  var semanaC=new Date(hoyC);semanaC.setDate(hoyC.getDate()+7);
-  if(fechaTurno<semanaC){alert('⚠ Los cambios deben solicitarse con al menos 1 semana de anticipación.');return;}
+  var mas48h=new Date(hoyC.getTime()+48*60*60*1000);
+  if(fechaTurno<mas48h){alert('⚠ Los cambios de turno deben solicitarse con al menos 48 horas de anticipación.');return;}
   sRef('cambios').push({solicitante:sol,con:con,dia:dia,horario:hor,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){m.remove();});}));
   box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
 };
