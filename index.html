@@ -694,6 +694,7 @@ function minutosEnFranja(items,dia,area,ini,fin){
   });
 }
 function verificar(){
+
   var def=[];
 
   REGLAS.forEach(function(r){
@@ -702,53 +703,59 @@ function verificar(){
 
       var personas = Object.values(bloques)
         .filter(function(b){
-          return b.dia===dia && b.area===r.area;
+          return (
+            b.dia===dia &&
+            b.area===r.area &&
+            !b.sinAtencion
+          );
         })
         .concat(
           Object.values(llamados)
           .filter(function(l){
-            return l.dia===dia && l.area===r.area;
+            return (
+              l.dia===dia &&
+              l.area===r.area
+            );
           })
         );
 
-      var ini = t2m(r.ini);
-      var fin = t2m(r.fin);
+      var ini=t2m(r.ini);
+      var fin=t2m(r.fin);
 
-      var coberturaOK = true;
+      var cobertura=true;
 
       for(var m=ini;m<fin;m++){
 
-        var cubriendo = personas.filter(function(p){
+        var cubriendo=personas.filter(function(p){
 
-          var h = p.horario || '';
+          if(!p.horario) return false;
 
-          if(!h.includes('–') && !h.includes('-'))
-            return false;
+          var partes=p.horario.split('–');
 
-          var sep = h.includes('–') ? '–' : '-';
+          if(partes.length!==2) return false;
 
-          var partes = h.split(sep);
+          var pIni=t2m(partes[0].trim());
+          var pFin=t2m(partes[1].trim());
 
-          var pIni = t2m(partes[0].trim());
-          var pFin = t2m(partes[1].trim());
-
-          return m>=pIni && m<pFin;
+          return pIni<=m && pFin>m;
 
         }).length;
 
-        if(cubriendo < r.min){
-          coberturaOK = false;
+        if(cubriendo<r.min){
+          cobertura=false;
           break;
         }
       }
 
-      if(!coberturaOK){
+      if(!cobertura){
+
         def.push({
-          dia: dia,
-          area: r.area,
-          horario: r.ini+'–'+r.fin,
-          falta: r.min
+          dia:dia,
+          area:r.area,
+          horario:r.ini+'–'+r.fin,
+          falta:r.min
         });
+
       }
 
     });
