@@ -360,6 +360,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="saveBulkBtn" style="margin-top:10px">💾 Guardar todos los turnos</button>
             <div class="saved" id="bulkSaved">✓ Guardado</div>
             <button class="btn-sec" id="verificarBtn" style="margin-top:6px">🔍 Verificar cobertura</button>
+            <button class="btn-sec" id="limpiarPendBtn" style="margin-top:4px;color:#fca5a5;border-color:rgba(239,68,68,.25)">🗑 Limpiar pendientes automáticos y reverificar</button>
             <div id="deficitDiv"></div>
           </div>
 
@@ -551,24 +552,28 @@ for(var _h=8;_h<20;_h++){
 // REGLAS: cada bloque de trabajo se verifica independientemente
 // El sistema verifica si hay al menos MIN personas con bloques que se SOLAPAN con la franja
 // No exige cobertura continua - solo que haya personas en ese horario
+// REGLAS: verifica presencia de personas en ventanas de tiempo
+// El sistema usa solapamiento de bloques, no cobertura continua
 var REGLAS=[
-  // Esterilización: mínimo 2 personas por bloque L-Ma mañana
-  {dias:['Lunes','Martes'],area:'Esterilización',ini:'07:45',fin:'10:00',min:2,bloque:true},
-  // Esterilización: mínimo 2 personas por bloque Mi-Vi mañana
-  {dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',ini:'07:45',fin:'11:00',min:2,bloque:true},
-  // Rayos: mínimo 1 persona por bloque mañana L-V
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'07:45',fin:'13:00',min:1,bloque:true},
-  // Rayos: mínimo 1 persona por bloque tarde L-V
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'14:00',fin:'20:00',min:1,bloque:true},
+  // Esterilización L-Ma: mínimo 2 en turno mañana (07:45-10:00)
+  {dias:['Lunes','Martes'],area:'Esterilización',ini:'07:45',fin:'10:00',min:2},
+  // Esterilización Mi-Vi: mínimo 2 en turno mañana (07:45-11:00)
+  {dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',ini:'07:45',fin:'11:00',min:2},
+  // Rayos mañana L-V: mínimo 1 entre 07:45 y 11:00
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'07:45',fin:'11:00',min:1},
+  // Rayos tarde L-V: mínimo 1 entre 14:00 y 17:00
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'14:00',fin:'17:00',min:1},
   // Rayos Sábado
-  {dias:['Sábado'],area:'Rayos',ini:'09:00',fin:'14:00',min:1,bloque:true},
-  // Dispensario 1: mínimo 1 por bloque (puede marcarse Sin Servicio)
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'07:45',fin:'13:00',min:1,bloque:true,opcional:true},
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'14:00',fin:'20:00',min:1,bloque:true,opcional:true},
-  // Dispensario 2: mínimo 1 por bloque (puede marcarse Sin Servicio)
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'07:45',fin:'13:00',min:1,bloque:true,opcional:true},
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'14:00',fin:'20:00',min:1,bloque:true,opcional:true},
-  {dias:['Sábado'],area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1,bloque:true,opcional:true}
+  {dias:['Sábado'],area:'Rayos',ini:'09:00',fin:'14:00',min:1},
+  // Dispensario 1 mañana: mínimo 1 (opcional - puede marcarse Sin Servicio)
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'07:45',fin:'11:00',min:1,opcional:true},
+  // Dispensario 1 tarde: mínimo 1
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'14:00',fin:'17:00',min:1,opcional:true},
+  // Dispensario 2 mañana: mínimo 1
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'07:45',fin:'11:00',min:1,opcional:true},
+  // Dispensario 2 tarde: mínimo 1
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'14:00',fin:'17:00',min:1,opcional:true},
+  {dias:['Sábado'],area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1,opcional:true}
 ];
 
 // ── HELPERS ──
@@ -1024,9 +1029,17 @@ function personasEnFranja(bDia,dia,area,ini,fin){
 // Check if a franja has "Sin Servicio" marker (manual block for Dispensario)
 function franjaEsSinServicio(dia,area,ini,fin){
   var iniM=t2m(ini),finM=t2m(fin);
-  return Object.values(sinServicios).some(function(ss){
+  // Check sinServicios collection
+  if(Object.values(sinServicios).some(function(ss){
     if(ss.dia!==dia||ss.area!==area||!ss.horario)return false;
     var p=ss.horario.split('–');
+    var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
+    return bI<finM&&bF>iniM;
+  }))return true;
+  // Also check bloques with sinServicio flag
+  return Object.values(bloques).some(function(b){
+    if(!b.sinServicio||b.dia!==dia||b.area!==area||!b.horario)return false;
+    var p=b.horario.split('–');
     var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
     return bI<finM&&bF>iniM;
   });
@@ -1184,7 +1197,15 @@ function addBulkRow(){
   var aSel=tr.querySelector('.aSel'),hSel=tr.querySelector('.hSel');
   tr.querySelector('.aSel').addEventListener('change',function(){tr.querySelector('.tSel').style.opacity=this.value==='Esterilización'?'1':'0.3';});
   ck.addEventListener('change',function(){if(this.checked){pSel.disabled=true;pSel.value='';lck.checked=false;}else pSel.disabled=false;});
-  lck.addEventListener('change',function(){if(this.checked){aSel.disabled=true;aSel.value='';hSel.disabled=true;hSel.value='';ck.checked=false;}else{aSel.disabled=false;hSel.disabled=false;}});
+  lck.addEventListener('change',function(){
+    if(this.checked){
+      // S/A mode: area stays selectable, horario stays selectable, just mark as sin servicio
+      ck.checked=false;
+      pSel.disabled=true;pSel.value='';
+    } else {
+      pSel.disabled=false;
+    }
+  });
   document.getElementById('bulkBody').appendChild(tr);
 }
 document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
@@ -1199,7 +1220,10 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){
     var libre=r.querySelector('.lCk')&&r.querySelector('.lCk').checked;
     if(d){
       if(sinAt&&a&&h)nv.push({dia:d,nombre:'__sa__',area:a,horario:h,sinAtencion:true});
-      else if(libre&&n)nv.push({dia:d,nombre:n,area:'Libre',horario:'libre',libre:true});
+      else if(libre&&a&&h){
+        // Sin Servicio - save to sinServicios, not as a bloque
+        sRef('sinServicios').push({dia:d,area:a,horario:h});
+      }
       else if(n&&a&&h){var blq={dia:d,nombre:n,area:a,horario:h};if(turno)blq.turno=turno;nv.push(blq);}
       if(krol&&n)claveBulk.push({n:n,r:krol});
     }
@@ -1272,6 +1296,25 @@ document.getElementById('addSSBtn').addEventListener('click',function(){
   sRef('sinServicios').push({dia:d,area:a,horario:h}).then(function(){
     ['ssD','ssA','ssH'].forEach(function(id){document.getElementById(id).value='';});
     showSaved('ssSaved');
+  });
+});
+
+document.getElementById('limpiarPendBtn').addEventListener('click',function(){
+  if(!confirm('¿Borrar solo los pendientes automáticos y regenerarlos con las reglas actuales?'))return;
+  sRef('pendientes').once('value',function(s){
+    var todos=s.val()||{},pr=[];
+    Object.entries(todos).forEach(function(e){
+      if(e[1].auto)pr.push(sRef('pendientes/'+e[0]).remove());
+    });
+    Promise.all(pr).then(function(){
+      setTimeout(function(){
+        genPendientes(function(def){
+          var dv=document.getElementById('deficitDiv');
+          if(!def.length){dv.innerHTML='<div class="def-sum" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);color:#6ee7b7">✓ Cobertura completa.</div>';}
+          else{var it=def.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+'): falta '+d.falta+'</li>';}).join('');dv.innerHTML='<div class="def-sum"><strong>⚠ Déficit:</strong><ul>'+it+'</ul></div>';}
+        });
+      },500);
+    });
   });
 });
 
