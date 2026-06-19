@@ -603,7 +603,7 @@ function getSub(h,a,turno){
   if(turno==='T2')return 'Recepción · Lavado · Secado';
   return null;
 }
-function getCol(h){return COLACION[h.split('–')[0]]||null;}
+function getCol(h){var ini=h.split('–')[0].trim();return COLACION[ini]||null;}
 function mkOpts(arr,ph){return '<option value="">'+ph+'</option>'+arr.map(function(o){return '<option>'+o+'</option>';}).join('');}
 function showSaved(id){var e=document.getElementById(id);e.style.display='block';setTimeout(function(){e.style.display='none';},2000);}
 function sRef(p){return db.ref('sedes/'+S+'/'+p);}
@@ -784,7 +784,13 @@ function renderMisTurnos(nombre){
     var libreBloque=Object.values(bloques).find(function(b){return b.dia===dia&&b.nombre===nombre&&b.libre;});
     if(libreBloque&&!ps.length){found=true;html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">🏖</span><span class="day-name">'+dia+' — Día libre</span></div><p style="font-size:13px;color:var(--text-dark3);text-align:center;padding:.5rem 0">Sin turnos asignados este día</p></div>';return;}
     if(!ps.length)return;found=true;
-    var cols=new Set();ps.forEach(function(b){var c=getCol(b.horario);if(c)cols.add(c);});
+    // Colación: una sola, basada en la hora de entrada más temprana del día
+    var cols=new Set();
+    var entradas=ps.map(function(b){return t2m(b.horario.split('–')[0].trim());});
+    var minEntrada=Math.min.apply(null,entradas);
+    var minHora=Math.floor(minEntrada/60)+':'+(minEntrada%60===0?'00':minEntrada%60);
+    var colUnica=getCol(minHora+'–dummy');
+    if(colUnica)cols.add(colUnica);
     var tds=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
     var nota=notas[nombre.replace(/\s/g,'_')+'_'+dia];
     var cob=Object.values(coberturas).find(function(cv){return cv.persona===nombre&&cv.dia===dia;});
