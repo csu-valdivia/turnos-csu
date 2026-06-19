@@ -574,7 +574,7 @@ var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var AREAS=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
 var TIPOS={pabellon:{icon:'ti-building-hospital',label:'Pabellón',cls:'pabellon'},pedido:{icon:'ti-shopping-cart',label:'Pedido',cls:'pedido'},consentimiento:{icon:'ti-file-text',label:'Consentimientos',cls:'consentimiento'},tarea:{icon:'ti-clipboard-check',label:'Tarea especial',cls:'tarea'}};
 var SUBAREAS={'07:45':'Empaque · Autoclave · Almacenamiento · Entrega','09:00':'Empaque · Autoclave · Almacenamiento · Entrega','10:00':'Recepción · Lavado · Secado','11:00':'Recepción · Lavado · Secado'};
-var FRANJAS=['07:45–10:00','07:45–11:00','07:45–13:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
+var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
 var REGLAS=[
   {dias:['Lunes','Martes'],area:'Esterilización',ini:'07:45',fin:'10:00',min:2},
   {dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',ini:'07:45',fin:'11:00',min:2},
@@ -587,7 +587,7 @@ var REGLAS=[
   {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'14:00',fin:'20:00',min:1},
   {dias:['Sábado'],area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1}
 ];
-var HORARIOS=['07:45–10:00','07:45–11:00','07:45–13:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
+var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
 
 function pad(n){return n<10?'0'+n:String(n);}
 ['pHorario','llHorario'].forEach(function(id){var s=document.getElementById(id);if(s)HORARIOS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;s.appendChild(o);});});
@@ -641,8 +641,19 @@ function attach(){
   on('ausencias',function(v){ausencias=v;renderAusencias();renderAusenciasAdmin();if(curNombre)renderMisTurnos(curNombre);});
   on('llamados',function(v){llamados=v;renderLlamadosList();renderPanorama();renderEstado();});
   on('encargados',function(v){encargados=v;renderEncargadosList();renderPanorama();});
-  on('coberturas',function(v){coberturas=v;renderCoberturasList();renderPanorama();});
-  on('equipoClave',function(v){equipoClave=Array.isArray(v)?v:(v?Object.values(v):[]);renderPanorama();renderClaveActual();renderMisTurnos(curNombre);});
+  on('coberturas',function(v){
+    coberturas=v;
+    renderCoberturasList();
+    renderPanorama();
+    // Re-check coverage when cobertura cruzada changes
+    setTimeout(function(){genPendientes(function(){});},300);
+  });
+  on('equipoClave',function(v){
+    if(!v){equipoClave=[];}
+    else if(Array.isArray(v)){equipoClave=v.filter(Boolean);}
+    else{equipoClave=Object.values(v).filter(Boolean);}
+    renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);
+  });
   on('correos',function(v){correos=v;});
 }
 
@@ -940,13 +951,30 @@ function renderCoberturasList(){var d=document.getElementById('coberturasList');
 
 function minutosEnFranja(items,dia,area,ini,fin){
   var iniM=t2m(ini),finM=t2m(fin);
+  // Build array of covered minutes, accounting for cobertura cruzada
+  // A person covering Pabellon is removed from their origen during that horario
   var covered=new Array(finM-iniM).fill(false);
   items.forEach(function(b){
     if(b.sinAtencion||b.libre)return;
     if(b.dia!==dia||b.area!==area)return;
+    // Check if this person has cobertura cruzada that overlaps with this area/dia
+    var cob=Object.values(coberturas).find(function(cv){
+      return cv.persona===b.nombre&&cv.dia===dia&&cv.origen===area&&cv.horario;
+    });
     var p=b.horario.split('–');
     var bIni=t2m(p[0].trim()),bFin=t2m(p[1].trim());
-    for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++)covered[m-iniM]=true;
+    if(cob){
+      // Person is away during cob.horario - split their coverage
+      var cp=cob.horario.split('–');
+      var cIni=t2m(cp[0].trim()),cFin=t2m(cp[1].trim());
+      // Cover minutes before and after the cobertura gap
+      for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++){
+        if(m>=cIni&&m<cFin)continue; // skip gap
+        covered[m-iniM]=true;
+      }
+    } else {
+      for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++)covered[m-iniM]=true;
+    }
   });
   return covered.every(function(v){return v;});
 }
@@ -1190,7 +1218,12 @@ document.getElementById('saveClaveBtn').addEventListener('click',function(){
   ].filter(function(e){return e.n;});
   var nombres_sel=entries.map(function(e){return e.n;});
   if(new Set(nombres_sel).size!==nombres_sel.length){alert('No puedes seleccionar la misma persona dos veces.');return;}
-  sRef('equipoClave').set(entries).then(function(){showSaved('claveSaved');});
+  // Remove old and set fresh
+  sRef('equipoClave').remove().then(function(){
+    var updates={};
+    entries.forEach(function(e,i){updates[i]=e;});
+    sRef('equipoClave').set(entries).then(function(){showSaved('claveSaved');});
+  });
 });
 
 document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Seguro que quieres borrar todo en '+S+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
