@@ -887,7 +887,15 @@ window.formCambio=function(){
   box.appendChild(sel1);box.appendChild(sel2);box.appendChild(sel3);box.appendChild(ta);
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px';
   row.appendChild(mkBtn('Cancelar','flex:1;padding:10px;font-size:13px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.2);border-radius:10px',function(){m.remove();}));
-  row.appendChild(mkBtn('Enviar','flex:1;padding:10px;font-size:13px;font-weight:700;background:var(--accent2);color:#fff;border:none;border-radius:10px',function(){var con=sel1.value,dia=sel2.value,hor=sel3.value,nota=ta.value.trim();if(!con||!dia||!hor){alert('Completa todos los campos.');return;}sRef('cambios').push({solicitante:sol,con:con,dia:dia,horario:hor,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){m.remove();});}));
+  row.appendChild(mkBtn('Enviar','flex:1;padding:10px;font-size:13px;font-weight:700;background:var(--accent2);color:#fff;border:none;border-radius:10px',function(){var con=sel1.value,dia=sel2.value,hor=sel3.value,nota=ta.value.trim();if(!con||!dia||!hor){alert('Completa todos los campos.');return;}
+  var diasSem=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var hoyC=new Date();hoyC.setHours(0,0,0,0);
+  var diaIdx=diasSem.indexOf(dia);
+  var diffC=(diaIdx-hoyC.getDay()+7)%7||7;
+  var fechaTurno=new Date(hoyC);fechaTurno.setDate(hoyC.getDate()+diffC);
+  var semanaC=new Date(hoyC);semanaC.setDate(hoyC.getDate()+7);
+  if(fechaTurno<semanaC){alert('⚠ Los cambios deben solicitarse con al menos 1 semana de anticipación.');return;}
+  sRef('cambios').push({solicitante:sol,con:con,dia:dia,horario:hor,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){m.remove();});}));
   box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
 };
 document.getElementById('cambioSol').addEventListener('change',function(){renderCambios();});
@@ -930,7 +938,12 @@ window.formAusencia=function(){
   box.appendChild(tipS);box.appendChild(dRow);box.appendChild(ta);
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px';
   row.appendChild(mkBtn('Cancelar','flex:1;padding:10px;font-size:13px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.2);border-radius:10px',function(){m.remove();}));
-  row.appendChild(mkBtn('Enviar','flex:1;padding:10px;font-size:13px;font-weight:700;background:var(--accent2);color:#fff;border:none;border-radius:10px',function(){var tipo=tipS.value,ini=iniIn.value,fin=finIn.value||ini,mot=ta.value.trim();if(!ini)return;var lab={permiso_medio:'Permiso medio día',permiso_dia:'Permiso día completo',vacaciones:'Vacaciones'}[tipo];sRef('ausencias').push({nombre:sol,tipo:tipo,tipoLabel:lab,inicio:ini,fin:fin,motivo:mot,estado:'pendiente',ts:Date.now()}).then(function(){m.remove();});}));
+  row.appendChild(mkBtn('Enviar','flex:1;padding:10px;font-size:13px;font-weight:700;background:var(--accent2);color:#fff;border:none;border-radius:10px',function(){var tipo=tipS.value,ini=iniIn.value,fin=finIn.value||ini,mot=ta.value.trim();if(!ini)return;
+  var hoyA=new Date();hoyA.setHours(0,0,0,0);
+  var fechaSolA=new Date(ini+'T12:00:00');
+  var semanaA=new Date(hoyA);semanaA.setDate(hoyA.getDate()+7);
+  if(fechaSolA<semanaA){alert('⚠ Los permisos y vacaciones deben solicitarse con al menos 1 semana de anticipación. La fecha '+ini+' no cumple este plazo.');return;}
+  var lab={permiso_medio:'Permiso medio día',permiso_dia:'Permiso día completo',vacaciones:'Vacaciones'}[tipo];sRef('ausencias').push({nombre:sol,tipo:tipo,tipoLabel:lab,inicio:ini,fin:fin,motivo:mot,estado:'pendiente',ts:Date.now()}).then(function(){m.remove();});}));
   box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
 };
 function renderAusencias(){
