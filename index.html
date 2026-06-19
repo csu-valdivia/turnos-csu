@@ -1304,7 +1304,8 @@ document.getElementById('limpiarPendBtn').addEventListener('click',function(){
   sRef('pendientes').once('value',function(s){
     var todos=s.val()||{},pr=[];
     Object.entries(todos).forEach(function(e){
-      if(e[1].auto)pr.push(sRef('pendientes/'+e[0]).remove());
+      // Only remove auto pendientes that are NOT covered by someone
+      if(e[1].auto&&!e[1].cubiertoPor)pr.push(sRef('pendientes/'+e[0]).remove());
     });
     Promise.all(pr).then(function(){
       setTimeout(function(){
