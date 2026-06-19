@@ -408,7 +408,7 @@ textarea.atxt::placeholder{color:rgba(255,255,255,.3)}
 
           <div class="asec">
             <p class="asec-title">Carga masiva de turnos</p>
-            <table class="bulk-tbl"><thead><tr><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead><tbody id="bulkBody"></tbody></table>
+            <table class="bulk-tbl"><thead><tr><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#93c5fd">🔑</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead><tbody id="bulkBody"></tbody></table>
             <button class="bulk-add" id="addRowBtn">+ Agregar fila</button>
             <button class="btn-add" id="saveBulkBtn" style="margin-top:10px">Guardar todos los turnos</button>
             <div class="saved" id="bulkSaved">✓ Guardado</div>
@@ -576,13 +576,17 @@ var TIPOS={pabellon:{icon:'ti-building-hospital',label:'Pabellón',cls:'pabellon
 var SUBAREAS={'07:45':'Empaque · Autoclave · Almacenamiento · Entrega','09:00':'Empaque · Autoclave · Almacenamiento · Entrega','10:00':'Recepción · Lavado · Secado','11:00':'Recepción · Lavado · Secado'};
 var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
 var REGLAS=[
+  // Esterilización: mínimo 2 personas en cualquier turno L-V
   {dias:['Lunes','Martes'],area:'Esterilización',ini:'07:45',fin:'10:00',min:2},
   {dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',ini:'07:45',fin:'11:00',min:2},
+  // Rayos: mínimo 1 persona siempre L-V (mañana y tarde), Sábado mañana
   {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'07:45',fin:'13:00',min:1},
   {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'14:00',fin:'20:00',min:1},
   {dias:['Sábado'],area:'Rayos',ini:'09:00',fin:'14:00',min:1},
-  {dias:['Miércoles','Jueves'],area:'Dispensario 1',ini:'07:45',fin:'13:00',min:1},
-  {dias:['Lunes','Martes','Miércoles','Jueves'],area:'Dispensario 1',ini:'14:00',fin:'20:00',min:1},
+  // Dispensario 1: mínimo 1 siempre
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'07:45',fin:'13:00',min:1},
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'14:00',fin:'20:00',min:1},
+  // Dispensario 2: mínimo 1 siempre
   {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'07:45',fin:'13:00',min:1},
   {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'14:00',fin:'20:00',min:1},
   {dias:['Sábado'],area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1}
@@ -949,42 +953,64 @@ function renderLlamadosList(){var d=document.getElementById('llamadosList');if(!
 function renderEncargadosList(){var d=document.getElementById('encargadosList');if(!d)return;var en=Object.entries(encargados);if(!en.length){d.innerHTML='<p class="empty">Sin encargados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],l=e[1];return '<div class="iitem"><div class="iitem-info">⭐ <strong>'+l.nombre+'</strong> — '+l.dia+'</div><button class="del-btn" onclick="sRef(\'encargados/'+k+'\').remove()">🗑</button></div>';}).join('');}
 function renderCoberturasList(){var d=document.getElementById('coberturasList');if(!d)return;var en=Object.entries(coberturas);if(!en.length){d.innerHTML='<p class="empty">Sin coberturas cruzadas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],cv=e[1];var horStr=cv.horario?' · '+cv.horario:'';return '<div class="iitem"><div class="iitem-info"><strong>'+cv.persona+'</strong> — '+cv.dia+'<div class="iitem-sub"><span style="color:#fca5a5">'+cv.origen+'</span> → <span style="color:#7ec8f7">'+cv.destino+'</span>'+horStr+'</div></div><button class="del-btn" onclick="sRef(\'coberturas/'+k+'\').remove()">🗑</button></div>';}).join('');}
 
-function minutosEnFranja(items,dia,area,ini,fin){
+function personasEnFranja(items,dia,area,ini,fin){
+  // Returns list of distinct persons covering the full franja [ini,fin]
+  // accounting for cobertura cruzada gaps
   var iniM=t2m(ini),finM=t2m(fin);
-  // Build array of covered minutes, accounting for cobertura cruzada
-  // A person covering Pabellon is removed from their origen during that horario
-  var covered=new Array(finM-iniM).fill(false);
+  var personas=[];
+  // Get distinct names in this area/dia
+  var nombres_area=[];
   items.forEach(function(b){
     if(b.sinAtencion||b.libre)return;
     if(b.dia!==dia||b.area!==area)return;
-    // Check if this person has cobertura cruzada that overlaps with this area/dia
-    var cob=Object.values(coberturas).find(function(cv){
-      return cv.persona===b.nombre&&cv.dia===dia&&cv.origen===area&&cv.horario;
-    });
-    var p=b.horario.split('–');
-    var bIni=t2m(p[0].trim()),bFin=t2m(p[1].trim());
-    if(cob){
-      // Person is away during cob.horario - split their coverage
-      var cp=cob.horario.split('–');
-      var cIni=t2m(cp[0].trim()),cFin=t2m(cp[1].trim());
-      // Cover minutes before and after the cobertura gap
-      for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++){
-        if(m>=cIni&&m<cFin)continue; // skip gap
-        covered[m-iniM]=true;
-      }
-    } else {
-      for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++)covered[m-iniM]=true;
-    }
+    if(b.nombre&&nombres_area.indexOf(b.nombre)===-1)nombres_area.push(b.nombre);
   });
-  return covered.every(function(v){return v;});
+  nombres_area.forEach(function(nombre){
+    // Get all blocks for this person in this area/dia
+    var bloquesPers=items.filter(function(b){return !b.sinAtencion&&!b.libre&&b.dia===dia&&b.area===area&&b.nombre===nombre;});
+    // Check cobertura cruzada gap for this person
+    var cob=Object.values(coberturas).find(function(cv){return cv.persona===nombre&&cv.dia===dia&&cv.origen===area&&cv.horario;});
+    // Build coverage array for this person
+    var covered=new Array(finM-iniM).fill(false);
+    bloquesPers.forEach(function(b){
+      var p=b.horario.split('–');
+      var bIni=t2m(p[0].trim()),bFin=t2m(p[1].trim());
+      if(cob){
+        var cp=cob.horario.split('–');
+        var cIni=t2m(cp[0].trim()),cFin=t2m(cp[1].trim());
+        for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++){
+          if(m>=cIni&&m<cFin)continue;
+          covered[m-iniM]=true;
+        }
+      } else {
+        for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++)covered[m-iniM]=true;
+      }
+    });
+    if(covered.every(function(v){return v;}))personas.push(nombre);
+  });
+  return personas;
+}
+
+function minutosEnFranja(items,dia,area,ini,fin){
+  // Legacy: check if franja is covered at all (at least 1 person)
+  return personasEnFranja(items,dia,area,ini,fin).length>0;
 }
 function verificar(){
   var def=[];
   REGLAS.forEach(function(r){r.dias.forEach(function(dia){
     var bDia=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area;});
     var lDia=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===r.area;});
-    if(!minutosEnFranja(bDia.concat(lDia),dia,r.area,r.ini,r.fin))
-      def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:1});
+    var persActivas=personasEnFranja(bDia,dia,r.area,r.ini,r.fin);
+    // Add llamados as extra coverage
+    var lCovers=lDia.filter(function(l){
+      if(!l.horario)return false;
+      var p=l.horario.split('–');
+      return t2m(p[0].trim())<=t2m(r.ini)&&t2m(p[1].trim())>=t2m(r.fin);
+    });
+    var total=persActivas.length+lCovers.length;
+    if(total<r.min){
+      def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:r.min-total});
+    }
   });});
   return def;
 }
@@ -1074,7 +1100,9 @@ function calcCob(){
     t+=r.min;
     var bDia=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area;});
     var lDia=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===r.area;});
-    if(minutosEnFranja(bDia.concat(lDia),dia,r.area,r.ini,r.fin))c+=r.min;
+    var pers=personasEnFranja(bDia,dia,r.area,r.ini,r.fin);
+    var lCovers=lDia.filter(function(l){if(!l.horario)return false;var p=l.horario.split('–');return t2m(p[0].trim())<=t2m(r.ini)&&t2m(p[1].trim())>=t2m(r.fin);});
+    c+=Math.min(pers.length+lCovers.length,r.min);
   });});
   return t?Math.round(c/t*100):100;
 }
@@ -1127,7 +1155,8 @@ document.getElementById('addNombreBtn').addEventListener('click',function(){var 
 
 function addBulkRow(){
   var tr=document.createElement('tr');
-  tr.innerHTML='<td><select>'+mkOpts(DIAS,'Día')+'</select></td><td><select class="pNom">'+mkOpts(nombres,'Persona')+'</select></td><td><select class="areaSel">'+mkOpts(AREAS,'Área')+'</select></td><td><select>'+mkOpts(HORARIOS,'Horario')+'</select></td><td><select class="turnoSel" style="font-size:10px;padding:4px 2px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);border-radius:4px;width:100%"><option value="">-</option><option value="T1">T1</option><option value="T2">T2</option></select></td><td style="text-align:center"><input type="checkbox" class="saCk"></td><td style="text-align:center"><input type="checkbox" class="libreCk"></td><td><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:14px">✕</button></td>';
+  var claveRolOpts='<option value="">-</option><option value="Rol A">A</option><option value="Rol B">B</option><option value="Rol C">C</option>';
+  tr.innerHTML='<td><select>'+mkOpts(DIAS,'Día')+'</select></td><td><select class="pNom">'+mkOpts(nombres,'Persona')+'</select></td><td><select class="areaSel">'+mkOpts(AREAS,'Área')+'</select></td><td><select>'+mkOpts(HORARIOS,'Horario')+'</select></td><td><select class="turnoSel" style="font-size:10px;padding:4px 2px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);border-radius:4px;width:100%"><option value="">-</option><option value="T1">T1</option><option value="T2">T2</option></select></td><td><select class="claveSel" style="font-size:10px;padding:4px 2px;background:rgba(37,99,235,.15);border:1px solid rgba(74,144,217,.3);color:#93c5fd;border-radius:4px;width:100%">'+claveRolOpts+'</select></td><td style="text-align:center"><input type="checkbox" class="saCk"></td><td style="text-align:center"><input type="checkbox" class="libreCk"></td><td><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:14px">✕</button></td>';
   var ck=tr.querySelector('.saCk'),lck=tr.querySelector('.libreCk'),pSel=tr.querySelector('.pNom');
   var areaSel=tr.querySelector('.areaSel'),horSel=tr.querySelectorAll('select')[3],turnoSel=tr.querySelector('.turnoSel');
   // Show turno selector only for Esterilización
@@ -1143,16 +1172,26 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){
     var s=r.querySelectorAll('select');
     var d=s[0].value,n=s[1].value,a=s[2].value,h=s[3].value;
     var turno=r.querySelector('.turnoSel')?r.querySelector('.turnoSel').value:'';
+    var claveRol=r.querySelector('.claveSel')?r.querySelector('.claveSel').value:'';
     var sinAt=r.querySelector('.saCk')&&r.querySelector('.saCk').checked;
     var esLibre=r.querySelector('.libreCk')&&r.querySelector('.libreCk').checked;
     if(d){
       if(sinAt&&a&&h)nv.push({dia:d,nombre:'__sa__',area:a,horario:h,sinAtencion:true});
       else if(esLibre&&n)nv.push({dia:d,nombre:n,area:'Libre',horario:'libre',libre:true});
-      else if(n&&a&&h){var bloque={dia:d,nombre:n,area:a,horario:h};if(turno)bloque.turno=turno;nv.push(bloque);}
+      else if(n&&a&&h){var bloque={dia:d,nombre:n,area:a,horario:h};if(turno)bloque.turno=turno;if(claveRol)bloque.claveRol=claveRol;nv.push(bloque);}
     }
+    // Register clave from bulk
+    if(claveRol&&n)claveBulk.push({n:n,r:claveRol});
   });
+  var claveBulk=[];
   if(!nv.length)return;
   Promise.all(nv.map(function(b){return sRef('bloques').push(b);})).then(function(){
+    // Save clave from bulk if any
+    if(claveBulk.length){
+      var uniqueClave=[];var seen=[];
+      claveBulk.forEach(function(e){if(seen.indexOf(e.n)===-1){seen.push(e.n);uniqueClave.push(e);}});
+      sRef('equipoClave').set(uniqueClave.slice(0,3));
+    }
     document.getElementById('bulkBody').innerHTML='';addBulkRow();showSaved('bulkSaved');
     setTimeout(function(){genPendientes(function(def){var dv=document.getElementById('deficitDiv');if(!def.length){dv.innerHTML='<div class="def-sum" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.2);color:#6ee7b7">✓ Cobertura completa.</div>';}else{var it=def.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+')</li>';}).join('');dv.innerHTML='<div class="def-sum"><strong>⚠ Déficit:</strong><ul>'+it+'</ul></div>';}});},500);
   });
