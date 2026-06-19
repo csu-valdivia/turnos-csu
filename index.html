@@ -89,6 +89,9 @@ button{cursor:pointer;font-family:inherit;transition:all .2s}
 .chip.ok{background:rgba(10,124,92,.12);color:var(--green);border-color:rgba(10,124,92,.25)}
 .chip.llamado{background:rgba(243,156,18,.1);color:#8a6200;border:1px dashed rgba(243,156,18,.5)}
 .chip.sin-atencion{background:rgba(192,57,43,.08);color:var(--red);border:1px dashed rgba(192,57,43,.4);font-style:italic}
+.chip.enc{background:rgba(243,156,18,.12);color:#8a6200;border:1px solid rgba(243,156,18,.4)}
+.chip.cob-origen{background:rgba(192,57,43,.08);color:var(--red);border:2px solid var(--red)}
+.chip.cob-destino{background:rgba(26,92,168,.1);color:var(--accent);border:2px solid var(--accent)}
 .sub{display:block;font-size:9px;color:var(--text3);margin-top:2px;line-height:1.3}
 
 /* Mis turnos */
@@ -386,12 +389,40 @@ textarea.atxt{width:100%;font-size:13px;padding:10px 12px;resize:vertical;min-he
 
         <div class="asec">
           <p class="asec-title"><i class="ti ti-table-import" style="font-size:12px;margin-right:5px"></i>Carga masiva de turnos</p>
-          <table class="bulk-tbl"><thead><tr><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th style="color:var(--red)">S/A</th><th></th></tr></thead><tbody id="bulkBody"></tbody></table>
+          <table class="bulk-tbl"><thead><tr><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th style="color:var(--red)">S/A</th><th style="color:var(--accent)">🏖</th><th></th></tr></thead><tbody id="bulkBody"></tbody></table>
           <button class="bulk-add" id="addRowBtn"><i class="ti ti-plus" style="font-size:12px;vertical-align:-1px"></i> Agregar fila</button>
           <button class="btn-add" id="saveBulkBtn" style="margin-top:10px"><i class="ti ti-device-floppy" style="font-size:13px;margin-right:3px"></i>Guardar todos los turnos</button>
           <div class="saved" id="bulkSaved">✓ Guardado</div>
           <button class="btn-sec" id="verificarBtn" style="margin-top:6px"><i class="ti ti-search" style="font-size:13px;margin-right:3px"></i>Verificar cobertura</button>
           <div id="deficitDiv"></div>
+        </div>
+
+        <div class="asec">
+          <p class="asec-title"><i class="ti ti-star" style="font-size:12px;margin-right:5px"></i>Enfermero a cargo del turno</p>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:8px">Aparece destacado en el panorama con estrella dorada.</p>
+          <div class="frow">
+            <select id="encNombre"><option value="">Persona</option></select>
+            <select id="encDia"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
+          </div>
+          <button class="btn-add" id="addEncBtn"><i class="ti ti-plus" style="font-size:13px;margin-right:3px"></i>Asignar</button>
+          <div class="saved" id="encSaved">✓ Asignado</div>
+          <div class="ilist" id="encargadosList"></div>
+        </div>
+
+        <div class="asec">
+          <p class="asec-title"><i class="ti ti-arrows-transfer-up" style="font-size:12px;margin-right:5px"></i>Cobertura cruzada</p>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:8px">Persona que deja su área para cubrir otro servicio. Rojo en origen, azul en destino.</p>
+          <div class="frow">
+            <select id="cobPersona"><option value="">Persona</option></select>
+            <select id="cobDia"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
+          </div>
+          <div class="frow">
+            <select id="cobOrigen"><option value="">Área origen (deja)</option><option>Esterilización</option><option>Rayos</option><option>Pabellón</option><option>Dispensario 1</option><option>Dispensario 2</option></select>
+            <select id="cobDestino"><option value="">Área destino (cubre)</option><option>Esterilización</option><option>Rayos</option><option>Pabellón</option><option>Dispensario 1</option><option>Dispensario 2</option></select>
+          </div>
+          <button class="btn-add" id="addCobBtn"><i class="ti ti-plus" style="font-size:13px;margin-right:3px"></i>Registrar</button>
+          <div class="saved" id="cobSaved">✓ Registrado</div>
+          <div class="ilist" id="coberturasList"></div>
         </div>
 
         <div class="asec">
@@ -527,7 +558,7 @@ function fechasRango(a,b){var r=[],c=new Date(a+'T12:00:00'),e=new Date(b+'T12:0
 function diaDeDate(s){return['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][new Date(s+'T12:00:00').getDay()];}
 function mkOverlay(){var o=document.createElement('div');o.className='overlay';return o;}
 
-var S='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={};
+var S='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
 
@@ -548,13 +579,15 @@ function attach(){
   on('cambios',function(v){cambios=v;renderCambios();renderCambiosAdmin();});
   on('ausencias',function(v){ausencias=v;renderAusencias();renderAusenciasAdmin();if(curNombre)renderMisTurnos(curNombre);});
   on('llamados',function(v){llamados=v;renderLlamadosList();renderPanorama();renderEstado();});
+  on('encargados',function(v){encargados=v;renderEncargadosList();renderPanorama();});
+  on('coberturas',function(v){coberturas=v;renderCoberturasList();renderPanorama();});
   on('correos',function(v){correos=v;});
 }
 
 // SEDE
 window.setSede=function(sede){
   S=sede;alertaMostrada=false;adminUnlocked=false;
-  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};curNombre='';
+  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};curNombre='';
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -562,14 +595,15 @@ window.setSede=function(sede){
   document.getElementById('results').innerHTML='';
   document.getElementById('semanaTxt').value='';
   attach();
-  // Check if user registered email
   var stored=localStorage.getItem('tcsu_email_'+sede);
-  if(stored){
+  if(stored && stored!=='pending'){
     document.getElementById('emailPromptView').style.display='none';
     document.getElementById('appContent').style.display='block';
   } else {
+    // Wait for nombres to load then show email prompt
     document.getElementById('emailPromptView').style.display='block';
     document.getElementById('appContent').style.display='none';
+    localStorage.setItem('tcsu_email_'+sede,'pending');
   }
 };
 window.changeSede=function(){detach();S='';adminUnlocked=false;document.getElementById('adminPanel').classList.remove('open');document.getElementById('mainView').style.display='none';document.getElementById('sedeView').style.display='block';document.getElementById('semanaTxt').value='';};
@@ -578,8 +612,8 @@ window.changeSede=function(){detach();S='';adminUnlocked=false;document.getEleme
 document.getElementById('saveEmailBtn').addEventListener('click',function(){
   var n=document.getElementById('emailNombreSelect').value;
   var e=document.getElementById('emailInput').value.trim();
-  if(!n){alert('Selecciona tu nombre.');return;}
-  if(!e||!e.includes('@')){alert('Ingresa un correo válido.');return;}
+  if(!n){alert('Selecciona tu nombre primero.');return;}
+  if(!e||!e.includes('@')){alert('Ingresa un correo válido (ej: nombre@uss.cl).');return;}
   localStorage.setItem('tcsu_email_'+S,JSON.stringify({nombre:n,email:e}));
   sRef('correos/'+n.replace(/\s/g,'_')).set(e);
   document.getElementById('emailPromptView').style.display='none';
@@ -592,13 +626,19 @@ window.skipEmail=function(){
 };
 
 function updateSelects(){
-  var maps={'nameSelect':'— Selecciona tu nombre —','estadoSelect':'— Selecciona tu nombre —','cambioSol':'Soy...','ausenciaSol':'Soy...','tNombre':'Persona','llNombre':'Persona','licNombre':'Persona','emailNombreSelect':'— Selecciona tu nombre —'};
+  var maps={'nameSelect':'— Selecciona tu nombre —','estadoSelect':'— Selecciona tu nombre —','cambioSol':'Soy...','ausenciaSol':'Soy...','tNombre':'Persona','llNombre':'Persona','licNombre':'Persona','emailNombreSelect':'— Selecciona tu nombre —','encNombre':'Persona','cobPersona':'Persona'};
   Object.keys(maps).forEach(function(id){
     var s=document.getElementById(id);if(!s)return;
     var cur=s.value;s.innerHTML='<option value="">'+maps[id]+'</option>';
     nombres.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;s.appendChild(o);});
     if(cur)s.value=cur;
   });
+  // Show email prompt if pending
+  var stored=localStorage.getItem('tcsu_email_'+S);
+  if(stored==='pending'&&nombres.length){
+    document.getElementById('emailPromptView').style.display='block';
+    document.getElementById('appContent').style.display='none';
+  }
 }
 
 // TABS
@@ -639,7 +679,22 @@ function renderPanorama(){
       var cell='';
       ps.forEach(function(b){
         if(b.sinAtencion){cell+='<span class="chip sin-atencion"><i class="ti ti-ban" style="font-size:9px;margin-right:2px"></i>Sin atención</span>';}
-        else{var sb=getSub(b.horario,area);var pr=asistencia[b.nombre?b.nombre.replace(/\s/g,'_'):''];cell+='<span class="chip'+(pr?' ok':'')+'">'+b.nombre+'</span>';if(sb)cell+='<span class="sub">'+sb+'</span>';}
+        else if(b.libre){/* skip libre in panorama */}
+        else{
+          var sb=getSub(b.horario,area);
+          var pr=asistencia[b.nombre?b.nombre.replace(/\s/g,'_'):''];
+          var isEnc=Object.values(encargados).some(function(e){return e.nombre===b.nombre&&e.dia===dia;});
+          var cob=Object.values(coberturas).find(function(cv){return cv.persona===b.nombre&&cv.dia===dia;});
+          var chipCls='chip'+(pr?' ok':'');
+          var prefix='';
+          if(isEnc){chipCls='chip enc';prefix='⭐ ';}
+          if(cob){
+            if(cob.origen===area)chipCls='chip cob-origen';
+            if(cob.destino===area)chipCls='chip cob-destino';
+          }
+          cell+='<span class="'+chipCls+'">'+prefix+b.nombre+'</span>';
+          if(sb)cell+='<span class="sub">'+sb+'</span>';
+        }
       });
       ls.forEach(function(l){cell+='<span class="chip llamado"><i class="ti ti-phone-call" style="font-size:9px;margin-right:2px"></i>'+l.nombre+'</span>';});
       html+='<td>'+cell+'</td>';
@@ -666,6 +721,9 @@ function renderMisTurnos(nombre){
   var btnLl=reg?'<button class="btn-ll ok" disabled><i class="ti ti-check" style="font-size:13px;margin-right:4px"></i>Llegué a las '+reg+'</button>':'<button class="btn-ll" onclick="marcarLl(\''+nombre+'\')"><i class="ti ti-map-pin" style="font-size:13px;margin-right:4px"></i>Marcar mi llegada</button>';
   DIAS.forEach(function(dia){
     var ps=Object.values(bloques).filter(function(b){return b.dia===dia&&b.nombre===nombre&&!b.sinAtencion;});
+    // Check if libre day
+    var libreBloque=Object.values(bloques).find(function(b){return b.dia===dia&&b.nombre===nombre&&b.libre;});
+    if(libreBloque&&!ps.length){found=true;html+='<div class="day-card"><div class="day-hdr"><i class="ti ti-calendar-event" style="font-size:16px;color:var(--text3)"></i><span class="day-name">'+dia+'</span></div><div style="text-align:center;padding:1rem 0"><span style="font-size:28px">🏖</span><p style="font-size:13px;font-weight:600;color:var(--accent);margin-top:6px">Día libre</p></div></div>';return;}
     if(!ps.length)return;found=true;
     var cols=new Set();ps.forEach(function(b){var c=getCol(b.horario);if(c)cols.add(c);});
     var tds=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
@@ -775,6 +833,10 @@ window.aprAus=function(k){var a=ausencias[k];if(!a)return;sRef('ausencias/'+k+'/
 
 // LLAMADOS
 function renderLlamadosList(){var d=document.getElementById('llamadosList');if(!d)return;var en=Object.entries(llamados);if(!en.length){d.innerHTML='<p class="empty">Sin estados asignados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],l=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+l.nombre+'</strong> — '+l.dia+'<div class="iitem-sub">'+l.area+' · '+l.horario+'</div></div><button class="del-btn" onclick="sRef(\'llamados/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}
+
+function renderEncargadosList(){var d=document.getElementById('encargadosList');if(!d)return;var en=Object.entries(encargados);if(!en.length){d.innerHTML='<p class="empty">Sin encargados asignados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],l=e[1];return '<div class="iitem"><div class="iitem-info"><strong>⭐ '+l.nombre+'</strong> — '+l.dia+'</div><button class="del-btn" onclick="sRef(\'encargados/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}
+
+function renderCoberturasList(){var d=document.getElementById('coberturasList');if(!d)return;var en=Object.entries(coberturas);if(!en.length){d.innerHTML='<p class="empty">Sin coberturas cruzadas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],cv=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+cv.persona+'</strong> — '+cv.dia+'<div class="iitem-sub"><span style="color:var(--red)">'+cv.origen+'</span> → <span style="color:var(--accent)">'+cv.destino+'</span></div></div><button class="del-btn" onclick="sRef(\'coberturas/'+k+'\').remove()"><i class="ti ti-trash"></i></button></div>';}).join('');}
 
 // PENDIENTES
 function minutosEnFranja(items,dia,area,ini,fin){
@@ -931,7 +993,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   o.querySelector('#pinOk').addEventListener('click',function(){
     if(o.querySelector('#pinIn').value===PIN){
       o.remove();p.classList.add('open');adminUnlocked=true;
-      renderPendientes();renderPendientesList();renderCambiosAdmin();renderAusenciasAdmin();renderLlamadosList();
+      renderPendientes();renderPendientesList();renderCambiosAdmin();renderAusenciasAdmin();renderLlamadosList();renderEncargadosList();renderCoberturasList();
       document.getElementById('bulkBody').innerHTML='';addBulkRow();
     } else {o.querySelector('#pinErr').style.display='block';o.querySelector('#pinIn').value='';}
   });
@@ -946,10 +1008,14 @@ document.getElementById('addNombreBtn').addEventListener('click',function(){var 
 // Bulk
 function addBulkRow(){
   var tr=document.createElement('tr');
-  tr.innerHTML='<td><select>'+mkOpts(DIAS,'Día')+'</select></td><td><select class="pNom">'+mkOpts(nombres,'Persona')+'</select></td><td><select>'+mkOpts(AREAS,'Área')+'</select></td><td><select>'+mkOpts(HORARIOS,'Horario')+'</select></td><td style="text-align:center"><input type="checkbox" class="saCk" style="width:16px;height:16px;cursor:pointer;accent-color:var(--red)"></td><td><button class="del-btn" onclick="this.closest(\'tr\').remove()" style="color:var(--text3)"><i class="ti ti-x"></i></button></td>';
+  tr.innerHTML='<td><select>'+mkOpts(DIAS,'Día')+'</select></td><td><select class="pNom">'+mkOpts(nombres,'Persona')+'</select></td><td><select>'+mkOpts(AREAS,'Área')+'</select></td><td><select>'+mkOpts(HORARIOS,'Horario')+'</select></td><td style="text-align:center"><input type="checkbox" class="saCk" title="Sin atención" style="width:16px;height:16px;cursor:pointer;accent-color:var(--red)"></td><td style="text-align:center"><input type="checkbox" class="libreCk" title="Día libre" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)"></td><td><button class="del-btn" onclick="this.closest(\'tr\').remove()" style="color:var(--text3)"><i class="ti ti-x"></i></button></td>';
   var ck=tr.querySelector('.saCk');
+  var lck=tr.querySelector('.libreCk');
   var pSel=tr.querySelector('.pNom');
-  ck.addEventListener('change',function(){pSel.disabled=this.checked;if(this.checked)pSel.value='';});
+  var areaSel=tr.querySelectorAll('select')[2];
+  var horSel=tr.querySelectorAll('select')[3];
+  ck.addEventListener('change',function(){if(this.checked){pSel.disabled=true;pSel.value='';lck.checked=false;}else{pSel.disabled=false;}});
+  lck.addEventListener('change',function(){if(this.checked){areaSel.disabled=true;areaSel.value='';horSel.disabled=true;horSel.value='';ck.checked=false;}else{areaSel.disabled=false;horSel.disabled=false;}});
   document.getElementById('bulkBody').appendChild(tr);
 }
 document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
@@ -958,12 +1024,17 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){
   rows.forEach(function(r){
     var s=r.querySelectorAll('select');
     var ck=r.querySelector('.saCk');
-    var d=s[0].value,a=s[2].value,h=s[3].value;
-    var sinAt=ck&&ck.checked;
+    var lck=r.querySelector('.libreCk');
+    var d=s[0].value;
     var n=s[1].value;
-    if(d&&a&&h){
-      if(sinAt)nv.push({dia:d,nombre:'__sa__',area:a,horario:h,sinAtencion:true});
-      else if(n)nv.push({dia:d,nombre:n,area:a,horario:h});
+    var a=s[2].value;
+    var h=s[3].value;
+    var sinAt=ck&&ck.checked;
+    var esLibre=lck&&lck.checked;
+    if(d){
+      if(sinAt&&a&&h)nv.push({dia:d,nombre:'__sa__',area:a,horario:h,sinAtencion:true});
+      else if(esLibre&&n)nv.push({dia:d,nombre:n,area:'Libre',horario:'libre',libre:true});
+      else if(n&&a&&h)nv.push({dia:d,nombre:n,area:a,horario:h});
     }
   });
   if(!nv.length)return;
@@ -981,6 +1052,28 @@ document.getElementById('verificarBtn').addEventListener('click',function(){genP
   if(!def.length){dv.innerHTML='<div class="def-sum" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)">✓ Cobertura completa.</div>';}
   else{var it=def.map(function(d){return '<li>'+d.dia+' — '+d.area+' ('+d.horario+')</li>';}).join('');dv.innerHTML='<div class="def-sum"><strong>⚠ Déficit:</strong><ul>'+it+'</ul></div>';}
 });});
+
+// Encargado
+document.getElementById('addEncBtn').addEventListener('click',function(){
+  var n=document.getElementById('encNombre').value,d=document.getElementById('encDia').value;
+  if(!n||!d){alert('Selecciona persona y día.');return;}
+  sRef('encargados').push({nombre:n,dia:d}).then(function(){
+    document.getElementById('encNombre').value='';document.getElementById('encDia').value='';
+    showSaved('encSaved');
+  });
+});
+
+// Cobertura cruzada
+document.getElementById('addCobBtn').addEventListener('click',function(){
+  var p=document.getElementById('cobPersona').value,d=document.getElementById('cobDia').value;
+  var o=document.getElementById('cobOrigen').value,dst=document.getElementById('cobDestino').value;
+  if(!p||!d||!o||!dst){alert('Completa todos los campos.');return;}
+  if(o===dst){alert('El área origen y destino no pueden ser iguales.');return;}
+  sRef('coberturas').push({persona:p,dia:d,origen:o,destino:dst}).then(function(){
+    ['cobPersona','cobDia','cobOrigen','cobDestino'].forEach(function(id){document.getElementById(id).value='';});
+    showSaved('cobSaved');
+  });
+});
 
 // Llamado
 document.getElementById('addLlamadoBtn').addEventListener('click',function(){
@@ -1017,7 +1110,7 @@ window.marcarBloqueComoSA=function(k){var b=bloques[k];if(!b)return;sRef('bloque
 window.restaurarBloque=function(k){sRef('bloques/'+k+'/sinAtencion').remove().then(function(){sRef('bloques/'+k+'/nombreOriginal').remove();setTimeout(function(){genPendientes(function(){});},300);});};
 
 // Clear
-document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Seguro que quieres borrar todo en '+S+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
+document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Seguro que quieres borrar todo en '+S+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
 </script>
 </body>
 </html>
