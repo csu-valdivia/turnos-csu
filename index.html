@@ -446,6 +446,19 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           </div>
 
           <div class="asec">
+            <p class="asec-title">🚫 Sin servicio — Dispensario</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Marca un bloque de Dispensario como "Sin servicio" ese día. No genera déficit.</p>
+            <div class="frow">
+              <select id="ssD"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
+              <select id="ssA"><option value="">Área</option><option>Dispensario 1</option><option>Dispensario 2</option></select>
+            </div>
+            <div class="frow"><select id="ssH"><option value="">Horario</option></select></div>
+            <button class="btn-add" id="addSSBtn">🚫 Marcar Sin servicio</button>
+            <div class="saved" id="ssSaved">✓ Marcado</div>
+            <div class="ilist" id="ssListEl"></div>
+          </div>
+
+          <div class="asec">
             <p class="asec-title">⚠ Turno pendiente manual</p>
             <div class="frow">
               <select id="pD"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
@@ -535,17 +548,27 @@ for(var _h=8;_h<20;_h++){
 // Add common multi-hour
 ['08:00–13:00','09:00–13:00','10:00–13:00','10:00–14:00','11:00–14:00','13:00–17:00','14:00–17:00','14:00–18:00','14:00–20:00','15:00–20:00','16:00–20:00','17:00–20:00'].forEach(function(h){if(COB_HOR.indexOf(h)===-1)COB_HOR.push(h);});
 
+// REGLAS: cada bloque de trabajo se verifica independientemente
+// El sistema verifica si hay al menos MIN personas con bloques que se SOLAPAN con la franja
+// No exige cobertura continua - solo que haya personas en ese horario
 var REGLAS=[
-  {dias:['Lunes','Martes'],area:'Esterilización',ini:'07:45',fin:'10:00',min:2},
-  {dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',ini:'07:45',fin:'11:00',min:2},
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'07:45',fin:'13:00',min:1},
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'14:00',fin:'20:00',min:1},
-  {dias:['Sábado'],area:'Rayos',ini:'09:00',fin:'14:00',min:1},
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'07:45',fin:'13:00',min:1},
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'14:00',fin:'20:00',min:1},
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'07:45',fin:'13:00',min:1},
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'14:00',fin:'20:00',min:1},
-  {dias:['Sábado'],area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1}
+  // Esterilización: mínimo 2 personas por bloque L-Ma mañana
+  {dias:['Lunes','Martes'],area:'Esterilización',ini:'07:45',fin:'10:00',min:2,bloque:true},
+  // Esterilización: mínimo 2 personas por bloque Mi-Vi mañana
+  {dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',ini:'07:45',fin:'11:00',min:2,bloque:true},
+  // Rayos: mínimo 1 persona por bloque mañana L-V
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'07:45',fin:'13:00',min:1,bloque:true},
+  // Rayos: mínimo 1 persona por bloque tarde L-V
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'14:00',fin:'20:00',min:1,bloque:true},
+  // Rayos Sábado
+  {dias:['Sábado'],area:'Rayos',ini:'09:00',fin:'14:00',min:1,bloque:true},
+  // Dispensario 1: mínimo 1 por bloque (puede marcarse Sin Servicio)
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'07:45',fin:'13:00',min:1,bloque:true,opcional:true},
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'14:00',fin:'20:00',min:1,bloque:true,opcional:true},
+  // Dispensario 2: mínimo 1 por bloque (puede marcarse Sin Servicio)
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'07:45',fin:'13:00',min:1,bloque:true,opcional:true},
+  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'14:00',fin:'20:00',min:1,bloque:true,opcional:true},
+  {dias:['Sábado'],area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1,bloque:true,opcional:true}
 ];
 
 // ── HELPERS ──
@@ -568,7 +591,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var S='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[];
+var S='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
 
@@ -591,6 +614,7 @@ function attach(){
   on('llamados',function(v){llamados=v;renderLlList();renderPanorama();renderEstado();});
   on('encargados',function(v){encargados=v;renderEncList();renderPanorama();});
   on('coberturas',function(v){coberturas=v;renderCobList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
+  on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('correos',function(v){correos=v;});
 }
@@ -598,7 +622,7 @@ function attach(){
 // ── SEDE ──
 window.setSede=function(sede){
   S=sede;alertaMostrada=false;adminUnlocked=false;
-  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];curNombre='';
+  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave={};sinServicios={};curNombre='';
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -707,6 +731,14 @@ function renderPanorama(){
         var ya=ps.some(function(b){return b.nombre===p.cubiertoPor;})||ls.some(function(l){return l.nombre===p.cubiertoPor;});
         if(!ya)cell+='<span class="chip chip-extra">+'+p.cubiertoPor+'</span>';
       });
+      // Add Sin Servicio chips
+      Object.values(sinServicios).filter(function(ss){
+        if(ss.dia!==dia||ss.area!==area||!ss.horario)return false;
+        var p=ss.horario.split('–');
+        var sI=t2m(p[0].trim()),sF=t2m(p[1].trim());
+        var fp=f.split('–');var fI=t2m(fp[0].trim()),fF=t2m(fp[1].trim());
+        return sI<fF&&sF>fI;
+      }).forEach(function(){cell+='<span class="chip chip-sa">🚫 Sin servicio</span>';});
       if(!cell)html+='<td class="empty"></td>';
       else html+='<td>'+cell+'</td>';
     });
@@ -962,36 +994,67 @@ function renderClaveActual(){
 
 // ── COBERTURA POR PERSONAS ──
 function personasEnFranja(bDia,dia,area,ini,fin){
+  // Block-based check: count distinct persons whose blocks OVERLAP with the franja
+  // A block overlaps if it starts before fin AND ends after ini
   var iniM=t2m(ini),finM=t2m(fin);
-  var nombres_area=[];
-  bDia.forEach(function(b){if(!b.sinAtencion&&!b.libre&&b.nombre&&nombres_area.indexOf(b.nombre)===-1)nombres_area.push(b.nombre);});
-  return nombres_area.filter(function(nombre){
-    var bloqP=bDia.filter(function(b){return !b.sinAtencion&&!b.libre&&b.nombre===nombre;});
-    var cob=Object.values(coberturas).find(function(cv){return cv.persona===nombre&&cv.dia===dia&&cv.origen===area&&cv.horario;});
-    var covered=new Array(finM-iniM).fill(false);
-    bloqP.forEach(function(b){
-      var p=b.horario.split('–');var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
-      if(cob){var cp=cob.horario.split('–');var cI=t2m(cp[0].trim()),cF=t2m(cp[1].trim());for(var m=Math.max(bI,iniM);m<Math.min(bF,finM);m++){if(m>=cI&&m<cF)continue;covered[m-iniM]=true;}}
-      else{for(var m=Math.max(bI,iniM);m<Math.min(bF,finM);m++)covered[m-iniM]=true;}
+  var contados=[];
+  bDia.forEach(function(b){
+    if(b.sinAtencion||b.libre||!b.nombre||!b.horario)return;
+    if(b.nombre==='__sa__')return;
+    var p=b.horario.split('–');
+    var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
+    // Check overlap: block starts before franja ends AND block ends after franja starts
+    if(bI>=finM||bF<=iniM)return;
+    // Check if person has cobertura cruzada that removes them during this overlap
+    var cob=Object.values(coberturas).find(function(cv){
+      return cv.persona===b.nombre&&cv.dia===dia&&cv.origen===area&&cv.horario;
     });
-    return covered.every(function(v){return v;});
+    if(cob){
+      var cp=cob.horario.split('–');
+      var cI=t2m(cp[0].trim()),cF=t2m(cp[1].trim());
+      // If cobertura covers the entire overlap, person is away
+      var overlapIni=Math.max(bI,iniM),overlapFin=Math.min(bF,finM);
+      if(cI<=overlapIni&&cF>=overlapFin)return; // fully away
+    }
+    if(contados.indexOf(b.nombre)===-1)contados.push(b.nombre);
+  });
+  return contados;
+}
+
+// Check if a franja has "Sin Servicio" marker (manual block for Dispensario)
+function franjaEsSinServicio(dia,area,ini,fin){
+  var iniM=t2m(ini),finM=t2m(fin);
+  return Object.values(sinServicios).some(function(ss){
+    if(ss.dia!==dia||ss.area!==area||!ss.horario)return false;
+    var p=ss.horario.split('–');
+    var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
+    return bI<finM&&bF>iniM;
   });
 }
 
 function verificar(){
   var def=[];
   REGLAS.forEach(function(r){r.dias.forEach(function(dia){
+    // Skip if marked as Sin Servicio (Dispensario manual block)
+    if(r.opcional&&franjaEsSinServicio(dia,r.area,r.ini,r.fin))return;
+
     var bDia=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area;});
-    var lDia=Object.values(llamados).filter(function(l){return l.dia===dia&&l.area===r.area&&l.horario;});
+
+    // Llamados: any llamado in this area/dia counts as coverage - no deficit
+    var hayLlamado=Object.values(llamados).some(function(l){return l.dia===dia&&l.area===r.area;});
+    if(hayLlamado)return; // llamado covers completely, no deficit
+
     var pers=personasEnFranja(bDia,dia,r.area,r.ini,r.fin);
-    var lCov=lDia.filter(function(l){
-      if(!l.horario)return true; // llamado sin horario específico cubre todo
-      var p=l.horario.split('–');
-      return t2m(p[0].trim())<=t2m(r.ini)&&t2m(p[1].trim())>=t2m(r.fin);
+
+    // Check if already covered by someone who volunteered
+    var yaCubierto=Object.values(pendientes).some(function(p){
+      return p.cubiertoPor&&p.dia===dia&&p.area===r.area&&p.auto;
     });
-    // Also check if deficit is already covered by a cubiertoPor pendiente
-    var yaCubierto=Object.values(pendientes).some(function(p){return p.cubiertoPor&&p.dia===dia&&p.area===r.area&&p.auto;});
-    if(!yaCubierto&&pers.length+lCov.length<r.min)def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:r.min-pers.length-lCov.length});
+    if(yaCubierto)return;
+
+    if(pers.length<r.min){
+      def.push({dia:dia,area:r.area,horario:r.ini+'–'+r.fin,falta:r.min-pers.length});
+    }
   });});
   return def;
 }
@@ -1191,7 +1254,35 @@ document.getElementById('addLlBtn').addEventListener('click',function(){var n=do
 document.getElementById('addTareaBtn').addEventListener('click',function(){var d=document.getElementById('tD').value,n=document.getElementById('tN').value,t=document.getElementById('tTip').value,x=document.getElementById('tTxt').value.trim();if(!d||!n||!t||!x)return;sRef('tareas').push({dia:d,nombre:n,tipo:t,texto:x}).then(function(){['tD','tN','tTip'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('tTxt').value='';showSaved('tareaSaved');});});
 document.getElementById('addPendBtn').addEventListener('click',function(){var d=document.getElementById('pD').value,a=document.getElementById('pA').value,h=document.getElementById('pH').value;if(!d||!a||!h)return;sRef('pendientes').push({dia:d,area:a,horario:h,auto:false}).then(function(){['pD','pA','pH'].forEach(function(id){document.getElementById(id).value='';});showSaved('pendSaved');renderPendList();});});
 document.getElementById('addLicBtn').addEventListener('click',function(){var n=document.getElementById('licN').value,ini=document.getElementById('licIni').value,fin=document.getElementById('licFin').value;if(!n||!ini||!fin){alert('Completa todos los campos.');return;}if(ini>fin){alert('Inicio debe ser antes que fin.');return;}sRef('ausencias').push({nombre:n,tipo:'licencia',tipoLabel:'Licencia médica',inicio:ini,fin:fin,motivo:'Licencia médica',estado:'aprobado',ts:Date.now()}).then(function(){var fechas=fechasRango(ini,fin);var dias=fechas.map(function(f){return diaDeDate(f);});var del=Object.entries(bloques).filter(function(e){return e[1].nombre===n&&dias.indexOf(e[1].dia)!==-1;});Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});['licN','licIni','licFin'].forEach(function(id){document.getElementById(id).value='';});showSaved('licSaved');});});
-document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Borrar todo en '+S+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
+// Populate ssH with HORARIOS
+(function(){var s=document.getElementById('ssH');if(s)HORARIOS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;s.appendChild(o);});})();
+
+function renderSSList(){
+  var d=document.getElementById('ssListEl');if(!d)return;
+  var en=Object.entries(sinServicios);
+  if(!en.length){d.innerHTML='<p class="empty">Sin bloques sin servicio.</p>';return;}
+  d.innerHTML=en.map(function(e){var k=e[0],ss=e[1];return '<div class="iitem"><div class="iitem-info"><span style="color:#fca5a5">🚫</span> <strong>'+ss.area+'</strong> — '+ss.dia+'<div class="iitem-sub">'+ss.horario+'</div></div><button class="del-btn" onclick="sRef('sinServicios/'+k+'').remove()">🗑</button></div>';}).join('');}
+
+document.getElementById('addSSBtn').addEventListener('click',function(){
+  var d=document.getElementById('ssD').value,a=document.getElementById('ssA').value,h=document.getElementById('ssH').value;
+  if(!d||!a||!h){alert('Completa todos los campos.');return;}
+  sRef('sinServicios').push({dia:d,area:a,horario:h}).then(function(){
+    ['ssD','ssA','ssH'].forEach(function(id){document.getElementById(id).value='';});
+    showSaved('ssSaved');
+  });
+});
+
+// Show Sin Servicio in panorama
+var _origRenderPanorama=renderPanorama;
+renderPanorama=function(){
+  _origRenderPanorama();
+  // Add SS chips to panorama cells
+  Object.values(sinServicios).forEach(function(ss){
+    // Already handled in panorama via franjaEsSinServicio visual
+  });
+};
+
+document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Borrar todo en '+S+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave','sinServicios'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
 </script>
 </body>
 </html>
