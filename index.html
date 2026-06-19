@@ -525,14 +525,19 @@ textarea.atxt::placeholder{color:rgba(255,255,255,.3)}
           </div>
 
           <div class="asec">
-            <p class="asec-title" style="color:#7ec8f7">⭐ Equipo clave azul</p>
-            <p style="font-size:12px;color:var(--text-light3);margin-bottom:8px">Marca hasta 3 personas como equipo clave de la semana. Aparecen destacados con badge azul en el panorama.</p>
+            <p class="asec-title" style="color:#7ec8f7">🔑 Equipo clave azul</p>
+            <p style="font-size:12px;color:var(--text-light3);margin-bottom:8px">Asigna hasta 3 personas con su rol. Aparecen destacados en el panorama para todos.</p>
             <div class="frow">
               <select id="claveNombre1"><option value="">Persona 1</option></select>
+              <select id="claveRol1" style="max-width:80px"><option value="">Rol</option><option value="Rol A">Rol A</option><option value="Rol B">Rol B</option><option value="Rol C">Rol C</option></select>
+            </div>
+            <div class="frow">
               <select id="claveNombre2"><option value="">Persona 2</option></select>
+              <select id="claveRol2" style="max-width:80px"><option value="">Rol</option><option value="Rol A">Rol A</option><option value="Rol B">Rol B</option><option value="Rol C">Rol C</option></select>
             </div>
             <div class="frow">
               <select id="claveNombre3"><option value="">Persona 3</option></select>
+              <select id="claveRol3" style="max-width:80px"><option value="">Rol</option><option value="Rol A">Rol A</option><option value="Rol B">Rol B</option><option value="Rol C">Rol C</option></select>
             </div>
             <button class="btn-add" id="saveClaveBtn">Guardar equipo clave</button>
             <div class="saved" id="claveSaved">✓ Guardado</div>
@@ -585,7 +590,9 @@ var REGLAS=[
 var HORARIOS=['07:45–10:00','07:45–11:00','07:45–13:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','16:00–20:00','17:00–20:00'];
 
 function pad(n){return n<10?'0'+n:String(n);}
-['pHorario','llHorario','cobHorario'].forEach(function(id){var s=document.getElementById(id);if(s)HORARIOS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;s.appendChild(o);});});
+['pHorario','llHorario'].forEach(function(id){var s=document.getElementById(id);if(s)HORARIOS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;s.appendChild(o);});});
+var COB_HORARIOS=["08:00–08:30", "08:00–09:00", "08:00–13:00", "08:00–14:00", "08:30–09:00", "09:00–09:30", "09:00–10:00", "09:00–13:00", "09:00–14:00", "09:30–10:00", "10:00–10:30", "10:00–11:00", "10:00–13:00", "10:00–14:00", "10:30–11:00", "11:00–11:30", "11:00–12:00", "11:00–13:00", "11:00–14:00", "11:30–12:00", "12:00–12:30", "12:00–13:00", "12:30–13:00", "13:00–13:30", "13:00–14:00", "13:00–17:00", "13:30–14:00", "14:00–14:30", "14:00–15:00", "14:00–17:00", "14:00–18:00", "14:00–20:00", "14:30–15:00", "15:00–15:30", "15:00–16:00", "15:00–20:00", "15:30–16:00", "16:00–16:30", "16:00–17:00", "16:00–20:00", "16:30–17:00", "17:00–17:30", "17:00–18:00", "17:00–20:00", "17:30–18:00", "18:00–18:30", "18:00–19:00", "18:30–19:00", "19:00–19:30", "19:00–20:00", "19:30–20:00"];
+(function(){var s=document.getElementById('cobHorario');if(s)COB_HORARIOS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;s.appendChild(o);});})();
 
 // Show horario selector only when destino = Pabellón
 document.getElementById('cobDestino').addEventListener('change',function(){
@@ -635,7 +642,7 @@ function attach(){
   on('llamados',function(v){llamados=v;renderLlamadosList();renderPanorama();renderEstado();});
   on('encargados',function(v){encargados=v;renderEncargadosList();renderPanorama();});
   on('coberturas',function(v){coberturas=v;renderCoberturasList();renderPanorama();});
-  on('equipoClave',function(v){equipoClave=Array.isArray(v)?v:(v?Object.values(v):[]);renderPanorama();renderClaveActual();});
+  on('equipoClave',function(v){equipoClave=Array.isArray(v)?v:(v?Object.values(v):[]);renderPanorama();renderClaveActual();renderMisTurnos(curNombre);});
   on('correos',function(v){correos=v;});
 }
 
@@ -730,11 +737,12 @@ function renderPanorama(){
           var sb=getSub(b.horario,area,b.turno);
           var pr=asistencia[b.nombre?b.nombre.replace(/\s/g,'_'):''];
           var isEnc=Object.values(encargados).some(function(e){return e.nombre===b.nombre&&e.dia===dia;});
-          var isClave=equipoClave.indexOf(b.nombre)!==-1;
+          var isClave=equipoClave.some(function(e){return e&&e.n===b.nombre;});
           var cob=Object.values(coberturas).find(function(cv){return cv.persona===b.nombre&&cv.dia===dia;});
           var cls='chip'+(pr?' ok':'');
           var pfx='';
-          if(isClave&&!isEnc){cls='chip clave';pfx='🔑 ';}
+          var claveEntry=equipoClave.find(function(e){return e&&e.n===b.nombre;});
+          if(claveEntry&&!isEnc){cls='chip clave';pfx='🔑 '+(claveEntry.r?claveEntry.r+' ':'');}
           if(isEnc){cls='chip enc';pfx='⭐ ';}
           if(cob){if(cob.origen===area)cls='chip cob-origen';if(cob.destino===area)cls='chip cob-destino';}
           var horLabel='';
@@ -774,8 +782,9 @@ function renderMisTurnos(nombre){
   var misLl=Object.values(llamados).filter(function(l){return l.nombre===nombre;});
   misLl.forEach(function(l){html+='<div class="ll-badge"><div class="ll-badge-title"><span style="font-size:20px">📞</span><span style="font-size:14px;font-weight:700;color:var(--yellow)">De llamado</span></div><div class="ll-badge-sub">'+l.dia+' · '+l.area+' · '+l.horario+'</div><div class="ll-badge-note">Estás cubriendo este servicio. El sistema te registra como cobertura activa.</div></div>';});
   var isEnc=Object.values(encargados).some(function(e){return e.nombre===nombre;});
-  var isClave=equipoClave.indexOf(nombre)!==-1;
-  if(isClave){html+='<div class="ll-badge" style="background:rgba(37,99,235,.1);border-color:rgba(74,144,217,.3)"><div class="ll-badge-title"><span style="font-size:20px">🔑</span><span style="font-size:14px;font-weight:700;color:#93c5fd">Equipo clave azul</span></div><div class="ll-badge-sub" style="color:#7ec8f7">Eres parte del equipo clave de esta semana.</div></div>';}
+  var claveEntryMT=equipoClave.find(function(e){return e&&e.n===nombre;});
+  var isClave=!!claveEntryMT;
+  if(isClave){var rolStr=claveEntryMT&&claveEntryMT.r?' · '+claveEntryMT.r:'';html+='<div class="ll-badge" style="background:rgba(37,99,235,.1);border-color:rgba(74,144,217,.3)"><div class="ll-badge-title"><span style="font-size:20px">🔑</span><span style="font-size:14px;font-weight:700;color:#93c5fd">Equipo clave azul'+rolStr+'</span></div><div class="ll-badge-sub" style="color:#7ec8f7">Eres parte del equipo clave de esta semana.</div></div>';}
   if(isEnc){var encDias=Object.values(encargados).filter(function(e){return e.nombre===nombre;}).map(function(e){return e.dia;}).join(', ');html+='<div class="ll-badge" style="background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.3)"><div class="ll-badge-title"><span style="font-size:20px">⭐</span><span style="font-size:14px;font-weight:700;color:var(--yellow)">Enfermero/a a cargo</span></div><div class="ll-badge-sub">'+encDias+'</div></div>';}
   var reg=asistencia[nombre.replace(/\s/g,'_')];
   var btnLl=reg?'<button class="btn-ll ok" disabled>✓ Llegué a las '+reg+'</button>':'<button class="btn-ll" onclick="marcarLl(\''+nombre+'\')">📍 Marcar mi llegada</button>';
@@ -1165,20 +1174,23 @@ window.restaurarBloque=function(k){sRef('bloques/'+k+'/sinAtencion').remove().th
 function renderClaveActual(){
   var d=document.getElementById('claveActualDiv');if(!d)return;
   if(!equipoClave.length){d.innerHTML='<p class="empty">Sin equipo clave asignado.</p>';return;}
-  d.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'+equipoClave.filter(Boolean).map(function(n){return '<span style="background:rgba(37,99,235,.25);color:#93c5fd;border:1.5px solid rgba(74,144,217,.5);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700">⭐ '+n+'</span>';}).join('')+'</div>';
+  d.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'+equipoClave.filter(function(e){return e&&e.n;}).map(function(e){return '<span style="background:rgba(37,99,235,.25);color:#93c5fd;border:1.5px solid rgba(74,144,217,.5);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700">🔑 '+e.n+(e.r?' · '+e.r:'')+'</span>';}).join('')+'</div>';
   // Pre-fill selects
-  ['claveNombre1','claveNombre2','claveNombre3'].forEach(function(id,i){var s=document.getElementById(id);if(s&&equipoClave[i])s.value=equipoClave[i];});
+  ['claveNombre1','claveNombre2','claveNombre3'].forEach(function(id,i){
+    var s=document.getElementById(id);if(s&&equipoClave[i])s.value=equipoClave[i].n||'';
+    var r=document.getElementById(id.replace('Nombre','Rol'));if(r&&equipoClave[i])r.value=equipoClave[i].r||'';
+  });
 }
 
 document.getElementById('saveClaveBtn').addEventListener('click',function(){
-  var p1=document.getElementById('claveNombre1').value;
-  var p2=document.getElementById('claveNombre2').value;
-  var p3=document.getElementById('claveNombre3').value;
-  var arr=[p1,p2,p3].filter(Boolean);
-  // Check duplicates
-  var unique=[...new Set(arr)];
-  if(unique.length!==arr.length){alert('No puedes seleccionar la misma persona dos veces.');return;}
-  sRef('equipoClave').set(arr).then(function(){showSaved('claveSaved');});
+  var entries=[
+    {n:document.getElementById('claveNombre1').value, r:document.getElementById('claveRol1').value},
+    {n:document.getElementById('claveNombre2').value, r:document.getElementById('claveRol2').value},
+    {n:document.getElementById('claveNombre3').value, r:document.getElementById('claveRol3').value}
+  ].filter(function(e){return e.n;});
+  var nombres_sel=entries.map(function(e){return e.n;});
+  if(new Set(nombres_sel).size!==nombres_sel.length){alert('No puedes seleccionar la misma persona dos veces.');return;}
+  sRef('equipoClave').set(entries).then(function(){showSaved('claveSaved');});
 });
 
 document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Seguro que quieres borrar todo en '+S+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
