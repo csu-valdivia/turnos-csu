@@ -658,16 +658,40 @@ function renderLlamadosList(){var d=document.getElementById('llamadosList');if(!
 
 // ── PENDIENTES ──
 function minutosEnFranja(items,dia,area,ini,fin){
-  // Calcula cuántos "slots" de minutos están cubiertos en la franja [ini,fin]
-  var iniM=t2m(ini),finM=t2m(fin);
+
+  var iniM=t2m(ini);
+  var finM=t2m(fin);
+
   var covered=new Array(finM-iniM).fill(false);
+
   items.forEach(function(b){
-    if(b.dia!==dia||b.area!==area)return;
-    var p=b.horario.split('–');
-    var bIni=t2m(p[0].trim()),bFin=t2m(p[1].trim());
-    for(var m=Math.max(bIni,iniM);m<Math.min(bFin,finM);m++)covered[m-iniM]=true;
+
+    if(b.dia!==dia || b.area!==area) return;
+
+    if(!b.horario) return;
+
+    var sep=b.horario.indexOf('–')>=0 ? '–' : '-';
+
+    var p=b.horario.split(sep);
+
+    if(p.length!==2) return;
+
+    var bIni=t2m(p[0].trim());
+    var bFin=t2m(p[1].trim());
+
+    for(
+      var m=Math.max(bIni,iniM);
+      m<Math.min(bFin,finM);
+      m++
+    ){
+      covered[m-iniM]=true;
+    }
+
   });
-  return covered.every(function(v){return v;});
+
+  return covered.every(function(v){
+    return v;
+  });
 }
 function verificar(){
   var def=[];
