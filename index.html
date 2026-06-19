@@ -564,7 +564,7 @@ firebase.initializeApp({apiKey:"AIzaSyDrm0TlQ0fNK57xIFSVX82L1qdMbyBU8Ng",authDom
 var db=firebase.database();
 
 var SEDES={'Valdivia':{pin:'2715'},'Patagonia':{pin:'1234'},'Bellavista':{pin:'5678'},'Los Leones':{pin:'9012'},'Concepción':{pin:'3456'}};
-var COLACION={'07:45':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
+var COLACION={'07:45':'13:00–14:00','08:00':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
 var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var AREAS=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
 var TIPOS={pabellon:{icon:'ti-building-hospital',label:'Pabellón',cls:'pabellon'},pedido:{icon:'ti-shopping-cart',label:'Pedido',cls:'pedido'},consentimiento:{icon:'ti-file-text',label:'Consentimientos',cls:'consentimiento'},tarea:{icon:'ti-clipboard-check',label:'Tarea especial',cls:'tarea'}};
@@ -784,15 +784,17 @@ function renderMisTurnos(nombre){
     var libreBloque=Object.values(bloques).find(function(b){return b.dia===dia&&b.nombre===nombre&&b.libre;});
     if(libreBloque&&!ps.length){found=true;html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">🏖</span><span class="day-name">'+dia+' — Día libre</span></div><p style="font-size:13px;color:var(--text-dark3);text-align:center;padding:.5rem 0">Sin turnos asignados este día</p></div>';return;}
     if(!ps.length)return;found=true;
-    // Colación: una sola, basada en la hora de entrada más temprana del día
+    // Colación: una sola, basada en la hora de entrada más temprana. Sin colación el sábado.
     var cols=new Set();
-    var entradas=ps.map(function(b){return t2m(b.horario.split('–')[0].trim());});
-    var minEntrada=Math.min.apply(null,entradas);
-    var hh=Math.floor(minEntrada/60);
-    var mm=minEntrada%60;
-    var minHoraStr=(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
-    var colUnica=COLACION[minHoraStr]||null;
-    if(colUnica)cols.add(colUnica);
+    if(dia!=='Sábado'){
+      var entradas=ps.map(function(b){return t2m(b.horario.split('–')[0].trim());});
+      var minEntrada=Math.min.apply(null,entradas);
+      var hh=Math.floor(minEntrada/60);
+      var mm=minEntrada%60;
+      var minHoraStr=(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
+      var colUnica=COLACION[minHoraStr]||null;
+      if(colUnica)cols.add(colUnica);
+    }
     var tds=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
     var nota=notas[nombre.replace(/\s/g,'_')+'_'+dia];
     var cob=Object.values(coberturas).find(function(cv){return cv.persona===nombre&&cv.dia===dia;});
