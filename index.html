@@ -847,7 +847,37 @@ function renderCambiosAdmin(){
   d.innerHTML=en.map(function(e){var k=e[0],c=e[1];return '<div class="cambio-card"><div class="cambio-hdr">'+c.solicitante+' ↔ '+c.con+'<span class="ebdg aceptado">aceptado por ambos</span></div><div class="cambio-sub">'+c.dia+' · '+c.horario+'</div><div class="cambio-acts"><button class="btn-ap" onclick="aprCambio(\''+k+'\')">✓ Aprobar y ejecutar</button><button class="btn-re" onclick="resCambio(\''+k+'\',\'rechazado\')">✗ Rechazar</button></div></div>';}).join('');
 }
 window.resCambio=function(k,e){sRef('cambios/'+k+'/estado').set(e);};
-window.aprCambio=function(k){var c=cambios[k];if(!c)return;var bS=Object.entries(bloques).filter(function(e){return e[1].nombre===c.solicitante&&e[1].dia===c.dia;});var bC=Object.entries(bloques).filter(function(e){return e[1].nombre===c.con&&e[1].dia===c.dia;});var upd={};bS.forEach(function(e){upd['sedes/'+S+'/bloques/'+e[0]+'/nombre']=c.con;});bC.forEach(function(e){upd['sedes/'+S+'/bloques/'+e[0]+'/nombre']=c.solicitante;});upd['sedes/'+S+'/cambios/'+k+'/estado']='aprobado';db.ref().update(upd);};
+window.aprCambio=function(k){
+  var cam=cambios[k];if(!cam)return;
+  var bS=Object.entries(bloques).filter(function(e){return e[1].nombre===cam.solicitante&&e[1].dia===cam.dia;});
+  var bC=Object.entries(bloques).filter(function(e){return e[1].nombre===cam.con&&e[1].dia===cam.dia;});
+  var upd={};
+  bS.forEach(function(e){upd['sedes/'+S+'/bloques/'+e[0]+'/nombre']=cam.con;});
+  bC.forEach(function(e){upd['sedes/'+S+'/bloques/'+e[0]+'/nombre']=cam.solicitante;});
+  upd['sedes/'+S+'/cambios/'+k+'/estado']='aprobado';
+  db.ref().update(upd).then(function(){
+    // Send email notifications via mailto
+    var semana=document.getElementById('semanaLabel').textContent||'esta semana';
+    var asunto=encodeURIComponent('TurnosCSU — Cambio de turno aprobado');
+    var cuerpo=encodeURIComponent(
+      'Hola,\n\n'+
+      'El cambio de turno ha sido APROBADO por el jefe de turno.\n\n'+
+      'Detalle:\n'+
+      '• '+cam.solicitante+' y '+cam.con+' intercambian el turno del '+cam.dia+' ('+cam.horario+')\n'+
+      '• Semana: '+semana+'\n'+(cam.nota?'• Motivo: '+cam.nota+'\n':'')+
+      '\nPor favor verifica tu turno actualizado en la app.\n\n'+
+      'TurnosCSU — USS Red de Salud'
+    );
+    // Get emails from correos
+    var emailSol=correos[cam.solicitante.replace(/\s/g,'_')]||'';
+    var emailCon=correos[cam.con.replace(/\s/g,'_')]||'';
+    var destinatarios=[emailSol,emailCon].filter(Boolean).join(',');
+    if(destinatarios){
+      window.open('mailto:'+destinatarios+'?subject='+asunto+'&body='+cuerpo,'_blank');
+    }
+    alert('✓ Cambio aprobado. Se ha abierto el correo para notificar a '+cam.solicitante+' y '+cam.con+'.');
+  });
+};
 
 // ── AUSENCIAS ──
 window.formAusencia=function(){
@@ -895,7 +925,22 @@ function renderAusenciasAdmin(){
   var da=document.getElementById('ausActivasList');
   if(da){var act=Object.entries(ausencias).filter(function(e){return e[1].estado==='aprobado';});if(!act.length){da.innerHTML='<p class="empty">Sin ausencias activas.</p>';}else{da.innerHTML=act.map(function(e){var k=e[0],a=e[1];var fs=a.inicio===a.fin?a.inicio:a.inicio+' → '+a.fin;return '<div class="iitem"><div class="iitem-info"><strong>'+a.nombre+'</strong> — '+(a.tipoLabel||a.tipo)+'<div class="iitem-sub">'+fs+'</div></div><button class="del-btn" onclick="sRef(\'ausencias/'+k+'\').remove()">🗑</button></div>';}).join('');}}
 }
-window.aprAus=function(k){var a=ausencias[k];if(!a)return;sRef('ausencias/'+k+'/estado').set('aprobado').then(function(){var fechas=fechasRango(a.inicio,a.fin);var dias=fechas.map(function(f){return diaDeDate(f);});var del=Object.entries(bloques).filter(function(e){return e[1].nombre===a.nombre&&dias.indexOf(e[1].dia)!==-1;});Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});});};
+window.aprAus=function(k){
+  var a=ausencias[k];if(!a)return;
+  sRef('ausencias/'+k+'/estado').set('aprobado').then(function(){
+    var fechas=fechasRango(a.inicio,a.fin);
+    var dias=fechas.map(function(f){return diaDeDate(f);});
+    var del=Object.entries(bloques).filter(function(e){return e[1].nombre===a.nombre&&dias.indexOf(e[1].dia)!==-1;});
+    Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});
+    // Notify via mailto
+    var emailP=correos[a.nombre.replace(/\s/g,'_')]||'';
+    if(emailP){
+      var asunto=encodeURIComponent('TurnosCSU — '+( a.tipoLabel||a.tipo)+' aprobado/a');
+      var cuerpo=encodeURIComponent('Hola '+a.nombre+',\n\nTu solicitud de '+(a.tipoLabel||a.tipo)+' ha sido APROBADA.\n\nFecha: '+a.inicio+(a.inicio!==a.fin?' al '+a.fin:'')+'.\n\nTurnosCSU — USS Red de Salud');
+      window.open('mailto:'+emailP+'?subject='+asunto+'&body='+cuerpo,'_blank');
+    }
+  });
+};
 
 // ── LLAMADOS ──
 function renderLlList(){var d=document.getElementById('llList');if(!d)return;var en=Object.entries(llamados);if(!en.length){d.innerHTML='<p class="empty">Sin llamados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],l=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+l.nombre+'</strong> — '+l.dia+'<div class="iitem-sub">'+l.area+' · '+l.horario+'</div></div><button class="del-btn" onclick="sRef(\'llamados/'+k+'\').remove()">🗑</button></div>';}).join('');}
@@ -971,7 +1016,13 @@ function renderPendientes(){
   var html='<div class="pend-section"><p class="pend-title">⚠ Pendientes por cubrir</p>';
   en.forEach(function(e){
     var k=e[0],p=e[1];
-    if(p.cubiertoPor){html+='<div class="pend-card cubierto"><div class="pend-info">✓ '+p.dia+' — '+p.area+'</div><div class="pend-sub">Cubierto por: <strong style="color:#6ee7b7">'+p.cubiertoPor+'</strong> · '+p.horario+'</div></div>';}
+    if(p.cubiertoPor){
+      html+='<div class="pend-card cubierto">';
+      html+='<div class="pend-info">✓ '+p.dia+' — '+p.area+'</div>';
+      html+='<div class="pend-sub">'+p.horario+' · Cubierto por: <strong style="color:#6ee7b7">'+p.cubiertoPor+'</strong></div>';
+      if(adminUnlocked)html+='<button style="margin-top:6px;font-size:11px;padding:3px 8px;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.25);border-radius:6px;font-family:inherit;cursor:pointer" id="delpend'+k.replace(/[^a-z0-9]/gi,'')+'">✕ Cancelar cobertura</button>';
+      html+='</div>';
+    }
     else{
       html+='<div class="pend-card'+(p.auto?' auto':'')+'">';
       if(p.auto)html+='<div class="pend-auto">⚠ Déficit detectado</div>';
@@ -987,6 +1038,7 @@ function renderPendientes(){
     var kid=k.replace(/[^a-z0-9]/gi,'');
     var pb=document.getElementById('pb'+kid);if(pb)pb.onclick=function(){anotarme(k);};
     var sa=document.getElementById('psa'+kid);if(sa)sa.onclick=function(){marcarSA(k);};
+    var dp=document.getElementById('delpend'+kid);if(dp)dp.onclick=function(){sRef('pendientes/'+k+'/cubiertoPor').remove();};
   });
 }
 function marcarSA(k){var p=pendientes[k];if(!p)return;sRef('bloques').push({dia:p.dia,nombre:'__sa__',area:p.area,horario:p.horario,sinAtencion:true}).then(function(){sRef('pendientes/'+k).remove();});}
