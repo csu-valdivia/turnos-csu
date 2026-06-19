@@ -599,8 +599,8 @@ function horas(h){var p=h.split('–');return(t2m(p[1].trim())-t2m(p[0].trim()))
 function overlaps(h,f){var p=h.split('–'),q=f.split('–');return t2m(p[0].trim())<=t2m(q[0].trim())&&t2m(p[1].trim())>=t2m(q[1].trim());}
 function getSub(h,a,turno){
   if(a!=='Esterilización')return null;
-  if(turno==='T1')return 'Recepción · Lavado · Secado';
-  if(turno==='T2')return 'Empaque · Autoclave · Almacenamiento · Entrega';
+  if(turno==='T1')return 'Empaque · Autoclave · Almacenamiento · Entrega';
+  if(turno==='T2')return 'Recepción · Lavado · Secado';
   return null;
 }
 function getCol(h){return COLACION[h.split('–')[0]]||null;}
