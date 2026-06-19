@@ -788,8 +788,10 @@ function renderMisTurnos(nombre){
     var cols=new Set();
     var entradas=ps.map(function(b){return t2m(b.horario.split('–')[0].trim());});
     var minEntrada=Math.min.apply(null,entradas);
-    var minHora=Math.floor(minEntrada/60)+':'+(minEntrada%60===0?'00':minEntrada%60);
-    var colUnica=getCol(minHora+'–dummy');
+    var hh=Math.floor(minEntrada/60);
+    var mm=minEntrada%60;
+    var minHoraStr=(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
+    var colUnica=COLACION[minHoraStr]||null;
     if(colUnica)cols.add(colUnica);
     var tds=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
     var nota=notas[nombre.replace(/\s/g,'_')+'_'+dia];
