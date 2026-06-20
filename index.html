@@ -693,7 +693,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion'];
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={},fichaProgreso={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -742,6 +742,13 @@ window.setSede=function(sede){
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
   sedeRef('biblioteca').on('value',function(s){biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();if(curNombre&&W)verificarFichasPendientes();});
   sedeRef('fichaProgreso').on('value',function(s){fichaProgreso=s.val()||{};renderCumplimientoList();renderAlertasCapacitacion();});
+  var primerCargaLogros=true;
+  sedeRef('logros').on('child_added',function(s){
+    if(primerCargaLogros)return; // skip historical logros on initial load
+    var l=s.val();
+    if(l&&l.nombre)mostrarBannerLogro(l.nombre,l.titulo);
+  });
+  sedeRef('logros').once('value',function(){primerCargaLogros=false;});
   sedeRef('semanas').on('value',function(s){
     semanas=s.val()||{};
     renderSemanasList();
@@ -804,7 +811,7 @@ window.confirmarSemana=function(wId){
 
 window.changeSede=function(){
   detach();
-  sedeRef('nombres').off();sedeRef('correos').off();sedeRef('semanas').off();sedeRef('biblioteca').off();sedeRef('fichaProgreso').off();
+  sedeRef('nombres').off();sedeRef('correos').off();sedeRef('semanas').off();sedeRef('biblioteca').off();sedeRef('fichaProgreso').off();sedeRef('logros').off();
   S='';W='';adminUnlocked=false;
   document.getElementById('adminPanel').classList.remove('open');
   document.getElementById('mainView').style.display='none';
@@ -1428,13 +1435,31 @@ function mostrarPasoPreguntas(docId,doc,prog){
 
 function aprobarFicha(docId){
   var key=curNombre.replace(/\s/g,'_');
-  sedeRef('fichaProgreso/'+docId+'/'+key).set({aprobado:true,fecha:Date.now(),intentos:(fichaProgreso[docId]&&fichaProgreso[docId][key]?fichaProgreso[docId][key].intentos:0)}).then(function(){
-    setTimeout(function(){
-      var pend=fichasObligatoriasPendientes(curNombre);
-      if(pend.length){mostrarFichaObligatoria(pend[0][0],pend[0][1]);}
-      else{document.getElementById('fichaObligView').style.display='none';document.getElementById('appView').style.display='block';}
-    },300);
-  });
+  var dataProg={aprobado:true,fecha:Date.now(),intentos:(fichaProgreso[docId]&&fichaProgreso[docId][key]?fichaProgreso[docId][key].intentos:0)};
+  // Actualizar variable local de inmediato, sin esperar el roundtrip de Firebase
+  if(!fichaProgreso[docId])fichaProgreso[docId]={};
+  fichaProgreso[docId][key]=dataProg;
+  mostrarLogro(curNombre,biblioteca[docId]?biblioteca[docId].titulo:'');
+  sedeRef('fichaProgreso/'+docId+'/'+key).set(dataProg);
+  var pend=fichasObligatoriasPendientes(curNombre);
+  if(pend.length){mostrarFichaObligatoria(pend[0][0],pend[0][1]);}
+  else{document.getElementById('fichaObligView').style.display='none';document.getElementById('appView').style.display='block';}
+}
+
+function mostrarLogro(nombre,titulo){
+  sedeRef('logros').push({nombre:nombre,titulo:titulo,fecha:Date.now()});
+}
+
+function mostrarBannerLogro(nombre,titulo){
+  var b=document.createElement('div');
+  b.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:200;background:linear-gradient(135deg,#1a3a6b,#2563eb);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:14px 20px;box-shadow:0 10px 40px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px;max-width:90vw;transition:transform .4s cubic-bezier(.34,1.56,.64,1)';
+  b.innerHTML='<span style="font-size:26px">⭐</span><div><p style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px">'+nombre+' aprobó la evaluación</p><p style="font-size:11px;color:rgba(255,255,255,.6)">'+(titulo||'')+'</p></div>';
+  document.body.appendChild(b);
+  setTimeout(function(){b.style.transform='translateX(-50%) translateY(0)';},50);
+  setTimeout(function(){
+    b.style.transform='translateX(-50%) translateY(-100px)';
+    setTimeout(function(){b.remove();},400);
+  },4000);
 }
 
 function registrarFallo(docId,doc){
@@ -1442,17 +1467,18 @@ function registrarFallo(docId,doc){
   var actual=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{intentos:0};
   var nuevosIntentos=(actual.intentos||0)+1;
   var data={intentos:nuevosIntentos,ultimoFallo:Date.now()};
+  if(!fichaProgreso[docId])fichaProgreso[docId]={};
   if(nuevosIntentos>=3){
     data.bloqueado=true;
-    sedeRef('fichaProgreso/'+docId+'/'+key).set(data).then(function(){
-      sedeRef('alertasCapacitacion').push({nombre:curNombre,documento:doc.titulo,docId:docId,fecha:Date.now()});
-      setTimeout(function(){mostrarFichaObligatoria(docId,doc);},300);
-    });
+    fichaProgreso[docId][key]=data;
+    sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
+    sedeRef('alertasCapacitacion').push({nombre:curNombre,documento:doc.titulo,docId:docId,fecha:Date.now()});
+    mostrarFichaObligatoria(docId,doc);
   } else {
-    sedeRef('fichaProgreso/'+docId+'/'+key).set(data).then(function(){
-      alert('Respuesta incorrecta. Vuelve a leer el contenido e inténtalo de nuevo.');
-      setTimeout(function(){mostrarFichaObligatoria(docId,doc);},300);
-    });
+    fichaProgreso[docId][key]=data;
+    sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
+    alert('Respuesta incorrecta. Vuelve a leer el contenido e inténtalo de nuevo. Intento '+nuevosIntentos+' de 3.');
+    mostrarFichaObligatoria(docId,doc);
   }
 }
 
@@ -1472,8 +1498,8 @@ function renderCumplimientoList(){
       else if(prog.bloqueado){estado='🔒 Bloqueado (3 fallos)';color='#fca5a5';}
       else if(prog.aprobado){estado='✓ Aprobado';color='#6ee7b7';}
       else{estado='En progreso ('+(prog.intentos||0)+' intento'+(prog.intentos!==1?'s':'')+')';color='#fcd34d';}
-      html+='<div class="iitem" style="padding:5px 0"><div class="iitem-info" style="font-size:12px">'+n+'</div><span style="font-size:11px;color:'+color+';font-weight:600">'+estado+'</span>';
-      if(prog&&prog.bloqueado)html+='<button class="del-btn" style="color:#6ee7b7;font-size:11px;padding:2px 6px;border:1px solid rgba(16,185,129,.3);border-radius:4px" onclick="marcarCapacitada(\''+docId+'\',\''+key+'\')">✓ Marcar capacitada</button>';
+      html+='<div class="iitem" style="padding:5px 0;flex-wrap:wrap"><div class="iitem-info" style="font-size:12px">'+n+'</div><span style="font-size:11px;color:'+color+';font-weight:600">'+estado+'</span>';
+      if(prog&&prog.bloqueado)html+='<button style="width:100%;margin-top:6px;padding:8px;font-size:12px;font-weight:700;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:inherit;cursor:pointer" onclick="marcarCapacitada(\''+docId+'\',\''+key+'\')">🔓 Desbloquear acceso (ya la capacité)</button>';
       html+='</div>';
     });
   });
@@ -1481,7 +1507,11 @@ function renderCumplimientoList(){
 }
 
 window.marcarCapacitada=function(docId,key){
-  sedeRef('fichaProgreso/'+docId+'/'+key).set({aprobado:true,fecha:Date.now(),capacitadaManual:true});
+  var data={aprobado:true,fecha:Date.now(),capacitadaManual:true};
+  if(!fichaProgreso[docId])fichaProgreso[docId]={};
+  fichaProgreso[docId][key]=data;
+  sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
+  renderCumplimientoList();
 };
 
 function renderAlertasCapacitacion(){
