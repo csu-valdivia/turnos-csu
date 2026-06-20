@@ -263,13 +263,16 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
       <div id="emailView" style="display:none">
         <div class="card" style="text-align:center">
           <p style="font-size:17px;font-weight:700;margin-bottom:8px">👋 Bienvenido/a</p>
-          <p style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:18px;line-height:1.5">Registra tu nombre y correo institucional para recibir notificaciones. Solo se hace una vez.</p>
+          <p style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:18px;line-height:1.5">Selecciona tu nombre para continuar. El correo es opcional, solo se usa para notificaciones.</p>
           <select id="emailNom" style="margin-bottom:10px"><option value="">— Selecciona tu nombre —</option></select>
-          <input type="email" id="emailIn" placeholder="nombre@uss.cl" style="margin-bottom:14px">
+          <input type="email" id="emailIn" placeholder="nombre@uss.cl (opcional)" style="margin-bottom:14px">
           <button class="btn-add" id="saveEmailBtn">Guardar y continuar →</button>
-          <p style="font-size:11px;color:rgba(255,255,255,.25);margin-top:12px;cursor:pointer" onclick="skipEmail()">Continuar sin registrar</p>
+          <p style="font-size:11px;color:rgba(255,255,255,.25);margin-top:12px;cursor:pointer" onclick="skipEmail()">Continuar sin correo</p>
         </div>
       </div>
+
+      <!-- FICHA OBLIGATORIA -->
+      <div id="fichaObligView" style="display:none"></div>
 
       <!-- APP -->
       <div id="appView" style="display:none">
@@ -401,6 +404,17 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <input type="text" id="bibCatNueva" placeholder="Nombre de la nueva categoría" style="display:none;margin-bottom:6px">
             <input type="text" id="bibLink" placeholder="Link de Google Drive (https://...)" style="margin-bottom:6px">
             <textarea class="atxt" id="bibDesc" placeholder="Descripción breve (opcional)"></textarea>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.7);margin:10px 0;cursor:pointer">
+              <input type="checkbox" id="bibObligatoria" style="width:16px;height:16px;accent-color:var(--accent2)">
+              📌 Lectura obligatoria (bloquea acceso hasta aprobar)
+            </label>
+            <div id="bibObligWrap" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px;margin-bottom:8px">
+              <p style="font-size:11px;font-weight:700;color:#fca5a5;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Contenido a leer</p>
+              <textarea class="atxt" id="bibContenido" placeholder="Texto breve que el colaborador debe leer antes de responder (ej: resumen del protocolo)..." style="min-height:90px;margin-bottom:12px"></textarea>
+              <p style="font-size:11px;font-weight:700;color:#fca5a5;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Banco de preguntas (mín. 5, ideal 20-30)</p>
+              <div id="bibPreguntasBuilder"></div>
+              <button class="btn-sec" id="addPreguntaBtn" type="button" style="margin-top:6px">+ Agregar pregunta</button>
+            </div>
             <button class="btn-add" id="addBibBtn">+ Agregar documento</button>
             <div class="saved" id="bibSaved">✓ Agregado</div>
             <div class="ilist" id="bibAdminList"></div>
@@ -555,6 +569,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="ilist" id="ausAdminList"></div>
           </div>
 
+          <div class="asec" style="border-color:rgba(239,68,68,.25)">
+            <p class="asec-title" style="color:#fca5a5">⚠ Cumplimiento de lectura obligatoria</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Estado de aprobación de fichas obligatorias por colaborador.</p>
+            <div id="alertasCapacitacion"></div>
+            <div class="ilist" id="cumplimientoList"></div>
+          </div>
+
           <div class="asec">
             <p class="asec-title">📦 Bloques cargados</p>
             <div class="ilist" id="bloquesList"></div>
@@ -670,8 +691,8 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca'];
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={};
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso'];
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={},fichaProgreso={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
@@ -708,7 +729,7 @@ function detectarSemanaActual(){
 
 window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
-  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};biblioteca={};curNombre='';semanas={};
+  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};biblioteca={};fichaProgreso={};curNombre='';semanas={};
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -717,7 +738,8 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
-  sedeRef('biblioteca').on('value',function(s){biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();});
+  sedeRef('biblioteca').on('value',function(s){biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();if(curNombre&&W)verificarFichasPendientes();});
+  sedeRef('fichaProgreso').on('value',function(s){fichaProgreso=s.val()||{};renderCumplimientoList();renderAlertasCapacitacion();});
   sedeRef('semanas').on('value',function(s){
     semanas=s.val()||{};
     renderSemanasList();
@@ -767,14 +789,20 @@ window.confirmarSemana=function(wId){
   document.getElementById('mainView').querySelector('.sede-hdr').style.display='flex';
   document.getElementById('semanaLabel').textContent=(semanas[wId].nombre||semanas[wId].ini+' al '+semanas[wId].fin);
   attach();
-  var stored=localStorage.getItem('tcsu_v3_'+S);
-  if(stored&&stored!=='pending'){showApp();}
-  else{localStorage.setItem('tcsu_v3_'+S,'pending');document.getElementById('emailView').style.display='block';document.getElementById('appView').style.display='none';}
+  var storedNombre=localStorage.getItem('tcsu_v3_nombre_'+S);
+  if(storedNombre){
+    curNombre=storedNombre;
+    var sel=document.getElementById('nameSelect');if(sel)sel.value=storedNombre;
+    showApp();
+  } else {
+    document.getElementById('emailView').style.display='block';
+    document.getElementById('appView').style.display='none';
+  }
 };
 
 window.changeSede=function(){
   detach();
-  sedeRef('nombres').off();sedeRef('correos').off();sedeRef('semanas').off();sedeRef('biblioteca').off();
+  sedeRef('nombres').off();sedeRef('correos').off();sedeRef('semanas').off();sedeRef('biblioteca').off();sedeRef('fichaProgreso').off();
   S='';W='';adminUnlocked=false;
   document.getElementById('adminPanel').classList.remove('open');
   document.getElementById('mainView').style.display='none';
@@ -795,17 +823,46 @@ window.cambiarSemana=function(){
   mostrarConfirmacionSemana();
 };
 
-function showApp(){document.getElementById('emailView').style.display='none';document.getElementById('appView').style.display='block';}
-function checkEmailPrompt(){var stored=localStorage.getItem('tcsu_v3_'+S);if(stored==='pending'&&nombres.length){document.getElementById('emailView').style.display='block';document.getElementById('appView').style.display='none';}}
+function showApp(){
+  document.getElementById('emailView').style.display='none';
+  // Check for pending mandatory fichas before showing the real app
+  if(verificarFichasPendientes())return;
+  document.getElementById('fichaObligView').style.display='none';
+  document.getElementById('appView').style.display='block';
+}
+function checkEmailPrompt(){
+  var stored=localStorage.getItem('tcsu_v3_nombre_'+S);
+  if(!stored&&nombres.length){
+    document.getElementById('emailView').style.display='block';
+    document.getElementById('appView').style.display='none';
+    document.getElementById('fichaObligView').style.display='none';
+    return;
+  }
+  if(stored){
+    curNombre=stored;
+    var sel=document.getElementById('nameSelect');if(sel)sel.value=stored;
+    if(verificarFichasPendientes())return;
+  }
+}
 
 document.getElementById('saveEmailBtn').addEventListener('click',function(){
   var n=document.getElementById('emailNom').value,e=document.getElementById('emailIn').value.trim();
   if(!n){alert('Selecciona tu nombre.');return;}
-  if(!e||!e.includes('@')){alert('Ingresa un correo válido.');return;}
-  localStorage.setItem('tcsu_v3_'+S,JSON.stringify({nombre:n,email:e}));
-  sRef('correos/'+n.replace(/\s/g,'_')).set(e);showApp();
+  if(e&&!e.includes('@')){alert('Ingresa un correo válido o deja el campo vacío.');return;}
+  localStorage.setItem('tcsu_v3_nombre_'+S,n);
+  curNombre=n;
+  var sel=document.getElementById('nameSelect');if(sel)sel.value=n;
+  if(e)sRef('correos/'+n.replace(/\s/g,'_')).set(e);
+  showApp();
 });
-window.skipEmail=function(){localStorage.setItem('tcsu_v3_'+S,'skip');showApp();};
+window.skipEmail=function(){
+  var n=document.getElementById('emailNom').value;
+  if(!n){alert('Selecciona tu nombre para continuar.');return;}
+  localStorage.setItem('tcsu_v3_nombre_'+S,n);
+  curNombre=n;
+  var sel=document.getElementById('nameSelect');if(sel)sel.value=n;
+  showApp();
+};
 
 function updateSelects(){
   var ids={nameSelect:'— Selecciona tu nombre —',estadoSelect:'— Selecciona tu nombre —',cambioSol:'Soy...',ausenciaSol:'Soy...',tN:'Persona',llN:'Persona',licN:'Persona',emailNom:'— Selecciona tu nombre —',encN:'Persona',cobP:'Persona',claveN1:'Persona 1',claveN2:'Persona 2',claveN3:'Persona 3'};
@@ -1204,6 +1261,25 @@ document.getElementById('bibCatSel').addEventListener('change',function(){
   document.getElementById('bibCatNueva').style.display=this.value==='__nueva__'?'block':'none';
 });
 
+document.getElementById('bibObligatoria').addEventListener('change',function(){
+  document.getElementById('bibObligWrap').style.display=this.checked?'block':'none';
+  if(this.checked&&!document.getElementById('bibPreguntasBuilder').children.length){
+    addPreguntaRow();addPreguntaRow();addPreguntaRow();addPreguntaRow();addPreguntaRow();
+  }
+});
+
+function addPreguntaRow(){
+  var wrap=document.getElementById('bibPreguntasBuilder');
+  var idx=wrap.children.length;
+  var div=document.createElement('div');
+  div.style.cssText='background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:8px';
+  div.innerHTML='<input type="text" class="pregTxt" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">'+
+    [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="correcta'+idx+'" class="pregCorrecta" value="'+i+'" style="accent-color:var(--green)"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
+    '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
+  wrap.appendChild(div);
+}
+document.getElementById('addPreguntaBtn').addEventListener('click',addPreguntaRow);
+
 document.getElementById('addBibBtn').addEventListener('click',function(){
   var titulo=document.getElementById('bibTitulo').value.trim();
   var catSel=document.getElementById('bibCatSel').value;
@@ -1211,18 +1287,198 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
   var cat=catSel==='__nueva__'?catNueva:catSel;
   var link=document.getElementById('bibLink').value.trim();
   var desc=document.getElementById('bibDesc').value.trim();
+  var esObligatoria=document.getElementById('bibObligatoria').checked;
   if(!titulo||!cat||!link){alert('Completa título, categoría y link.');return;}
   if(!link.startsWith('http')){alert('El link debe empezar con http:// o https://');return;}
-  sedeRef('biblioteca').push({titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now()}).then(function(){
+
+  var doc={titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now()};
+
+  if(esObligatoria){
+    var contenido=document.getElementById('bibContenido').value.trim();
+    if(!contenido){alert('Escribe el contenido breve que el colaborador debe leer.');return;}
+    var filas=document.querySelectorAll('#bibPreguntasBuilder > div');
+    var preguntas=[];
+    var errorPreg=false;
+    filas.forEach(function(f){
+      var pregTxt=f.querySelector('.pregTxt').value.trim();
+      var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
+      var correctaEl=f.querySelector('.pregCorrecta:checked');
+      if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){errorPreg=true;return;}
+      preguntas.push({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value)});
+    });
+    if(errorPreg||preguntas.length<5){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta). Mínimo 5 preguntas para una ficha obligatoria.');return;}
+    doc.obligatoria=true;
+    doc.contenido=contenido;
+    doc.preguntas=preguntas;
+  }
+
+  sedeRef('biblioteca').push(doc).then(function(){
     document.getElementById('bibTitulo').value='';
     document.getElementById('bibLink').value='';
     document.getElementById('bibDesc').value='';
     document.getElementById('bibCatNueva').value='';
     document.getElementById('bibCatNueva').style.display='none';
     document.getElementById('bibCatSel').value='Protocolos';
+    document.getElementById('bibObligatoria').checked=false;
+    document.getElementById('bibObligWrap').style.display='none';
+    document.getElementById('bibContenido').value='';
+    document.getElementById('bibPreguntasBuilder').innerHTML='';
     showSaved('bibSaved');
   });
 });
+
+// ── FICHAS OBLIGATORIAS ──
+function fichasObligatoriasPendientes(nombre){
+  if(!nombre)return [];
+  var key=nombre.replace(/\s/g,'_');
+  return Object.entries(biblioteca).filter(function(e){
+    var doc=e[1];
+    if(!doc.obligatoria)return false;
+    var prog=fichaProgreso[e[0]]&&fichaProgreso[e[0]][key];
+    if(prog&&prog.aprobado)return false; // ya aprobó
+    if(prog&&prog.bloqueado)return true; // bloqueado, debe ver pantalla de bloqueo
+    return true; // pendiente
+  });
+}
+
+function verificarFichasPendientes(){
+  if(!curNombre)return false;
+  var pend=fichasObligatoriasPendientes(curNombre);
+  if(!pend.length)return false;
+  mostrarFichaObligatoria(pend[0][0],pend[0][1]);
+  return true;
+}
+
+var fichaActualPreguntas=[];
+var fichaActualRespuestas={};
+
+function mostrarFichaObligatoria(docId,doc){
+  var key=curNombre.replace(/\s/g,'_');
+  var prog=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{intentos:0};
+
+  document.getElementById('emailView').style.display='none';
+  document.getElementById('appView').style.display='none';
+  var v=document.getElementById('fichaObligView');
+  v.style.display='block';
+
+  if(prog.bloqueado){
+    v.innerHTML='<div class="card" style="text-align:center;border-color:rgba(239,68,68,.3)"><p style="font-size:36px;margin-bottom:10px">🔒</p><p style="font-size:16px;font-weight:700;color:#fca5a5;margin-bottom:8px">Acceso bloqueado</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:6px">No superaste la evaluación de <strong style="color:#fff">'+doc.titulo+'</strong> después de 3 intentos.</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6">El jefe de turno ha sido notificado y debe realizar una capacitación contigo antes de habilitar tu acceso nuevamente.</p></div>';
+    return;
+  }
+
+  var preguntas=Object.values(doc.preguntas||{});
+  if(preguntas.length<2){
+    // Not enough questions configured - auto approve to avoid blocking everyone
+    aprobarFicha(docId);
+    return;
+  }
+  // Pick 2 random questions
+  var shuffled=preguntas.slice().sort(function(){return Math.random()-0.5;});
+  fichaActualPreguntas=shuffled.slice(0,2);
+  fichaActualRespuestas={};
+
+  var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📌 Lectura obligatoria</p>';
+  html+='<p style="font-size:17px;font-weight:700;margin-bottom:12px">'+doc.titulo+'</p>';
+  if(doc.contenido)html+='<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,.7);line-height:1.7">'+doc.contenido.replace(/\n/g,'<br>')+'</div>';
+  if(doc.link)html+='<a href="'+doc.link+'" target="_blank" rel="noopener" style="display:inline-block;font-size:12px;color:#7ec8f7;margin-bottom:16px">📄 Ver documento completo en Drive ↗</a>';
+  if(prog.intentos>0)html+='<p style="font-size:12px;color:var(--orange);margin-bottom:12px">⚠ Intento '+(prog.intentos+1)+' de 3. Responde correctamente ambas preguntas para continuar.</p>';
+
+  fichaActualPreguntas.forEach(function(p,i){
+    html+='<div style="margin-bottom:16px"><p style="font-size:13px;font-weight:600;margin-bottom:8px">'+(i+1)+'. '+p.pregunta+'</p>';
+    (p.opciones||[]).forEach(function(op,oi){
+      html+='<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-bottom:6px;font-size:13px;cursor:pointer">';
+      html+='<input type="radio" name="preg'+i+'" value="'+oi+'" onchange="fichaActualRespuestas['+i+']='+oi+'" style="accent-color:var(--accent2)">';
+      html+=op+'</label>';
+    });
+    html+='</div>';
+  });
+
+  html+='<button class="btn-add" id="enviarFichaBtn">Enviar respuestas</button></div>';
+  v.innerHTML=html;
+
+  document.getElementById('enviarFichaBtn').addEventListener('click',function(){
+    if(Object.keys(fichaActualRespuestas).length<fichaActualPreguntas.length){
+      alert('Responde todas las preguntas antes de continuar.');
+      return;
+    }
+    var correctas=fichaActualPreguntas.every(function(p,i){return fichaActualRespuestas[i]===p.correcta;});
+    if(correctas){
+      aprobarFicha(docId);
+    } else {
+      registrarFallo(docId,doc);
+    }
+  });
+}
+
+function aprobarFicha(docId){
+  var key=curNombre.replace(/\s/g,'_');
+  sedeRef('fichaProgreso/'+docId+'/'+key).set({aprobado:true,fecha:Date.now(),intentos:(fichaProgreso[docId]&&fichaProgreso[docId][key]?fichaProgreso[docId][key].intentos:0)}).then(function(){
+    setTimeout(function(){
+      var pend=fichasObligatoriasPendientes(curNombre);
+      if(pend.length){mostrarFichaObligatoria(pend[0][0],pend[0][1]);}
+      else{document.getElementById('fichaObligView').style.display='none';document.getElementById('appView').style.display='block';}
+    },300);
+  });
+}
+
+function registrarFallo(docId,doc){
+  var key=curNombre.replace(/\s/g,'_');
+  var actual=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{intentos:0};
+  var nuevosIntentos=(actual.intentos||0)+1;
+  var data={intentos:nuevosIntentos,ultimoFallo:Date.now()};
+  if(nuevosIntentos>=3){
+    data.bloqueado=true;
+    sedeRef('fichaProgreso/'+docId+'/'+key).set(data).then(function(){
+      sedeRef('alertasCapacitacion').push({nombre:curNombre,documento:doc.titulo,docId:docId,fecha:Date.now()});
+      setTimeout(function(){mostrarFichaObligatoria(docId,doc);},300);
+    });
+  } else {
+    sedeRef('fichaProgreso/'+docId+'/'+key).set(data).then(function(){
+      alert('Respuesta incorrecta. Vuelve a leer el contenido e inténtalo de nuevo.');
+      setTimeout(function(){mostrarFichaObligatoria(docId,doc);},300);
+    });
+  }
+}
+
+function renderCumplimientoList(){
+  var d=document.getElementById('cumplimientoList');if(!d)return;
+  var obligatorias=Object.entries(biblioteca).filter(function(e){return e[1].obligatoria;});
+  if(!obligatorias.length){d.innerHTML='<p class="empty">Sin fichas obligatorias configuradas.</p>';return;}
+  var html='';
+  obligatorias.forEach(function(e){
+    var docId=e[0],doc=e[1];
+    html+='<p style="font-size:12px;font-weight:700;color:rgba(255,255,255,.6);margin:10px 0 6px">'+doc.titulo+'</p>';
+    nombres.forEach(function(n){
+      var key=n.replace(/\s/g,'_');
+      var prog=(fichaProgreso[docId]&&fichaProgreso[docId][key])||null;
+      var estado,color;
+      if(!prog){estado='Sin iniciar';color='rgba(255,255,255,.3)';}
+      else if(prog.bloqueado){estado='🔒 Bloqueado (3 fallos)';color='#fca5a5';}
+      else if(prog.aprobado){estado='✓ Aprobado';color='#6ee7b7';}
+      else{estado='En progreso ('+(prog.intentos||0)+' intento'+(prog.intentos!==1?'s':'')+')';color='#fcd34d';}
+      html+='<div class="iitem" style="padding:5px 0"><div class="iitem-info" style="font-size:12px">'+n+'</div><span style="font-size:11px;color:'+color+';font-weight:600">'+estado+'</span>';
+      if(prog&&prog.bloqueado)html+='<button class="del-btn" style="color:#6ee7b7;font-size:11px;padding:2px 6px;border:1px solid rgba(16,185,129,.3);border-radius:4px" onclick="marcarCapacitada(\''+docId+'\',\''+key+'\')">✓ Marcar capacitada</button>';
+      html+='</div>';
+    });
+  });
+  d.innerHTML=html;
+}
+
+window.marcarCapacitada=function(docId,key){
+  sedeRef('fichaProgreso/'+docId+'/'+key).set({aprobado:true,fecha:Date.now(),capacitadaManual:true});
+};
+
+function renderAlertasCapacitacion(){
+  var d=document.getElementById('alertasCapacitacion');if(!d)return;
+  sedeRef('alertasCapacitacion').once('value',function(s){
+    var en=Object.entries(s.val()||{}).filter(function(e){return !e[1].vista;});
+    if(!en.length){d.innerHTML='';return;}
+    d.innerHTML=en.map(function(e){
+      var k=e[0],a=e[1];
+      return '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:12px;color:#fca5a5"><strong>'+a.nombre+'</strong> falló 3 veces en "'+a.documento+'". Requiere capacitación.<br><button class="del-btn" style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;padding:0" onclick="sedeRef(\'alertasCapacitacion/'+k+'/vista\').set(true)">Marcar como vista</button></div>';
+    }).join('');
+  });
+}
 
 // ── COBERTURA POR PERSONAS ──
 function personasEnFranja(bDia,dia,area,ini,fin){
