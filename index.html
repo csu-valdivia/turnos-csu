@@ -287,6 +287,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="tab" onclick="goTab('ausencias')">Ausencias</button>
             <button class="tab" onclick="goTab('resumen')">Resumen</button>
           </div>
+          <div class="tabs" style="margin-top:4px">
+            <button class="tab" onclick="goTab('biblioteca')" style="flex:1">📚 Biblioteca de conocimiento</button>
+          </div>
         </div>
 
         <div class="tc active" id="tc-panorama">
@@ -332,6 +335,20 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           <div id="resumenView"></div>
         </div>
 
+        <div class="tc" id="tc-biblioteca">
+          <div class="sel-wrap">
+            <select id="bibFiltro" style="background:rgba(255,255,255,.08);color:#fff">
+              <option value="">Todas las categorías</option>
+              <option value="Protocolos">Protocolos</option>
+              <option value="Inducción">Inducción</option>
+              <option value="Acreditación">Acreditación</option>
+              <option value="Infografías">Infografías</option>
+              <option value="Otros">Otros</option>
+            </select>
+          </div>
+          <div id="bibliotecaView"></div>
+        </div>
+
         <div id="pendientesSection"></div>
 
         <div class="atoggle"><button id="adminBtn">⚙ Admin</button></div>
@@ -365,6 +382,28 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button class="btn-add" id="addNombreBtn" style="width:auto;margin-top:0;padding:8px 14px">+</button>
             </div>
             <div class="ilist" id="nombresList"></div>
+          </div>
+
+          <div class="asec">
+            <p class="asec-title">📚 Biblioteca de conocimiento</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Sube protocolos, infografías e inducciones. Comparte el archivo en Google Drive ("Cualquiera con el link puede ver") y pega el link aquí.</p>
+            <input type="text" id="bibTitulo" placeholder="Título del documento" style="margin-bottom:6px">
+            <div class="frow">
+              <select id="bibCatSel">
+                <option value="Protocolos">Protocolos</option>
+                <option value="Inducción">Inducción</option>
+                <option value="Acreditación">Acreditación</option>
+                <option value="Infografías">Infografías</option>
+                <option value="Otros">Otros</option>
+                <option value="__nueva__">+ Nueva categoría...</option>
+              </select>
+            </div>
+            <input type="text" id="bibCatNueva" placeholder="Nombre de la nueva categoría" style="display:none;margin-bottom:6px">
+            <input type="text" id="bibLink" placeholder="Link de Google Drive (https://...)" style="margin-bottom:6px">
+            <textarea class="atxt" id="bibDesc" placeholder="Descripción breve (opcional)"></textarea>
+            <button class="btn-add" id="addBibBtn">+ Agregar documento</button>
+            <div class="saved" id="bibSaved">✓ Agregado</div>
+            <div class="ilist" id="bibAdminList"></div>
           </div>
 
           <div class="asec">
@@ -631,8 +670,8 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos'];
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={};
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca'];
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
@@ -669,7 +708,7 @@ function detectarSemanaActual(){
 
 window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
-  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};curNombre='';semanas={};
+  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};biblioteca={};curNombre='';semanas={};
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -678,6 +717,7 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
+  sedeRef('biblioteca').on('value',function(s){biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();});
   sedeRef('semanas').on('value',function(s){
     semanas=s.val()||{};
     renderSemanasList();
@@ -734,7 +774,7 @@ window.confirmarSemana=function(wId){
 
 window.changeSede=function(){
   detach();
-  sedeRef('nombres').off();sedeRef('correos').off();sedeRef('semanas').off();
+  sedeRef('nombres').off();sedeRef('correos').off();sedeRef('semanas').off();sedeRef('biblioteca').off();
   S='';W='';adminUnlocked=false;
   document.getElementById('adminPanel').classList.remove('open');
   document.getElementById('mainView').style.display='none';
@@ -773,7 +813,7 @@ function updateSelects(){
 }
 
 // ── TABS ──
-var TABS=['panorama','mis-turnos','asistencia','estado','cambios','ausencias','resumen'];
+var TABS=['panorama','mis-turnos','asistencia','estado','cambios','ausencias','resumen','biblioteca'];
 window.goTab=function(tab){
   document.querySelectorAll('.tab').forEach(function(t){var m=t.getAttribute('onclick').match(/goTab\('([^']+)'\)/);if(m)t.classList.toggle('active',m[1]===tab);});
   TABS.forEach(function(id){var el=document.getElementById('tc-'+id);if(el)el.classList.toggle('active',id===tab);});
@@ -781,6 +821,7 @@ window.goTab=function(tab){
   if(tab==='estado')renderEstado();
   if(tab==='cambios')renderCambios();
   if(tab==='ausencias')renderAusencias();
+  if(tab==='biblioteca')renderBiblioteca();
 };
 
 // ── AVISO ──
@@ -1111,6 +1152,77 @@ function renderClaveActual(){
   d.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'+equipoClave.filter(function(e){return e&&e.n;}).map(function(e){return '<span style="background:rgba(37,99,235,.2);color:#93c5fd;border:1.5px solid rgba(74,144,217,.4);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700">🔑 '+e.n+(e.r?' · '+e.r:'')+'</span>';}).join('')+'</div>';
   ['claveN1','claveN2','claveN3'].forEach(function(id,i){var s=document.getElementById(id);if(s&&equipoClave[i])s.value=equipoClave[i].n||'';var r=document.getElementById(id.replace('N','R'));if(r&&equipoClave[i])r.value=equipoClave[i].r||'';});
 }
+
+// ── BIBLIOTECA DE CONOCIMIENTO ──
+var BIB_ICONOS={Protocolos:'📋',Inducción:'🎓',Acreditación:'🏆',Infografías:'🖼️',Otros:'📄'};
+function bibIcono(cat){return BIB_ICONOS[cat]||'📄';}
+
+function renderBiblioteca(){
+  var d=document.getElementById('bibliotecaView');if(!d)return;
+  var filtro=document.getElementById('bibFiltro')?document.getElementById('bibFiltro').value:'';
+  var en=Object.entries(biblioteca);
+  if(filtro)en=en.filter(function(e){return e[1].categoria===filtro;});
+  if(!en.length){d.innerHTML='<div class="no-result"><p style="font-size:32px;margin-bottom:8px">📚</p><p>'+(filtro?'Sin documentos en esta categoría.':'Aún no hay documentos disponibles.')+'</p></div>';return;}
+  // Group by category
+  var porCat={};
+  en.forEach(function(e){var cat=e[1].categoria||'Otros';if(!porCat[cat])porCat[cat]=[];porCat[cat].push(e);});
+  var html='';
+  Object.keys(porCat).sort().forEach(function(cat){
+    html+='<p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px">'+bibIcono(cat)+' '+cat+'</p>';
+    porCat[cat].forEach(function(e){
+      var k=e[0],doc=e[1];
+      html+='<a href="'+doc.link+'" target="_blank" rel="noopener" style="text-decoration:none" onclick="marcarLecturaDoc(\''+k+'\')"><div class="wcard" style="margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;cursor:pointer">';
+      html+='<div style="font-size:22px;flex-shrink:0">'+bibIcono(doc.categoria)+'</div>';
+      html+='<div style="flex:1;min-width:0"><p style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">'+doc.titulo+'</p>';
+      if(doc.descripcion)html+='<p style="font-size:11px;color:var(--text2)">'+doc.descripcion+'</p>';
+      html+='</div><div style="font-size:18px;color:var(--text3);flex-shrink:0">↗</div>';
+      html+='</div></a>';
+    });
+  });
+  d.innerHTML=html;
+}
+var bibFiltroEl=document.getElementById('bibFiltro');
+if(bibFiltroEl)bibFiltroEl.addEventListener('change',renderBiblioteca);
+
+window.marcarLecturaDoc=function(k){
+  if(!curNombre)return;
+  sedeRef('biblioteca/'+k+'/lecturas/'+curNombre.replace(/\s/g,'_')).set(Date.now());
+};
+
+function renderBibAdminList(){
+  var d=document.getElementById('bibAdminList');if(!d)return;
+  var en=Object.entries(biblioteca);
+  if(!en.length){d.innerHTML='<p class="empty">Sin documentos subidos.</p>';return;}
+  d.innerHTML=en.sort(function(a,b){return(b[1].ts||0)-(a[1].ts||0);}).map(function(e){
+    var k=e[0],doc=e[1];
+    var numLecturas=doc.lecturas?Object.keys(doc.lecturas).length:0;
+    return '<div class="iitem"><div class="iitem-info">'+bibIcono(doc.categoria)+' <strong>'+doc.titulo+'</strong><div class="iitem-sub">'+doc.categoria+' · '+numLecturas+' lectura'+(numLecturas!==1?'s':'')+'</div></div><button class="del-btn" onclick="if(confirm(\'¿Eliminar este documento?\'))sedeRef(\'biblioteca/'+k+'\').remove()">🗑</button></div>';
+  }).join('');
+}
+
+document.getElementById('bibCatSel').addEventListener('change',function(){
+  document.getElementById('bibCatNueva').style.display=this.value==='__nueva__'?'block':'none';
+});
+
+document.getElementById('addBibBtn').addEventListener('click',function(){
+  var titulo=document.getElementById('bibTitulo').value.trim();
+  var catSel=document.getElementById('bibCatSel').value;
+  var catNueva=document.getElementById('bibCatNueva').value.trim();
+  var cat=catSel==='__nueva__'?catNueva:catSel;
+  var link=document.getElementById('bibLink').value.trim();
+  var desc=document.getElementById('bibDesc').value.trim();
+  if(!titulo||!cat||!link){alert('Completa título, categoría y link.');return;}
+  if(!link.startsWith('http')){alert('El link debe empezar con http:// o https://');return;}
+  sedeRef('biblioteca').push({titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now()}).then(function(){
+    document.getElementById('bibTitulo').value='';
+    document.getElementById('bibLink').value='';
+    document.getElementById('bibDesc').value='';
+    document.getElementById('bibCatNueva').value='';
+    document.getElementById('bibCatNueva').style.display='none';
+    document.getElementById('bibCatSel').value='Protocolos';
+    showSaved('bibSaved');
+  });
+});
 
 // ── COBERTURA POR PERSONAS ──
 function personasEnFranja(bDia,dia,area,ini,fin){
