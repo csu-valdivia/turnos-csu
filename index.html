@@ -244,7 +244,19 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
     <div id="mainView" style="display:none">
       <div class="sede-hdr">
         <span class="sede-tag" id="sedeTag"></span>
-        <button class="sede-change" onclick="changeSede()">↺ Cambiar sede</button>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="sede-change" onclick="cambiarSemana()" style="text-decoration:underline">↺ Cambiar semana</button>
+          <button class="sede-change" onclick="changeSede()">↺ Cambiar sede</button>
+        </div>
+      </div>
+
+      <!-- CONFIRMACION DE SEMANA -->
+      <div id="semanaConfirmView" style="display:none"></div>
+      <div id="selectorSemanasDiv" style="display:none">
+        <div class="card">
+          <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Semanas disponibles</p>
+          <div id="semanasListSel"></div>
+        </div>
       </div>
 
       <!-- EMAIL PROMPT -->
@@ -334,10 +346,16 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           </div>
 
           <div class="asec">
-            <p class="asec-title">📅 Nombre de la semana</p>
-            <input type="text" id="semanaTxt" placeholder="Ej: Semana 22–27 junio" style="margin-bottom:4px">
-            <button class="btn-add" id="saveSemanaBtn">Guardar</button>
-            <div class="saved" id="semanaSaved">✓ Guardado</div>
+            <p class="asec-title">📅 Gestión de semanas</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Crea las semanas que necesites con anticipación. Puedes cargar un mes completo de una vez.</p>
+            <div class="frow">
+              <div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.3);display:block;margin-bottom:3px">Inicio</label><input type="date" id="semIniNew"></div>
+              <div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.3);display:block;margin-bottom:3px">Fin</label><input type="date" id="semFinNew"></div>
+            </div>
+            <input type="text" id="semNombreNew" placeholder="Nombre (ej: Semana 23–29 junio)" style="margin-bottom:6px">
+            <button class="btn-add" id="addSemanaBtn">+ Crear semana</button>
+            <div class="saved" id="semanaSaved">✓ Semana creada</div>
+            <div class="ilist" id="semanasAdminList"></div>
           </div>
 
           <div class="asec">
@@ -583,7 +601,12 @@ function horas(h){var p=h.split('–');return(t2m(p[1].trim())-t2m(p[0].trim()))
 function overlaps(h,f){var p=h.split('–'),q=f.split('–');return t2m(p[0].trim())<=t2m(q[0].trim())&&t2m(p[1].trim())>=t2m(q[1].trim());}
 function mkOpts(arr,ph){return '<option value="">'+ph+'</option>'+arr.map(function(o){return '<option>'+o+'</option>';}).join('');}
 function showSaved(id){var e=document.getElementById(id);e.style.display='block';setTimeout(function(){e.style.display='none';},2000);}
-function sRef(p){return db.ref('sedes/'+S+'/'+p);}
+function sRef(p){
+  var base=p.split('/')[0];
+  if(SEDE_LEVEL_FIELDS.indexOf(base)!==-1)return db.ref('sedes/'+S+'/'+p);
+  return db.ref('sedes/'+S+'/semanas/'+W+'/'+p);
+}
+function sedeRef(p){return db.ref('sedes/'+S+'/'+p);}
 function fechasRango(a,b){var r=[],c=new Date(a+'T12:00:00'),e=new Date(b+'T12:00:00');while(c<=e){r.push(c.toISOString().split('T')[0]);c.setDate(c.getDate()+1);}return r;}
 function diaDeDate(s){return['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][new Date(s+'T12:00:00').getDay()];}
 function mkOverlay(){var o=document.createElement('div');o.className='overlay';return o;}
@@ -596,7 +619,9 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var S='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={};
+var SEDE_LEVEL_FIELDS=['nombres','correos'];
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={};
+var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
 
@@ -605,12 +630,10 @@ function on(path,cb){var fn=function(s){cb(s.val()||{});};sRef(path).on('value',
 
 function attach(){
   detach();
-  on('semana',function(v){document.getElementById('semanaLabel').textContent=v||'Semana actual';var si=document.getElementById('semanaTxt');if(si&&!si.value)si.value=v||'';});
   on('aviso',function(v){renderAviso(v);});
   on('bloques',function(v){bloques=v;renderPanorama();renderBloquesList();renderResumen();if(curNombre)renderMisTurnos(curNombre);});
   on('tareas',function(v){tareas=v;renderTareasList();if(curNombre)renderMisTurnos(curNombre);});
   on('pendientes',function(v){pendientes=v;renderPendientes();renderPendList();checkAlerta();});
-  on('nombres',function(v){nombres=Array.isArray(v)?v:Object.values(v||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   on('asistencia',function(v){asistencia=v;renderAsist();renderPanorama();if(curNombre)renderMisTurnos(curNombre);});
   on('notas',function(v){notas=v;if(curNombre)renderMisTurnos(curNombre);});
   on('visto',function(v){visto=v;if(curNombre)renderMisTurnos(curNombre);});
@@ -621,24 +644,96 @@ function attach(){
   on('coberturas',function(v){coberturas=v;renderCobList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
-  on('correos',function(v){correos=v;});
 }
 
-// ── SEDE ──
+// ── SEDE Y SEMANAS ──
+function hoyStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+
+function detectarSemanaActual(){
+  var hoy=hoyStr();
+  var match=Object.entries(semanas).find(function(e){return e[1].ini<=hoy&&e[1].fin>=hoy;});
+  return match?match[0]:null;
+}
+
 window.setSede=function(sede){
-  S=sede;alertaMostrada=false;adminUnlocked=false;
-  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};curNombre='';
+  S=sede;W='';alertaMostrada=false;adminUnlocked=false;
+  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};curNombre='';semanas={};
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
-  document.getElementById('semanaTxt').value='';
+  document.getElementById('semanaLabel').textContent='Buscando semana...';
   document.getElementById('results').innerHTML='';
-  attach();
-  var stored=localStorage.getItem('tcsu_v3_'+sede);
-  if(stored&&stored!=='pending'){showApp();}
-  else{localStorage.setItem('tcsu_v3_'+sede,'pending');document.getElementById('emailView').style.display='block';document.getElementById('appView').style.display='none';}
+  // Cargar nombres/correos (nivel sede) y la lista de semanas
+  sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
+  sedeRef('correos').on('value',function(s){correos=s.val()||{};});
+  sedeRef('semanas').on('value',function(s){
+    semanas=s.val()||{};
+    renderSemanasList();
+    renderSemanasAdminList();
+    if(!W)mostrarConfirmacionSemana();
+  });
 };
-window.changeSede=function(){detach();S='';adminUnlocked=false;document.getElementById('adminPanel').classList.remove('open');document.getElementById('mainView').style.display='none';document.getElementById('sedeView').style.display='block';};
+
+function mostrarConfirmacionSemana(){
+  var wId=detectarSemanaActual();
+  var v=document.getElementById('semanaConfirmView');
+  if(!wId){
+    v.innerHTML='<div class="card" style="text-align:center"><p style="font-size:32px;margin-bottom:10px">📅</p><p style="font-size:15px;font-weight:600;margin-bottom:8px">No hay una semana activa para hoy</p><p style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:16px">El jefe debe crear la semana correspondiente a la fecha de hoy en el panel admin, o puedes elegir otra semana manualmente.</p><button class="btn-sec" onclick="toggleSelectorSemanas()">Ver semanas disponibles</button></div>';
+  } else {
+    var sem=semanas[wId];
+    v.innerHTML='<div class="card" style="text-align:center"><p style="font-size:11px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+S+'</p><p style="font-size:17px;font-weight:500;margin-bottom:4px">Estás en la semana</p><p style="font-size:21px;font-weight:700;color:#7ec8f7;margin-bottom:1.25rem">'+(sem.nombre||sem.ini+' al '+sem.fin)+'</p><div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;margin-bottom:1.25rem;text-align:left;font-size:13px;color:rgba(255,255,255,.55)">📅 '+sem.ini+' → '+sem.fin+'</div><button class="btn-add" onclick="confirmarSemana(\''+wId+'\')">Confirmar e ingresar →</button><p style="font-size:12px;color:rgba(255,255,255,.3);margin-top:10px;cursor:pointer" onclick="toggleSelectorSemanas()">Ver otra semana</p></div>';
+  }
+  document.getElementById('selectorSemanasDiv').style.display='none';
+  document.getElementById('semanaConfirmView').style.display='block';
+  document.getElementById('mainView').querySelector('.sede-hdr').style.display='none';
+  document.getElementById('appView').style.display='none';
+  document.getElementById('emailView').style.display='none';
+}
+
+window.toggleSelectorSemanas=function(){
+  var d=document.getElementById('selectorSemanasDiv');
+  d.style.display=d.style.display==='none'?'block':'none';
+  renderSemanasList();
+};
+
+function renderSemanasList(){
+  var d=document.getElementById('semanasListSel');
+  if(!d)return;
+  var en=Object.entries(semanas).sort(function(a,b){return a[1].ini.localeCompare(b[1].ini);});
+  if(!en.length){d.innerHTML='<p class="empty">Sin semanas creadas todavía.</p>';return;}
+  var hoy=hoyStr();
+  d.innerHTML=en.map(function(e){
+    var k=e[0],s=e[1];
+    var esActual=s.ini<=hoy&&s.fin>=hoy;
+    return '<div class="iitem" style="cursor:pointer'+(esActual?';background:rgba(74,144,217,.08);border-radius:8px;padding:6px 8px':'')+'" onclick="confirmarSemana(\''+k+'\')"><div class="iitem-info"><strong>'+(s.nombre||s.ini+' al '+s.fin)+'</strong>'+(esActual?' <span style="color:#6ee7b7;font-size:10px">● actual</span>':'')+'<div class="iitem-sub">'+s.ini+' → '+s.fin+'</div></div></div>';
+  }).join('');
+}
+
+window.confirmarSemana=function(wId){
+  W=wId;
+  document.getElementById('semanaConfirmView').style.display='none';
+  document.getElementById('mainView').querySelector('.sede-hdr').style.display='flex';
+  document.getElementById('semanaLabel').textContent=(semanas[wId].nombre||semanas[wId].ini+' al '+semanas[wId].fin);
+  attach();
+  var stored=localStorage.getItem('tcsu_v3_'+S);
+  if(stored&&stored!=='pending'){showApp();}
+  else{localStorage.setItem('tcsu_v3_'+S,'pending');document.getElementById('emailView').style.display='block';document.getElementById('appView').style.display='none';}
+};
+
+window.changeSede=function(){
+  detach();
+  sedeRef('nombres').off();sedeRef('correos').off();sedeRef('semanas').off();
+  S='';W='';adminUnlocked=false;
+  document.getElementById('adminPanel').classList.remove('open');
+  document.getElementById('mainView').style.display='none';
+  document.getElementById('sedeView').style.display='block';
+};
+
+window.cambiarSemana=function(){
+  detach();W='';adminUnlocked=false;
+  document.getElementById('adminPanel').classList.remove('open');
+  mostrarConfirmacionSemana();
+};
 
 function showApp(){document.getElementById('emailView').style.display='none';document.getElementById('appView').style.display='block';}
 function checkEmailPrompt(){var stored=localStorage.getItem('tcsu_v3_'+S);if(stored==='pending'&&nombres.length){document.getElementById('emailView').style.display='block';document.getElementById('appView').style.display='none';}}
@@ -1275,7 +1370,31 @@ document.getElementById('adminBtn').addEventListener('click',function(){
 
 document.getElementById('saveAvisoBtn').addEventListener('click',function(){var v=document.getElementById('avisoTxt').value.trim();if(!v)return;sRef('aviso').set(v).then(function(){showSaved('avisoSaved');});});
 document.getElementById('clearAvisoBtn').addEventListener('click',function(){sRef('aviso').remove();document.getElementById('avisoTxt').value='';});
-document.getElementById('saveSemanaBtn').addEventListener('click',function(){var v=document.getElementById('semanaTxt').value.trim();if(!v)return;sRef('semana').set(v).then(function(){showSaved('semanaSaved');});});
+document.getElementById('addSemanaBtn').addEventListener('click',function(){
+  var ini=document.getElementById('semIniNew').value;
+  var fin=document.getElementById('semFinNew').value;
+  var nom=document.getElementById('semNombreNew').value.trim();
+  if(!ini||!fin){alert('Completa fecha de inicio y fin.');return;}
+  if(ini>fin){alert('La fecha de inicio debe ser antes que la de fin.');return;}
+  if(!nom)nom=ini+' al '+fin;
+  sedeRef('semanas').push({ini:ini,fin:fin,nombre:nom}).then(function(){
+    ['semIniNew','semFinNew','semNombreNew'].forEach(function(id){document.getElementById(id).value='';});
+    showSaved('semanaSaved');
+  });
+});
+
+function renderSemanasAdminList(){
+  var d=document.getElementById('semanasAdminList');if(!d)return;
+  var en=Object.entries(semanas).sort(function(a,b){return a[1].ini.localeCompare(b[1].ini);});
+  if(!en.length){d.innerHTML='<p class="empty">Sin semanas creadas.</p>';return;}
+  var hoy=hoyStr();
+  d.innerHTML=en.map(function(e){
+    var k=e[0],s=e[1];
+    var esActual=s.ini<=hoy&&s.fin>=hoy;
+    var esEsta=k===W;
+    return '<div class="iitem"><div class="iitem-info">'+(esEsta?'<span style="color:#7ec8f7">▶ </span>':'')+'<strong>'+(s.nombre||s.ini+' al '+s.fin)+'</strong>'+(esActual?' <span style="color:#6ee7b7;font-size:10px">● actual</span>':'')+'<div class="iitem-sub">'+s.ini+' → '+s.fin+'</div></div><button class="del-btn" onclick="if(confirm(\'¿Eliminar esta semana y todos sus datos?\'))sedeRef(\'semanas/'+k+'\').remove()">🗑</button></div>';
+  }).join('');
+}
 document.getElementById('addNombreBtn').addEventListener('click',function(){var v=document.getElementById('nuevoNombre').value.trim();if(!v)return;var a=nombres.slice();if(a.indexOf(v)===-1)a.push(v);sRef('nombres').set(a).then(function(){document.getElementById('nuevoNombre').value='';});});
 document.getElementById('saveClaveBtn').addEventListener('click',function(){
   var entries=[{n:document.getElementById('claveN1').value,r:document.getElementById('claveR1').value},{n:document.getElementById('claveN2').value,r:document.getElementById('claveR2').value},{n:document.getElementById('claveN3').value,r:document.getElementById('claveR3').value}].filter(function(e){return e.n;});
@@ -1335,7 +1454,7 @@ document.getElementById('limpiarPendBtn').addEventListener('click',function(){
   });
 });
 
-document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Borrar todo en '+S+'?'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave','sinServicios'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
+document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Borrar todos los datos de esta semana en '+S+'? (el personal y otras semanas no se ven afectados)'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave','sinServicios'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
 </script>
 </body>
 </html>
