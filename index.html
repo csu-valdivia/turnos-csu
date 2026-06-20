@@ -1045,11 +1045,24 @@ function franjaEsSinServicio(dia,area,ini,fin){
   });
 }
 
+function franjaTieneSinAtencion(dia,area,ini,fin){
+  var iniM=t2m(ini),finM=t2m(fin);
+  return Object.values(bloques).some(function(b){
+    if(!b.sinAtencion||b.dia!==dia||b.area!==area||!b.horario)return false;
+    var p=b.horario.split('–');
+    var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
+    return bI<finM&&bF>iniM;
+  });
+}
+
 function verificar(){
   var def=[];
   REGLAS.forEach(function(r){r.dias.forEach(function(dia){
     // Skip if marked as Sin Servicio (Dispensario manual block)
     if(r.opcional&&franjaEsSinServicio(dia,r.area,r.ini,r.fin))return;
+
+    // Skip if jefe already accepted this gap as "Sin atención" (admin decision)
+    if(franjaTieneSinAtencion(dia,r.area,r.ini,r.fin))return;
 
     var bDia=Object.values(bloques).filter(function(b){return b.dia===dia&&b.area===r.area;});
 
@@ -1196,12 +1209,16 @@ function addBulkRow(){
   var ck=tr.querySelector('.saCk'),lck=tr.querySelector('.lCk'),pSel=tr.querySelector('.pNom');
   var aSel=tr.querySelector('.aSel'),hSel=tr.querySelector('.hSel');
   tr.querySelector('.aSel').addEventListener('change',function(){tr.querySelector('.tSel').style.opacity=this.value==='Esterilización'?'1':'0.3';});
-  ck.addEventListener('change',function(){if(this.checked){pSel.disabled=true;pSel.value='';lck.checked=false;}else pSel.disabled=false;});
+  ck.addEventListener('change',function(){
+    if(this.checked){pSel.disabled=true;pSel.value='';lck.checked=false;aSel.disabled=false;hSel.disabled=false;}
+    else pSel.disabled=false;
+  });
   lck.addEventListener('change',function(){
+    // 🏖 Libre = servicio/área libre de uso ese bloque: requiere área+horario, no persona
     if(this.checked){
-      // S/A mode: area stays selectable, horario stays selectable, just mark as sin servicio
       ck.checked=false;
       pSel.disabled=true;pSel.value='';
+      aSel.disabled=false;hSel.disabled=false;
     } else {
       pSel.disabled=false;
     }
@@ -1218,15 +1235,14 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){
     var krol=r.querySelector('.kSel')?r.querySelector('.kSel').value:'';
     var sinAt=r.querySelector('.saCk')&&r.querySelector('.saCk').checked;
     var libre=r.querySelector('.lCk')&&r.querySelector('.lCk').checked;
+    var ssToAdd=[];
     if(d){
       if(sinAt&&a&&h)nv.push({dia:d,nombre:'__sa__',area:a,horario:h,sinAtencion:true});
-      else if(libre&&a&&h){
-        // Sin Servicio - save to sinServicios, not as a bloque
-        sRef('sinServicios').push({dia:d,area:a,horario:h});
-      }
+      else if(libre&&a&&h){ssToAdd.push({dia:d,area:a,horario:h});}
       else if(n&&a&&h){var blq={dia:d,nombre:n,area:a,horario:h};if(turno)blq.turno=turno;nv.push(blq);}
       if(krol&&n)claveBulk.push({n:n,r:krol});
     }
+    ssToAdd.forEach(function(ss){sRef('sinServicios').push(ss);});
   });
   if(!nv.length)return;
   Promise.all(nv.map(function(b){return sRef('bloques').push(b);})).then(function(){
