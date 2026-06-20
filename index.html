@@ -1591,6 +1591,7 @@ function renderCumplimientoList(){
       else{estado='En progreso ('+(prog.intentos||0)+' intento'+(prog.intentos!==1?'s':'')+')';color='#fcd34d';}
       html+='<div class="iitem" style="padding:5px 0;flex-wrap:wrap"><div class="iitem-info" style="font-size:12px">'+n+'</div><span style="font-size:11px;color:'+color+';font-weight:600">'+estado+'</span>';
       if(prog&&prog.bloqueado)html+='<button style="width:100%;margin-top:6px;padding:8px;font-size:12px;font-weight:700;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:inherit;cursor:pointer" onclick="marcarCapacitada(\''+docId+'\',\''+key+'\')">🔓 Desbloquear acceso (ya la capacité)</button>';
+      if(prog)html+='<button style="font-size:10px;color:rgba(255,255,255,.3);background:none;border:1px solid rgba(255,255,255,.15);border-radius:5px;padding:3px 8px;margin-left:6px;font-family:inherit;cursor:pointer" onclick="if(confirm(\'¿Reiniciar el progreso de '+n+' en esta ficha? Podrá volver a leer y responder desde cero.\'))reiniciarProgresoFicha(\''+docId+'\',\''+key+'\')">↺ Reiniciar (prueba)</button>';
       html+='</div>';
     });
   });
@@ -1602,6 +1603,12 @@ window.marcarCapacitada=function(docId,key){
   if(!fichaProgreso[docId])fichaProgreso[docId]={};
   fichaProgreso[docId][key]=data;
   sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
+  renderCumplimientoList();
+};
+
+window.reiniciarProgresoFicha=function(docId,key){
+  if(fichaProgreso[docId])delete fichaProgreso[docId][key];
+  sedeRef('fichaProgreso/'+docId+'/'+key).remove();
   renderCumplimientoList();
 };
 
@@ -1878,7 +1885,8 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var p=document.getElementById('adminPanel');
   if(p.classList.contains('open')){
     p.classList.remove('open');adminUnlocked=false;renderPendientes();
-    if(!W)mostrarConfirmacionSemana();
+    if(!W){mostrarConfirmacionSemana();}
+    else if(curNombre&&verificarFichasPendientes()){/* bloqueado por ficha pendiente */}
     return;
   }
   var PIN=SEDES[S];
