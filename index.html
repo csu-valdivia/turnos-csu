@@ -1276,7 +1276,7 @@ function addPreguntaRow(){
   var div=document.createElement('div');
   div.style.cssText='background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:8px';
   div.innerHTML='<input type="text" class="pregTxt" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">'+
-    [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="correcta'+idx+'" class="pregCorrecta" value="'+i+'" style="accent-color:var(--green)"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
+    [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="correcta'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--green);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
     '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
   wrap.appendChild(div);
 }
@@ -1368,29 +1368,43 @@ function mostrarFichaObligatoria(docId,doc){
     return;
   }
 
-  var preguntas=Object.values(doc.preguntas||{});
-  if(preguntas.length<2){
-    // Not enough questions configured - auto approve to avoid blocking everyone
-    aprobarFicha(docId);
-    return;
-  }
-  // Pick 2 random questions
-  var shuffled=preguntas.slice().sort(function(){return Math.random()-0.5;});
-  fichaActualPreguntas=shuffled.slice(0,2);
-  fichaActualRespuestas={};
+  mostrarPasoLectura(docId,doc,prog);
+}
 
+function mostrarPasoLectura(docId,doc,prog){
+  var v=document.getElementById('fichaObligView');
   var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📌 Lectura obligatoria</p>';
   html+='<p style="font-size:17px;font-weight:700;margin-bottom:12px">'+doc.titulo+'</p>';
   if(doc.contenido)html+='<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,.7);line-height:1.7">'+doc.contenido.replace(/\n/g,'<br>')+'</div>';
   if(doc.link)html+='<a href="'+doc.link+'" target="_blank" rel="noopener" style="display:inline-block;font-size:12px;color:#7ec8f7;margin-bottom:16px">📄 Ver documento completo en Drive ↗</a>';
-  if(prog.intentos>0)html+='<p style="font-size:12px;color:var(--orange);margin-bottom:12px">⚠ Intento '+(prog.intentos+1)+' de 3. Responde correctamente ambas preguntas para continuar.</p>';
+  if(prog.intentos>0)html+='<p style="font-size:12px;color:var(--orange);margin-bottom:12px">⚠ Intento '+(prog.intentos+1)+' de 3. A continuación responderás 2 preguntas sobre este contenido.</p>';
+  html+='<button class="btn-add" id="yaLeiBtn">✓ Ya leí esto, continuar →</button></div>';
+  v.innerHTML=html;
+  document.getElementById('yaLeiBtn').addEventListener('click',function(){
+    mostrarPasoPreguntas(docId,doc,prog);
+  });
+}
+
+function mostrarPasoPreguntas(docId,doc,prog){
+  var v=document.getElementById('fichaObligView');
+  var preguntas=Object.values(doc.preguntas||{});
+  if(preguntas.length<2){
+    aprobarFicha(docId);
+    return;
+  }
+  var shuffled=preguntas.slice().sort(function(){return Math.random()-0.5;});
+  fichaActualPreguntas=shuffled.slice(0,2);
+  fichaActualRespuestas={};
+
+  var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📌 Evaluación rápida</p>';
+  html+='<p style="font-size:15px;font-weight:600;margin-bottom:16px;color:rgba(255,255,255,.6)">'+doc.titulo+'</p>';
 
   fichaActualPreguntas.forEach(function(p,i){
-    html+='<div style="margin-bottom:16px"><p style="font-size:13px;font-weight:600;margin-bottom:8px">'+(i+1)+'. '+p.pregunta+'</p>';
+    html+='<div style="margin-bottom:18px"><p style="font-size:13px;font-weight:600;margin-bottom:8px">'+(i+1)+'. '+p.pregunta+'</p>';
     (p.opciones||[]).forEach(function(op,oi){
-      html+='<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-bottom:6px;font-size:13px;cursor:pointer">';
-      html+='<input type="radio" name="preg'+i+'" value="'+oi+'" onchange="fichaActualRespuestas['+i+']='+oi+'" style="accent-color:var(--accent2)">';
-      html+=op+'</label>';
+      html+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-bottom:6px;font-size:13px;cursor:pointer">';
+      html+='<input type="radio" name="preg'+i+'" value="'+oi+'" onchange="fichaActualRespuestas['+i+']='+oi+'" style="width:18px;height:18px;flex-shrink:0;accent-color:var(--accent2);margin:0">';
+      html+='<span style="flex:1">'+op+'</span></label>';
     });
     html+='</div>';
   });
