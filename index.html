@@ -255,6 +255,10 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
       <!-- CONFIRMACION DE SEMANA -->
       <div id="semanaConfirmView" style="display:none"></div>
       <div id="selectorSemanasDiv" style="display:none">
+        <div class="card" style="margin-bottom:10px">
+          <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🏆 Ranking de cumplimiento — esta semana</p>
+          <div id="rankingSelectorView"></div>
+        </div>
         <div class="card">
           <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Semanas disponibles</p>
           <div id="semanasListSel"></div>
@@ -279,6 +283,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
       <!-- APP -->
       <div id="appView" style="display:none">
         <div id="avisoBanner"></div>
+        <div id="rankingMiniCard"></div>
 
         <div style="margin-bottom:4px">
           <div class="tabs">
@@ -694,7 +699,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 
 // ── STATE ──
 var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion'];
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={},fichaProgreso={};
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={},fichaProgreso={},ranking={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
@@ -718,6 +723,7 @@ function attach(){
   on('coberturas',function(v){coberturas=v;renderCobList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
+  on('ranking',function(v){ranking=v||{};renderRanking();});
 }
 
 // ── SEDE Y SEMANAS ──
@@ -731,7 +737,7 @@ function detectarSemanaActual(){
 
 window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
-  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};biblioteca={};fichaProgreso={};curNombre='';semanas={};
+  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};biblioteca={};fichaProgreso={};ranking={};curNombre='';semanas={};
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -1360,6 +1366,7 @@ function verificarFichasPendientes(){
 
 var fichaActualPreguntas=[];
 var fichaActualRespuestas={};
+var fichaInicioMs=0;
 
 function mostrarFichaObligatoria(docId,doc){
   var key=curNombre.replace(/\s/g,'_');
@@ -1388,6 +1395,7 @@ function mostrarPasoLectura(docId,doc,prog){
   html+='<button class="btn-add" id="yaLeiBtn">✓ Ya leí esto, continuar →</button></div>';
   v.innerHTML=html;
   document.getElementById('yaLeiBtn').addEventListener('click',function(){
+    fichaInicioMs=Date.now();
     mostrarPasoPreguntas(docId,doc,prog);
   });
 }
@@ -1435,12 +1443,31 @@ function mostrarPasoPreguntas(docId,doc,prog){
 
 function aprobarFicha(docId){
   var key=curNombre.replace(/\s/g,'_');
-  var dataProg={aprobado:true,fecha:Date.now(),intentos:(fichaProgreso[docId]&&fichaProgreso[docId][key]?fichaProgreso[docId][key].intentos:0)};
+  var intentosPrevios=(fichaProgreso[docId]&&fichaProgreso[docId][key]?fichaProgreso[docId][key].intentos:0)||0;
+  var dataProg={aprobado:true,fecha:Date.now(),intentos:intentosPrevios};
   // Actualizar variable local de inmediato, sin esperar el roundtrip de Firebase
   if(!fichaProgreso[docId])fichaProgreso[docId]={};
   fichaProgreso[docId][key]=dataProg;
   mostrarLogro(curNombre,biblioteca[docId]?biblioteca[docId].titulo:'');
   sedeRef('fichaProgreso/'+docId+'/'+key).set(dataProg);
+
+  // Registrar en ranking semanal acumulado (cada ficha aprobada suma una entrada)
+  if(W&&fichaInicioMs){
+    var duracionMs=Date.now()-fichaInicioMs;
+    var sinFallos=intentosPrevios===0;
+    sRef('ranking/'+key).push({
+      nombre:curNombre,
+      docId:docId,
+      titulo:biblioteca[docId]?biblioteca[docId].titulo:'',
+      duracionMs:duracionMs,
+      sinFallos:sinFallos,
+      intentos:intentosPrevios,
+      puntos:sinFallos?10:5,
+      fecha:Date.now()
+    });
+  }
+  fichaInicioMs=0;
+
   var pend=fichasObligatoriasPendientes(curNombre);
   if(pend.length){mostrarFichaObligatoria(pend[0][0],pend[0][1]);}
   else{document.getElementById('fichaObligView').style.display='none';document.getElementById('appView').style.display='block';}
@@ -1479,6 +1506,70 @@ function registrarFallo(docId,doc){
     sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
     alert('Respuesta incorrecta. Vuelve a leer el contenido e inténtalo de nuevo. Intento '+nuevosIntentos+' de 3.');
     mostrarFichaObligatoria(docId,doc);
+  }
+}
+
+function agregarRankingPorPersona(){
+  // ranking[key] es un objeto de entradas push (una por cada ficha aprobada)
+  var porPersona={};
+  Object.values(ranking).forEach(function(entradasPersona){
+    if(!entradasPersona||typeof entradasPersona!=='object')return;
+    Object.values(entradasPersona).forEach(function(e){
+      if(!e||!e.nombre)return;
+      if(!porPersona[e.nombre])porPersona[e.nombre]={nombre:e.nombre,puntos:0,totalDuracionMs:0,fichas:0,sinFallosCount:0};
+      var p=porPersona[e.nombre];
+      p.puntos+=(e.puntos||(e.sinFallos?10:5));
+      p.totalDuracionMs+=(e.duracionMs||0);
+      p.fichas+=1;
+      if(e.sinFallos)p.sinFallosCount+=1;
+    });
+  });
+  return Object.values(porPersona).map(function(p){
+    p.promedioDuracionMs=p.fichas?Math.round(p.totalDuracionMs/p.fichas):0;
+    return p;
+  });
+}
+
+function ordenarRanking(){
+  return agregarRankingPorPersona().sort(function(a,b){
+    if(a.puntos!==b.puntos)return b.puntos-a.puntos;
+    return a.promedioDuracionMs-b.promedioDuracionMs;
+  });
+}
+
+function fmtDuracion(ms){
+  var totalSeg=Math.round(ms/1000);
+  var min=Math.floor(totalSeg/60),seg=totalSeg%60;
+  return min+':'+(seg<10?'0':'')+seg;
+}
+
+function renderRanking(){
+  var ordenado=ordenarRanking();
+
+  // Vista completa (selector de semanas)
+  var dFull=document.getElementById('rankingSelectorView');
+  if(dFull){
+    if(!ordenado.length){
+      dFull.innerHTML='<p class="empty">Aún nadie ha completado una evaluación esta semana.</p>';
+    } else {
+      var medallas=['🥇','🥈','🥉'];
+      dFull.innerHTML=ordenado.map(function(r,i){
+        var medalla=medallas[i]||('#'+(i+1));
+        var liderTag=i===0?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':'<span style="color:rgba(255,255,255,.35);font-size:10px">'+r.fichas+' ficha'+(r.fichas!==1?'s':'')+' aprobada'+(r.fichas!==1?'s':'')+'</span>';
+        return '<div class="iitem" style="padding:7px 0"><div class="iitem-info" style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+liderTag+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.puntos+' pts</span></div>';
+      }).join('');
+    }
+  }
+
+  // Mini card resumida (appView)
+  var dMini=document.getElementById('rankingMiniCard');
+  if(dMini){
+    if(!ordenado.length){dMini.innerHTML='';return;}
+    var top3=ordenado.slice(0,3);
+    var medallas2=['🥇','🥈','🥉'];
+    dMini.innerHTML='<div class="card" style="margin-bottom:10px;padding:12px 14px"><p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">🏆 Ranking de cumplimiento — esta semana</p>'+
+      top3.map(function(r,i){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span>'+medallas2[i]+' '+r.nombre+(i===0?' <span style="color:#fcd34d;font-size:10px">· Ganador</span>':'')+'</span><span style="color:#7ec8f7;font-weight:600">'+r.puntos+' pts</span></div>';}).join('')+
+      '</div>';
   }
 }
 
