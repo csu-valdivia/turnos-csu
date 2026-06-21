@@ -601,6 +601,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="saved" id="migSaved">✓ Migración completa</div>
           </div>
 
+          <div class="asec" style="border-color:rgba(245,158,11,.3)">
+            <p class="asec-title" style="color:#fcd34d">🧹 Limpiar semanas duplicadas vacías</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Busca semanas sin bloques de turnos cargados (vacías) y permite eliminarlas de forma segura, conservando siempre la que tiene datos reales.</p>
+            <button class="btn-sec" id="buscarDuplicadasBtn">🔍 Buscar semanas vacías</button>
+            <div id="duplicadasResultado" style="margin-top:10px"></div>
+          </div>
+
           <div class="asec">
             <p class="asec-title" style="color:#fca5a5">🗑 Limpiar semana</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Borra bloques, tareas, pendientes, asistencia, llamados, encargados y coberturas de la semana actual.</p>
@@ -2011,6 +2018,38 @@ document.getElementById('borrarMiRankingBtn').addEventListener('click',function(
   renderRanking();
   alert('✓ Tus puntos del ranking fueron eliminados.');
 });
+
+document.getElementById('buscarDuplicadasBtn').addEventListener('click',function(){
+  var d=document.getElementById('duplicadasResultado');
+  d.innerHTML='<p style="font-size:12px;color:rgba(255,255,255,.4)">Buscando...</p>';
+  sedeRef('semanas').once('value',function(snap){
+    var todas=snap.val()||{};
+    var ids=Object.keys(todas);
+    if(!ids.length){d.innerHTML='<p class="empty">No hay semanas creadas.</p>';return;}
+    var lecturas=ids.map(function(wId){
+      return db.ref('sedes/'+S+'/semanas/'+wId+'/bloques').once('value').then(function(s){
+        var bloquesVal=s.val();
+        var numBloques=bloquesVal?Object.keys(bloquesVal).length:0;
+        return {wId:wId,sem:todas[wId],numBloques:numBloques};
+      });
+    });
+    Promise.all(lecturas).then(function(resultados){
+      resultados.sort(function(a,b){return b.numBloques-a.numBloques;});
+      d.innerHTML=resultados.map(function(r){
+        var esVacia=r.numBloques===0;
+        var color=esVacia?'#fca5a5':'#6ee7b7';
+        var etiqueta=esVacia?'⚠ Vacía (0 bloques) — candidata a eliminar':'✓ Tiene '+r.numBloques+' bloques de turnos';
+        return '<div class="iitem" style="padding:7px 0"><div class="iitem-info"><strong style="font-size:12px">'+(r.sem.nombre||r.sem.ini+' al '+r.sem.fin)+'</strong><div class="iitem-sub" style="color:'+color+'">'+etiqueta+'</div></div>'+(esVacia?'<button class="del-btn" onclick="if(confirm(\'¿Eliminar esta semana vacía?\'))eliminarSemanaDuplicada(\''+r.wId+'\')">🗑</button>':'')+'</div>';
+      }).join('');
+    });
+  });
+});
+
+window.eliminarSemanaDuplicada=function(wId){
+  sedeRef('semanas/'+wId).remove().then(function(){
+    document.getElementById('buscarDuplicadasBtn').click();
+  });
+};
 
 document.getElementById('migrarBtn').addEventListener('click',function(){
   var ini=document.getElementById('migIni').value;
