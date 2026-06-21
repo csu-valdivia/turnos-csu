@@ -770,12 +770,21 @@ function reproducirAlerta(){
 
 var primerCargaNotas=true;
 var ultimasNovedadesCount=0;
+var primerCargaBloques=true;
+var ultimosBloquesCount=0;
 
 function attach(){
   detach();
   primerCargaNotas=true;ultimasNovedadesCount=0;
+  primerCargaBloques=true;ultimosBloquesCount=0;
   on('aviso',function(v){renderAviso(v);});
-  on('bloques',function(v){bloques=v;renderPanorama();renderBloquesList();renderResumen();if(curNombre)renderMisTurnos(curNombre);});
+  on('bloques',function(v){
+    bloques=v;renderPanorama();renderBloquesList();renderResumen();if(curNombre)renderMisTurnos(curNombre);
+    var totalAhora=Object.keys(bloques).length;
+    if(!primerCargaBloques&&totalAhora>ultimosBloquesCount)reproducirAlerta();
+    primerCargaBloques=false;
+    ultimosBloquesCount=totalAhora;
+  });
   on('tareas',function(v){tareas=v;renderTareasList();if(curNombre)renderMisTurnos(curNombre);});
   on('pendientes',function(v){pendientes=v;renderPendientes();renderPendList();checkAlerta();});
   on('asistencia',function(v){asistencia=v;renderAsist();renderPanorama();if(curNombre)renderMisTurnos(curNombre);});
@@ -818,7 +827,14 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
-  sedeRef('biblioteca').on('value',function(s){biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();if(curNombre&&W)verificarFichasPendientes();});
+  var primerCargaBib=true,ultimoBibCount=0;
+  sedeRef('biblioteca').on('value',function(s){
+    biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();if(curNombre&&W)verificarFichasPendientes();
+    var totalAhora=Object.keys(biblioteca).length;
+    if(!primerCargaBib&&totalAhora>ultimoBibCount)reproducirAlerta();
+    primerCargaBib=false;
+    ultimoBibCount=totalAhora;
+  });
   sedeRef('fichaProgreso').on('value',function(s){fichaProgreso=s.val()||{};renderCumplimientoList();renderAlertasCapacitacion();});
   var primerCargaLogros=true;
   sedeRef('logros').on('child_added',function(s){
