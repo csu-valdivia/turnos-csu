@@ -1378,7 +1378,7 @@ function mostrarFichaObligatoria(docId,doc){
   v.style.display='block';
 
   if(prog.bloqueado){
-    v.innerHTML='<div class="card" style="text-align:center;border-color:rgba(239,68,68,.3)"><p style="font-size:36px;margin-bottom:10px">🔒</p><p style="font-size:16px;font-weight:700;color:#fca5a5;margin-bottom:8px">Acceso bloqueado</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:6px">No superaste la evaluación de <strong style="color:#fff">'+doc.titulo+'</strong> después de 3 intentos.</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6">El jefe de turno ha sido notificado y debe realizar una capacitación contigo antes de habilitar tu acceso nuevamente.</p></div>';
+    v.innerHTML='<div class="card" style="text-align:center;border-color:rgba(239,68,68,.3)"><p style="font-size:36px;margin-bottom:10px">🔒</p><p style="font-size:16px;font-weight:700;color:#fca5a5;margin-bottom:8px">Acceso bloqueado</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:6px">No superaste la evaluación de <strong style="color:#fff">'+doc.titulo+'</strong> después de 3 intentos.</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6">Debes acudir donde el enfermero jefe para que te capacite y habilite tu acceso nuevamente.</p></div>';
     return;
   }
 
@@ -1609,7 +1609,17 @@ window.marcarCapacitada=function(docId,key){
 window.reiniciarProgresoFicha=function(docId,key){
   if(fichaProgreso[docId])delete fichaProgreso[docId][key];
   sedeRef('fichaProgreso/'+docId+'/'+key).remove();
+  // También limpiar sus entradas de puntos en el ranking semanal para este documento
+  if(W&&ranking[key]){
+    Object.entries(ranking[key]).forEach(function(e){
+      if(e[1]&&e[1].docId===docId){
+        delete ranking[key][e[0]];
+        sRef('ranking/'+key+'/'+e[0]).remove();
+      }
+    });
+  }
   renderCumplimientoList();
+  renderRanking();
 };
 
 function renderAlertasCapacitacion(){
