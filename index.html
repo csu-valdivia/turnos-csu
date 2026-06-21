@@ -43,6 +43,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 .sede-btn{padding:14px 8px;font-size:14px;font-weight:600;border-radius:var(--rs);border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.95);color:#1a2332;cursor:pointer;text-align:center;font-family:inherit;transition:all .2s}
 .sede-btn:hover{background:#fff;transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,0,0,.2)}
 .sede-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sede-tag{font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.2)}
 .sede-change{font-size:11px;color:rgba(255,255,255,.4);background:none;border:none;cursor:pointer;font-family:inherit}
 
@@ -244,9 +245,15 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
     <!-- MAIN -->
     <div id="mainView" style="display:none">
+      <div id="connIndicator" style="display:none;align-items:center;gap:8px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#fca5a5">
+        <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:pulse 1.5s infinite"></span>
+        <span style="flex:1">Sin conexión — los cambios pueden no estar actualizándose. Reconectando...</span>
+        <button onclick="location.reload()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:11px;padding:5px 10px;border-radius:6px;font-family:inherit;cursor:pointer;flex-shrink:0">Recargar</button>
+      </div>
       <div class="sede-hdr">
         <span class="sede-tag" id="sedeTag"></span>
         <div style="display:flex;gap:10px;align-items:center">
+          <button class="sede-change" onclick="forzarActualizar()" title="Forzar actualización">🔄</button>
           <button class="sede-change" onclick="cambiarSemana()" style="text-decoration:underline">↺ Cambiar semana</button>
           <button class="sede-change" onclick="changeSede()">↺ Cambiar sede</button>
         </div>
@@ -298,6 +305,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="tab" onclick="goTab('resumen')">Resumen</button>
           </div>
           <div class="tabs" style="margin-top:4px">
+            <button class="tab" onclick="goTab('novedades')" style="flex:1">📣 Novedades</button>
+          </div>
+          <div class="tabs" style="margin-top:4px">
             <button class="tab" onclick="goTab('biblioteca')" style="flex:1">📚 Biblioteca de conocimiento</button>
           </div>
         </div>
@@ -343,6 +353,10 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
         <div class="tc" id="tc-resumen">
           <div id="resumenView"></div>
+        </div>
+
+        <div class="tc" id="tc-novedades">
+          <div id="novedadesView"></div>
         </div>
 
         <div class="tc" id="tc-biblioteca">
@@ -632,6 +646,30 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 firebase.initializeApp({apiKey:"AIzaSyDrm0TlQ0fNK57xIFSVX82L1qdMbyBU8Ng",authDomain:"turnos-equipo-cl.firebaseapp.com",databaseURL:"https://turnos-equipo-cl-default-rtdb.firebaseio.com",projectId:"turnos-equipo-cl",storageBucket:"turnos-equipo-cl.firebasestorage.app",messagingSenderId:"313100676497",appId:"1:313100676497:web:5edc3746bc1be66758be30"});
 var db=firebase.database();
 
+// Monitoreo de conexión: detecta si Firebase se desconectó silenciosamente
+db.ref('.info/connected').on('value',function(snap){
+  var conectado=snap.val()===true;
+  var indicador=document.getElementById('connIndicator');
+  if(!indicador)return;
+  if(conectado){
+    indicador.style.display='none';
+  } else {
+    indicador.style.display='flex';
+  }
+});
+
+// Reconectar automáticamente cuando la app vuelve a primer plano (celular se desbloquea, cambia de pestaña, etc.)
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'){
+    db.goOffline();
+    db.goOnline();
+  }
+});
+window.addEventListener('online',function(){
+  db.goOffline();
+  db.goOnline();
+});
+
 // ── CONSTANTES ──
 var SEDES={'Valdivia':'2715','Patagonia':'1234','Bellavista':'5678','Los Leones':'9012','Concepción':'3456'};
 var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -715,14 +753,40 @@ var listeners=[];
 function detach(){listeners.forEach(function(l){l.ref.off('value',l.fn);});listeners=[];}
 function on(path,cb){var fn=function(s){cb(s.val()||{});};sRef(path).on('value',fn);listeners.push({ref:sRef(path),fn:fn});}
 
+function reproducirAlerta(){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [0,0.15].forEach(function(delay){
+      var o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=880;o.type='sine';
+      g.gain.setValueAtTime(0.001,ctx.currentTime+delay);
+      g.gain.exponentialRampToValueAtTime(0.25,ctx.currentTime+delay+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+0.25);
+      o.start(ctx.currentTime+delay);o.stop(ctx.currentTime+delay+0.3);
+    });
+  }catch(e){}
+}
+
+var primerCargaNotas=true;
+var ultimasNovedadesCount=0;
+
 function attach(){
   detach();
+  primerCargaNotas=true;ultimasNovedadesCount=0;
   on('aviso',function(v){renderAviso(v);});
   on('bloques',function(v){bloques=v;renderPanorama();renderBloquesList();renderResumen();if(curNombre)renderMisTurnos(curNombre);});
   on('tareas',function(v){tareas=v;renderTareasList();if(curNombre)renderMisTurnos(curNombre);});
   on('pendientes',function(v){pendientes=v;renderPendientes();renderPendList();checkAlerta();});
   on('asistencia',function(v){asistencia=v;renderAsist();renderPanorama();if(curNombre)renderMisTurnos(curNombre);});
-  on('notas',function(v){notas=v;if(curNombre)renderMisTurnos(curNombre);});
+  on('notas',function(v){
+    notas=v;if(curNombre)renderMisTurnos(curNombre);renderNovedades();
+    var totalAhora=0;
+    Object.values(notas).forEach(function(grupo){if(grupo&&typeof grupo==='object')totalAhora+=Object.keys(grupo).length;});
+    if(!primerCargaNotas&&totalAhora>ultimasNovedadesCount)reproducirAlerta();
+    primerCargaNotas=false;
+    ultimasNovedadesCount=totalAhora;
+  });
   on('visto',function(v){visto=v;if(curNombre)renderMisTurnos(curNombre);});
   on('cambios',function(v){cambios=v;renderCambios();renderCambiosAdmin();});
   on('ausencias',function(v){ausencias=v;renderAusencias();renderAusenciasAdmin();if(curNombre)renderMisTurnos(curNombre);});
@@ -846,6 +910,17 @@ window.cambiarSemana=function(){
   mostrarConfirmacionSemana();
 };
 
+window.forzarActualizar=function(){
+  var btn=event&&event.target;
+  if(btn)btn.style.opacity='0.4';
+  db.goOffline();
+  setTimeout(function(){
+    db.goOnline();
+    if(W)attach();
+    setTimeout(function(){if(btn)btn.style.opacity='1';},600);
+  },300);
+};
+
 function showApp(){
   document.getElementById('emailView').style.display='none';
   // Check for pending mandatory fichas before showing the real app
@@ -893,7 +968,7 @@ function updateSelects(){
 }
 
 // ── TABS ──
-var TABS=['panorama','mis-turnos','asistencia','estado','cambios','ausencias','resumen','biblioteca'];
+var TABS=['panorama','mis-turnos','asistencia','estado','cambios','ausencias','resumen','biblioteca','novedades'];
 window.goTab=function(tab){
   document.querySelectorAll('.tab').forEach(function(t){var m=t.getAttribute('onclick').match(/goTab\('([^']+)'\)/);if(m)t.classList.toggle('active',m[1]===tab);});
   TABS.forEach(function(id){var el=document.getElementById('tc-'+id);if(el)el.classList.toggle('active',id===tab);});
@@ -902,6 +977,7 @@ window.goTab=function(tab){
   if(tab==='cambios')renderCambios();
   if(tab==='ausencias')renderAusencias();
   if(tab==='biblioteca')renderBiblioteca();
+  if(tab==='novedades')renderNovedades();
 };
 
 // ── AVISO ──
@@ -1019,13 +1095,14 @@ function renderMisTurnos(nombre){
     var minH=pad(Math.floor(minE/60))+':'+pad(minE%60);
     var col=dia!=='Sábado'?(COLACION[minH]||null):null;
     var tds=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
-    var nota=notas[nombre.replace(/\s/g,'_')+'_'+dia];
+    var notaObj=notas[nombre.replace(/\s/g,'_')+'_'+dia];
+    var notaLista=notaObj?Object.values(notaObj).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
     var cobDia=cobP.find(function(cv){return cv.dia===dia;});
     html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">📅</span><span class="day-name">'+dia+'</span>'+(cobDia?'<span style="font-size:11px;background:rgba(239,68,68,.1);color:#991b1b;padding:2px 8px;border-radius:4px;margin-left:auto">Cubre '+cobDia.destino+'</span>':'')+'</div>';
     ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?SUBAREAS[b.turno]:null;html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
     if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span></div></div>';
     tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+'</div>'+t.texto+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
-    if(nota)html+='<div class="nota-box">📝 '+nota+'</div>';
+    notaLista.forEach(function(nt){html+='<div class="nota-box">📣 '+nt.texto+'</div>';});
     html+='<div class="tactions">'+btnLl+'<button class="btn-nota" onclick="dejarNota(\''+nombre+'\',\''+dia+'\')">✏ Nota</button><button class="btn-ct" onclick="document.getElementById(\'cambioSol\').value=\''+nombre+'\';goTab(\'cambios\')">↔ Cambio</button></div>';
     html+='</div>';
   });
@@ -1037,11 +1114,14 @@ window.marcarVisto=function(k,btn){sRef('visto/'+k).set(true).then(function(){bt
 window.dejarNota=function(n,dia){
   var m=mkOverlay();var nk=n.replace(/\s/g,'_')+'_'+dia;
   var box=document.createElement('div');box.className='obox';
-  box.innerHTML='<h3>📝 Nota — '+dia+'</h3>';
-  var ta=document.createElement('textarea');ta.className='atxt';ta.style.marginBottom='12px';ta.style.minHeight='80px';ta.value=notas[nk]||'';
+  box.innerHTML='<h3>📣 Nueva novedad — '+dia+'</h3><p style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px">Visible para todo el equipo en la pestaña Novedades.</p>';
+  var ta=document.createElement('textarea');ta.className='atxt';ta.style.marginBottom='12px';ta.style.minHeight='80px';ta.placeholder='Escribe tu novedad o aviso...';
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
-  row.appendChild(pBtn('Guardar',function(){var t=ta.value.trim();if(!t)return;sRef('notas/'+nk).set(t).then(function(){m.remove();});}));
+  row.appendChild(pBtn('Publicar',function(){
+    var t=ta.value.trim();if(!t)return;
+    sRef('notas/'+nk).push({texto:t,nombre:n,dia:dia,fecha:Date.now()}).then(function(){m.remove();});
+  }));
   box.appendChild(ta);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
 };
 
@@ -1236,6 +1316,27 @@ function renderClaveActual(){
 // ── BIBLIOTECA DE CONOCIMIENTO ──
 var BIB_ICONOS={Protocolos:'📋',Inducción:'🎓',Acreditación:'🏆',Infografías:'🖼️',Otros:'📄'};
 function bibIcono(cat){return BIB_ICONOS[cat]||'📄';}
+
+function renderNovedades(){
+  var d=document.getElementById('novedadesView');if(!d)return;
+  // notas = { 'nombre_dia': { pushId: {texto,nombre,dia,fecha} } }
+  var todas=[];
+  Object.values(notas).forEach(function(grupo){
+    if(!grupo||typeof grupo!=='object')return;
+    Object.values(grupo).forEach(function(n){
+      if(n&&n.texto)todas.push(n);
+    });
+  });
+  todas.sort(function(a,b){return (b.fecha||0)-(a.fecha||0);});
+  if(!todas.length){
+    d.innerHTML='<div class="no-result"><p style="font-size:32px;margin-bottom:8px">📣</p><p>Aún no hay novedades publicadas esta semana.</p></div>';
+    return;
+  }
+  d.innerHTML=todas.map(function(n){
+    var fechaStr=n.fecha?new Date(n.fecha).toLocaleDateString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    return '<div class="wcard" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong style="font-size:13px">'+n.nombre+'</strong><span style="font-size:10px;color:var(--text3)">'+n.dia+(fechaStr?' · '+fechaStr:'')+'</span></div><p style="font-size:13px;color:var(--text2);line-height:1.5">'+n.texto+'</p></div>';
+  }).join('');
+}
 
 function renderBiblioteca(){
   var d=document.getElementById('bibliotecaView');if(!d)return;
