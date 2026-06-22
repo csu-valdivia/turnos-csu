@@ -486,7 +486,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <p class="asec-title">📋 Carga masiva de turnos</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">T=Turno (Esterilización) · 🔑=Equipo clave · S/A=Sin atención · 🏖=Libre</p>
             <table class="bulk-tbl">
-              <thead><tr><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#93c5fd">🔑</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#93c5fd">🔑</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead>
               <tbody id="bulkBody"></tbody>
             </table>
             <button class="bulk-add" id="addRowBtn">+ Agregar fila</button>
@@ -2382,9 +2382,17 @@ function renderTareasList(){var d=document.getElementById('tareasList');if(!d)re
 // ── BULK ──
 function addBulkRow(){
   var tr=document.createElement('tr');
-  tr.innerHTML='<td><select>'+mkOpts(DIAS,'Día')+'</select></td><td><select class="pNom">'+mkOpts(nombres,'Pers.')+'</select></td><td><select class="aSel">'+mkOpts(AREAS,'Área')+'</select></td><td><select class="hSel">'+mkOpts(HORARIOS,'Hor.')+'</select></td><td><select class="tSel" style="font-size:10px;padding:3px 1px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"><option value="">-</option><option value="T1">T1</option><option value="T2">T2</option></select></td><td><select class="kSel" style="font-size:10px;padding:3px 1px;background:rgba(37,99,235,.1);color:#93c5fd;border:1px solid rgba(74,144,217,.2);border-radius:4px;width:100%"><option value="">-</option><option value="Rol A">A</option><option value="Rol B">B</option><option value="Rol C">C</option></select></td><td style="text-align:center"><input type="checkbox" class="saCk"></td><td style="text-align:center"><input type="checkbox" class="lCk"></td><td><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:14px">✕</button></td>';
+  tr.innerHTML='<td><input type="date" class="dFecha" style="font-size:10px;padding:4px 2px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"></td><td><span class="dLabel" style="font-size:10px;color:#7ec8f7;padding:2px 4px;display:block;text-align:center">—</span></td><td><select class="pNom">'+mkOpts(nombres,'Pers.')+'</select></td><td><select class="aSel">'+mkOpts(AREAS,'Área')+'</select></td><td><select class="hSel">'+mkOpts(HORARIOS,'Hor.')+'</select></td><td><select class="tSel" style="font-size:10px;padding:3px 1px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"><option value="">-</option><option value="T1">T1</option><option value="T2">T2</option></select></td><td><select class="kSel" style="font-size:10px;padding:3px 1px;background:rgba(37,99,235,.1);color:#93c5fd;border:1px solid rgba(74,144,217,.2);border-radius:4px;width:100%"><option value="">-</option><option value="Rol A">A</option><option value="Rol B">B</option><option value="Rol C">C</option></select></td><td style="text-align:center"><input type="checkbox" class="saCk"></td><td style="text-align:center"><input type="checkbox" class="lCk"></td><td><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:14px">✕</button></td>';
   var ck=tr.querySelector('.saCk'),lck=tr.querySelector('.lCk'),pSel=tr.querySelector('.pNom');
   var aSel=tr.querySelector('.aSel'),hSel=tr.querySelector('.hSel');
+  var dFecha=tr.querySelector('.dFecha'),dLabel=tr.querySelector('.dLabel');
+  dFecha.addEventListener('change',function(){
+    if(!this.value){dLabel.textContent='—';return;}
+    var d=new Date(this.value+'T12:00:00');
+    var dias=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    dLabel.textContent=dias[d.getDay()]+' '+d.getDate();
+    dLabel.style.color=d.getDay()===0||d.getDay()===6?'#fca5a5':'#7ec8f7';
+  });
   tr.querySelector('.aSel').addEventListener('change',function(){tr.querySelector('.tSel').style.opacity=this.value==='Esterilización'?'1':'0.3';});
   ck.addEventListener('change',function(){
     if(this.checked){pSel.disabled=true;pSel.value='';lck.checked=false;aSel.disabled=false;hSel.disabled=false;}
@@ -2407,9 +2415,15 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){
   var rows=document.querySelectorAll('#bulkBody tr'),nv=[],claveBulk=[];
   rows.forEach(function(r){
     var ss=r.querySelectorAll('select');
-    var d=ss[0].value,n=ss[1].value,a=ss[2].value,h=ss[3].value;
+    var fechaInput=r.querySelector('.dFecha');
+    var fechaVal=fechaInput?fechaInput.value:'';
+    var d='';
+    if(fechaVal){var fd=new Date(fechaVal+'T12:00:00');var dias2=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];d=dias2[fd.getDay()];}
+    var ss=r.querySelectorAll('select');
+    var n=ss[0].value,a=ss[1].value,h=ss[2].value;
     var turno=r.querySelector('.tSel')?r.querySelector('.tSel').value:'';
     var krol=r.querySelector('.kSel')?r.querySelector('.kSel').value:'';
+    // d already computed above from date
     var sinAt=r.querySelector('.saCk')&&r.querySelector('.saCk').checked;
     var libre=r.querySelector('.lCk')&&r.querySelector('.lCk').checked;
     var ssToAdd=[];
