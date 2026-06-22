@@ -412,7 +412,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
                 <option value="">— Selecciona colaborador —</option>
               </select>
             </div>
-            <input type="date" id="cumpFecha" style="margin-bottom:6px">
+            <div class="frow" style="margin-bottom:6px">
+              <input type="date" id="cumpFecha" style="flex:1;margin-bottom:0">
+              <select id="cumpGenero" style="width:auto;margin-top:0">
+                <option value="F">♀ Femenino</option>
+                <option value="M">♂ Masculino</option>
+              </select>
+            </div>
             <button class="btn-add" id="saveCumpBtn" style="background:linear-gradient(135deg,#d97706,#f59e0b)">🎂 Guardar cumpleaños</button>
             <div class="saved" id="cumpSaved">✓ Guardado</div>
             <div class="ilist" id="cumpList"></div>
@@ -860,10 +866,15 @@ window.setSede=function(sede){
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
   sedeRef('cumpleanos').on('value',function(s){
     var todos=s.val()||{};
-    var hoy=hoyStr().substring(5); // MM-DD
+    var hoy=hoyStr().substring(5);
     var cumpleaneros=Object.entries(todos).filter(function(e){
-      return e[1]&&e[1].substring(5)===hoy;
-    }).map(function(e){return e[0].replace(/_/g,' ');});
+      var val=e[1];
+      var fecha=typeof val==='string'?val:(val&&val.fecha?val.fecha:'');
+      return fecha&&fecha.substring(5)===hoy;
+    }).map(function(e){
+      var val=e[1];
+      return {nombre:e[0].replace(/_/g,' '),genero:typeof val==='object'&&val.genero?val.genero:'F'};
+    });
     if(cumpleaneros.length)mostrarCumpleanos(cumpleaneros);
   });
   sedeRef('planPabellon').on('value',function(s){
@@ -1723,6 +1734,68 @@ window.cerrarCumpleanosAntiguo=function(){
   if(o)o.remove();
 };
 
+
+function svgCaricatura(genero){
+  var animStyle='<style>@keyframes saltarC{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@keyframes aplDC{0%,100%{transform:rotate(-20deg)}50%{transform:rotate(20deg)}}@keyframes aplIC{0%,100%{transform:rotate(20deg)}50%{transform:rotate(-20deg)}}.bc{animation:saltarC .7s ease-in-out infinite}.adc{transform-origin:108px 100px;animation:aplDC .35s ease-in-out infinite}.aic{transform-origin:52px 100px;animation:aplIC .35s ease-in-out infinite}</style>';
+  var corona='<g transform=\"translate(56,-4)\"><polygon points=\"24,22 16,4 24,10 24,4 32,10 40,4 40,10 48,4 40,22\" fill=\"#f59e0b\"/><rect x=\"14\" y=\"20\" width=\"34\" height=\"6\" rx=\"2\" fill=\"#d97706\"/><circle cx=\"24\" cy=\"20\" r=\"3\" fill=\"#ef4444\"/><circle cx=\"31\" cy=\"18\" r=\"3\" fill=\"#3b82f6\"/><circle cx=\"38\" cy=\"20\" r=\"3\" fill=\"#10b981\"/></g>';
+  var copa='<g transform=\"translate(108,82)\"><path d=\"M10 0 L30 0 L26 20 Q28 26 28 30 L12 30 Q12 26 14 20 Z\" fill=\"#fcd34d\" stroke=\"#d97706\" stroke-width=\"1\"/><rect x=\"17\" y=\"30\" width=\"6\" height=\"8\" rx=\"1\" fill=\"#d97706\"/><rect x=\"12\" y=\"37\" width=\"16\" height=\"4\" rx=\"2\" fill=\"#d97706\"/><path d=\"M10 5 Q4 8 5 15 Q6 20 10 20\" stroke=\"#fcd34d\" stroke-width=\"2\" fill=\"none\"/><path d=\"M30 5 Q36 8 35 15 Q34 20 30 20\" stroke=\"#fcd34d\" stroke-width=\"2\" fill=\"none\"/></g>';
+  if(genero==='M'){
+    return '<svg width=\"140\" height=\"220\" viewBox=\"0 0 160 260\" style=\"display:block;margin:0 auto\">' +
+      animStyle +
+      '<g class=\"bc\">' +
+      corona +
+      '<ellipse cx=\"80\" cy=\"36\" rx=\"32\" ry=\"20\" fill=\"#1a0a00\"/>' +
+      '<rect x=\"48\" y=\"30\" width=\"64\" height=\"18\" rx=\"4\" fill=\"#1a0a00\"/>' +
+      '<ellipse cx=\"80\" cy=\"62\" rx=\"28\" ry=\"30\" fill=\"#FBBF7A\"/>' +
+      '<path d=\"M64 46 Q70 43 76 46\" stroke=\"#1a0a00\" stroke-width=\"2.5\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<path d=\"M84 46 Q90 43 96 46\" stroke=\"#1a0a00\" stroke-width=\"2.5\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<ellipse cx=\"70\" cy=\"55\" rx=\"5\" ry=\"5.5\" fill=\"#fff\"/><ellipse cx=\"90\" cy=\"55\" rx=\"5\" ry=\"5.5\" fill=\"#fff\"/>' +
+      '<circle cx=\"71\" cy=\"56\" r=\"3.5\" fill=\"#1e293b\"/><circle cx=\"91\" cy=\"56\" r=\"3.5\" fill=\"#1e293b\"/>' +
+      '<circle cx=\"72\" cy=\"55\" r=\"1.2\" fill=\"#fff\"/><circle cx=\"92\" cy=\"55\" r=\"1.2\" fill=\"#fff\"/>' +
+      '<path d=\"M67 72 Q80 82 93 72\" stroke=\"#c2410c\" stroke-width=\"2.5\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<ellipse cx=\"63\" cy=\"68\" rx=\"7\" ry=\"4\" fill=\"#fca5a5\" opacity=\".4\"/><ellipse cx=\"97\" cy=\"68\" rx=\"7\" ry=\"4\" fill=\"#fca5a5\" opacity=\".4\"/>' +
+      '<rect x=\"72\" y=\"90\" width=\"16\" height=\"12\" rx=\"4\" fill=\"#FBBF7A\"/>' +
+      '<rect x=\"54\" y=\"100\" width=\"52\" height=\"58\" rx=\"10\" fill=\"#1d4ed8\"/>' +
+      '<polygon points=\"80,102 76,112 80,130 84,112\" fill=\"#ef4444\"/>' +
+      '<rect x=\"54\" y=\"152\" width=\"52\" height=\"8\" rx=\"3\" fill=\"#1e293b\"/>' +
+      '<rect x=\"60\" y=\"158\" width=\"16\" height=\"42\" rx=\"7\" fill=\"#1e293b\"/><rect x=\"84\" y=\"158\" width=\"16\" height=\"42\" rx=\"7\" fill=\"#1e293b\"/>' +
+      '<ellipse cx=\"68\" cy=\"200\" rx=\"12\" ry=\"6\" fill=\"#111\"/><ellipse cx=\"92\" cy=\"200\" rx=\"12\" ry=\"6\" fill=\"#111\"/>' +
+      '</g>' +
+      '<g class=\"adc\"><rect x=\"104\" y=\"98\" width=\"14\" height=\"38\" rx=\"7\" fill=\"#1d4ed8\"/><ellipse cx=\"111\" cy=\"140\" rx=\"10\" ry=\"10\" fill=\"#FBBF7A\"/></g>' +
+      '<g class=\"aic\"><rect x=\"42\" y=\"98\" width=\"14\" height=\"38\" rx=\"7\" fill=\"#1d4ed8\"/><ellipse cx=\"49\" cy=\"140\" rx=\"10\" ry=\"10\" fill=\"#FBBF7A\"/></g>' +
+      copa + '</svg>';
+  } else {
+    return '<svg width=\"140\" height=\"220\" viewBox=\"0 0 160 260\" style=\"display:block;margin:0 auto\">' +
+      animStyle +
+      '<g class=\"bc\">' +
+      corona +
+      '<ellipse cx=\"80\" cy=\"40\" rx=\"34\" ry=\"24\" fill=\"#8b1a1a\"/>' +
+      '<rect x=\"46\" y=\"38\" width=\"14\" height=\"60\" rx=\"7\" fill=\"#8b1a1a\"/>' +
+      '<rect x=\"100\" y=\"38\" width=\"14\" height=\"60\" rx=\"7\" fill=\"#8b1a1a\"/>' +
+      '<path d=\"M46 55 Q38 80 44 100\" stroke=\"#8b1a1a\" stroke-width=\"13\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<path d=\"M114 55 Q122 80 116 100\" stroke=\"#8b1a1a\" stroke-width=\"13\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<path d=\"M50 34 Q80 22 110 34\" stroke=\"#ec4899\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<circle cx=\"80\" cy=\"21\" r=\"7\" fill=\"#ec4899\"/><circle cx=\"80\" cy=\"21\" r=\"4\" fill=\"#fce7f3\"/>' +
+      '<ellipse cx=\"80\" cy=\"62\" rx=\"26\" ry=\"28\" fill=\"#FBBF7A\"/>' +
+      '<path d=\"M64 47 Q70 43 76 46\" stroke=\"#8b1a1a\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<path d=\"M84 46 Q90 43 96 47\" stroke=\"#8b1a1a\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<ellipse cx=\"70\" cy=\"55\" rx=\"5\" ry=\"5.5\" fill=\"#fff\"/><ellipse cx=\"90\" cy=\"55\" rx=\"5\" ry=\"5.5\" fill=\"#fff\"/>' +
+      '<circle cx=\"71\" cy=\"56\" r=\"3.5\" fill=\"#5b21b6\"/><circle cx=\"91\" cy=\"56\" r=\"3.5\" fill=\"#5b21b6\"/>' +
+      '<circle cx=\"72\" cy=\"55\" r=\"1.2\" fill=\"#fff\"/><circle cx=\"92\" cy=\"55\" r=\"1.2\" fill=\"#fff\"/>' +
+      '<path d=\"M68 71 Q80 82 92 71\" stroke=\"#ec4899\" stroke-width=\"2.5\" fill=\"none\" stroke-linecap=\"round\"/>' +
+      '<ellipse cx=\"62\" cy=\"67\" rx=\"7\" ry=\"4\" fill=\"#fca5a5\" opacity=\".5\"/><ellipse cx=\"98\" cy=\"67\" rx=\"7\" ry=\"4\" fill=\"#fca5a5\" opacity=\".5\"/>' +
+      '<rect x=\"72\" y=\"88\" width=\"16\" height=\"12\" rx=\"4\" fill=\"#FBBF7A\"/>' +
+      '<path d=\"M54 100 L50 170 Q80 180 110 170 L106 100 Z\" fill=\"#7c3aed\"/>' +
+      '<path d=\"M54 100 L50 135 Q80 140 110 135 L106 100 Z\" fill=\"#6d28d9\"/>' +
+      '<rect x=\"62\" y=\"168\" width=\"14\" height=\"36\" rx=\"7\" fill=\"#FBBF7A\"/><rect x=\"84\" y=\"168\" width=\"14\" height=\"36\" rx=\"7\" fill=\"#FBBF7A\"/>' +
+      '<ellipse cx=\"69\" cy=\"204\" rx=\"11\" ry=\"5\" fill=\"#ec4899\"/><ellipse cx=\"91\" cy=\"204\" rx=\"11\" ry=\"5\" fill=\"#ec4899\"/>' +
+      '</g>' +
+      '<g class=\"adc\"><rect x=\"104\" y=\"98\" width=\"13\" height=\"36\" rx=\"6.5\" fill=\"#7c3aed\"/><ellipse cx=\"110\" cy=\"137\" rx=\"9\" ry=\"9\" fill=\"#FBBF7A\"/></g>' +
+      '<g class=\"aic\"><rect x=\"43\" y=\"98\" width=\"13\" height=\"36\" rx=\"6.5\" fill=\"#7c3aed\"/><ellipse cx=\"49\" cy=\"137\" rx=\"9\" ry=\"9\" fill=\"#FBBF7A\"/></g>' +
+      copa + '</svg>';
+  }
+}
+
 function mostrarCumpleanos(nombres){
   var existing=document.getElementById('cumpleanosOverlay');
   if(existing)existing.remove();
@@ -1738,11 +1811,13 @@ function mostrarCumpleanos(nombres){
 
   // Message
   var msg=document.createElement('div');
-  msg.style.cssText='position:relative;z-index:1;text-align:center;padding:2rem 1.5rem;max-width:340px';
-  var nombres2=nombres.join(' y ');
-  msg.innerHTML='<div style="font-size:64px;margin-bottom:12px;animation:bounceEmoji 1s infinite alternate">🎂</div>'+
-    '<p style="font-size:28px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.2">¡Feliz cumpleaños<br>'+nombres2+'! 🎉</p>'+
-    '<p style="font-size:15px;color:rgba(255,255,255,.7);margin-bottom:24px;line-height:1.5">Tu equipo CSU Valdivia<br>te desea un día increíble 💙</p>'+
+  msg.style.cssText='position:relative;z-index:1;text-align:center;padding:1.5rem 1rem;max-width:320px';
+  var nombre1=Array.isArray(nombres)?nombres[0].nombre||nombres[0]:nombres;
+  var genero1=Array.isArray(nombres)&&nombres[0].genero?nombres[0].genero:'F';
+  var nombresStr=Array.isArray(nombres)?nombres.map(function(n){return n.nombre||n;}).join(' y '):nombres;
+  msg.innerHTML=svgCaricatura(genero1)+
+    '<p style="font-size:22px;font-weight:900;color:#fff;margin:10px 0 6px;line-height:1.2">¡Feliz cumpleaños<br>'+nombresStr+'! 🎉</p>'+
+    '<p style="font-size:14px;color:rgba(255,255,255,.7);margin-bottom:20px;line-height:1.5">Tu equipo CSU Valdivia<br>te desea un día increíble 💙</p>'+
     '<button onclick="cerrarCumpleanos()" style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;padding:12px 32px;border-radius:50px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">¡Muchas gracias! 🎊</button>';
   overlay.appendChild(msg);
   document.body.appendChild(overlay);
@@ -1913,6 +1988,9 @@ function renderRanking(){
   var temporizador=fmtTemporizador();
   var falta=quienFaltaHoy();
   var semanaCerrada=temporizador==='🏁 Semana cerrada';
+  if(semanaCerrada&&ordenado.length&&!document.getElementById('ganadorOverlay')&&document.getElementById('appView').style.display!=='none'){
+    setTimeout(mostrarGanadorSemana,1000);
+  }
   var medallas=['🥇','🥈','🥉'];
 
   // Vista completa (selector de semanas)
@@ -1984,6 +2062,49 @@ function renderRanking(){
     dMini.innerHTML=miniHtml;
   }
 }
+
+function mostrarGanadorSemana(){
+  var ordenado=ordenarRanking();
+  if(!ordenado.length)return;
+  var ganador=ordenado[0];
+  var key=ganador.nombre.replace(/\s/g,'_');
+  // Get gender from cumpleanos data or default to F
+  sedeRef('cumpleanos').once('value',function(s){
+    var todos=s.val()||{};
+    var val=todos[key];
+    var genero=typeof val==='object'&&val&&val.genero?val.genero:'F';
+    var existing=document.getElementById('ganadorOverlay');
+    if(existing)return; // already shown
+    var overlay=document.createElement('div');
+    overlay.id='ganadorOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,20,50,.93);animation:fadeInCump .5s ease';
+    var canvas=document.createElement('canvas');
+    canvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none';
+    overlay.appendChild(canvas);
+    var msg=document.createElement('div');
+    msg.style.cssText='position:relative;z-index:1;text-align:center;padding:1.5rem 1rem;max-width:320px';
+    msg.innerHTML=svgCaricatura(genero)+
+      '<div style="font-size:18px;font-weight:700;color:#fcd34d;margin:10px 0 4px">🏆 ¡Ganador de la semana!</div>'+
+      '<div style="font-size:24px;font-weight:900;color:#fff;margin-bottom:6px">'+ganador.nombre+'</div>'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:6px">'+ganador.puntos+' pts · '+ganador.veces+' vez'+(ganador.veces!==1?'ces':'')+' · promedio '+fmtDuracion(ganador.promedioDuracionMs)+'</div>'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px">¡Felicitaciones de todo el equipo CSU Valdivia! 👏</div>'+
+      '<button onclick="cerrarGanador()" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">¡Excelente semana! 🎉</button>';
+    overlay.appendChild(msg);
+    document.body.appendChild(overlay);
+    var ctx=canvas.getContext('2d');
+    canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+    var pieces=[];
+    var cols=['#f59e0b','#10b981','#3b82f6','#ec4899','#8b5cf6','#fcd34d','#06b6d4'];
+    for(var i=0;i<100;i++)pieces.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height-canvas.height,w:Math.random()*9+4,h:Math.random()*5+3,col:cols[i%cols.length],rot:Math.random()*360,vx:(Math.random()-.5)*2,vy:Math.random()*3+1.5,vr:Math.random()*3-1.5});
+    function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);pieces.forEach(function(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);ctx.fillStyle=p.col;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width;}});if(document.getElementById('ganadorOverlay'))requestAnimationFrame(draw);}
+    draw();
+  });
+}
+
+window.cerrarGanador=function(){
+  var o=document.getElementById('ganadorOverlay');
+  if(o)o.remove();
+};
 
 function renderCumplimientoList(){
   var d=document.getElementById('cumplimientoList');if(!d)return;
@@ -2368,9 +2489,11 @@ function renderCumpAdmin(){
     var hoyMD=hoyStr().substring(5);
     d.innerHTML=Object.entries(todos).map(function(e){
       var nombre=e[0].replace(/_/g,' ');
-      var fecha=e[1];
+      var val=e[1];
+      var fecha=typeof val==='string'?val:(val&&val.fecha?val.fecha:'');
+      var genero=typeof val==='object'&&val.genero?val.genero:'F';
       var esCumple=fecha&&fecha.substring(5)===hoyMD;
-      return '<div class="iitem"><div class="iitem-info"><strong>'+nombre+'</strong>'+(esCumple?' 🎂':'')+
+      return '<div class="iitem"><div class="iitem-info"><strong>'+nombre+'</strong> <span style="font-size:10px;color:rgba(255,255,255,.4)">'+(genero==='M'?'♂':'♀')+'</span>'+(esCumple?' 🎂':'')+
         '<div class="iitem-sub">'+fecha+'</div></div>'+
         '<button class="del-btn" onclick="borrarCumple(\''+e[0]+'\')">🗑</button></div>';
     }).join('');
@@ -2380,9 +2503,10 @@ function renderCumpAdmin(){
 document.getElementById('saveCumpBtn').addEventListener('click',function(){
   var n=document.getElementById('cumpNombre').value;
   var f=document.getElementById('cumpFecha').value;
+  var g=document.getElementById('cumpGenero').value;
   if(!n||!f){alert('Selecciona colaborador y fecha.');return;}
   var key=n.replace(/\s/g,'_');
-  sedeRef('cumpleanos/'+key).set(f).then(function(){
+  sedeRef('cumpleanos/'+key).set({fecha:f,genero:g}).then(function(){
     showSaved('cumpSaved');
     renderCumpAdmin();
   });
@@ -2550,4 +2674,3 @@ document.getElementById('migrarBtn').addEventListener('click',function(){
 document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Borrar todos los datos de esta semana en '+S+'? (el personal y otras semanas no se ven afectados)'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave','sinServicios'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
 </script>
 </body>
-</html>
