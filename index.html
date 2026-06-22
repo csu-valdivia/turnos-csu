@@ -832,7 +832,8 @@ window.setSede=function(sede){
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
   var primerCargaBib=true,ultimoBibCount=0;
   sedeRef('biblioteca').on('value',function(s){
-    biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();if(curNombre&&W)verificarFichasPendientes();
+    biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();
+    if(curNombre&&W&&document.getElementById('appView').style.display!=='none')verificarFichasPendientes();
     var totalAhora=Object.keys(biblioteca).length;
     if(!primerCargaBib&&totalAhora>ultimoBibCount)reproducirAlerta();
     primerCargaBib=false;
@@ -1492,6 +1493,7 @@ function fichasObligatoriasPendientes(nombre){
 
 function verificarFichasPendientes(){
   if(!curNombre)return false;
+  if(curNombre.trim().toLowerCase()==='patricio baeza')return false; // admin no pasa por evaluación
   var pend=fichasObligatoriasPendientes(curNombre);
   if(!pend.length)return false;
   mostrarFichaObligatoria(pend[0][0],pend[0][1]);
