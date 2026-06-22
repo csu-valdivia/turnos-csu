@@ -44,6 +44,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 .sede-btn:hover{background:#fff;transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,0,0,.2)}
 .sede-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fadeInCump{from{opacity:0}to{opacity:1}}
+@keyframes bounceEmoji{from{transform:scale(1) rotate(-5deg)}to{transform:scale(1.15) rotate(5deg)}}
 .sede-tag{font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.2)}
 .sede-change{font-size:11px;color:rgba(255,255,255,.4);background:none;border:none;cursor:pointer;font-family:inherit}
 
@@ -400,6 +402,20 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="addSemanaBtn">+ Crear semana</button>
             <div class="saved" id="semanaSaved">✓ Semana creada</div>
             <div class="ilist" id="semanasAdminList"></div>
+          </div>
+
+          <div class="asec" style="border-color:rgba(245,158,11,.3)">
+            <p class="asec-title" style="color:#f59e0b">🎂 Cumpleaños del equipo</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Agrega la fecha de cumpleaños de cada colaborador. Ese día aparecerá una sorpresa en la app para todo el equipo.</p>
+            <div class="frow">
+              <select id="cumpNombre" style="flex:1">
+                <option value="">— Selecciona colaborador —</option>
+              </select>
+            </div>
+            <input type="date" id="cumpFecha" style="margin-bottom:6px">
+            <button class="btn-add" id="saveCumpBtn" style="background:linear-gradient(135deg,#d97706,#f59e0b)">🎂 Guardar cumpleaños</button>
+            <div class="saved" id="cumpSaved">✓ Guardado</div>
+            <div class="ilist" id="cumpList"></div>
           </div>
 
           <div class="asec" style="border-color:rgba(16,185,129,.3)">
@@ -759,7 +775,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos'];
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={},fichaProgreso={},ranking={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -842,6 +858,14 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
+  sedeRef('cumpleanos').on('value',function(s){
+    var todos=s.val()||{};
+    var hoy=hoyStr().substring(5); // MM-DD
+    var cumpleaneros=Object.entries(todos).filter(function(e){
+      return e[1]&&e[1].substring(5)===hoy;
+    }).map(function(e){return e[0].replace(/_/g,' ');});
+    if(cumpleaneros.length)mostrarCumpleanos(cumpleaneros);
+  });
   sedeRef('planPabellon').on('value',function(s){
     var link=s.val()||'';
     var inp=document.getElementById('pabellonLink');
@@ -972,10 +996,30 @@ window.forzarActualizar=function(){
 
 function showApp(){
   document.getElementById('emailView').style.display='none';
-  // Check for pending mandatory fichas before showing the real app
+  // 1. Check cumpleanos first
+  if(verificarCumpleanos())return;
+  // 2. Then fichas obligatorias
   if(verificarFichasPendientes())return;
   document.getElementById('fichaObligView').style.display='none';
   document.getElementById('appView').style.display='block';
+}
+
+function verificarCumpleanos(){
+  var hoy=hoyStr().substring(5); // MM-DD
+  sedeRef('cumpleanos').once('value',function(s){
+    var todos=s.val()||{};
+    var cumpleaneros=Object.entries(todos)
+      .filter(function(e){return e[1]&&e[1].substring(5)===hoy;})
+      .map(function(e){return e[0].replace(/_/g,' ');});
+    if(cumpleaneros.length){
+      mostrarCumpleanosConCallback(cumpleaneros,function(){
+        if(verificarFichasPendientes())return;
+        document.getElementById('fichaObligView').style.display='none';
+        document.getElementById('appView').style.display='block';
+      });
+    }
+  });
+  return false; // no blocking, async check
 }
 function checkEmailPrompt(){
   var stored=localStorage.getItem('tcsu_v3_nombre_'+S);
@@ -1656,6 +1700,91 @@ function aprobarFicha(docId){
   else{document.getElementById('fichaObligView').style.display='none';document.getElementById('appView').style.display='block';}
 }
 
+window.borrarCumple=function(key){
+  sedeRef('cumpleanos/'+key).remove();
+  renderCumpAdmin();
+};
+
+var _cumpleCallback=null;
+
+window.cerrarCumpleanos=function(){
+  var o=document.getElementById('cumpleanosOverlay');
+  if(o)o.remove();
+  if(_cumpleCallback){var cb=_cumpleCallback;_cumpleCallback=null;cb();}
+};
+
+function mostrarCumpleanosConCallback(nombres,callback){
+  _cumpleCallback=callback;
+  mostrarCumpleanos(nombres);
+}
+
+window.cerrarCumpleanosAntiguo=function(){
+  var o=document.getElementById('cumpleanosOverlay');
+  if(o)o.remove();
+};
+
+function mostrarCumpleanos(nombres){
+  var existing=document.getElementById('cumpleanosOverlay');
+  if(existing)existing.remove();
+
+  var overlay=document.createElement('div');
+  overlay.id='cumpleanosOverlay';
+  overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,20,50,.92);animation:fadeInCump .5s ease';
+
+  // Confetti canvas
+  var canvas=document.createElement('canvas');
+  canvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none';
+  overlay.appendChild(canvas);
+
+  // Message
+  var msg=document.createElement('div');
+  msg.style.cssText='position:relative;z-index:1;text-align:center;padding:2rem 1.5rem;max-width:340px';
+  var nombres2=nombres.join(' y ');
+  msg.innerHTML='<div style="font-size:64px;margin-bottom:12px;animation:bounceEmoji 1s infinite alternate">🎂</div>'+
+    '<p style="font-size:28px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.2">¡Feliz cumpleaños<br>'+nombres2+'! 🎉</p>'+
+    '<p style="font-size:15px;color:rgba(255,255,255,.7);margin-bottom:24px;line-height:1.5">Tu equipo CSU Valdivia<br>te desea un día increíble 💙</p>'+
+    '<button onclick="cerrarCumpleanos()" style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;padding:12px 32px;border-radius:50px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">¡Muchas gracias! 🎊</button>';
+  overlay.appendChild(msg);
+  document.body.appendChild(overlay);
+
+  // Confetti animation
+  var ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+  var pieces=[];
+  var colors=['#f59e0b','#10b981','#3b82f6','#ec4899','#8b5cf6','#ef4444','#06b6d4'];
+  for(var i=0;i<120;i++){
+    pieces.push({
+      x:Math.random()*canvas.width,
+      y:Math.random()*canvas.height-canvas.height,
+      w:Math.random()*10+5,
+      h:Math.random()*6+3,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      rot:Math.random()*360,
+      vx:(Math.random()-0.5)*3,
+      vy:Math.random()*4+2,
+      vr:Math.random()*5-2.5
+    });
+  }
+  var anim;
+  function drawConfetti(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(function(p){
+      ctx.save();
+      ctx.translate(p.x,p.y);
+      ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle=p.color;
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+      p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;
+      if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width;}
+    });
+    if(document.getElementById('cumpleanosOverlay'))anim=requestAnimationFrame(drawConfetti);
+    else cancelAnimationFrame(anim);
+  }
+  drawConfetti();
+}
+
 function mostrarLogro(nombre,titulo){
   sedeRef('logros').push({nombre:nombre,titulo:titulo,fecha:Date.now()});
 }
@@ -2190,7 +2319,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();document.getElementById('bulkBody').innerHTML='';addBulkRow();}
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();document.getElementById('bulkBody').innerHTML='';addBulkRow();}
     else{err.style.display='block';pinIn.value='';}
   });
   row.appendChild(ok);box.appendChild(pinIn);box.appendChild(err);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
@@ -2225,6 +2354,40 @@ function renderSemanasAdminList(){
     return '<div class="iitem"><div class="iitem-info">'+(esEsta?'<span style="color:#7ec8f7">▶ </span>':'')+'<strong>'+(s.nombre||s.ini+' al '+s.fin)+'</strong>'+(esActual?' <span style="color:#6ee7b7;font-size:10px">● actual</span>':'')+'<div class="iitem-sub">'+s.ini+' → '+s.fin+'</div></div><button class="del-btn" onclick="if(confirm(\'¿Eliminar esta semana y todos sus datos?\'))sedeRef(\'semanas/'+k+'\').remove()">🗑</button></div>';
   }).join('');
 }
+// Populate cumpNombre select when admin opens
+function renderCumpAdmin(){
+  var sel=document.getElementById('cumpNombre');
+  if(!sel)return;
+  sel.innerHTML='<option value="">— Selecciona colaborador —</option>';
+  nombres.forEach(function(n){sel.innerHTML+='<option value="'+n+'">'+n+'</option>';});
+  // Show existing
+  sedeRef('cumpleanos').once('value',function(s){
+    var todos=s.val()||{};
+    var d=document.getElementById('cumpList');if(!d)return;
+    if(!Object.keys(todos).length){d.innerHTML='<p class="empty">Sin fechas registradas.</p>';return;}
+    var hoyMD=hoyStr().substring(5);
+    d.innerHTML=Object.entries(todos).map(function(e){
+      var nombre=e[0].replace(/_/g,' ');
+      var fecha=e[1];
+      var esCumple=fecha&&fecha.substring(5)===hoyMD;
+      return '<div class="iitem"><div class="iitem-info"><strong>'+nombre+'</strong>'+(esCumple?' 🎂':'')+
+        '<div class="iitem-sub">'+fecha+'</div></div>'+
+        '<button class="del-btn" onclick="borrarCumple(\''+e[0]+'\')">🗑</button></div>';
+    }).join('');
+  });
+}
+
+document.getElementById('saveCumpBtn').addEventListener('click',function(){
+  var n=document.getElementById('cumpNombre').value;
+  var f=document.getElementById('cumpFecha').value;
+  if(!n||!f){alert('Selecciona colaborador y fecha.');return;}
+  var key=n.replace(/\s/g,'_');
+  sedeRef('cumpleanos/'+key).set(f).then(function(){
+    showSaved('cumpSaved');
+    renderCumpAdmin();
+  });
+});
+
 document.getElementById('savePabellonBtn').addEventListener('click',function(){
   var link=document.getElementById('pabellonLink').value.trim();
   if(!link){alert('Pega el link de Teams antes de guardar.');return;}
