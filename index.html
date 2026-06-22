@@ -413,7 +413,14 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               </select>
             </div>
             <div class="frow" style="margin-bottom:6px">
-              <input type="date" id="cumpFecha" style="flex:1;margin-bottom:0">
+              <select id="cumpMes" style="flex:1;margin-top:0">
+                <option value="">Mes</option>
+                <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option><option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option><option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+              </select>
+              <select id="cumpDia" style="flex:1;margin-top:0">
+                <option value="">Día</option>
+                <option value="01">1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option><option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option><option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>
+              </select>
               <select id="cumpGenero" style="width:auto;margin-top:0">
                 <option value="F">♀ Femenino</option>
                 <option value="M">♂ Masculino</option>
@@ -870,7 +877,7 @@ window.setSede=function(sede){
     var cumpleaneros=Object.entries(todos).filter(function(e){
       var val=e[1];
       var fecha=typeof val==='string'?val:(val&&val.fecha?val.fecha:'');
-      return fecha&&fecha.substring(5)===hoy;
+      return fecha&&fecha===hoy; // fecha ya es MM-DD
     }).map(function(e){
       var val=e[1];
       return {nombre:e[0].replace(/_/g,' '),genero:typeof val==='object'&&val.genero?val.genero:'F'};
@@ -2502,9 +2509,11 @@ function renderCumpAdmin(){
 
 document.getElementById('saveCumpBtn').addEventListener('click',function(){
   var n=document.getElementById('cumpNombre').value;
-  var f=document.getElementById('cumpFecha').value;
+  var mes=document.getElementById('cumpMes').value;
+  var dia=document.getElementById('cumpDia').value;
   var g=document.getElementById('cumpGenero').value;
-  if(!n||!f){alert('Selecciona colaborador y fecha.');return;}
+  if(!n||!mes||!dia){alert('Selecciona colaborador, mes y día.');return;}
+  var f=mes+'-'+dia; // formato MM-DD
   var key=n.replace(/\s/g,'_');
   sedeRef('cumpleanos/'+key).set({fecha:f,genero:g}).then(function(){
     showSaved('cumpSaved');
@@ -2674,3 +2683,4 @@ document.getElementById('migrarBtn').addEventListener('click',function(){
 document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Borrar todos los datos de esta semana en '+S+'? (el personal y otras semanas no se ven afectados)'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave','sinServicios'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
 </script>
 </body>
+</html>
