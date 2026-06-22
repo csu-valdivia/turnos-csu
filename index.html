@@ -1819,36 +1819,36 @@ function renderRanking(){
     if(!ordenado.length){
       miniHtml+='<p style="font-size:12px;color:rgba(255,255,255,.3)">Aún sin participantes esta semana.</p>';
     } else {
+      var hoyObj2=new Date();hoyObj2.setHours(0,0,0,0);var inicioHoy2=hoyObj2.getTime();
       miniHtml+=ordenado.map(function(r,i){
         var medal=medallas[i]||(i+1)+'°';
-        // Get last response hour for this person today
         var key=r.nombre.replace(/\s/g,'_');
-        var horaHoy='';
+        var horaHoy='',durHoy='';
         if(ranking[key]){
-          var hoy=hoyStr();
-          var entradasHoy=Object.values(ranking[key]).filter(function(e){return e&&e.fechaStr===hoy;});
+          var entradasHoy=Object.values(ranking[key]).filter(function(e){return e&&e.fecha&&e.fecha>=inicioHoy2;});
           if(entradasHoy.length){
             entradasHoy.sort(function(a,b){return b.fecha-a.fecha;});
-            horaHoy=entradasHoy[0].horaStr||'';
+            var ultima=entradasHoy[0];
+            if(ultima.horaStr)horaHoy=ultima.horaStr;
+            else if(ultima.fecha){var d=new Date(ultima.fecha);horaHoy=pad(d.getHours())+':'+pad(d.getMinutes());}
+            if(ultima.duracionMs)durHoy=fmtDuracion(ultima.duracionMs);
           }
         }
-        var durHoy='';
-        if(ranking[key]){
-          var hoy2=hoyStr();
-          var entradasHoy2=Object.values(ranking[key]).filter(function(e){return e&&e.fechaStr===hoy2;});
-          if(entradasHoy2.length){
-            entradasHoy2.sort(function(a,b){return b.fecha-a.fecha;});
-            if(entradasHoy2[0].duracionMs)durHoy=fmtDuracion(entradasHoy2[0].duracionMs);
-          }
+        var infoHoy='';
+        if(horaHoy||durHoy){
+          infoHoy=' <span style="color:rgba(255,255,255,.3);font-size:10px">';
+          if(horaHoy)infoHoy+=horaHoy;
+          if(horaHoy&&durHoy)infoHoy+=' · ';
+          if(durHoy)infoHoy+='⏱'+durHoy;
+          infoHoy+='</span>';
         }
-        var infoHoy=(horaHoy||durHoy)?(' <span style="color:rgba(255,255,255,.3);font-size:10px">'+(horaHoy?horaHoy:'')+(horaHoy&&durHoy?' · ':'')+( durHoy?'⏱'+durHoy:'')+'</span>'):'';
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span>'+medal+' '+r.nombre+(i===0&&semanaCerrada?' <span style="color:#fcd34d;font-size:10px">· Ganador</span>':i===0?' <span style="color:#fcd34d;font-size:10px">· Líder</span>':'')+infoHoy+'</span><span style="color:#7ec8f7;font-weight:600">'+r.puntos+' pts</span></div>';
+        var etiqueta=i===0&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · Ganador</span>':i===0?'<span style="color:#fcd34d;font-size:10px"> · Líder</span>':'';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.05)"><span>'+medal+' <strong>'+r.nombre+'</strong>'+etiqueta+infoHoy+'</span><span style="color:#7ec8f7;font-weight:700;flex-shrink:0;margin-left:8px">'+r.puntos+' pts</span></div>';
       }).join('');
     }
     if(falta.length&&!semanaCerrada){
       miniHtml+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)"><p style="font-size:10px;color:#fcd34d;margin-bottom:4px">⏳ Faltan por responder hoy: '+falta.length+'</p>';
-      miniHtml+=falta.slice(0,3).map(function(n){return '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+n+'</span>';}).join(', ');
-      if(falta.length>3)miniHtml+='<span style="font-size:11px;color:rgba(255,255,255,.3)"> y '+(falta.length-3)+' más</span>';
+      miniHtml+=falta.map(function(n){return '<div style="font-size:11px;color:rgba(255,255,255,.4);padding:1px 0">'+n+'</div>';}).join('');
       miniHtml+='</div>';
     }
     miniHtml+='</div>';
