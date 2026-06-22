@@ -310,6 +310,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           <div class="tabs" style="margin-top:4px">
             <button class="tab" onclick="goTab('biblioteca')" style="flex:1">📚 Biblioteca de conocimiento</button>
           </div>
+          <div style="margin-top:4px">
+            <button id="planPabBtn" onclick="abrirPlanPabellon()" style="width:100%;padding:12px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-family:inherit;cursor:pointer;letter-spacing:.3px">🏥 Ver Plan de Pabellón</button>
+          </div>
         </div>
 
         <div class="tc active" id="tc-panorama">
@@ -397,6 +400,15 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="addSemanaBtn">+ Crear semana</button>
             <div class="saved" id="semanaSaved">✓ Semana creada</div>
             <div class="ilist" id="semanasAdminList"></div>
+          </div>
+
+          <div class="asec" style="border-color:rgba(16,185,129,.3)">
+            <p class="asec-title" style="color:#10b981">🏥 Plan de Pabellón</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Pega el link de Teams o SharePoint. El equipo lo abrirá directo desde la app y siempre verán la versión actualizada.</p>
+            <input type="text" id="pabellonLink" placeholder="https://... (link compartido de Teams/SharePoint)" style="margin-bottom:6px">
+            <button class="btn-add" id="savePabellonBtn" style="background:linear-gradient(135deg,#059669,#10b981)">💾 Guardar link</button>
+            <div class="saved" id="pabellonSaved">✓ Guardado</div>
+            <div id="pabellonActual" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.3)"></div>
           </div>
 
           <div class="asec">
@@ -747,7 +759,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon'];
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={},fichaProgreso={},ranking={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -830,6 +842,15 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
+  sedeRef('planPabellon').on('value',function(s){
+    var link=s.val()||'';
+    var inp=document.getElementById('pabellonLink');
+    var act=document.getElementById('pabellonActual');
+    var btn=document.getElementById('planPabBtn');
+    if(inp&&!inp.value)inp.value=link;
+    if(act)act.textContent=link?'Link actual: '+link.substring(0,50)+'...':'Sin link configurado';
+    if(btn)btn.style.opacity=link?'1':'0.5';
+  });
   var primerCargaBib=true,ultimoBibCount=0;
   sedeRef('biblioteca').on('value',function(s){
     biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();
@@ -928,6 +949,14 @@ window.cambiarSemana=function(){
   detach();W='';adminUnlocked=false;
   document.getElementById('adminPanel').classList.remove('open');
   mostrarConfirmacionSemana();
+};
+
+window.abrirPlanPabellon=function(){
+  sedeRef('planPabellon').once('value',function(s){
+    var link=s.val();
+    if(!link){alert('El jefe aún no ha configurado el link del Plan de Pabellón.');return;}
+    window.open(link,'_blank','noopener');
+  });
 };
 
 window.forzarActualizar=function(){
@@ -1598,6 +1627,8 @@ function aprobarFicha(docId){
   // Registrar en ranking semanal acumulado
   if(W&&fichaInicioMs){
     var duracionMs=Date.now()-fichaInicioMs;
+    var ahora=new Date();
+    var horaStr=pad(ahora.getHours())+':'+pad(ahora.getMinutes());
     sRef('ranking/'+key).push({
       nombre:curNombre,
       docId:docId,
@@ -1607,7 +1638,8 @@ function aprobarFicha(docId){
       intentos:fallosHoy,
       puntos:sinFallos?10:5,
       fecha:Date.now(),
-      fechaStr:hoy
+      fechaStr:hoy,
+      horaStr:horaStr
     });
   }
   fichaInicioMs=0;
@@ -1721,12 +1753,17 @@ function quienFaltaHoy(){
   var conTurno=nombresConTurnoSemana();
   return conTurno.filter(function(n){
     var key=n.replace(/\s/g,'_');
-    // Revisar si respondió correctamente hoy en alguna ficha
-    var yaRespondio=Object.keys(biblioteca).some(function(docId){
+    // Revisar fichaProgreso
+    var yaRespondioFicha=Object.keys(biblioteca).some(function(docId){
       var prog=fichaProgreso[docId]&&fichaProgreso[docId][key];
       return prog&&prog.ultimaAprobacion===hoy;
     });
-    return !yaRespondio;
+    if(yaRespondioFicha)return false;
+    // También revisar ranking (por si fichaProgreso no se sincronizó aún)
+    var yaRespondioRanking=ranking[key]&&Object.values(ranking[key]).some(function(e){
+      return e&&e.fechaStr===hoy;
+    });
+    return !yaRespondioRanking;
   });
 }
 
@@ -1770,8 +1807,30 @@ function renderRanking(){
     if(!ordenado.length){
       miniHtml+='<p style="font-size:12px;color:rgba(255,255,255,.3)">Aún sin participantes esta semana.</p>';
     } else {
-      miniHtml+=ordenado.slice(0,3).map(function(r,i){
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span>'+medallas[i]+' '+r.nombre+(i===0&&semanaCerrada?' <span style="color:#fcd34d;font-size:10px">· Ganador</span>':i===0?' <span style="color:#fcd34d;font-size:10px">· Líder</span>':'')+'</span><span style="color:#7ec8f7;font-weight:600">'+r.puntos+' pts</span></div>';
+      miniHtml+=ordenado.map(function(r,i){
+        var medal=medallas[i]||(i+1)+'°';
+        // Get last response hour for this person today
+        var key=r.nombre.replace(/\s/g,'_');
+        var horaHoy='';
+        if(ranking[key]){
+          var hoy=hoyStr();
+          var entradasHoy=Object.values(ranking[key]).filter(function(e){return e&&e.fechaStr===hoy;});
+          if(entradasHoy.length){
+            entradasHoy.sort(function(a,b){return b.fecha-a.fecha;});
+            horaHoy=entradasHoy[0].horaStr||'';
+          }
+        }
+        var durHoy='';
+        if(ranking[key]){
+          var hoy2=hoyStr();
+          var entradasHoy2=Object.values(ranking[key]).filter(function(e){return e&&e.fechaStr===hoy2;});
+          if(entradasHoy2.length){
+            entradasHoy2.sort(function(a,b){return b.fecha-a.fecha;});
+            if(entradasHoy2[0].duracionMs)durHoy=fmtDuracion(entradasHoy2[0].duracionMs);
+          }
+        }
+        var infoHoy=(horaHoy||durHoy)?(' <span style="color:rgba(255,255,255,.3);font-size:10px">'+(horaHoy?horaHoy:'')+(horaHoy&&durHoy?' · ':'')+( durHoy?'⏱'+durHoy:'')+'</span>'):'';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span>'+medal+' '+r.nombre+(i===0&&semanaCerrada?' <span style="color:#fcd34d;font-size:10px">· Ganador</span>':i===0?' <span style="color:#fcd34d;font-size:10px">· Líder</span>':'')+infoHoy+'</span><span style="color:#7ec8f7;font-weight:600">'+r.puntos+' pts</span></div>';
       }).join('');
     }
     if(falta.length&&!semanaCerrada){
@@ -2154,6 +2213,17 @@ function renderSemanasAdminList(){
     return '<div class="iitem"><div class="iitem-info">'+(esEsta?'<span style="color:#7ec8f7">▶ </span>':'')+'<strong>'+(s.nombre||s.ini+' al '+s.fin)+'</strong>'+(esActual?' <span style="color:#6ee7b7;font-size:10px">● actual</span>':'')+'<div class="iitem-sub">'+s.ini+' → '+s.fin+'</div></div><button class="del-btn" onclick="if(confirm(\'¿Eliminar esta semana y todos sus datos?\'))sedeRef(\'semanas/'+k+'\').remove()">🗑</button></div>';
   }).join('');
 }
+document.getElementById('savePabellonBtn').addEventListener('click',function(){
+  var link=document.getElementById('pabellonLink').value.trim();
+  if(!link){alert('Pega el link de Teams antes de guardar.');return;}
+  if(!link.startsWith('http')){alert('El link debe comenzar con http:// o https://');return;}
+  sedeRef('planPabellon').set(link).then(function(){
+    showSaved('pabellonSaved');
+    var act=document.getElementById('pabellonActual');
+    if(act)act.textContent='Link actual: '+link.substring(0,50)+'...';
+  });
+});
+
 document.getElementById('addNombreBtn').addEventListener('click',function(){var v=document.getElementById('nuevoNombre').value.trim();if(!v)return;var a=nombres.slice();if(a.indexOf(v)===-1)a.push(v);sRef('nombres').set(a).then(function(){document.getElementById('nuevoNombre').value='';});});
 document.getElementById('saveClaveBtn').addEventListener('click',function(){
   var entries=[{n:document.getElementById('claveN1').value,r:document.getElementById('claveR1').value},{n:document.getElementById('claveN2').value,r:document.getElementById('claveR2').value},{n:document.getElementById('claveN3').value,r:document.getElementById('claveR3').value}].filter(function(e){return e.n;});
