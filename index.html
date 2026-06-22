@@ -670,6 +670,9 @@ window.addEventListener('online',function(){
   db.goOnline();
 });
 
+// Refrescar temporizador del ranking cada minuto
+setInterval(function(){if(W)renderRanking();},60000);
+
 // ── CONSTANTES ──
 var SEDES={'Valdivia':'2715','Patagonia':'1234','Bellavista':'5678','Los Leones':'9012','Concepción':'3456'};
 var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -1471,13 +1474,19 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
 function fichasObligatoriasPendientes(nombre){
   if(!nombre)return [];
   var key=nombre.replace(/\s/g,'_');
+  var hoy=hoyStr();
   return Object.entries(biblioteca).filter(function(e){
     var doc=e[1];
     if(!doc.obligatoria)return false;
     var prog=fichaProgreso[e[0]]&&fichaProgreso[e[0]][key];
-    if(prog&&prog.aprobado)return false; // ya aprobó
-    if(prog&&prog.bloqueado)return true; // bloqueado, debe ver pantalla de bloqueo
-    return true; // pendiente
+    // Bloqueado hoy (3 fallos en la jornada de hoy)
+    if(prog&&prog.bloqueadoFecha===hoy)return true;
+    // Ya respondió correctamente hoy
+    if(prog&&prog.ultimaAprobacion===hoy)return false;
+    // Tiene preguntas configuradas
+    var preguntas=Object.values(doc.preguntas||{});
+    if(preguntas.length<2)return false;
+    return true; // debe responder hoy
   });
 }
 
@@ -1503,7 +1512,7 @@ function mostrarFichaObligatoria(docId,doc){
   v.style.display='block';
 
   if(prog.bloqueado){
-    v.innerHTML='<div class="card" style="text-align:center;border-color:rgba(239,68,68,.3)"><p style="font-size:36px;margin-bottom:10px">🔒</p><p style="font-size:16px;font-weight:700;color:#fca5a5;margin-bottom:8px">Acceso bloqueado</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:6px">No superaste la evaluación de <strong style="color:#fff">'+doc.titulo+'</strong> después de 3 intentos.</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6">Debes acudir donde el enfermero jefe para que te capacite y habilite tu acceso nuevamente.</p></div>';
+    v.innerHTML='<div class="card" style="text-align:center;border-color:rgba(239,68,68,.3)"><p style="font-size:36px;margin-bottom:10px">🔒</p><p style="font-size:16px;font-weight:700;color:#fca5a5;margin-bottom:8px">Bloqueado por hoy</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:6px">Fallaste 3 veces en la evaluación de <strong style="color:#fff">'+doc.titulo+'</strong> el día de hoy.</p><p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6">Debes acudir donde el enfermero jefe. Mañana podrás volver a intentarlo automáticamente.</p></div>';
     return;
   }
 
@@ -1568,27 +1577,35 @@ function mostrarPasoPreguntas(docId,doc,prog){
 
 function aprobarFicha(docId){
   var key=curNombre.replace(/\s/g,'_');
-  var intentosPrevios=(fichaProgreso[docId]&&fichaProgreso[docId][key]?fichaProgreso[docId][key].intentos:0)||0;
-  var dataProg={aprobado:true,fecha:Date.now(),intentos:intentosPrevios};
-  // Actualizar variable local de inmediato, sin esperar el roundtrip de Firebase
+  var hoy=hoyStr();
+  var progActual=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{};
+  var fallosHoy=(progActual.fallosHoy&&progActual.fallosFecha===hoy)?progActual.fallosHoy:0;
+  var sinFallos=fallosHoy===0;
+  var dataProg=Object.assign({},progActual,{
+    ultimaAprobacion:hoy,
+    fecha:Date.now(),
+    fallosHoy:0, // resetear fallos del dia al aprobar
+    fallosFecha:hoy,
+    totalAprobaciones:(progActual.totalAprobaciones||0)+1
+  });
   if(!fichaProgreso[docId])fichaProgreso[docId]={};
   fichaProgreso[docId][key]=dataProg;
   mostrarLogro(curNombre,biblioteca[docId]?biblioteca[docId].titulo:'');
   sedeRef('fichaProgreso/'+docId+'/'+key).set(dataProg);
 
-  // Registrar en ranking semanal acumulado (cada ficha aprobada suma una entrada)
+  // Registrar en ranking semanal acumulado
   if(W&&fichaInicioMs){
     var duracionMs=Date.now()-fichaInicioMs;
-    var sinFallos=intentosPrevios===0;
     sRef('ranking/'+key).push({
       nombre:curNombre,
       docId:docId,
       titulo:biblioteca[docId]?biblioteca[docId].titulo:'',
       duracionMs:duracionMs,
       sinFallos:sinFallos,
-      intentos:intentosPrevios,
+      intentos:fallosHoy,
       puntos:sinFallos?10:5,
-      fecha:Date.now()
+      fecha:Date.now(),
+      fechaStr:hoy
     });
   }
   fichaInicioMs=0;
@@ -1616,43 +1633,58 @@ function mostrarBannerLogro(nombre,titulo){
 
 function registrarFallo(docId,doc){
   var key=curNombre.replace(/\s/g,'_');
-  var actual=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{intentos:0};
-  var nuevosIntentos=(actual.intentos||0)+1;
-  var data={intentos:nuevosIntentos,ultimoFallo:Date.now()};
+  var hoy=hoyStr();
+  var actual=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{};
+  // Contar fallos de HOY solamente (se reinicia cada día)
+  var fallosHoy=(actual.fallosFecha===hoy?(actual.fallosHoy||0):0)+1;
+  var data=Object.assign({},actual,{fallosHoy:fallosHoy,fallosFecha:hoy,ultimoFallo:Date.now()});
   if(!fichaProgreso[docId])fichaProgreso[docId]={};
-  if(nuevosIntentos>=3){
-    data.bloqueado=true;
+  if(fallosHoy>=3){
+    data.bloqueadoFecha=hoy; // bloqueado solo para hoy
     fichaProgreso[docId][key]=data;
     sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
-    sedeRef('alertasCapacitacion').push({nombre:curNombre,documento:doc.titulo,docId:docId,fecha:Date.now()});
+    sedeRef('alertasCapacitacion').push({nombre:curNombre,documento:doc.titulo,docId:docId,fecha:Date.now(),fechaStr:hoy});
     mostrarFichaObligatoria(docId,doc);
   } else {
     fichaProgreso[docId][key]=data;
     sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
-    alert('Respuesta incorrecta. Vuelve a leer el contenido e inténtalo de nuevo. Intento '+nuevosIntentos+' de 3.');
+    alert('Respuesta incorrecta. Intento '+fallosHoy+' de 3 de hoy. Vuelve a leer e inténtalo de nuevo.');
     mostrarFichaObligatoria(docId,doc);
   }
 }
 
 function agregarRankingPorPersona(){
-  // ranking[key] es un objeto de entradas push (una por cada ficha aprobada)
   var porPersona={};
+  // Solo personas con turno esta semana, excluyendo Patricio Baeza
+  var conTurno=Object.values(bloques)
+    .map(function(b){return b.nombre;})
+    .filter(function(n){return n&&n!=='__sa__'&&n.trim().toLowerCase()!=='patricio baeza';});
+  var unicos=[...new Set(conTurno)];
+
   Object.values(ranking).forEach(function(entradasPersona){
     if(!entradasPersona||typeof entradasPersona!=='object')return;
     Object.values(entradasPersona).forEach(function(e){
       if(!e||!e.nombre)return;
-      if(!porPersona[e.nombre])porPersona[e.nombre]={nombre:e.nombre,puntos:0,totalDuracionMs:0,fichas:0,sinFallosCount:0};
+      if(e.nombre.trim().toLowerCase()==='patricio baeza')return;
+      if(!porPersona[e.nombre])porPersona[e.nombre]={nombre:e.nombre,puntos:0,totalDuracionMs:0,veces:0,sinFallosCount:0};
       var p=porPersona[e.nombre];
       p.puntos+=(e.puntos||(e.sinFallos?10:5));
       p.totalDuracionMs+=(e.duracionMs||0);
-      p.fichas+=1;
+      p.veces+=1;
       if(e.sinFallos)p.sinFallosCount+=1;
     });
   });
   return Object.values(porPersona).map(function(p){
-    p.promedioDuracionMs=p.fichas?Math.round(p.totalDuracionMs/p.fichas):0;
+    p.promedioDuracionMs=p.veces?Math.round(p.totalDuracionMs/p.veces):0;
     return p;
   });
+}
+
+function nombresConTurnoSemana(){
+  var con=Object.values(bloques)
+    .map(function(b){return b.nombre;})
+    .filter(function(n){return n&&n!=='__sa__'&&n.trim().toLowerCase()!=='patricio baeza';});
+  return [...new Set(con)];
 }
 
 function ordenarRanking(){
@@ -1668,33 +1700,86 @@ function fmtDuracion(ms){
   return min+':'+(seg<10?'0':'')+seg;
 }
 
+function fmtTemporizador(){
+  if(!W||!semanas[W])return '';
+  var fin=semanas[W].fin;
+  if(!fin)return '';
+  var hoy=hoyStr();
+  if(hoy>fin)return '🏁 Semana cerrada';
+  var msRestantes=new Date(fin+'T23:59:59').getTime()-Date.now();
+  if(msRestantes<=0)return '🏁 Semana cerrada';
+  var dias=Math.floor(msRestantes/(1000*60*60*24));
+  var hrs=Math.floor((msRestantes%(1000*60*60*24))/(1000*60*60));
+  if(dias>0)return '⏱ Cierra en '+dias+' día'+(dias!==1?'s':'')+' y '+hrs+'h';
+  return '⏱ Cierra hoy';
+}
+
+function quienFaltaHoy(){
+  var hoy=hoyStr();
+  var conTurno=nombresConTurnoSemana();
+  return conTurno.filter(function(n){
+    var key=n.replace(/\s/g,'_');
+    // Revisar si respondió correctamente hoy en alguna ficha
+    var yaRespondio=Object.keys(biblioteca).some(function(docId){
+      var prog=fichaProgreso[docId]&&fichaProgreso[docId][key];
+      return prog&&prog.ultimaAprobacion===hoy;
+    });
+    return !yaRespondio;
+  });
+}
+
 function renderRanking(){
   var ordenado=ordenarRanking();
+  var temporizador=fmtTemporizador();
+  var falta=quienFaltaHoy();
+  var semanaCerrada=temporizador==='🏁 Semana cerrada';
+  var medallas=['🥇','🥈','🥉'];
 
   // Vista completa (selector de semanas)
   var dFull=document.getElementById('rankingSelectorView');
   if(dFull){
+    var html='';
+    if(temporizador)html+='<div style="text-align:center;font-size:12px;color:#7ec8f7;font-weight:700;padding:6px 0 10px">'+temporizador+'</div>';
     if(!ordenado.length){
-      dFull.innerHTML='<p class="empty">Aún nadie ha completado una evaluación esta semana.</p>';
+      html+='<p class="empty">Aún nadie ha completado una evaluación esta semana.</p>';
     } else {
-      var medallas=['🥇','🥈','🥉'];
-      dFull.innerHTML=ordenado.map(function(r,i){
+      html+=ordenado.map(function(r,i){
         var medalla=medallas[i]||('#'+(i+1));
-        var liderTag=i===0?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':'<span style="color:rgba(255,255,255,.35);font-size:10px">'+r.fichas+' ficha'+(r.fichas!==1?'s':'')+' aprobada'+(r.fichas!==1?'s':'')+'</span>';
-        return '<div class="iitem" style="padding:7px 0"><div class="iitem-info" style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+liderTag+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.puntos+' pts</span></div>';
+        var esLider=i===0;
+        var liderTag=esLider&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':esLider?'<span style="color:#fcd34d;font-size:10px">● Lider</span>':'';
+        var sub=r.veces+' vez'+(r.veces!==1?'ces':'')+' · promedio '+fmtDuracion(r.promedioDuracionMs)+' '+liderTag;
+        return '<div class="iitem" style="padding:7px 0"><div class="iitem-info" style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.puntos+' pts</span></div>';
       }).join('');
     }
+    if(falta.length&&!semanaCerrada){
+      html+='<div style="margin-top:12px;padding:10px;background:rgba(255,165,0,.07);border:1px solid rgba(255,165,0,.2);border-radius:8px">';
+      html+='<p style="font-size:10px;font-weight:700;color:#fcd34d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⏳ Falta responder hoy ('+falta.length+')</p>';
+      html+=falta.map(function(n){return '<div style="font-size:12px;color:rgba(255,255,255,.5);padding:2px 0">'+n+'</div>';}).join('');
+      html+='</div>';
+    }
+    dFull.innerHTML=html;
   }
 
-  // Mini card resumida (appView)
+  // Mini card en appView
   var dMini=document.getElementById('rankingMiniCard');
   if(dMini){
-    if(!ordenado.length){dMini.innerHTML='';return;}
-    var top3=ordenado.slice(0,3);
-    var medallas2=['🥇','🥈','🥉'];
-    dMini.innerHTML='<div class="card" style="margin-bottom:10px;padding:12px 14px"><p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">🏆 Ranking de cumplimiento — esta semana</p>'+
-      top3.map(function(r,i){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span>'+medallas2[i]+' '+r.nombre+(i===0?' <span style="color:#fcd34d;font-size:10px">· Ganador</span>':'')+'</span><span style="color:#7ec8f7;font-weight:600">'+r.puntos+' pts</span></div>';}).join('')+
-      '</div>';
+    var miniHtml='<div class="card" style="margin-bottom:10px;padding:12px 14px">';
+    miniHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.7px">🏆 Ranking semanal</p>'+(temporizador?'<span style="font-size:10px;color:#7ec8f7">'+temporizador+'</span>':'')+'</div>';
+    if(!ordenado.length){
+      miniHtml+='<p style="font-size:12px;color:rgba(255,255,255,.3)">Aún sin participantes esta semana.</p>';
+    } else {
+      miniHtml+=ordenado.slice(0,3).map(function(r,i){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span>'+medallas[i]+' '+r.nombre+(i===0&&semanaCerrada?' <span style="color:#fcd34d;font-size:10px">· Ganador</span>':i===0?' <span style="color:#fcd34d;font-size:10px">· Líder</span>':'')+'</span><span style="color:#7ec8f7;font-weight:600">'+r.puntos+' pts</span></div>';
+      }).join('');
+    }
+    if(falta.length&&!semanaCerrada){
+      miniHtml+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)"><p style="font-size:10px;color:#fcd34d;margin-bottom:4px">⏳ Faltan por responder hoy: '+falta.length+'</p>';
+      miniHtml+=falta.slice(0,3).map(function(n){return '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+n+'</span>';}).join(', ');
+      if(falta.length>3)miniHtml+='<span style="font-size:11px;color:rgba(255,255,255,.3)"> y '+(falta.length-3)+' más</span>';
+      miniHtml+='</div>';
+    }
+    miniHtml+='</div>';
+    dMini.innerHTML=miniHtml;
   }
 }
 
