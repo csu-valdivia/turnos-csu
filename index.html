@@ -1504,19 +1504,26 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
 function fichasObligatoriasPendientes(nombre){
   if(!nombre)return [];
   var key=nombre.replace(/\s/g,'_');
-  var hoy=hoyStr();
+  var hoyStr2=hoyStr();
+  var hoyObj=new Date();hoyObj.setHours(0,0,0,0);
+  var inicioHoy=hoyObj.getTime();
   return Object.entries(biblioteca).filter(function(e){
     var doc=e[1];
     if(!doc.obligatoria)return false;
     var prog=fichaProgreso[e[0]]&&fichaProgreso[e[0]][key];
-    // Bloqueado hoy (3 fallos en la jornada de hoy)
-    if(prog&&prog.bloqueadoFecha===hoy)return true;
-    // Ya respondió correctamente hoy
-    if(prog&&prog.ultimaAprobacion===hoy)return false;
+    // Bloqueado hoy
+    if(prog&&prog.bloqueadoFecha===hoyStr2)return true;
+    // Ya respondió correctamente hoy (por fecha string)
+    if(prog&&prog.ultimaAprobacion===hoyStr2)return false;
+    // También verificar por timestamp en ranking (más confiable)
+    var yaEnRanking=ranking[key]&&Object.values(ranking[key]).some(function(e2){
+      return e2&&e2.fecha&&e2.fecha>=inicioHoy;
+    });
+    if(yaEnRanking)return false;
     // Tiene preguntas configuradas
     var preguntas=Object.values(doc.preguntas||{});
     if(preguntas.length<2)return false;
-    return true; // debe responder hoy
+    return true;
   });
 }
 
@@ -1749,19 +1756,24 @@ function fmtTemporizador(){
 }
 
 function quienFaltaHoy(){
-  var hoy=hoyStr();
+  // Usar ventana de tiempo: desde medianoche de hoy hasta ahora
+  var ahora=Date.now();
+  var hoy=new Date();
+  hoy.setHours(0,0,0,0);
+  var inicioHoy=hoy.getTime();
+  var hoyStr2=hoyStr();
   var conTurno=nombresConTurnoSemana();
   return conTurno.filter(function(n){
     var key=n.replace(/\s/g,'_');
-    // Revisar fichaProgreso
+    // Revisar fichaProgreso (fecha como string local)
     var yaRespondioFicha=Object.keys(biblioteca).some(function(docId){
       var prog=fichaProgreso[docId]&&fichaProgreso[docId][key];
-      return prog&&prog.ultimaAprobacion===hoy;
+      return prog&&prog.ultimaAprobacion===hoyStr2;
     });
     if(yaRespondioFicha)return false;
-    // También revisar ranking (por si fichaProgreso no se sincronizó aún)
+    // Revisar ranking por timestamp real (más confiable que fechaStr)
     var yaRespondioRanking=ranking[key]&&Object.values(ranking[key]).some(function(e){
-      return e&&e.fechaStr===hoy;
+      return e&&e.fecha&&e.fecha>=inicioHoy&&e.fecha<=ahora;
     });
     return !yaRespondioRanking;
   });
