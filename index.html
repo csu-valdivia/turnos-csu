@@ -1045,6 +1045,20 @@ window.setSede=function(sede){
 };
 
 function mostrarConfirmacionSemana(){
+  // Si semanas está vacío, forzar carga desde Firebase antes de mostrar
+  if(!Object.keys(semanas).length){
+    sedeRef('semanas').once('value',function(s){
+      semanas=s.val()||{};
+      renderSemanasList();
+      renderSemanasAdminList();
+      _mostrarConfirmacionSemanaInner();
+    });
+    return;
+  }
+  _mostrarConfirmacionSemanaInner();
+}
+
+function _mostrarConfirmacionSemanaInner(){
   var wId=detectarSemanaActual();
   var v=document.getElementById('semanaConfirmView');
   if(!wId){
