@@ -192,6 +192,12 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 /* BULK */
 .bulk-tbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
 .heat-wrap{overflow-x:auto;margin-bottom:10px}
+.sup-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);gap:8px}
+.sup-item span{font-size:11px;color:rgba(255,255,255,.7);flex:1;line-height:1.4}
+.sup-toggle{display:flex;gap:4px;flex-shrink:0}
+.sup-btn{width:32px;height:28px;border:1px solid rgba(255,255,255,.15);border-radius:6px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.3);font-size:14px;cursor:pointer;font-family:inherit;transition:all .15s}
+.sup-btn.active-yes{background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.4);color:#6ee7b7}
+.sup-btn.active-no{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4);color:#fca5a5}
 .heat-tbl{border-collapse:collapse;font-size:9px;width:100%;min-width:340px}
 .heat-tbl th{padding:3px 2px;font-weight:700;color:rgba(255,255,255,.35);text-align:center;white-space:nowrap;font-size:8px;text-transform:uppercase;letter-spacing:.3px}
 .heat-tbl td{padding:1px;text-align:center}
@@ -338,6 +344,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
         <div class="tc" id="tc-mis-turnos">
           <div class="sel-wrap"><select id="nameSelect" style="background:rgba(255,255,255,.08);color:#fff"><option value="">— Selecciona tu nombre —</option></select></div>
+          <div id="supResultColaborador"></div>
           <div id="results"></div>
         </div>
 
@@ -693,6 +700,65 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="ilist" id="cumplimientoList"></div>
           </div>
 
+          <div class="asec" style="border-color:rgba(139,92,246,.3)">
+            <p class="asec-title" style="color:#a78bfa">👁 Ronda de supervisión</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Registra la supervisión en terreno. Máximo 2 rondas por día por colaborador (mañana y tarde).</p>
+            <div class="frow">
+              <select id="supNombre" style="flex:1"><option value="">Selecciona colaborador</option></select>
+              <select id="supRonda" style="width:auto">
+                <option value="manana">🌅 Mañana</option>
+                <option value="tarde">🌆 Tarde</option>
+              </select>
+            </div>
+            <div id="supItems" style="margin-top:10px">
+              <div class="sup-item" data-key="epp" data-peso="0.28">
+                <span>🦺 EPP correcto según área y procedimiento</span>
+                <div class="sup-toggle">
+                  <button class="sup-btn sup-yes" data-val="1">✓</button>
+                  <button class="sup-btn sup-no" data-val="0">✗</button>
+                </div>
+              </div>
+              <div class="sup-item" data-key="puntualidad" data-peso="0.22">
+                <span>⏰ Inicio de jornada puntual en su puesto</span>
+                <div class="sup-toggle">
+                  <button class="sup-btn sup-yes" data-val="1">✓</button>
+                  <button class="sup-btn sup-no" data-val="0">✗</button>
+                </div>
+              </div>
+              <div class="sup-item" data-key="uniforme" data-peso="0.20">
+                <span>👔 Uniforme reglamentario completo y en buen estado</span>
+                <div class="sup-toggle">
+                  <button class="sup-btn sup-yes" data-val="1">✓</button>
+                  <button class="sup-btn sup-no" data-val="0">✗</button>
+                </div>
+              </div>
+              <div class="sup-item" data-key="puesto" data-peso="0.12">
+                <span>🧹 Puesto de trabajo ordenado y limpio</span>
+                <div class="sup-toggle">
+                  <button class="sup-btn sup-yes" data-val="1">✓</button>
+                  <button class="sup-btn sup-no" data-val="0">✗</button>
+                </div>
+              </div>
+              <div class="sup-item" data-key="cofia" data-peso="0.10">
+                <span>👩‍⚕️ Cofia o gorro utilizado correctamente</span>
+                <div class="sup-toggle">
+                  <button class="sup-btn sup-yes" data-val="1">✓</button>
+                  <button class="sup-btn sup-no" data-val="0">✗</button>
+                </div>
+              </div>
+              <div class="sup-item" data-key="alimentos" data-peso="0.08">
+                <span>🚫 Sin alimentos ni bebidas en el área de trabajo</span>
+                <div class="sup-toggle">
+                  <button class="sup-btn sup-yes" data-val="1">✓</button>
+                  <button class="sup-btn sup-no" data-val="0">✗</button>
+                </div>
+              </div>
+            </div>
+            <div id="supPuntaje" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:right"></div>
+            <button class="btn-add" id="guardarSupBtn" style="margin-top:8px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">💾 Guardar ronda de supervisión</button>
+            <div class="saved" id="supSaved">✓ Ronda guardada</div>
+          </div>
+
           <div class="asec">
             <p class="asec-title">📦 Bloques cargados</p>
             <div class="ilist" id="bloquesList"></div>
@@ -843,6 +909,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 
 // ── STATE ──
 var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos'];
+var supervisionData={};
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={},fichaProgreso={},ranking={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -903,6 +970,7 @@ function attach(){
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();});
+  on('supervision',function(v){supervisionData=v||{};renderRanking();if(curNombre)renderSupervisionColaborador(curNombre);});
 }
 
 // ── SEDE Y SEMANAS ──
@@ -916,7 +984,7 @@ function detectarSemanaActual(){
 
 window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
-  bloques={};tareas={};pendientes={};nombres=[];asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};biblioteca={};fichaProgreso={};ranking={};curNombre='';semanas={};
+  bloques={};tareas={};pendientes={};nombres=[];supervisionData={};asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};biblioteca={};fichaProgreso={};ranking={};curNombre='';semanas={};
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -1230,7 +1298,7 @@ function renderPanorama(){
 }
 
 // ── MIS TURNOS ──
-document.getElementById('nameSelect').addEventListener('change',function(e){curNombre=e.target.value;renderMisTurnos(curNombre);});
+document.getElementById('nameSelect').addEventListener('change',function(e){curNombre=e.target.value;renderMisTurnos(curNombre);renderSupervisionColaborador(curNombre);});
 function renderMisTurnos(nombre){
   var d=document.getElementById('results');if(!nombre){d.innerHTML='';return;}
   var html='',found=false;
@@ -1982,6 +2050,24 @@ function agregarRankingPorPersona(){
   });
   return Object.values(porPersona).map(function(p){
     p.promedioDuracionMs=p.veces?Math.round(p.totalDuracionMs/p.veces):0;
+    // Calcular puntaje combinado semanal (50% preguntas + 50% supervisión)
+    var diasUnicos=[];
+    var key=p.nombre.replace(/\s/g,'_');
+    if(ranking&&ranking[key]){
+      Object.values(ranking[key]).forEach(function(e){if(e&&e.fechaStr&&diasUnicos.indexOf(e.fechaStr)===-1)diasUnicos.push(e.fechaStr);});
+    }
+    // También incluir días con supervisión
+    Object.values(supervisionData||{}).forEach(function(r){
+      if(r&&r.nombre===p.nombre&&r.fecha&&diasUnicos.indexOf(r.fecha)===-1)diasUnicos.push(r.fecha);
+    });
+    var totalFinal=0;var diasConDatos=0;
+    diasUnicos.forEach(function(fecha){
+      var res=calcPuntajeFinalDia(p.nombre,fecha);
+      if(res&&res.total!==null){totalFinal+=res.total;diasConDatos++;}
+      else if(res&&res.preguntas>0){totalFinal+=res.preguntas*0.5;diasConDatos++;} // solo preguntas ese día
+    });
+    p.puntajeFinal=diasConDatos?Math.round(totalFinal/diasConDatos*100):0;
+    p.diasEvaluados=diasConDatos;
     return p;
   });
 }
@@ -1995,6 +2081,7 @@ function nombresConTurnoSemana(){
 
 function ordenarRanking(){
   return agregarRankingPorPersona().sort(function(a,b){
+    if(a.puntajeFinal!==b.puntajeFinal)return b.puntajeFinal-a.puntajeFinal;
     if(a.puntos!==b.puntos)return b.puntos-a.puntos;
     return a.promedioDuracionMs-b.promedioDuracionMs;
   });
@@ -2111,7 +2198,9 @@ function renderRanking(){
           infoHoy+='</span>';
         }
         var etiqueta=i===0&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · Ganador</span>':i===0?'<span style="color:#fcd34d;font-size:10px"> · Líder</span>':'';
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.05)"><span>'+medal+' <strong>'+r.nombre+'</strong>'+etiqueta+infoHoy+'</span><span style="color:#7ec8f7;font-weight:700;flex-shrink:0;margin-left:8px">'+r.puntos+' pts</span></div>';
+        var scoreStr=r.puntajeFinal?r.puntajeFinal+'%':''+r.puntos+' pts';
+        var scoreColor=r.puntajeFinal>=80?'#6ee7b7':r.puntajeFinal>=60?'#fcd34d':'#7ec8f7';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.05)"><span>'+medal+' <strong>'+r.nombre+'</strong>'+etiqueta+infoHoy+'</span><span style="color:'+scoreColor+';font-weight:700;flex-shrink:0;margin-left:8px">'+scoreStr+'</span></div>';
       }).join('');
     }
     if(falta.length&&!semanaCerrada){
@@ -2166,6 +2255,61 @@ window.cerrarGanador=function(){
   var o=document.getElementById('ganadorOverlay');
   if(o)o.remove();
 };
+
+// ── SUPERVISIÓN ──
+var SUP_PESOS={epp:0.28,puntualidad:0.22,uniforme:0.20,puesto:0.12,cofia:0.10,alimentos:0.08};
+var SUP_LABELS={epp:'🦺 EPP',puntualidad:'⏰ Puntualidad',uniforme:'👔 Uniforme',puesto:'🧹 Puesto',cofia:'👩‍⚕️ Cofia',alimentos:'🚫 Sin alimentos'};
+
+function calcPuntajeSupDia(nombre,fecha){
+  var key=nombre.replace(/\s/g,'_');
+  var rondasDia=Object.values(supervisionData||{}).filter(function(r){
+    return r&&r.nombre===nombre&&r.fecha===fecha;
+  });
+  if(!rondasDia.length)return null;
+  // Promedio de las rondas del día
+  var promedioRondas=rondasDia.map(function(ronda){
+    var score=0;
+    Object.entries(SUP_PESOS).forEach(function(e){
+      if(ronda.items&&ronda.items[e[0]]===1)score+=e[1];
+    });
+    return score;
+  });
+  return promedioRondas.reduce(function(a,b){return a+b;},0)/promedioRondas.length;
+}
+
+function calcPuntajeFinalDia(nombre,fecha){
+  // 50% preguntas + 50% supervisión
+  var hoyObj=new Date(fecha+'T12:00:00');hoyObj.setHours(0,0,0,0);
+  var finDia=hoyObj.getTime()+86400000;
+  var key=nombre.replace(/\s/g,'_');
+  // Puntaje preguntas del día (0-10 → normalizado a 0-1)
+  var puntPreg=0;
+  if(ranking&&ranking[key]){
+    var entradasDia=Object.values(ranking[key]).filter(function(e){
+      return e&&e.fecha&&e.fecha>=hoyObj.getTime()&&e.fecha<finDia;
+    });
+    if(entradasDia.length){
+      var pts=entradasDia[entradasDia.length-1].puntos||0;
+      puntPreg=pts/10; // normalizar a 0-1
+    }
+  }
+  var puntSup=calcPuntajeSupDia(nombre,fecha);
+  if(puntSup===null)return{total:null,preguntas:puntPreg,supervision:null};
+  var total=(puntPreg*0.5)+(puntSup*0.5);
+  return{total:total,preguntas:puntPreg,supervision:puntSup};
+}
+
+function renderSupervisionColaborador(nombre){
+  // Muestra al colaborador su resultado de supervisión del día en Mis Turnos
+  var hoy=hoyStr();
+  var puntaje=calcPuntajeSupDia(nombre,hoy);
+  var el=document.getElementById('supResultColaborador');
+  if(!el)return;
+  if(puntaje===null){el.innerHTML='';return;}
+  var pct=Math.round(puntaje*100);
+  var color=pct>=80?'#6ee7b7':pct>=60?'#fcd34d':'#fca5a5';
+  el.innerHTML='<div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:10px 12px;margin-top:8px"><p style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:4px">👁 Tu supervisión de hoy</p><p style="font-size:20px;font-weight:900;color:'+color+'">'+pct+'%</p></div>';
+}
 
 function renderCumplimientoList(){
   var d=document.getElementById('cumplimientoList');if(!d)return;
@@ -2619,7 +2763,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();document.getElementById('bulkBody').innerHTML='';addBulkRow();}
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();document.getElementById('bulkBody').innerHTML='';addBulkRow();}
     else{err.style.display='block';pinIn.value='';}
   });
   row.appendChild(ok);box.appendChild(pinIn);box.appendChild(err);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
@@ -2690,6 +2834,72 @@ document.getElementById('saveCumpBtn').addEventListener('click',function(){
   sedeRef('cumpleanos/'+key).set({fecha:f,genero:g}).then(function(){
     showSaved('cumpSaved');
     renderCumpAdmin();
+  });
+});
+
+// Supervision admin handlers
+function initSupervisionAdmin(){
+  var supNom=document.getElementById('supNombre');
+  if(!supNom)return;
+  supNom.innerHTML='<option value="">Selecciona colaborador</option>'+
+    nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';})
+    .map(function(n){return '<option>'+n+'</option>';}).join('');
+
+  // Toggle buttons
+  document.querySelectorAll('.sup-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var toggle=this.closest('.sup-toggle');
+      toggle.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no');});
+      if(this.classList.contains('sup-yes'))this.classList.add('active-yes');
+      else this.classList.add('active-no');
+      calcPreviewPuntaje();
+    });
+  });
+}
+
+function calcPreviewPuntaje(){
+  var total=0;var respondidos=0;
+  document.querySelectorAll('#supItems .sup-item').forEach(function(item){
+    var peso=parseFloat(item.dataset.peso);
+    var activo=item.querySelector('.sup-btn.active-yes,sup-btn.active-no');
+    var yes=item.querySelector('.sup-btn.active-yes');
+    if(item.querySelector('.active-yes')||item.querySelector('.active-no')){
+      respondidos++;
+      if(item.querySelector('.active-yes'))total+=peso;
+    }
+  });
+  var el=document.getElementById('supPuntaje');
+  if(el&&respondidos>0)el.textContent='Puntaje parcial: '+Math.round(total*100)+'%';
+}
+
+document.getElementById('guardarSupBtn').addEventListener('click',function(){
+  var nombre=document.getElementById('supNombre').value;
+  var ronda=document.getElementById('supRonda').value;
+  if(!nombre){alert('Selecciona un colaborador.');return;}
+  var items={};var todosRespondidos=true;
+  document.querySelectorAll('#supItems .sup-item').forEach(function(item){
+    var key=item.dataset.key;
+    if(item.querySelector('.active-yes'))items[key]=1;
+    else if(item.querySelector('.active-no'))items[key]=0;
+    else todosRespondidos=false;
+  });
+  if(!todosRespondidos){alert('Evalúa todos los ítems antes de guardar.');return;}
+  var hoy=hoyStr();
+  // Verificar si ya existe esa ronda hoy
+  var yaExiste=Object.values(supervisionData||{}).some(function(r){
+    return r&&r.nombre===nombre&&r.fecha===hoy&&r.ronda===ronda;
+  });
+  if(yaExiste){if(!confirm('Ya existe una ronda de '+ronda+' para '+nombre+' hoy. ¿Sobreescribir?'))return;}
+  var puntaje=0;
+  Object.entries(SUP_PESOS).forEach(function(e){if(items[e[0]]===1)puntaje+=e[1];});
+  sRef('supervision').push({
+    nombre:nombre,ronda:ronda,fecha:hoy,items:items,
+    puntaje:Math.round(puntaje*100),ts:Date.now()
+  }).then(function(){
+    showSaved('supSaved');
+    // Reset toggles
+    document.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no');});
+    document.getElementById('supPuntaje').textContent='';
   });
 });
 
