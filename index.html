@@ -2572,13 +2572,13 @@ document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
 document.getElementById('saveBulkBtn').addEventListener('click',function(){
   var rows=document.querySelectorAll('#bulkBody tr'),nv=[],claveBulk=[];
   rows.forEach(function(r){
-    var ss=r.querySelectorAll('select');
     var fechaInput=r.querySelector('.dFecha');
     var fechaVal=fechaInput?fechaInput.value:'';
     var d='';
     if(fechaVal){var fd=new Date(fechaVal+'T12:00:00');var dias2=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];d=dias2[fd.getDay()];}
-    var ss=r.querySelectorAll('select');
-    var n=ss[0].value,a=ss[1].value,h=ss[2].value;
+    var n=r.querySelector('.pNom')?r.querySelector('.pNom').value:'';
+    var a=r.querySelector('.aSel')?r.querySelector('.aSel').value:'';
+    var h=r.querySelector('.hSel')?r.querySelector('.hSel').value:'';
     var turno=r.querySelector('.tSel')?r.querySelector('.tSel').value:'';
     var krol=r.querySelector('.kSel')?r.querySelector('.kSel').value:'';
     // d already computed above from date
