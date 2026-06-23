@@ -500,6 +500,10 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           </div>
 
           <div class="asec">
+            <div id="adminSemanaIndicador" style="background:rgba(74,144,217,.1);border:1px solid rgba(74,144,217,.25);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;justify-content:space-between">
+              <span style="color:rgba(255,255,255,.5)">Cargando en:</span>
+              <span id="adminSemanaLabel" style="color:#7ec8f7;font-weight:700">— sin semana confirmada —</span>
+            </div>
             <p class="asec-title">📋 Carga masiva de turnos</p>
 
             <!-- MAPA DE CALOR -->
@@ -2698,6 +2702,7 @@ document.getElementById('qkSelTodos').addEventListener('click',function(){
 });
 
 document.getElementById('qkGuardar').addEventListener('click',function(){
+  if(!W){alert('⚠ Confirma una semana primero antes de cargar turnos.');return;}
   var n=document.getElementById('qkNombre').value;
   var a=document.getElementById('qkArea').value;
   var h=document.getElementById('qkHorario').value;
@@ -2714,6 +2719,10 @@ document.getElementById('qkGuardar').addEventListener('click',function(){
 
 document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
 document.getElementById('saveBulkBtn').addEventListener('click',function(){
+  if(!W){
+    alert('⚠ No hay una semana confirmada.\n\nPara cargar turnos:\n1. Cierra el admin\n2. Toca "↺ Cambiar semana"\n3. Selecciona la semana donde quieres cargar\n4. Confirma e ingresa\n5. Vuelve a abrir admin');
+    return;
+  }
   var rows=document.querySelectorAll('#bulkBody tr'),nv=[],claveBulk=[];
   rows.forEach(function(r){
     var fechaInput=r.querySelector('.dFecha');
@@ -2763,7 +2772,14 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();document.getElementById('bulkBody').innerHTML='';addBulkRow();}
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();
+      // Update week indicator
+      var lbl=document.getElementById('adminSemanaLabel');
+      if(lbl){
+        if(W&&semanas[W])lbl.innerHTML='<span style="color:#6ee7b7">✓ '+( semanas[W].nombre||semanas[W].ini+' al '+semanas[W].fin)+'</span>';
+        else lbl.innerHTML='<span style="color:#fca5a5">⚠ Sin semana confirmada — los turnos NO se guardarán</span>';
+      }
+      document.getElementById('bulkBody').innerHTML='';addBulkRow();}
     else{err.style.display='block';pinIn.value='';}
   });
   row.appendChild(ok);box.appendChild(pinIn);box.appendChild(err);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
