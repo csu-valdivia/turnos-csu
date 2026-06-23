@@ -1063,7 +1063,14 @@ function mostrarConfirmacionSemana(){
 window.toggleSelectorSemanas=function(){
   var d=document.getElementById('selectorSemanasDiv');
   d.style.display=d.style.display==='none'?'block':'none';
-  renderSemanasList();
+  if(d.style.display==='block'){
+    // Forzar recarga de semanas desde Firebase por si el listener aún no disparó
+    sedeRef('semanas').once('value',function(s){
+      semanas=s.val()||{};
+      renderSemanasList();
+      renderSemanasAdminList();
+    });
+  }
 };
 
 function renderSemanasList(){
