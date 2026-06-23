@@ -191,6 +191,16 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
 /* BULK */
 .bulk-tbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.heat-wrap{overflow-x:auto;margin-bottom:10px}
+.heat-tbl{border-collapse:collapse;font-size:9px;width:100%;min-width:340px}
+.heat-tbl th{padding:3px 2px;font-weight:700;color:rgba(255,255,255,.35);text-align:center;white-space:nowrap;font-size:8px;text-transform:uppercase;letter-spacing:.3px}
+.heat-tbl td{padding:1px;text-align:center}
+.heat-cell{border-radius:4px;padding:3px 2px;font-size:8px;font-weight:700;min-height:24px;display:flex;align-items:center;justify-content:center;cursor:default}
+.hc-green{background:rgba(16,185,129,.25);color:#6ee7b7;border:1px solid rgba(16,185,129,.2)}
+.hc-yellow{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.2)}
+.hc-red{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
+.hc-gray{background:rgba(255,255,255,.04);color:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.06)}
+.heat-area{font-size:8px;color:rgba(255,255,255,.4);text-align:left;padding:2px 4px;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis}
 .bulk-tbl th{background:rgba(255,255,255,.06);padding:6px 3px;font-weight:700;border:1px solid rgba(255,255,255,.06);font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase}
 .bulk-tbl td{padding:2px;border:1px solid rgba(255,255,255,.04)}
 .bulk-tbl select{font-size:10px;padding:4px 2px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%}
@@ -484,6 +494,50 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec">
             <p class="asec-title">📋 Carga masiva de turnos</p>
+
+            <!-- MAPA DE CALOR -->
+            <div style="margin-bottom:12px">
+              <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🗺 Cobertura por área</p>
+              <div class="heat-wrap"><table class="heat-tbl" id="heatAreaTbl">
+                <thead><tr><th style="text-align:left">Área</th><th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th><th>Vie</th><th>Sáb</th></tr></thead>
+                <tbody id="heatAreaBody"></tbody>
+              </table></div>
+              <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">🕐 Cobertura por bloque</p>
+              <div class="heat-wrap"><table class="heat-tbl">
+                <thead><tr><th style="text-align:left">Bloque</th><th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th><th>Vie</th><th>Sáb</th></tr></thead>
+                <tbody id="heatBloquebody"></tbody>
+              </table></div>
+            </div>
+
+            <!-- CARGA RÁPIDA SEMANAL -->
+            <details style="margin-bottom:10px;background:rgba(74,144,217,.06);border:1px solid rgba(74,144,217,.15);border-radius:8px;padding:8px">
+              <summary style="font-size:11px;font-weight:700;color:#7ec8f7;cursor:pointer;list-style:none">⚡ Carga rápida — replicar turno toda la semana</summary>
+              <div style="margin-top:10px">
+                <p style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px">Elige persona, área y horario — marca los días que aplica y guarda de una vez.</p>
+                <div class="frow">
+                  <select id="qkNombre" style="flex:1"><option value="">Persona</option></select>
+                  <select id="qkArea" style="flex:1"><option value="">Área</option></select>
+                </div>
+                <div class="frow" style="margin-top:4px">
+                  <select id="qkHorario" style="flex:1"><option value="">Horario</option></select>
+                  <select id="qkTurno" style="flex:1;background:rgba(167,139,250,.1);color:#a78bfa;border-color:rgba(167,139,250,.2)">
+                    <option value="">T (Estéril.)</option><option value="T1">T1</option><option value="T2">T2</option>
+                  </select>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px" id="qkDias">
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Lunes" style="accent-color:var(--accent2)"> Lun</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Martes" style="accent-color:var(--accent2)"> Mar</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Miércoles" style="accent-color:var(--accent2)"> Mié</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Jueves" style="accent-color:var(--accent2)"> Jue</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Viernes" style="accent-color:var(--accent2)"> Vie</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Sábado" style="accent-color:var(--accent2)"> Sáb</label>
+                  <button id="qkSelTodos" style="font-size:10px;padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">Todos L-V</button>
+                </div>
+                <button class="btn-add" id="qkGuardar" style="margin-top:8px">⚡ Guardar turno semanal</button>
+                <div class="saved" id="qkSaved">✓ Guardado</div>
+              </div>
+            </details>
+
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">T=Turno (Esterilización) · 🔑=Equipo clave · S/A=Sin atención · 🏖=Libre</p>
             <table class="bulk-tbl">
               <thead><tr><th>Fecha</th><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#93c5fd">🔑</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead>
@@ -823,7 +877,7 @@ function attach(){
   primerCargaBloques=true;ultimosBloquesCount=0;
   on('aviso',function(v){renderAviso(v);});
   on('bloques',function(v){
-    bloques=v;renderPanorama();renderBloquesList();renderResumen();if(curNombre)renderMisTurnos(curNombre);
+    bloques=v;renderPanorama();renderBloquesList();renderResumen();renderHeatMap();if(curNombre)renderMisTurnos(curNombre);
     var totalAhora=Object.keys(bloques).length;
     if(!primerCargaBloques&&totalAhora>ultimosBloquesCount)reproducirAlerta();
     primerCargaBloques=false;
@@ -843,7 +897,7 @@ function attach(){
   on('visto',function(v){visto=v;if(curNombre)renderMisTurnos(curNombre);});
   on('cambios',function(v){cambios=v;renderCambios();renderCambiosAdmin();});
   on('ausencias',function(v){ausencias=v;renderAusencias();renderAusenciasAdmin();if(curNombre)renderMisTurnos(curNombre);});
-  on('llamados',function(v){llamados=v;renderLlList();renderPanorama();renderEstado();});
+  on('llamados',function(v){llamados=v;renderLlList();renderPanorama();renderHeatMap();renderEstado();});
   on('encargados',function(v){encargados=v;renderEncList();renderPanorama();});
   on('coberturas',function(v){coberturas=v;renderCobList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
@@ -2367,6 +2421,79 @@ function renderResumen(){
 }
 
 // ── BLOQUES ──
+function renderHeatMap(){
+  var areaBody=document.getElementById('heatAreaBody');
+  var bloqBody=document.getElementById('heatBloquebody');
+  if(!areaBody||!bloqBody)return;
+  var DIAS_SHORT=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+  function heatCell(personas,minReq){
+    var n=personas.length;
+    var cls,txt;
+    if(n===0){cls='hc-red';txt='✕';}
+    else if(n<minReq){cls='hc-yellow';txt=n+'/'+(minReq||1);}
+    else{cls='hc-green';txt='✓';}
+    return '<td><div class="heat-cell '+cls+'">'+txt+'</div></td>';
+  }
+  function heatNA(){return '<td><div class="heat-cell hc-gray">—</div></td>';}
+
+  // Reglas de mínimos por área
+  var MINS={'Esterilización':2,'Rayos':1,'Dispensario 1':1,'Dispensario 2':1};
+
+  // Mapa por área
+  areaBody.innerHTML='';
+  AREAS.forEach(function(area){
+    if(area==='Pabellón')return;
+    var tr='<tr><td class="heat-area">'+area+'</td>';
+    DIAS_SHORT.forEach(function(dia){
+      var esSab=dia==='Sábado';
+      if(esSab&&(area==='Esterilización'))return tr+=heatNA();
+      var pers=Object.values(bloques).filter(function(b){
+        return b.dia===dia&&b.area===area&&b.nombre!=='__sa__'&&!b.libre;
+      });
+      var nombres=[];
+      pers.forEach(function(b){if(nombres.indexOf(b.nombre)===-1)nombres.push(b.nombre);});
+      var hayLlamado=Object.values(llamados).some(function(l){return l.dia===dia&&l.area===area;});
+      if(hayLlamado)tr+='<td><div class="heat-cell hc-green">📞</div></td>';
+      else tr+=heatCell(nombres,MINS[area]||1);
+    });
+    tr+='</tr>';
+    areaBody.innerHTML+=tr;
+  });
+
+  // Mapa por bloque horario (usa REGLAS)
+  bloqBody.innerHTML='';
+  var seenBloques={};
+  REGLAS.forEach(function(r){
+    var bloqueKey=r.area.substring(0,5)+' '+r.ini+'–'+r.fin;
+    if(seenBloques[bloqueKey])return;
+    seenBloques[bloqueKey]=true;
+    var tr='<tr><td class="heat-area" title="'+r.area+'">'+r.ini+'–'+r.fin+' '+r.area.substring(0,5)+'</td>';
+    DIAS_SHORT.forEach(function(dia){
+      if(r.dias.indexOf(dia)===-1)return tr+=heatNA();
+      // sinAtencion check
+      var tieneSA=Object.values(bloques).some(function(b){
+        return b.dia===dia&&b.area===r.area&&b.sinAtencion;
+      });
+      if(tieneSA)return tr+='<td><div class="heat-cell hc-gray">S/A</div></td>';
+      var hayLlamado=Object.values(llamados).some(function(l){return l.dia===dia&&l.area===r.area;});
+      if(hayLlamado)return tr+='<td><div class="heat-cell hc-green">📞</div></td>';
+      var iniM=t2m(r.ini),finM=t2m(r.fin);
+      var pers=[];
+      Object.values(bloques).forEach(function(b){
+        if(b.dia!==dia||b.area!==r.area||b.nombre==='__sa__'||b.libre)return;
+        if(!b.horario)return;
+        var p=b.horario.split('–');
+        var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
+        if(bI<finM&&bF>iniM&&pers.indexOf(b.nombre)===-1)pers.push(b.nombre);
+      });
+      tr+=heatCell(pers,r.min||1);
+    });
+    tr+='</tr>';
+    bloqBody.innerHTML+=tr;
+  });
+}
+
 function renderBloquesList(){
   var d=document.getElementById('bloquesList');if(!d)return;
   var en=Object.entries(bloques);if(!en.length){d.innerHTML='<p class="empty">Sin bloques.</p>';return;}
@@ -2410,6 +2537,37 @@ function addBulkRow(){
   });
   document.getElementById('bulkBody').appendChild(tr);
 }
+// Quick weekly load
+function updateQkSelects(){
+  var qkN=document.getElementById('qkNombre');
+  var qkA=document.getElementById('qkArea');
+  var qkH=document.getElementById('qkHorario');
+  if(!qkN)return;
+  qkN.innerHTML='<option value="">Persona</option>'+nombres.map(function(n){return '<option>'+n+'</option>';}).join('');
+  qkA.innerHTML='<option value="">Área</option>'+AREAS.map(function(a){return '<option>'+a+'</option>';}).join('');
+  qkH.innerHTML='<option value="">Horario</option>'+HORARIOS.map(function(h){return '<option>'+h+'</option>';}).join('');
+}
+
+document.getElementById('qkSelTodos').addEventListener('click',function(){
+  var cbs=document.querySelectorAll('#qkDias input[type=checkbox]');
+  cbs.forEach(function(cb){if(cb.value!=='Sábado')cb.checked=true;});
+});
+
+document.getElementById('qkGuardar').addEventListener('click',function(){
+  var n=document.getElementById('qkNombre').value;
+  var a=document.getElementById('qkArea').value;
+  var h=document.getElementById('qkHorario').value;
+  var t=document.getElementById('qkTurno').value;
+  var dias=Array.from(document.querySelectorAll('#qkDias input:checked')).map(function(cb){return cb.value;});
+  if(!n||!a||!h){alert('Selecciona persona, área y horario.');return;}
+  if(!dias.length){alert('Marca al menos un día.');return;}
+  var bloquesSem=dias.map(function(dia){var b={dia:dia,nombre:n,area:a,horario:h};if(t)b.turno=t;return b;});
+  Promise.all(bloquesSem.map(function(b){return sRef('bloques').push(b);})).then(function(){
+    showSaved('qkSaved');
+    document.querySelectorAll('#qkDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
+  });
+});
+
 document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
 document.getElementById('saveBulkBtn').addEventListener('click',function(){
   var rows=document.querySelectorAll('#bulkBody tr'),nv=[],claveBulk=[];
@@ -2461,7 +2619,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();document.getElementById('bulkBody').innerHTML='';addBulkRow();}
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();document.getElementById('bulkBody').innerHTML='';addBulkRow();}
     else{err.style.display='block';pinIn.value='';}
   });
   row.appendChild(ok);box.appendChild(pinIn);box.appendChild(err);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
