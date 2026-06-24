@@ -2666,11 +2666,42 @@ function renderHeatMap(){
 function renderBloquesList(){
   var d=document.getElementById('bloquesList');if(!d)return;
   var en=Object.entries(bloques);if(!en.length){d.innerHTML='<p class="empty">Sin bloques.</p>';return;}
-  d.innerHTML=en.map(function(e){var k=e[0],b=e[1];var esSA=b.sinAtencion;var esL=b.libre;
+
+  // Get unique days for filter
+  var diasUnicos=[...new Set(en.map(function(e){return e[1].dia;}).filter(Boolean))];
+  diasUnicos.sort(function(a,b){return DIAS.indexOf(a)-DIAS.indexOf(b);});
+  var filtroActual=d.dataset.filtro||'';
+
+  var filtroHtml='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;align-items:center">';
+  filtroHtml+='<button onclick="limpiarFiltroBloques()" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.2);background:'+(filtroActual===''?'rgba(255,255,255,.15)':'rgba(255,255,255,.05)')+';color:#fff;font-family:inherit;cursor:pointer">Todos</button>';
+  diasUnicos.forEach(function(dia){
+    var activo=filtroActual===dia;
+    filtroHtml+='<button onclick="filtrarBloquesDia(\''+dia+'\')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.2);background:'+(activo?'rgba(239,68,68,.2)':'rgba(255,255,255,.05)')+';color:'+(activo?'#fca5a5':'rgba(255,255,255,.5)')+';font-family:inherit;cursor:pointer">'+(dia.substring(0,3))+'</button>';
+  });
+  if(filtroActual){
+    var countFiltro=en.filter(function(e){return e[1].dia===filtroActual;}).length;
+    if(filtroActual){var countFiltro2=en.filter(function(e){return e[1].dia===filtroActual;}).length;filtroHtml+='<button onclick="borrarBloquesDiaConfirm(\''+filtroActual+'\','+countFiltro2+')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#fca5a5;font-family:inherit;cursor:pointer">🗑 Borrar todos del '+filtroActual+'</button>';}
+  }
+  filtroHtml+='</div>';
+
+  var enFiltrados=filtroActual?en.filter(function(e){return e[1].dia===filtroActual;}):en;
+
+  d.innerHTML=filtroHtml+enFiltrados.map(function(e){
+    var k=e[0],b=e[1];var esSA=b.sinAtencion;var esL=b.libre;
     var label=esSA?'<span style="color:#fca5a5;font-style:italic">Sin atención</span>':esL?'<span style="color:#7ec8f7">🏖 Libre</span>':'<strong>'+b.nombre+'</strong>';
     return '<div class="iitem"><div class="iitem-info">'+label+' — '+b.dia+'<div class="iitem-sub">'+(esL?'Día libre':(b.area||'')+(b.horario?' · '+b.horario:''))+(b.turno?' · '+b.turno:'')+'</div></div><div style="display:flex;gap:4px;flex-shrink:0">'+(!esSA&&!esL?'<button class="del-btn" style="color:#fca5a5;font-size:12px;padding:2px 5px;border:1px dashed rgba(239,68,68,.35);border-radius:4px" onclick="marcarBSA(\''+k+'\')">⊘</button>':'<button class="del-btn" style="color:#6ee7b7;font-size:12px;padding:2px 5px;border:1px dashed rgba(16,185,129,.35);border-radius:4px" onclick="restaurar(\''+k+'\')">↺</button>')+'<button class="del-btn" onclick="sRef(\'bloques/'+k+'\').remove()">🗑</button></div></div>';
   }).join('');
 }
+
+window.borrarBloquesDiaConfirm=function(dia,count){if(confirm('¿Borrar todos los bloques del '+dia+' ('+count+' en total)?'))borrarBloquesDia(dia);};
+window.limpiarFiltroBloques=function(){document.getElementById('bloquesList').dataset.filtro='';renderBloquesList();};
+window.filtrarBloquesDia=function(dia){document.getElementById('bloquesList').dataset.filtro=dia;renderBloquesList();};
+window.borrarBloquesDia=function(dia){
+  var aEliminar=Object.entries(bloques).filter(function(e){return e[1].dia===dia;});
+  Promise.all(aEliminar.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){
+    document.getElementById('bloquesList').dataset.filtro='';
+  });
+};
 window.marcarBSA=function(k){var b=bloques[k];if(!b)return;sRef('bloques/'+k+'/sinAtencion').set(true).then(function(){sRef('bloques/'+k+'/nomOrig').set(b.nombre);setTimeout(function(){genPendientes(function(){});},300);});};
 window.restaurar=function(k){sRef('bloques/'+k+'/sinAtencion').remove().then(function(){sRef('bloques/'+k+'/nomOrig').remove();setTimeout(function(){genPendientes(function(){});},300);});};
 function renderTareasList(){var d=document.getElementById('tareasList');if(!d)return;var en=Object.entries(tareas);if(!en.length){d.innerHTML='<p class="empty">Sin tareas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],t=e[1];var cfg=TIPOS[t.tipo]||TIPOS['tarea'];return '<div class="iitem"><div class="iitem-info">'+cfg.e+' <strong>'+t.nombre+'</strong> — '+t.dia+' ('+cfg.l+')<div class="iitem-sub">'+t.texto+'</div></div><button class="del-btn" onclick="sRef(\'tareas/'+k+'\').remove()">🗑</button></div>';}).join('');}
