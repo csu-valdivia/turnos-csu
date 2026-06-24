@@ -2082,20 +2082,24 @@ function agregarRankingPorPersona(){
 
   Object.values(ranking).forEach(function(entradasPersona){
     if(!entradasPersona||typeof entradasPersona!=='object')return;
-    // Agrupar por fecha para contar días únicos
+    // Agrupar por fecha para contar días únicos — solo fechas dentro de la semana activa
     var porFecha={};
+    var semActual=semanas[W]||{};
+    var semIni=semActual.ini||'';
+    var semFin=semActual.fin||'';
     Object.values(entradasPersona).forEach(function(e){
       if(!e||!e.nombre)return;
       if(e.nombre.trim().toLowerCase()==='patricio baeza')return;
-      // Determinar fecha local de la entrada usando timestamp
-      var fecha='';
-      if(e.fecha){
+      // Usar fechaStr si existe, si no calcular desde timestamp
+      var fecha=e.fechaStr||'';
+      if(!fecha&&e.fecha){
         var d=new Date(e.fecha);
         fecha=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-      } else if(e.fechaStr){
-        fecha=e.fechaStr;
       }
       if(!fecha)return;
+      // Filtrar solo entradas dentro del rango de la semana activa
+      if(semIni&&fecha<semIni)return;
+      if(semFin&&fecha>semFin)return;
       if(!porFecha[fecha])porFecha[fecha]=[];
       porFecha[fecha].push(e);
     });
