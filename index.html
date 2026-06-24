@@ -1358,7 +1358,11 @@ function renderMisTurnos(nombre){
   var btnLl=reg?'<button class="btn-ll ok" disabled>✓ Llegué a las '+reg+'</button>':'<button class="btn-ll" onclick="marcarLl(\''+nombre+'\')">📍 Marcar llegada</button>';
 
   DIAS.forEach(function(dia){
-    var ps=Object.values(bloques).filter(function(b){return b.dia===dia&&b.nombre===nombre&&!b.sinAtencion;});
+    var ps=Object.values(bloques).filter(function(b){return b.dia===dia&&b.nombre===nombre&&!b.sinAtencion;}).sort(function(a,b){
+      var hA=a.horario?t2m(a.horario.split('–')[0].trim()):0;
+      var hB=b.horario?t2m(b.horario.split('–')[0].trim()):0;
+      return hA-hB;
+    });
     var libreB=Object.values(bloques).find(function(b){return b.dia===dia&&b.nombre===nombre&&b.libre;});
     if(libreB&&!ps.length){found=true;html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">🏖</span><span class="day-name">'+dia+' — Día libre</span></div></div>';return;}
     if(!ps.length)return;found=true;
