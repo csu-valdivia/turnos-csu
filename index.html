@@ -706,6 +706,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec" style="border-color:rgba(139,92,246,.3)">
             <p class="asec-title" style="color:#a78bfa">👁 Ronda de supervisión</p>
+            <div id="supEstadoHoy" style="margin-bottom:12px"></div>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Registra la supervisión en terreno. Máximo 2 rondas por día por colaborador (mañana y tarde).</p>
             <div class="frow">
               <select id="supNombre" style="flex:1"><option value="">Selecciona colaborador</option></select>
@@ -974,7 +975,7 @@ function attach(){
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();});
-  on('supervision',function(v){supervisionData=v||{};renderRanking();if(curNombre)renderSupervisionColaborador(curNombre);});
+  on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);});
 }
 
 // ── SEDE Y SEMANAS ──
@@ -2355,6 +2356,41 @@ function renderSupervisionColaborador(nombre){
   el.innerHTML='<div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:10px 12px;margin-top:8px"><p style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:4px">👁 Tu supervisión de hoy</p><p style="font-size:20px;font-weight:900;color:'+color+'">'+pct+'%</p></div>';
 }
 
+function renderSupEstadoHoy(){
+  var d=document.getElementById('supEstadoHoy');if(!d)return;
+  var hoy=hoyStr();
+  var conTurno=nombresConTurnoSemana();
+  if(!conTurno.length){d.innerHTML='';return;}
+
+  var filas=conTurno.map(function(nombre){
+    var rondasHoy=Object.values(supervisionData||{}).filter(function(r){
+      return r&&r.nombre===nombre&&r.fecha===hoy;
+    });
+    var tieneMañana=rondasHoy.some(function(r){return r.ronda==='manana';});
+    var tieneTarde=rondasHoy.some(function(r){return r.ronda==='tarde';});
+    var pct=rondasHoy.length?Math.round(rondasHoy.reduce(function(a,r){return a+(r.puntaje||0);},0)/rondasHoy.length)+'%':'—';
+    return {nombre:nombre,manana:tieneMañana,tarde:tieneTarde,pct:pct};
+  });
+
+  var completos=filas.filter(function(f){return f.manana&&f.tarde;}).length;
+  var html='<div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:10px 12px">';
+  html+='<p style="font-size:10px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Estado de supervisión hoy · '+completos+'/'+filas.length+' completos</p>';
+  html+='<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 8px;align-items:center">';
+  html+='<span style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase">Colaborador</span>';
+  html+='<span style="font-size:9px;color:rgba(255,255,255,.3);text-align:center">🌅</span>';
+  html+='<span style="font-size:9px;color:rgba(255,255,255,.3);text-align:center">🌆</span>';
+  html+='<span style="font-size:9px;color:rgba(255,255,255,.3);text-align:right">%</span>';
+  filas.forEach(function(f){
+    var completo=f.manana&&f.tarde;
+    html+='<span style="font-size:11px;color:'+(completo?'rgba(255,255,255,.7)':'#fff')+';font-weight:'+(completo?'400':'600')+'">'+f.nombre+'</span>';
+    html+='<span style="text-align:center;font-size:13px">'+(f.manana?'✅':'⬜')+'</span>';
+    html+='<span style="text-align:center;font-size:13px">'+(f.tarde?'✅':'⬜')+'</span>';
+    html+='<span style="text-align:right;font-size:11px;font-weight:700;color:'+(completo?'#6ee7b7':f.manana||f.tarde?'#fcd34d':'rgba(255,255,255,.25)')+'">'+f.pct+'</span>';
+  });
+  html+='</div></div>';
+  d.innerHTML=html;
+}
+
 function renderCumplimientoList(){
   var d=document.getElementById('cumplimientoList');if(!d)return;
   var obligatorias=Object.entries(biblioteca).filter(function(e){return e[1].obligatoria;});
@@ -2617,11 +2653,12 @@ function renderHeatMap(){
 
   function heatCell(personas,minReq){
     var n=personas.length;
+    var min=minReq||1;
     var cls,txt;
-    if(n===0){cls='hc-red';txt='✕';}
-    else if(n<minReq){cls='hc-yellow';txt=n+'/'+(minReq||1);}
-    else{cls='hc-green';txt='✓';}
-    return '<td><div class="heat-cell '+cls+'">'+txt+'</div></td>';
+    if(n===0){cls='hc-red';txt='0/'+min;}
+    else if(n<min){cls='hc-yellow';txt=n+'/'+min;}
+    else{cls='hc-green';txt=n+'/'+min;}
+    return '<td><div class="heat-cell '+cls+'" title="'+personas.join(', ')+'">'+txt+'</div></td>';
   }
   function heatNA(){return '<td><div class="heat-cell hc-gray">—</div></td>';}
 
@@ -2844,6 +2881,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
     if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();
+      renderSupEstadoHoy();
       // Update week indicator
       var lbl=document.getElementById('adminSemanaLabel');
       if(lbl){
