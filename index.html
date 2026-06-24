@@ -2085,12 +2085,13 @@ function agregarRankingPorPersona(){
     Object.values(entradasPersona).forEach(function(e){
       if(!e||!e.nombre)return;
       if(e.nombre.trim().toLowerCase()==='patricio baeza')return;
-      if(!porPersona[e.nombre])porPersona[e.nombre]={nombre:e.nombre,puntos:0,totalDuracionMs:0,veces:0,sinFallosCount:0};
+      if(!porPersona[e.nombre])porPersona[e.nombre]={nombre:e.nombre,puntos:0,totalDuracionMs:0,veces:0,sinFallosCount:0,totalFallos:0};
       var p=porPersona[e.nombre];
       p.puntos+=(e.puntos||(e.sinFallos?10:5));
       p.totalDuracionMs+=(e.duracionMs||0);
       p.veces+=1;
       if(e.sinFallos)p.sinFallosCount+=1;
+      p.totalFallos+=(e.intentos||0);
     });
   });
   return Object.values(porPersona).map(function(p){
@@ -2201,9 +2202,10 @@ function renderRanking(){
         var medalla=medallas[i]||('#'+(i+1));
         var esLider=i===0;
         var liderTag=esLider&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':esLider?'<span style="color:#fcd34d;font-size:10px">● Lider</span>':'';
-        var promStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados*10)/10+' pts/día':'';
-        var pctStr2=r.puntajeFinal?r.puntajeFinal+'%':'';
-        var sub=r.veces+' vez'+(r.veces!==1?'ces':'')+' · ⏱'+fmtDuracion(r.promedioDuracionMs)+(promStr?' · '+promStr:'')+(pctStr2?' · '+pctStr2:'')+' '+liderTag;
+        var promStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
+        var fallosStr2=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
+        var fallosColor2=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
+        var sub=r.veces+' día'+(r.veces!==1?'s':'')+' · ⏱'+fmtDuracion(r.promedioDuracionMs)+(promStr?' · '+promStr:'')+' · <span style="color:'+fallosColor2+'">'+fallosStr2+'</span> '+liderTag;
         return '<div class="iitem" style="padding:7px 0"><div class="iitem-info" style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.puntos+' pts</span></div>';
       }).join('');
     }
@@ -2249,10 +2251,11 @@ function renderRanking(){
         }
         var etiqueta=i===0&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · Ganador</span>':i===0?'<span style="color:#fcd34d;font-size:10px"> · Líder</span>':'';
         var scoreStr=r.puntos+' pts';
-        var promedioStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados*10)/10+' pts/día':'';
-        var pctStr=r.puntajeFinal?r.puntajeFinal+'%':'';
-        var scoreColor=r.puntajeFinal>=80?'#6ee7b7':r.puntajeFinal>=60?'#fcd34d':'#7ec8f7';
-        var subInfo='<span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' vez'+(r.veces!==1?'ces':'')+' · '+fmtDuracion(r.promedioDuracionMs)+(promedioStr?' · '+promedioStr:'')+(pctStr?' · '+pctStr:'')+'</span>';
+        var promedioStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
+        var scoreColor='#7ec8f7';
+        var fallosStr=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
+        var fallosColor=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
+        var subInfo='<span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · ⏱'+fmtDuracion(r.promedioDuracionMs)+(promedioStr?' · '+promedioStr:'')+'</span> <span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span>';
         return '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
           +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+etiqueta+infoHoy+'</span>'
