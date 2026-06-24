@@ -1076,13 +1076,15 @@ function _mostrarConfirmacionSemanaInner(){
 
 window.toggleSelectorSemanas=function(){
   var d=document.getElementById('selectorSemanasDiv');
-  d.style.display=d.style.display==='none'?'block':'none';
-  if(d.style.display==='block'){
-    // Forzar recarga de semanas desde Firebase por si el listener aún no disparó
+  var abriendo=d.style.display==='none';
+  d.style.display=abriendo?'block':'none';
+  if(abriendo){
+    var lista=document.getElementById('semanasListSel');
+    if(lista)lista.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.3);padding:6px 0">Cargando semanas...</p>';
     sedeRef('semanas').once('value',function(s){
       semanas=s.val()||{};
       renderSemanasList();
-      renderSemanasAdminList();
+      renderRanking();
     });
   }
 };
@@ -1090,13 +1092,26 @@ window.toggleSelectorSemanas=function(){
 function renderSemanasList(){
   var d=document.getElementById('semanasListSel');
   if(!d)return;
-  var en=Object.entries(semanas).sort(function(a,b){return a[1].ini.localeCompare(b[1].ini);});
-  if(!en.length){d.innerHTML='<p class="empty">Sin semanas creadas todavía.</p>';return;}
+  var todas=Object.entries(semanas||{});
+  if(!todas.length){d.innerHTML='<p class="empty">Sin semanas creadas todavía.</p>';return;}
   var hoy=hoyStr();
+  var en=todas.sort(function(a,b){
+    var iniA=a[1]&&a[1].ini?a[1].ini:'';
+    var iniB=b[1]&&b[1].ini?b[1].ini:'';
+    return iniA.localeCompare(iniB);
+  });
   d.innerHTML=en.map(function(e){
     var k=e[0],s=e[1];
+    if(!s||!s.ini)return '';
     var esActual=s.ini<=hoy&&s.fin>=hoy;
-    return '<div class="iitem" style="cursor:pointer'+(esActual?';background:rgba(74,144,217,.08);border-radius:8px;padding:6px 8px':'')+'" onclick="confirmarSemana(\''+k+'\')"><div class="iitem-info"><strong>'+(s.nombre||s.ini+' al '+s.fin)+'</strong>'+(esActual?' <span style="color:#6ee7b7;font-size:10px">● actual</span>':'')+'<div class="iitem-sub">'+s.ini+' → '+s.fin+'</div></div></div>';
+    var esEsta=k===W;
+    var bg=esEsta?'rgba(74,144,217,.15)':esActual?'rgba(74,144,217,.06)':'';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-radius:8px;background:'+bg+';border:1px solid rgba(255,255,255,'+(esEsta?'.15':'.05')+');margin-bottom:6px;cursor:pointer" onclick="confirmarSemana(\''+k+'\')">'
+      +'<div><strong style="font-size:13px;color:#fff">'+(s.nombre||s.ini+' al '+s.fin)+'</strong>'
+      +(esEsta?' <span style="color:#7ec8f7;font-size:10px">▶ actual</span>':esActual?' <span style="color:#6ee7b7;font-size:10px">● hoy</span>':'')
+      +'<div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:2px">'+s.ini+' → '+s.fin+'</div></div>'
+      +'<span style="color:#7ec8f7;font-size:18px">›</span>'
+      +'</div>';
   }).join('');
 }
 
