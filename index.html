@@ -2082,16 +2082,30 @@ function agregarRankingPorPersona(){
 
   Object.values(ranking).forEach(function(entradasPersona){
     if(!entradasPersona||typeof entradasPersona!=='object')return;
+    // Agrupar por fecha para contar días únicos
+    var porFecha={};
     Object.values(entradasPersona).forEach(function(e){
       if(!e||!e.nombre)return;
       if(e.nombre.trim().toLowerCase()==='patricio baeza')return;
-      if(!porPersona[e.nombre])porPersona[e.nombre]={nombre:e.nombre,puntos:0,totalDuracionMs:0,veces:0,sinFallosCount:0,totalFallos:0};
-      var p=porPersona[e.nombre];
-      p.puntos+=(e.puntos||(e.sinFallos?10:5));
-      p.totalDuracionMs+=(e.duracionMs||0);
-      p.veces+=1;
-      if(e.sinFallos)p.sinFallosCount+=1;
-      p.totalFallos+=(e.intentos||0);
+      // Determinar fecha de la entrada
+      var fecha=e.fechaStr;
+      if(!fecha&&e.fecha){var d=new Date(e.fecha);fecha=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+      if(!fecha)return;
+      if(!porFecha[fecha])porFecha[fecha]=[];
+      porFecha[fecha].push(e);
+    });
+    // Por cada día, tomar solo la última entrada (la aprobación final)
+    Object.entries(porFecha).forEach(function(fe){
+      var entradasDia=fe[1].sort(function(a,b){return (b.fecha||0)-(a.fecha||0);});
+      var ultima=entradasDia[0];
+      if(!ultima||!ultima.nombre)return;
+      if(!porPersona[ultima.nombre])porPersona[ultima.nombre]={nombre:ultima.nombre,puntos:0,totalDuracionMs:0,veces:0,sinFallosCount:0,totalFallos:0};
+      var p=porPersona[ultima.nombre];
+      p.puntos+=(ultima.puntos||(ultima.sinFallos?10:5));
+      p.totalDuracionMs+=(ultima.duracionMs||0);
+      p.veces+=1; // ahora cuenta días únicos
+      if(ultima.sinFallos)p.sinFallosCount+=1;
+      p.totalFallos+=(ultima.intentos||0);
     });
   });
   return Object.values(porPersona).map(function(p){
