@@ -599,9 +599,14 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec">
             <p class="asec-title">⭐ Enfermero/a a cargo</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">T1: 07:45–17:00 aprox · T2: desde las 15:00–20:00 aprox según día</p>
             <div class="frow">
-              <select id="encN"><option value="">Persona</option></select>
+              <select id="encN" style="flex:2"><option value="">Persona</option></select>
               <select id="encD"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
+              <select id="encT" style="width:auto">
+                <option value="T1">T1</option>
+                <option value="T2">T2</option>
+              </select>
             </div>
             <button class="btn-add" id="addEncBtn">Asignar</button>
             <div class="saved" id="encSaved">✓ Asignado</div>
@@ -1661,7 +1666,22 @@ window.aprAus=function(k){
 function renderLlList(){var d=document.getElementById('llList');if(!d)return;var en=Object.entries(llamados);if(!en.length){d.innerHTML='<p class="empty">Sin llamados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],l=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+l.nombre+'</strong> — '+l.dia+'<div class="iitem-sub">'+l.area+' · '+l.horario+'</div></div><button class="del-btn" onclick="sRef(\'llamados/'+k+'\').remove()">🗑</button></div>';}).join('');}
 
 // ── ENCARGADOS ──
-function renderEncList(){var d=document.getElementById('encList');if(!d)return;var en=Object.entries(encargados);if(!en.length){d.innerHTML='<p class="empty">Sin encargados.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],l=e[1];return '<div class="iitem"><div class="iitem-info">⭐ <strong>'+l.nombre+'</strong> — '+l.dia+'</div><button class="del-btn" onclick="sRef(\'encargados/'+k+'\').remove()">🗑</button></div>';}).join('');}
+function renderEncList(){
+  var d=document.getElementById('encList');if(!d)return;
+  var en=Object.entries(encargados);
+  if(!en.length){d.innerHTML='<p class="empty">Sin encargados.</p>';return;}
+  // Sort by dia then turno
+  en.sort(function(a,b){
+    var dA=DIAS.indexOf(a[1].dia),dB=DIAS.indexOf(b[1].dia);
+    if(dA!==dB)return dA-dB;
+    return (a[1].turno||'T1').localeCompare(b[1].turno||'T1');
+  });
+  d.innerHTML=en.map(function(e){
+    var k=e[0],l=e[1];
+    var turnoColor=l.turno==='T2'?'#a78bfa':'#7ec8f7';
+    return '<div class="iitem"><div class="iitem-info">⭐ <strong>'+l.nombre+'</strong> — '+l.dia+' <span style="color:'+turnoColor+';font-size:11px;font-weight:700">'+( l.turno||'T1')+'</span></div><button class="del-btn" onclick="sRef(\'encargados/'+k+'\').remove()">🗑</button></div>';
+  }).join('');
+}
 
 // ── COBERTURAS ──
 document.getElementById('cobDst').addEventListener('change',function(){var isPab=this.value==='Pabellón';document.getElementById('cobHorWrap').style.display=isPab?'block':'none';if(!isPab)document.getElementById('cobHor').value='';});
@@ -2795,30 +2815,53 @@ function renderHeatMap(){
   var bloqBody=document.getElementById('heatBloquebody');
   if(!areaBody||!bloqBody)return;
   var DIAS_SHORT=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var MINS={'Esterilización':2,'Rayos':1,'Dispensario 1':1,'Dispensario 2':1};
 
   function heatCell(personas,minReq){
-    var n=personas.length;
-    var min=minReq||1;
-    var cls,txt;
+    var n=personas.length,min=minReq||1,cls,txt;
     if(n===0){cls='hc-red';txt='0/'+min;}
     else if(n<min){cls='hc-yellow';txt=n+'/'+min;}
     else{cls='hc-green';txt=n+'/'+min;}
     return '<td><div class="heat-cell '+cls+'" title="'+personas.join(', ')+'">'+txt+'</div></td>';
   }
   function heatNA(){return '<td><div class="heat-cell hc-gray">—</div></td>';}
+  function heatFeriado(){return '<td><div class="heat-cell hc-gray">🗓</div></td>';}
 
-  // Reglas de mínimos por área
-  var MINS={'Esterilización':2,'Rayos':1,'Dispensario 1':1,'Dispensario 2':1};
+  // Contar personas en un área/día dentro de una franja horaria
+  function persEnFranja(dia,area,iniStr,finStr){
+    if(esFeriado(dia))return null; // null = feriado
+    var tieneSA=Object.values(bloques).some(function(b){
+      return b.dia===dia&&b.area===area&&b.sinAtencion;
+    });
+    if(tieneSA)return -1; // -1 = sinAtencion
+    var hayLlamado=Object.values(llamados).some(function(l){return l.dia===dia&&l.area===area;});
+    if(hayLlamado)return 99; // 99 = cubierto por llamado
+    var iniM=t2m(iniStr),finM=t2m(finStr);
+    var pers=[];
+    Object.values(bloques).forEach(function(b){
+      if(b.dia!==dia||b.area!==area||b.nombre==='__sa__'||b.libre||!b.horario)return;
+      var p=b.horario.split('–');
+      var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
+      if(bI<finM&&bF>iniM&&pers.indexOf(b.nombre)===-1)pers.push(b.nombre);
+    });
+    return pers;
+  }
 
-  // Mapa por área
+  function cellFromResult(res,min){
+    if(res===null)return heatFeriado();
+    if(res===-1)return '<td><div class="heat-cell hc-gray">S/A</div></td>';
+    if(res===99)return '<td><div class="heat-cell hc-green">📞</div></td>';
+    return heatCell(res,min);
+  }
+
+  // ── TABLA 1: por área (resumen del día completo) ──
   areaBody.innerHTML='';
   AREAS.forEach(function(area){
     if(area==='Pabellón')return;
     var tr='<tr><td class="heat-area">'+area+'</td>';
     DIAS_SHORT.forEach(function(dia){
-      if(esFeriado(dia))return tr+='<td><div class="heat-cell hc-gray" title="Feriado">🗓</div></td>';
-      var esSab=dia==='Sábado';
-      if(esSab&&(area==='Esterilización'))return tr+=heatNA();
+      if(esFeriado(dia))return tr+=heatFeriado();
+      if(dia==='Sábado'&&area==='Esterilización')return tr+=heatNA();
       var pers=Object.values(bloques).filter(function(b){
         return b.dia===dia&&b.area===area&&b.nombre!=='__sa__'&&!b.libre;
       });
@@ -2832,36 +2875,42 @@ function renderHeatMap(){
     areaBody.innerHTML+=tr;
   });
 
-  // Mapa por bloque horario (usa REGLAS)
+  // ── TABLA 2: por franja horaria agrupada (compacta) ──
+  // Define franjas del día con horarios según grupo de días
+  var FRANJAS=[
+    {label:'Mañana temprana',  lmar:{ini:'07:45',fin:'10:00'}, miju:{ini:'07:45',fin:'11:00'}, vie:{ini:'08:00',fin:'11:00'}, sab:null},
+    {label:'Mediodía',         lmar:{ini:'10:00',fin:'14:00'}, miju:{ini:'11:00',fin:'14:00'}, vie:{ini:'11:00',fin:'14:00'}, sab:null},
+    {label:'Tarde',            lmar:{ini:'14:00',fin:'17:00'}, miju:{ini:'14:00',fin:'16:00'}, vie:{ini:'14:00',fin:'15:00'}, sab:{ini:'09:00',fin:'14:00'}},
+    {label:'Noche',            lmar:{ini:'17:00',fin:'20:00'}, miju:{ini:'16:00',fin:'20:00'}, vie:{ini:'15:00',fin:'20:00'}, sab:null},
+  ];
+
+  var AREAS_HEAT=['Esterilización','Rayos','Dispensario 1','Dispensario 2'];
+
   bloqBody.innerHTML='';
-  var seenBloques={};
-  REGLAS.forEach(function(r){
-    var bloqueKey=r.area.substring(0,5)+' '+r.ini+'–'+r.fin;
-    if(seenBloques[bloqueKey])return;
-    seenBloques[bloqueKey]=true;
-    var tr='<tr><td class="heat-area" title="'+r.area+'">'+r.ini+'–'+r.fin+' '+r.area.substring(0,5)+'</td>';
-    DIAS_SHORT.forEach(function(dia){
-      if(r.dias.indexOf(dia)===-1)return tr+=heatNA();
-      // sinAtencion check
-      var tieneSA=Object.values(bloques).some(function(b){
-        return b.dia===dia&&b.area===r.area&&b.sinAtencion;
+  FRANJAS.forEach(function(franja){
+    AREAS_HEAT.forEach(function(area){
+      var min=MINS[area]||1;
+      var tr='<tr><td class="heat-area" style="font-size:8px"><span style="color:rgba(255,255,255,.5)">'+franja.label+'</span><br>'+area.replace('Dispensario ','Disp.')+'</td>';
+      DIAS_SHORT.forEach(function(dia){
+        var grupo=(['Lunes','Martes'].indexOf(dia)>=0)?'lmar':(['Miércoles','Jueves'].indexOf(dia)>=0)?'miju':dia==='Viernes'?'vie':'sab';
+        var rango=franja[grupo];
+        if(!rango){
+          // Sábado solo aplica para Rayos y Disp2 en franja tarde
+          if(dia==='Sábado'&&franja.label==='Tarde'&&(area==='Rayos'||area==='Dispensario 2')){
+            var res=persEnFranja(dia,area,'09:00','14:00');
+            return tr+=cellFromResult(res,min);
+          }
+          return tr+=heatNA();
+        }
+        if(franja.label==='Noche'&&area==='Esterilización'&&dia==='Sábado')return tr+=heatNA();
+        var res=persEnFranja(dia,area,rango.ini,rango.fin);
+        tr+=cellFromResult(res,min);
       });
-      if(tieneSA)return tr+='<td><div class="heat-cell hc-gray">S/A</div></td>';
-      var hayLlamado=Object.values(llamados).some(function(l){return l.dia===dia&&l.area===r.area;});
-      if(hayLlamado)return tr+='<td><div class="heat-cell hc-green">📞</div></td>';
-      var iniM=t2m(r.ini),finM=t2m(r.fin);
-      var pers=[];
-      Object.values(bloques).forEach(function(b){
-        if(b.dia!==dia||b.area!==r.area||b.nombre==='__sa__'||b.libre)return;
-        if(!b.horario)return;
-        var p=b.horario.split('–');
-        var bI=t2m(p[0].trim()),bF=t2m(p[1].trim());
-        if(bI<finM&&bF>iniM&&pers.indexOf(b.nombre)===-1)pers.push(b.nombre);
-      });
-      tr+=heatCell(pers,r.min||1);
+      tr+='</tr>';
+      bloqBody.innerHTML+=tr;
     });
-    tr+='</tr>';
-    bloqBody.innerHTML+=tr;
+    // Separator row between franjas
+    bloqBody.innerHTML+='<tr><td colspan="7" style="padding:2px 0;background:rgba(255,255,255,.04)"></td></tr>';
   });
 }
 
@@ -3200,7 +3249,16 @@ document.getElementById('saveClaveBtn').addEventListener('click',function(){
   var ns=entries.map(function(e){return e.n;});if(new Set(ns).size!==ns.length){alert('No puedes seleccionar la misma persona dos veces.');return;}
   sRef('equipoClave').set(entries).then(function(){showSaved('claveSaved');});
 });
-document.getElementById('addEncBtn').addEventListener('click',function(){var n=document.getElementById('encN').value,d=document.getElementById('encD').value;if(!n||!d){alert('Selecciona persona y día.');return;}sRef('encargados').push({nombre:n,dia:d}).then(function(){document.getElementById('encN').value='';document.getElementById('encD').value='';showSaved('encSaved');});});
+document.getElementById('addEncBtn').addEventListener('click',function(){
+  var n=document.getElementById('encN').value;
+  var d=document.getElementById('encD').value;
+  var t=document.getElementById('encT').value;
+  if(!n||!d){alert('Selecciona persona y día.');return;}
+  sRef('encargados').push({nombre:n,dia:d,turno:t||'T1'}).then(function(){
+    document.getElementById('encN').value='';
+    showSaved('encSaved');
+  });
+});
 document.getElementById('addCobBtn').addEventListener('click',function(){
   var p=document.getElementById('cobP').value,d=document.getElementById('cobD').value,o=document.getElementById('cobO').value,dst=document.getElementById('cobDst').value,hor=document.getElementById('cobHor').value;
   if(!p||!d||!o||!dst){alert('Completa todos los campos.');return;}if(o===dst){alert('Origen y destino no pueden ser iguales.');return;}
