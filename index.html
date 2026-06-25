@@ -504,6 +504,21 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <span style="color:rgba(255,255,255,.5)">Cargando en:</span>
               <span id="adminSemanaLabel" style="color:#7ec8f7;font-weight:700">— sin semana confirmada —</span>
             </div>
+            <!-- FERIADO -->
+            <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px">
+              <p style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:8px">🗓 Marcar día como feriado</p>
+              <div class="frow">
+                <select id="feriadoDia" style="flex:1">
+                  <option value="">Selecciona día</option>
+                  <option>Lunes</option><option>Martes</option><option>Miércoles</option>
+                  <option>Jueves</option><option>Viernes</option><option>Sábado</option>
+                </select>
+                <button class="btn-add" id="marcarFeriadoBtn" style="background:linear-gradient(135deg,#d97706,#f59e0b);width:auto;padding:8px 14px">🗓 Marcar feriado</button>
+              </div>
+              <div class="saved" id="feriadoSaved">✓ Día marcado como feriado</div>
+              <div id="feriadosList" style="margin-top:6px"></div>
+            </div>
+
             <p class="asec-title">📋 Carga masiva de turnos</p>
 
             <!-- MAPA DE CALOR -->
@@ -866,26 +881,94 @@ for(var _h=8;_h<20;_h++){
 // No exige cobertura continua - solo que haya personas en ese horario
 // REGLAS: verifica presencia de personas en ventanas de tiempo
 // El sistema usa solapamiento de bloques, no cobertura continua
+var LMa=['Lunes','Martes'];
+var MiJu=['Miércoles','Jueves'];
+var LV=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+
 var REGLAS=[
-  // Esterilización L-Ma: mínimo 2 en turno mañana (07:45-10:00)
-  {dias:['Lunes','Martes'],area:'Esterilización',ini:'07:45',fin:'10:00',min:2},
-  // Esterilización Mi-Vi: mínimo 2 en turno mañana (07:45-11:00)
-  {dias:['Miércoles','Jueves','Viernes'],area:'Esterilización',ini:'07:45',fin:'11:00',min:2},
-  // Rayos mañana L-V: mínimo 1 entre 07:45 y 11:00
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'07:45',fin:'11:00',min:1},
-  // Rayos tarde L-V: mínimo 1 entre 14:00 y 17:00
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Rayos',ini:'14:00',fin:'17:00',min:1},
-  // Rayos Sábado
-  {dias:['Sábado'],area:'Rayos',ini:'09:00',fin:'14:00',min:1},
-  // Dispensario 1 mañana: mínimo 1 (opcional - puede marcarse Sin Servicio)
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'07:45',fin:'11:00',min:1,opcional:true},
-  // Dispensario 1 tarde: mínimo 1
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 1',ini:'14:00',fin:'17:00',min:1,opcional:true},
-  // Dispensario 2 mañana: mínimo 1
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'07:45',fin:'11:00',min:1,opcional:true},
-  // Dispensario 2 tarde: mínimo 1
-  {dias:['Lunes','Martes','Miércoles','Jueves','Viernes'],area:'Dispensario 2',ini:'14:00',fin:'17:00',min:1,opcional:true},
-  {dias:['Sábado'],area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1,opcional:true}
+  // ── ESTERILIZACIÓN (mín 2 por bloque) ──
+  // Mañana temprano
+  {dias:LMa,         area:'Esterilización',ini:'07:45',fin:'10:00',min:2},
+  {dias:MiJu,        area:'Esterilización',ini:'07:45',fin:'11:00',min:2},
+  {dias:['Viernes'], area:'Esterilización',ini:'08:00',fin:'11:00',min:2},
+  // Mediodía T1
+  {dias:LMa,         area:'Esterilización',ini:'10:00',fin:'13:00',min:2},
+  {dias:MiJu,        area:'Esterilización',ini:'11:00',fin:'13:00',min:2},
+  {dias:['Viernes'], area:'Esterilización',ini:'11:00',fin:'13:00',min:2},
+  // Mediodía T2
+  {dias:LMa,         area:'Esterilización',ini:'10:00',fin:'14:00',min:2},
+  {dias:MiJu,        area:'Esterilización',ini:'11:00',fin:'14:00',min:2},
+  {dias:['Viernes'], area:'Esterilización',ini:'11:00',fin:'14:00',min:2},
+  // Tarde T1
+  {dias:LMa,         area:'Esterilización',ini:'14:00',fin:'17:00',min:2},
+  {dias:MiJu,        area:'Esterilización',ini:'14:00',fin:'16:00',min:2},
+  {dias:['Viernes'], area:'Esterilización',ini:'14:00',fin:'15:00',min:2},
+  // Tarde T2
+  {dias:LMa,         area:'Esterilización',ini:'15:00',fin:'17:00',min:2},
+  {dias:MiJu,        area:'Esterilización',ini:'15:00',fin:'16:00',min:2},
+  {dias:['Viernes'], area:'Esterilización',ini:'15:00',fin:'20:00',min:2},
+  // Noche T2
+  {dias:LMa,         area:'Esterilización',ini:'17:00',fin:'20:00',min:2},
+  {dias:MiJu,        area:'Esterilización',ini:'16:00',fin:'20:00',min:2},
+
+  // ── RAYOS (mín 1 por bloque) ──
+  {dias:LMa,         area:'Rayos',ini:'07:45',fin:'10:00',min:1},
+  {dias:MiJu,        area:'Rayos',ini:'07:45',fin:'11:00',min:1},
+  {dias:['Viernes'], area:'Rayos',ini:'08:00',fin:'11:00',min:1},
+  {dias:LMa,         area:'Rayos',ini:'10:00',fin:'13:00',min:1},
+  {dias:MiJu,        area:'Rayos',ini:'11:00',fin:'13:00',min:1},
+  {dias:['Viernes'], area:'Rayos',ini:'11:00',fin:'13:00',min:1},
+  {dias:LMa,         area:'Rayos',ini:'10:00',fin:'14:00',min:1},
+  {dias:MiJu,        area:'Rayos',ini:'11:00',fin:'14:00',min:1},
+  {dias:['Viernes'], area:'Rayos',ini:'11:00',fin:'14:00',min:1},
+  {dias:LMa,         area:'Rayos',ini:'14:00',fin:'17:00',min:1},
+  {dias:MiJu,        area:'Rayos',ini:'14:00',fin:'16:00',min:1},
+  {dias:['Viernes'], area:'Rayos',ini:'14:00',fin:'15:00',min:1},
+  {dias:LMa,         area:'Rayos',ini:'15:00',fin:'17:00',min:1},
+  {dias:MiJu,        area:'Rayos',ini:'15:00',fin:'16:00',min:1},
+  {dias:['Viernes'], area:'Rayos',ini:'15:00',fin:'20:00',min:1},
+  {dias:LMa,         area:'Rayos',ini:'17:00',fin:'20:00',min:1},
+  {dias:MiJu,        area:'Rayos',ini:'16:00',fin:'20:00',min:1},
+  {dias:['Sábado'],  area:'Rayos',ini:'09:00',fin:'14:00',min:1},
+
+  // ── DISPENSARIO 1 (mín 1 por bloque) ──
+  {dias:LMa,         area:'Dispensario 1',ini:'07:45',fin:'10:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 1',ini:'07:45',fin:'11:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 1',ini:'08:00',fin:'11:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 1',ini:'10:00',fin:'13:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 1',ini:'11:00',fin:'13:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 1',ini:'11:00',fin:'13:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 1',ini:'10:00',fin:'14:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 1',ini:'11:00',fin:'14:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 1',ini:'11:00',fin:'14:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 1',ini:'14:00',fin:'17:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 1',ini:'14:00',fin:'16:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 1',ini:'14:00',fin:'15:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 1',ini:'15:00',fin:'17:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 1',ini:'15:00',fin:'16:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 1',ini:'15:00',fin:'20:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 1',ini:'17:00',fin:'20:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 1',ini:'16:00',fin:'20:00',min:1,opcional:true},
+
+  // ── DISPENSARIO 2 (mín 1 por bloque) ──
+  {dias:LMa,         area:'Dispensario 2',ini:'07:45',fin:'10:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 2',ini:'07:45',fin:'11:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 2',ini:'08:00',fin:'11:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 2',ini:'10:00',fin:'13:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 2',ini:'11:00',fin:'13:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 2',ini:'11:00',fin:'13:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 2',ini:'10:00',fin:'14:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 2',ini:'11:00',fin:'14:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 2',ini:'11:00',fin:'14:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 2',ini:'14:00',fin:'17:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 2',ini:'14:00',fin:'16:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 2',ini:'14:00',fin:'15:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 2',ini:'15:00',fin:'17:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 2',ini:'15:00',fin:'16:00',min:1,opcional:true},
+  {dias:['Viernes'], area:'Dispensario 2',ini:'15:00',fin:'20:00',min:1,opcional:true},
+  {dias:LMa,         area:'Dispensario 2',ini:'17:00',fin:'20:00',min:1,opcional:true},
+  {dias:MiJu,        area:'Dispensario 2',ini:'16:00',fin:'20:00',min:1,opcional:true},
+  {dias:['Sábado'],  area:'Dispensario 2',ini:'09:00',fin:'14:00',min:1,opcional:true}
 ];
 
 // ── HELPERS ──
@@ -976,6 +1059,7 @@ function attach(){
   on('equipoClave',function(v){equipoClave=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);});
+  on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
 
 // ── SEDE Y SEMANAS ──
@@ -2540,6 +2624,25 @@ function franjaEsSinServicio(dia,area,ini,fin){
   });
 }
 
+var feriados={}; // {dia: true} guardado en sRef('feriados')
+
+function esFeriado(dia){
+  return !!(feriados&&feriados[dia]);
+}
+
+function renderFeriadosList(){
+  var d=document.getElementById('feriadosList');if(!d)return;
+  var dias=Object.keys(feriados||{});
+  if(!dias.length){d.innerHTML='<p style="font-size:10px;color:rgba(255,255,255,.3)">Sin feriados marcados esta semana.</p>';return;}
+  d.innerHTML=dias.map(function(dia){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0"><span style="color:#fcd34d">🗓 '+dia+'</span><button onclick="quitarFeriado(\''+dia+'\')" style="font-size:10px;color:#fca5a5;background:none;border:none;cursor:pointer;font-family:inherit">✕ Quitar</button></div>';
+  }).join('');
+}
+
+window.quitarFeriado=function(dia){
+  sRef('feriados/'+dia).remove();
+};
+
 function franjaTieneSinAtencion(dia,area,ini,fin){
   var iniM=t2m(ini),finM=t2m(fin);
   return Object.values(bloques).some(function(b){
@@ -2553,6 +2656,8 @@ function franjaTieneSinAtencion(dia,area,ini,fin){
 function verificar(){
   var def=[];
   REGLAS.forEach(function(r){r.dias.forEach(function(dia){
+    // Skip feriados
+    if(esFeriado(dia))return;
     // Skip if marked as Sin Servicio (Dispensario manual block)
     if(r.opcional&&franjaEsSinServicio(dia,r.area,r.ini,r.fin))return;
 
@@ -2711,6 +2816,7 @@ function renderHeatMap(){
     if(area==='Pabellón')return;
     var tr='<tr><td class="heat-area">'+area+'</td>';
     DIAS_SHORT.forEach(function(dia){
+      if(esFeriado(dia))return tr+='<td><div class="heat-cell hc-gray" title="Feriado">🗓</div></td>';
       var esSab=dia==='Sábado';
       if(esSab&&(area==='Esterilización'))return tr+=heatNA();
       var pers=Object.values(bloques).filter(function(b){
@@ -3065,6 +3171,15 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
     // Reset toggles
     document.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no');});
     document.getElementById('supPuntaje').textContent='';
+  });
+});
+
+document.getElementById('marcarFeriadoBtn').addEventListener('click',function(){
+  var dia=document.getElementById('feriadoDia').value;
+  if(!dia){alert('Selecciona un día.');return;}
+  sRef('feriados/'+dia).set(true).then(function(){
+    showSaved('feriadoSaved');
+    document.getElementById('feriadoDia').value='';
   });
 });
 
