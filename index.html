@@ -579,7 +579,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec">
             <p class="asec-title">🔑 Equipo clave azul</p>
-            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Hasta 3 personas con rol. Visible en panorama para todos.</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Hasta 3 personas con rol. Selecciona los días que aplica.</p>
             <div class="frow">
               <select id="claveN1"><option value="">Persona 1</option></select>
               <select id="claveR1" style="max-width:75px"><option value="">Rol</option><option>Rol A</option><option>Rol B</option><option>Rol C</option></select>
@@ -592,7 +592,16 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <select id="claveN3"><option value="">Persona 3</option></select>
               <select id="claveR3" style="max-width:75px"><option value="">Rol</option><option>Rol A</option><option>Rol B</option><option>Rol C</option></select>
             </div>
-            <button class="btn-add" id="saveClaveBtn">Guardar equipo clave</button>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0" id="claveDias">
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Lunes" style="accent-color:var(--accent2)"> Lun</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Martes" style="accent-color:var(--accent2)"> Mar</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Miércoles" style="accent-color:var(--accent2)"> Mié</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Jueves" style="accent-color:var(--accent2)"> Jue</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Viernes" style="accent-color:var(--accent2)"> Vie</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Sábado" style="accent-color:var(--accent2)"> Sáb</label>
+                  <button onclick="selTodosLV('claveDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
+                </div>
+            <button class="btn-add" id="saveClaveBtn">Guardar equipo clave para los días seleccionados</button>
             <div class="saved" id="claveSaved">✓ Guardado</div>
             <div id="claveActualDiv" style="margin-top:8px"></div>
           </div>
@@ -602,13 +611,21 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">T1: 07:45–17:00 aprox · T2: desde las 15:00–20:00 aprox según día</p>
             <div class="frow">
               <select id="encN" style="flex:2"><option value="">Persona</option></select>
-              <select id="encD"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
               <select id="encT" style="width:auto">
                 <option value="T1">T1</option>
                 <option value="T2">T2</option>
               </select>
             </div>
-            <button class="btn-add" id="addEncBtn">Asignar</button>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0" id="encDias">
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Lunes" style="accent-color:var(--accent2)"> Lun</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Martes" style="accent-color:var(--accent2)"> Mar</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Miércoles" style="accent-color:var(--accent2)"> Mié</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Jueves" style="accent-color:var(--accent2)"> Jue</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Viernes" style="accent-color:var(--accent2)"> Vie</label>
+                  <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Sábado" style="accent-color:var(--accent2)"> Sáb</label>
+                  <button onclick="selTodosLV('encDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
+                </div>
+            <button class="btn-add" id="addEncBtn">Asignar para los días seleccionados</button>
             <div class="saved" id="encSaved">✓ Asignado</div>
             <div class="ilist" id="encList"></div>
           </div>
@@ -1003,7 +1020,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // ── STATE ──
 var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos'];
 var supervisionData={};
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave=[],sinServicios={},biblioteca={},fichaProgreso={},ranking={};
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
@@ -1061,7 +1078,7 @@ function attach(){
   on('encargados',function(v){encargados=v;renderEncList();renderPanorama();});
   on('coberturas',function(v){coberturas=v;renderCobList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
-  on('equipoClave',function(v){equipoClave=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
+  on('equipoClave',function(v){equipoClave=v||{};renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
@@ -1078,7 +1095,7 @@ function detectarSemanaActual(){
 
 window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
-  bloques={};tareas={};pendientes={};nombres=[];supervisionData={};asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave=[];sinServicios={};biblioteca={};fichaProgreso={};ranking={};curNombre='';semanas={};
+  bloques={};tareas={};pendientes={};nombres=[];supervisionData={};asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave={};sinServicios={};biblioteca={};fichaProgreso={};ranking={};curNombre='';semanas={};
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -1357,7 +1374,7 @@ function getChipClass(b,area,dia){
   var nombre=b.nombre||'';
   var pr=asistencia[nombre.replace(/\s/g,'_')];
   var isEnc=Object.values(encargados).some(function(e){return e.nombre===nombre&&e.dia===dia;});
-  var claveE=equipoClave.find(function(e){return e&&e.n===nombre;});
+  var claveE=getClaveParaDia(dia).find(function(e){return e&&e.n===nombre;});
   var cob=Object.values(coberturas).find(function(cv){return cv.persona===nombre&&cv.dia===dia;});
   if(isEnc)return 'chip chip-enc';
   if(claveE&&!isEnc)return 'chip chip-clave';
@@ -1368,7 +1385,7 @@ function getChipClass(b,area,dia){
 }
 function getChipPfx(nombre,area,dia){
   var isEnc=Object.values(encargados).some(function(e){return e.nombre===nombre&&e.dia===dia;});
-  var claveE=equipoClave.find(function(e){return e&&e.n===nombre;});
+  var claveE=getClaveParaDia(dia).find(function(e){return e&&e.n===nombre;});
   if(isEnc)return '⭐ ';
   if(claveE)return '🔑 '+(claveE.r?claveE.r+' ':'');
   return '';
@@ -1437,7 +1454,7 @@ function renderMisTurnos(nombre){
     var c=a.tipo==='licencia'?'rgba(124,58,237,.15)':a.tipo==='vacaciones'?'rgba(74,144,217,.15)':'rgba(16,185,129,.15)';
     html+='<div class="badge-row" style="background:'+c+';border:1px solid rgba(255,255,255,.1);color:#fff">📅 '+(a.tipoLabel||a.tipo)+' · '+a.inicio+(a.inicio!==a.fin?' → '+a.fin:'')+'</div>';
   });
-  var clave=equipoClave.find(function(e){return e&&e.n===nombre;});
+  var clave=getClaveParaDia(dia).find(function(e){return e&&e.n===nombre;});
   if(clave)html+='<div class="badge-row" style="background:rgba(37,99,235,.15);border:1px solid rgba(74,144,217,.3);color:#93c5fd">🔑 Equipo clave azul'+(clave.r?' · '+clave.r:'')+'</div>';
   Object.values(llamados).filter(function(l){return l.nombre===nombre;}).forEach(function(l){html+='<div style="background:rgba(251,191,36,.06);border:1px dashed rgba(251,191,36,.25);border-radius:10px;padding:10px 14px;margin-bottom:8px"><p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px">📞 De llamado</p><p style="font-size:12px;color:rgba(255,255,255,.5)">'+l.dia+' · '+l.area+' · '+l.horario+'</p></div>';});
   Object.values(encargados).filter(function(e){return e.nombre===nombre;}).forEach(function(e){html+='<div style="background:rgba(251,191,36,.06);border:1px dashed rgba(251,191,36,.25);border-radius:10px;padding:10px 14px;margin-bottom:8px"><p style="font-size:13px;font-weight:700;color:#fcd34d">⭐ Enfermero/a a cargo · '+e.dia+'</p></div>';});
@@ -1514,7 +1531,7 @@ function renderEstado(){
   var ml=Object.values(llamados).filter(function(l){return l.nombre===n;});
   var enc=Object.values(encargados).filter(function(e){return e.nombre===n;});
   var cob=Object.values(coberturas).filter(function(c){return c.persona===n;});
-  var clave=equipoClave.find(function(e){return e&&e.n===n;});
+  var clave=getClaveParaDia(dia).find(function(e){return e&&e.n===n;});
   if(!ml.length&&!enc.length&&!cob.length&&!clave){d.innerHTML='<div style="text-align:center;padding:2.5rem"><p style="font-size:36px;margin-bottom:8px">✅</p><p style="font-size:14px;color:rgba(255,255,255,.4)">Sin estado especial esta semana.</p></div>';return;}
   var html='';
   if(clave)html+='<div class="estado-card"><p style="font-size:13px;font-weight:700;color:#fcd34d">🔑 Equipo clave azul'+(clave.r?' · '+clave.r:'')+'</p></div>';
@@ -1688,10 +1705,26 @@ document.getElementById('cobDst').addEventListener('change',function(){var isPab
 function renderCobList(){var d=document.getElementById('cobList');if(!d)return;var en=Object.entries(coberturas);if(!en.length){d.innerHTML='<p class="empty">Sin coberturas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],cv=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+cv.persona+'</strong> — '+cv.dia+'<div class="iitem-sub"><span style="color:#fca5a5">'+cv.origen+'</span> → <span style="color:#7ec8f7">'+cv.destino+'</span>'+(cv.horario?' · '+cv.horario:'')+'</div></div><button class="del-btn" onclick="sRef(\'coberturas/'+k+'\').remove()">🗑</button></div>';}).join('');}
 
 // ── CLAVE ──
+function getClaveParaDia(dia){
+  // New format: equipoClave[dia] = [{n,r}...]
+  // Old format: equipoClave is array
+  if(Array.isArray(equipoClave))return equipoClave.filter(Boolean);
+  var v=equipoClave[dia];
+  if(v)return Array.isArray(v)?v.filter(Boolean):Object.values(v).filter(Boolean);
+  return [];
+}
+
 function renderClaveActual(){
   var d=document.getElementById('claveActualDiv');if(!d)return;
-  if(!equipoClave.length){d.innerHTML='<p class="empty">Sin equipo clave.</p>';return;}
-  d.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'+equipoClave.filter(function(e){return e&&e.n;}).map(function(e){return '<span style="background:rgba(37,99,235,.2);color:#93c5fd;border:1.5px solid rgba(74,144,217,.4);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700">🔑 '+e.n+(e.r?' · '+e.r:'')+'</span>';}).join('')+'</div>';
+  var dias=DIAS.filter(function(dia){return getClaveParaDia(dia).length>0;});
+  if(!dias.length){d.innerHTML='<p class="empty">Sin equipo clave.</p>';return;}
+  d.innerHTML=dias.map(function(dia){
+    var equipo=getClaveParaDia(dia);
+    return '<div style="margin-bottom:6px"><span style="font-size:10px;color:rgba(255,255,255,.3)">'+dia+'</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px">'+
+      equipo.map(function(e){return '<span style="background:rgba(37,99,235,.2);color:#93c5fd;border:1.5px solid rgba(74,144,217,.4);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">🔑 '+e.n+(e.r?' · '+e.r:'')+'</span>';}).join('')+
+      '<button onclick="sRef(\'equipoClave/'+dia+'\').remove()" style="font-size:10px;color:#fca5a5;background:none;border:none;cursor:pointer;font-family:inherit">✕</button>'+
+    '</div></div>';
+  }).join('');
   ['claveN1','claveN2','claveN3'].forEach(function(id,i){var s=document.getElementById(id);if(s&&equipoClave[i])s.value=equipoClave[i].n||'';var r=document.getElementById(id.replace('N','R'));if(r&&equipoClave[i])r.value=equipoClave[i].r||'';});
 }
 
@@ -2945,6 +2978,11 @@ function renderBloquesList(){
 }
 
 window.borrarBloquesDiaConfirm=function(dia,count){if(confirm('¿Borrar todos los bloques del '+dia+' ('+count+' en total)?'))borrarBloquesDia(dia);};
+window.selTodosLV=function(id){
+  var cbs=document.querySelectorAll('#'+id+' input[type=checkbox]');
+  cbs.forEach(function(cb){cb.checked=cb.value!=='Sábado';});
+};
+
 window.limpiarFiltroBloques=function(){document.getElementById('bloquesList').dataset.filtro='';renderBloquesList();};
 window.filtrarBloquesDia=function(dia){document.getElementById('bloquesList').dataset.filtro=dia;renderBloquesList();};
 window.borrarBloquesDia=function(dia){
@@ -3245,17 +3283,36 @@ document.getElementById('savePabellonBtn').addEventListener('click',function(){
 
 document.getElementById('addNombreBtn').addEventListener('click',function(){var v=document.getElementById('nuevoNombre').value.trim();if(!v)return;var a=nombres.slice();if(a.indexOf(v)===-1)a.push(v);sRef('nombres').set(a).then(function(){document.getElementById('nuevoNombre').value='';});});
 document.getElementById('saveClaveBtn').addEventListener('click',function(){
-  var entries=[{n:document.getElementById('claveN1').value,r:document.getElementById('claveR1').value},{n:document.getElementById('claveN2').value,r:document.getElementById('claveR2').value},{n:document.getElementById('claveN3').value,r:document.getElementById('claveR3').value}].filter(function(e){return e.n;});
-  var ns=entries.map(function(e){return e.n;});if(new Set(ns).size!==ns.length){alert('No puedes seleccionar la misma persona dos veces.');return;}
-  sRef('equipoClave').set(entries).then(function(){showSaved('claveSaved');});
+  var entries=[
+    {n:document.getElementById('claveN1').value,r:document.getElementById('claveR1').value},
+    {n:document.getElementById('claveN2').value,r:document.getElementById('claveR2').value},
+    {n:document.getElementById('claveN3').value,r:document.getElementById('claveR3').value}
+  ].filter(function(e){return e.n;});
+  if(!entries.length){alert('Selecciona al menos una persona.');return;}
+  var ns=entries.map(function(e){return e.n;});
+  if(new Set(ns).size!==ns.length){alert('No puedes seleccionar la misma persona dos veces.');return;}
+  var dias=Array.from(document.querySelectorAll('#claveDias input:checked')).map(function(cb){return cb.value;});
+  if(!dias.length){alert('Selecciona al menos un día.');return;}
+  // Save a separate equipoClave entry per day
+  var saves=dias.map(function(dia){
+    return sRef('equipoClave/'+dia).set(entries);
+  });
+  Promise.all(saves).then(function(){
+    document.querySelectorAll('#claveDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
+    showSaved('claveSaved');
+  });
 });
 document.getElementById('addEncBtn').addEventListener('click',function(){
   var n=document.getElementById('encN').value;
-  var d=document.getElementById('encD').value;
-  var t=document.getElementById('encT').value;
-  if(!n||!d){alert('Selecciona persona y día.');return;}
-  sRef('encargados').push({nombre:n,dia:d,turno:t||'T1'}).then(function(){
+  var t=document.getElementById('encT').value||'T1';
+  var dias=Array.from(document.querySelectorAll('#encDias input:checked')).map(function(cb){return cb.value;});
+  if(!n){alert('Selecciona una persona.');return;}
+  if(!dias.length){alert('Selecciona al menos un día.');return;}
+  Promise.all(dias.map(function(dia){
+    return sRef('encargados').push({nombre:n,dia:dia,turno:t});
+  })).then(function(){
     document.getElementById('encN').value='';
+    document.querySelectorAll('#encDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
     showSaved('encSaved');
   });
 });
