@@ -753,47 +753,37 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               </select>
             </div>
             <div id="supItems" style="margin-top:10px">
-              <div class="sup-item" data-key="epp" data-peso="0.28">
-                <span>🦺 EPP correcto según área y procedimiento</span>
-                <div class="sup-toggle">
-                  <button class="sup-btn sup-yes" data-val="1">✓</button>
-                  <button class="sup-btn sup-no" data-val="0">✗</button>
-                </div>
-              </div>
-              <div class="sup-item" data-key="puntualidad" data-peso="0.22">
+              <div class="sup-item" data-key="puntualidad" data-peso="0.20">
                 <span>⏰ Inicio de jornada puntual en su puesto</span>
-                <div class="sup-toggle">
-                  <button class="sup-btn sup-yes" data-val="1">✓</button>
-                  <button class="sup-btn sup-no" data-val="0">✗</button>
-                </div>
+                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
               </div>
-              <div class="sup-item" data-key="uniforme" data-peso="0.20">
+              <div class="sup-item" data-key="uniforme" data-peso="0.18">
                 <span>👔 Uniforme reglamentario completo y en buen estado</span>
-                <div class="sup-toggle">
-                  <button class="sup-btn sup-yes" data-val="1">✓</button>
-                  <button class="sup-btn sup-no" data-val="0">✗</button>
-                </div>
+                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
               </div>
-              <div class="sup-item" data-key="puesto" data-peso="0.12">
+              <div class="sup-item" data-key="identificacion" data-peso="0.12">
+                <span>🪪 Identificación institucional visible</span>
+                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              </div>
+              <div class="sup-item" data-key="epp" data-peso="0.15">
+                <span>🦺 EPP correcto según área y procedimiento</span>
+                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              </div>
+              <div class="sup-item" data-key="puesto" data-peso="0.10">
                 <span>🧹 Puesto de trabajo ordenado y limpio</span>
-                <div class="sup-toggle">
-                  <button class="sup-btn sup-yes" data-val="1">✓</button>
-                  <button class="sup-btn sup-no" data-val="0">✗</button>
-                </div>
+                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
               </div>
-              <div class="sup-item" data-key="cofia" data-peso="0.10">
+              <div class="sup-item" data-key="accesorios" data-peso="0.13">
+                <span>💍 Sin accesorios durante acciones clínicas (reloj, joyas)</span>
+                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              </div>
+              <div class="sup-item" data-key="cofia" data-peso="0.09">
                 <span>👩‍⚕️ Cofia o gorro utilizado correctamente</span>
-                <div class="sup-toggle">
-                  <button class="sup-btn sup-yes" data-val="1">✓</button>
-                  <button class="sup-btn sup-no" data-val="0">✗</button>
-                </div>
+                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
               </div>
-              <div class="sup-item" data-key="alimentos" data-peso="0.08">
+              <div class="sup-item" data-key="alimentos" data-peso="0.03">
                 <span>🚫 Sin alimentos ni bebidas en el área de trabajo</span>
-                <div class="sup-toggle">
-                  <button class="sup-btn sup-yes" data-val="1">✓</button>
-                  <button class="sup-btn sup-no" data-val="0">✗</button>
-                </div>
+                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
               </div>
             </div>
             <div id="supPuntaje" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:right"></div>
@@ -1888,14 +1878,28 @@ function fichasObligatoriasPendientes(nombre){
     if(yaEnRanking)return false;
     // Tiene preguntas configuradas
     var preguntas=Object.values(doc.preguntas||{});
-    if(preguntas.length<2)return false;
+    if(preguntas.length<3)return false;
     return true;
   });
 }
 
+function dentroHorarioEvaluacion(){
+  // Solo disponible Mar-Vie de 08:00 a 20:00
+  var ahora=new Date();
+  var diaSemana=ahora.getDay(); // 0=Dom,1=Lun,2=Mar,3=Mié,4=Jue,5=Vie,6=Sáb
+  var hora=ahora.getHours()*60+ahora.getMinutes();
+  var diasValidos=[2,3,4,5]; // Mar,Mié,Jue,Vie
+  if(diasValidos.indexOf(diaSemana)===-1)return false;
+  if(hora<480)return false;  // antes de 08:00
+  if(hora>=1200)return false; // desde 20:00
+  return true;
+}
+
 function verificarFichasPendientes(){
   if(!curNombre)return false;
-  if(curNombre.trim().toLowerCase()==='patricio baeza')return false; // admin no pasa por evaluación
+  if(curNombre.trim().toLowerCase()==='patricio baeza')return false;
+  // Solo mostrar preguntas dentro del horario laboral Mar-Vie 08:00-20:00
+  if(!dentroHorarioEvaluacion())return false;
   var pend=fichasObligatoriasPendientes(curNombre);
   if(!pend.length)return false;
   mostrarFichaObligatoria(pend[0][0],pend[0][1]);
@@ -1946,7 +1950,7 @@ function mostrarPasoPreguntas(docId,doc,prog){
     return;
   }
   var shuffled=preguntas.slice().sort(function(){return Math.random()-0.5;});
-  fichaActualPreguntas=shuffled.slice(0,2);
+  fichaActualPreguntas=shuffled.slice(0,3);
   fichaActualRespuestas={};
 
   var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📌 Evaluación rápida</p>';
@@ -2317,7 +2321,8 @@ function fmtTemporizador(){
 }
 
 function quienFaltaHoy(){
-  // Usar ventana de tiempo: desde medianoche de hoy hasta ahora
+  // Solo mostrar lista dentro del horario laboral Mar-Vie 08:00-20:00
+  if(!dentroHorarioEvaluacion())return [];
   var ahora=Date.now();
   var hoy=new Date();
   hoy.setHours(0,0,0,0);
@@ -2479,8 +2484,8 @@ window.cerrarGanador=function(){
 };
 
 // ── SUPERVISIÓN ──
-var SUP_PESOS={epp:0.28,puntualidad:0.22,uniforme:0.20,puesto:0.12,cofia:0.10,alimentos:0.08};
-var SUP_LABELS={epp:'🦺 EPP',puntualidad:'⏰ Puntualidad',uniforme:'👔 Uniforme',puesto:'🧹 Puesto',cofia:'👩‍⚕️ Cofia',alimentos:'🚫 Sin alimentos'};
+var SUP_PESOS={puntualidad:0.20,uniforme:0.18,identificacion:0.12,epp:0.15,puesto:0.10,accesorios:0.13,cofia:0.09,alimentos:0.03};
+var SUP_LABELS={puntualidad:'⏰ Puntualidad',uniforme:'👔 Uniforme reglamentario',identificacion:'🪪 Identificación visible',epp:'🦺 EPP correcto según área',puesto:'🧹 Puesto ordenado y limpio',accesorios:'💍 Sin accesorios en acciones clínicas',cofia:'👩‍⚕️ Cofia o gorro correcto',alimentos:'🚫 Sin alimentos en el área'};
 
 function calcPuntajeSupDia(nombre,fecha){
   var key=nombre.replace(/\s/g,'_');
