@@ -737,7 +737,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <p class="asec-title" style="color:#fca5a5">⚠ Cumplimiento de lectura obligatoria</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Estado de aprobación de fichas obligatorias por colaborador.</p>
             <div id="alertasCapacitacion"></div>
-            <button class="btn-sec" id="borrarMiRankingBtn" style="margin-bottom:10px;font-size:11px;color:rgba(255,255,255,.4)">🗑 Borrar mis puntos del ranking (admin, no afecta al equipo)</button>
+            <button class="btn-sec" id="borrarMiRankingBtn" style="margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.4)">🗑 Borrar mis puntos del ranking (admin, no afecta al equipo)</button>
+            <button class="btn-sec" id="reiniciarTodoBtn" style="margin-bottom:10px;font-size:11px;color:#fca5a5;border-color:rgba(239,68,68,.3)">↺ Reiniciar evaluaciones de todo el equipo (nueva semana)</button>
+            <div class="saved" id="reiniciarTodoSaved">✓ Evaluaciones reiniciadas</div>
             <div class="ilist" id="cumplimientoList"></div>
           </div>
 
@@ -1273,13 +1275,72 @@ window.forzarActualizar=function(){
 
 function showApp(){
   document.getElementById('emailView').style.display='none';
-  // 1. Check cumpleanos first
+  // 1. Bienvenida de semana nueva (solo una vez por semana por persona)
+  if(verificarBienvenidaSemana())return;
+  // 2. Check cumpleanos
   if(verificarCumpleanos())return;
-  // 2. Then fichas obligatorias
+  // 3. Then fichas obligatorias
   if(verificarFichasPendientes())return;
   document.getElementById('fichaObligView').style.display='none';
   document.getElementById('appView').style.display='block';
 }
+
+function verificarBienvenidaSemana(){
+  if(!curNombre||!W||!semanas[W])return false;
+  if(curNombre.trim().toLowerCase()==='patricio baeza')return false;
+  var lsKey='tcsu_bienvenida_'+S+'_'+W+'_'+curNombre.replace(/\s/g,'_');
+  if(localStorage.getItem(lsKey))return false; // ya vio la bienvenida esta semana
+  localStorage.setItem(lsKey,'1');
+  // Get gender for caricature
+  sedeRef('cumpleanos').once('value',function(s){
+    var todos=s.val()||{};
+    var key=curNombre.replace(/\s/g,'_');
+    var val=todos[key];
+    var genero=typeof val==='object'&&val&&val.genero?val.genero:'F';
+    mostrarBienvenidaSemana(genero);
+  });
+  return true;
+}
+
+function mostrarBienvenidaSemana(genero){
+  var sem=semanas[W];
+  var nombreSem=sem?sem.nombre||sem.ini+' al '+sem.fin:'esta semana';
+  var existing=document.getElementById('bienvenidaOverlay');
+  if(existing)existing.remove();
+  var overlay=document.createElement('div');
+  overlay.id='bienvenidaOverlay';
+  overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,20,50,.93);animation:fadeInCump .5s ease';
+  var canvas=document.createElement('canvas');
+  canvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none';
+  overlay.appendChild(canvas);
+  var msg=document.createElement('div');
+  msg.style.cssText='position:relative;z-index:1;text-align:center;padding:1.5rem 1rem;max-width:320px';
+  var saludo=genero==='M'?'¡Bienvenido':'¡Bienvenida';
+  msg.innerHTML=svgCaricatura(genero)+
+    '<p style="font-size:20px;font-weight:900;color:#fff;margin:10px 0 6px;line-height:1.2">'+saludo+', '+curNombre.split(' ')[0]+'! 👋</p>'+
+    '<p style="font-size:14px;color:rgba(255,255,255,.7);margin-bottom:6px">'+nombreSem+'</p>'+
+    '<p style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px">¡Mucho éxito esta semana! 💙<br>Tu equipo CSU Valdivia te acompaña.</p>'+
+    '<button onclick="cerrarBienvenida()" style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">¡Vamos! 💪</button>';
+  overlay.appendChild(msg);
+  document.body.appendChild(overlay);
+  // Confetti
+  var ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  var pieces=[];
+  var cols=['#2563eb','#7c3aed','#10b981','#f59e0b','#ec4899','#06b6d4'];
+  for(var i=0;i<80;i++)pieces.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height-canvas.height,w:Math.random()*8+4,h:Math.random()*5+3,col:cols[i%cols.length],rot:Math.random()*360,vx:(Math.random()-.5)*2,vy:Math.random()*3+1.5,vr:Math.random()*3-1.5});
+  function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);pieces.forEach(function(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);ctx.fillStyle=p.col;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width;}});if(document.getElementById('bienvenidaOverlay'))requestAnimationFrame(draw);}
+  draw();
+}
+
+window.cerrarBienvenida=function(){
+  var o=document.getElementById('bienvenidaOverlay');if(o)o.remove();
+  // Continue flow
+  if(verificarCumpleanos())return;
+  if(verificarFichasPendientes())return;
+  document.getElementById('fichaObligView').style.display='none';
+  document.getElementById('appView').style.display='block';
+};
 
 function verificarCumpleanos(){
   var hoy=hoyStr().substring(5); // MM-DD
@@ -3370,6 +3431,15 @@ document.getElementById('limpiarPendBtn').addEventListener('click',function(){
         });
       },500);
     });
+  });
+});
+
+document.getElementById('reiniciarTodoBtn').addEventListener('click',function(){
+  if(!confirm('¿Reiniciar las evaluaciones de TODO el equipo? Mañana partirán desde cero. Esto NO borra el ranking de puntos acumulados.'))return;
+  sedeRef('fichaProgreso').remove().then(function(){
+    fichaProgreso={};
+    showSaved('reiniciarTodoSaved');
+    renderCumplimientoList();
   });
 });
 
