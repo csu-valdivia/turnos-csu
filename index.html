@@ -1959,13 +1959,105 @@ function dentroHorarioEvaluacion(){
 function verificarFichasPendientes(){
   if(!curNombre)return false;
   if(curNombre.trim().toLowerCase()==='patricio baeza')return false;
-  // Solo mostrar preguntas dentro del horario laboral Mar-Vie 08:00-20:00
   if(!dentroHorarioEvaluacion())return false;
   var pend=fichasObligatoriasPendientes(curNombre);
   if(!pend.length)return false;
-  mostrarFichaObligatoria(pend[0][0],pend[0][1]);
+  // Si alguno está bloqueado hoy, mostrar pantalla de bloqueo del primero bloqueado
+  var hoyStr2=hoyStr();
+  var key=curNombre.replace(/\s/g,'_');
+  var bloqueado=pend.find(function(e){
+    var prog=fichaProgreso[e[0]]&&fichaProgreso[e[0]][key];
+    return prog&&prog.bloqueadoFecha===hoyStr2;
+  });
+  if(bloqueado){mostrarFichaObligatoria(bloqueado[0],bloqueado[1]);return true;}
+  // Combinar preguntas de TODOS los documentos obligatorios pendientes
+  mostrarEvaluacionCombinada(pend);
   return true;
 }
+
+function mostrarEvaluacionCombinada(pend){
+  document.getElementById('emailView').style.display='none';
+  document.getElementById('appView').style.display='none';
+  var v=document.getElementById('fichaObligView');
+  v.style.display='block';
+  // Mostrar paso de lectura del primer documento (o combinar lecturas)
+  mostrarPasoLecturaCombinado(pend,0);
+}
+
+function mostrarPasoLecturaCombinado(pend,idx){
+  var v=document.getElementById('fichaObligView');
+  if(idx>=pend.length){
+    iniciarPreguntasCombinadas(pend);
+    return;
+  }
+  var docId=pend[idx][0],doc=pend[idx][1];
+  var key=curNombre.replace(/\s/g,'_');
+  var prog=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{fallosHoy:0};
+  var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📌 Lectura obligatoria ('+(idx+1)+'/'+pend.length+')</p>';
+  html+='<p style="font-size:17px;font-weight:700;margin-bottom:12px">'+doc.titulo+'</p>';
+  if(doc.contenido)html+='<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,.7);line-height:1.7">'+doc.contenido.replace(/\n/g,'<br>')+'</div>';
+  if(doc.link)html+='<a href="'+doc.link+'" target="_blank" rel="noopener" style="display:inline-block;font-size:12px;color:#7ec8f7;margin-bottom:16px">📄 Ver documento completo en Drive ↗</a>';
+  if(prog.fallosHoy>0&&prog.fallosFecha===hoyStr())html+='<p style="font-size:12px;color:var(--orange);margin-bottom:12px">⚠ Intento '+(prog.fallosHoy+1)+' de 3 hoy.</p>';
+  html+='<button class="btn-add" id="yaLeiBtn">✓ Ya leí esto, continuar →</button></div>';
+  v.innerHTML=html;
+  document.getElementById('yaLeiBtn').addEventListener('click',function(){
+    if(idx===0)fichaInicioMs=Date.now();
+    mostrarPasoLecturaCombinado(pend,idx+1);
+  });
+}
+
+function iniciarPreguntasCombinadas(pend){
+  // Combinar preguntas de TODOS los documentos pendientes en un solo pool
+  var poolPreguntas=[];
+  pend.forEach(function(e){
+    var docId=e[0],doc=e[1];
+    Object.values(doc.preguntas||{}).forEach(function(p){
+      poolPreguntas.push(Object.assign({},p,{_docId:docId,_docTitulo:doc.titulo}));
+    });
+  });
+  var shuffled=poolPreguntas.slice().sort(function(){return Math.random()-0.5;});
+  fichaActualPreguntas=shuffled.slice(0,3);
+  fichaActualRespuestas={};
+  fichaActualPend=pend; // guardar referencia global para aprobar todos los docs involucrados
+
+  var v=document.getElementById('fichaObligView');
+  var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📌 Evaluación rápida</p>';
+  html+='<p style="font-size:15px;font-weight:600;margin-bottom:16px;color:rgba(255,255,255,.6)">'+pend.map(function(e){return e[1].titulo;}).join(' + ')+'</p>';
+
+  fichaActualPreguntas.forEach(function(p,i){
+    html+='<div style="margin-bottom:18px"><p style="font-size:13px;font-weight:600;margin-bottom:8px">'+(i+1)+'. '+p.pregunta+'</p><div class="opciones-preg" data-idx="'+i+'">';
+    (p.opciones||[]).forEach(function(op,j){
+      html+='<button class="opcion-btn" data-correcta="'+(j===p.correcta?'1':'0')+'" data-idx="'+i+'" style="display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+op+'</button>';
+    });
+    html+='</div></div>';
+  });
+  html+='<button class="btn-add" id="enviarRespBtn" disabled style="opacity:.4">Responder todas para continuar</button></div>';
+  v.innerHTML=html;
+  hookPreguntasCombinadasEvents();
+}
+
+function hookPreguntasCombinadasEvents(){
+  document.querySelectorAll('.opcion-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var idx=this.dataset.idx;
+      document.querySelectorAll('.opcion-btn[data-idx="'+idx+'"]').forEach(function(b){
+        b.style.background='rgba(255,255,255,.05)';b.style.borderColor='rgba(255,255,255,.12)';
+      });
+      this.style.background='rgba(74,144,217,.25)';this.style.borderColor='rgba(74,144,217,.5)';
+      fichaActualRespuestas[idx]=this.dataset.correcta==='1';
+      var totalResp=Object.keys(fichaActualRespuestas).length;
+      var btnEnviar=document.getElementById('enviarRespBtn');
+      if(totalResp>=fichaActualPreguntas.length){btnEnviar.disabled=false;btnEnviar.style.opacity='1';}
+    });
+  });
+  document.getElementById('enviarRespBtn').addEventListener('click',function(){
+    var todasCorrectas=Object.values(fichaActualRespuestas).every(function(v){return v===true;});
+    if(todasCorrectas)aprobarTodosFichaCombinada(fichaActualPend);
+    else registrarFalloCombinado(fichaActualPend);
+  });
+}
+
+var fichaActualPend=[];
 
 var fichaActualPreguntas=[];
 var fichaActualRespuestas={};
@@ -2042,6 +2134,71 @@ function mostrarPasoPreguntas(docId,doc,prog){
       registrarFallo(docId,doc);
     }
   });
+}
+
+function aprobarTodosFichaCombinada(pend){
+  var key=curNombre.replace(/\s/g,'_');
+  var hoy=hoyStr();
+  var fallosHoyMax=0;
+  pend.forEach(function(e){
+    var docId=e[0];
+    var progActual=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{};
+    var fallosHoy=(progActual.fallosHoy&&progActual.fallosFecha===hoy)?progActual.fallosHoy:0;
+    fallosHoyMax=Math.max(fallosHoyMax,fallosHoy);
+    var dataProg=Object.assign({},progActual,{
+      ultimaAprobacion:hoy,fecha:Date.now(),fallosHoy:0,fallosFecha:hoy,
+      totalAprobaciones:(progActual.totalAprobaciones||0)+1
+    });
+    if(!fichaProgreso[docId])fichaProgreso[docId]={};
+    fichaProgreso[docId][key]=dataProg;
+    sedeRef('fichaProgreso/'+docId+'/'+key).set(dataProg);
+  });
+  var sinFallos=fallosHoyMax===0;
+  var titulos=pend.map(function(e){return e[1].titulo;}).join(' + ');
+  mostrarLogro(curNombre,titulos);
+
+  if(W&&fichaInicioMs){
+    var duracionMs=Date.now()-fichaInicioMs;
+    var ahora=new Date();
+    var horaStr=pad(ahora.getHours())+':'+pad(ahora.getMinutes());
+    sRef('ranking/'+key).push({
+      nombre:curNombre,docId:pend[0][0],titulo:titulos,
+      duracionMs:duracionMs,sinFallos:sinFallos,intentos:fallosHoyMax,
+      puntos:sinFallos?10:5,fecha:Date.now(),fechaStr:hoy,horaStr:horaStr
+    });
+  }
+  fichaInicioMs=0;
+
+  document.getElementById('fichaObligView').style.display='none';
+  document.getElementById('appView').style.display='block';
+}
+
+function registrarFalloCombinado(pend){
+  var key=curNombre.replace(/\s/g,'_');
+  var hoy=hoyStr();
+  var bloqueoActivado=false;
+  pend.forEach(function(e){
+    var docId=e[0],doc=e[1];
+    var actual=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{};
+    var fallosHoy=(actual.fallosFecha===hoy?(actual.fallosHoy||0):0)+1;
+    var data=Object.assign({},actual,{fallosHoy:fallosHoy,fallosFecha:hoy,ultimoFallo:Date.now()});
+    if(fallosHoy>=3){
+      data.bloqueadoFecha=hoy;
+      bloqueoActivado=true;
+      sedeRef('alertasCapacitacion').push({nombre:curNombre,documento:doc.titulo,docId:docId,fecha:Date.now(),fechaStr:hoy});
+    }
+    if(!fichaProgreso[docId])fichaProgreso[docId]={};
+    fichaProgreso[docId][key]=data;
+    sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
+  });
+  if(bloqueoActivado){
+    alert('Has fallado 3 veces hoy. Debes acudir donde el enfermero jefe.');
+    verificarFichasPendientes();
+  } else {
+    alert('Una o más respuestas fueron incorrectas. Vuelve a leer e inténtalo de nuevo.');
+    var pendActual=fichasObligatoriasPendientes(curNombre);
+    mostrarEvaluacionCombinada(pendActual);
+  }
 }
 
 function aprobarFicha(docId){
