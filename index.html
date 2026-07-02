@@ -1064,7 +1064,18 @@ function attach(){
     ultimasNovedadesCount=totalAhora;
   });
   on('visto',function(v){visto=v;if(curNombre)renderMisTurnos(curNombre);});
-  on('cambios',function(v){cambios=v;renderCambios();renderCambiosAdmin();});
+  on('cambios',function(v){
+    cambios=v;renderCambios();renderCambiosAdmin();
+    // Show badge on tab if there's a pending cambio for curNombre
+    var pendParaMi=curNombre?Object.values(cambios).filter(function(c){
+      return c.estado==='pendiente'&&c.con===curNombre;
+    }).length:0;
+    var tabBtn=document.querySelector('.tab[onclick*="cambios"]');
+    if(tabBtn){
+      tabBtn.innerHTML=pendParaMi>0?'Cambios <span style="background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-left:3px">'+pendParaMi+'</span>':'Cambios';
+    }
+    if(pendParaMi>0)reproducirAlerta();
+  });
   on('ausencias',function(v){ausencias=v;renderAusencias();renderAusenciasAdmin();if(curNombre)renderMisTurnos(curNombre);});
   on('llamados',function(v){llamados=v;renderLlList();renderPanorama();renderHeatMap();renderEstado();});
   on('encargados',function(v){encargados=v;renderEncList();renderPanorama();});
@@ -1622,11 +1633,29 @@ window.formCambio=function(){
 document.getElementById('cambioSol').addEventListener('change',function(){renderCambios();});
 function renderCambios(){
   var d=document.getElementById('cambiosList');if(!d)return;
-  var sol=document.getElementById('cambioSol').value;
+  var sol=document.getElementById('cambioSol').value||curNombre;
   var en=Object.entries(cambios);
   var rel=sol?en.filter(function(e){return e[1].solicitante===sol||e[1].con===sol;}):en;
-  if(!rel.length){d.innerHTML='<p class="empty" style="padding:1rem">Sin solicitudes.</p>';return;}
-  d.innerHTML=rel.map(function(e){var k=e[0],c=e[1];var eb='<span class="ebdg '+c.estado+'">'+c.estado+'</span>';var btns='';if(c.estado==='pendiente'&&sol===c.con)btns='<div class="cambio-acts"><button class="btn-ac" onclick="resCambio(\''+k+'\',\'aceptado\')">✓ Aceptar</button><button class="btn-re" onclick="resCambio(\''+k+'\',\'rechazado\')">✗ Rechazar</button></div>';return '<div class="cambio-card"><div class="cambio-hdr">'+c.solicitante+' → '+c.con+eb+'</div><div class="cambio-sub">'+c.dia+' · '+c.horario+(c.nota?' · '+c.nota:'')+'</div>'+btns+'</div>';}).join('');
+  if(!rel.length){d.innerHTML='<p class="empty" style="padding:1rem">Sin solicitudes de cambio.</p>';return;}
+  d.innerHTML=rel.map(function(e){
+    var k=e[0],c=e[1];
+    var estadoLabel={'pendiente':'⏳ Pendiente de aceptación','aceptado':'✅ Aceptado — esperando aprobación del jefe','aprobado':'✓ Aprobado','rechazado':'✗ Rechazado'};
+    var eb='<span class="ebdg '+c.estado+'">'+(estadoLabel[c.estado]||c.estado)+'</span>';
+    var btns='';
+    // Botón aceptar/rechazar para la persona destinataria del cambio
+    if(c.estado==='pendiente'&&sol===c.con){
+      btns='<div class="cambio-acts">'+
+        '<button class="btn-ac" onclick="resCambio(\''+k+'\',\'aceptado\')">✓ Aceptar cambio</button>'+
+        '<button class="btn-re" onclick="resCambio(\''+k+'\',\'rechazado\')">✗ Rechazar</button>'+
+        '</div>';
+    }
+    // Aviso para el solicitante cuando está pendiente
+    if(c.estado==='pendiente'&&sol===c.solicitante){
+      btns='<p style="font-size:11px;color:rgba(255,255,255,.4);margin-top:6px">Esperando que '+c.con+' acepte...</p>';
+    }
+    return '<div class="cambio-card"><div class="cambio-hdr">'+c.solicitante+' ↔ '+c.con+eb+'</div>'+
+      '<div class="cambio-sub">'+c.dia+' · '+c.horario+(c.nota?' · Motivo: '+c.nota:'')+'</div>'+btns+'</div>';
+  }).join('');
 }
 function renderCambiosAdmin(){
   var d=document.getElementById('cambiosAdminList');if(!d)return;
