@@ -595,7 +595,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">T=Turno (Esterilización) · 🔑=Equipo clave · S/A=Sin atención · 🏖=Libre</p>
             <table class="bulk-tbl">
-              <thead><tr><th>Fecha</th><th>Día</th><th>Persona</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#93c5fd">🔑</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Día</th><th>Personas</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#93c5fd">🔑</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead>
               <tbody id="bulkBody"></tbody>
             </table>
             <button class="bulk-add" id="addRowBtn">+ Agregar fila</button>
@@ -3395,13 +3395,21 @@ window.restaurar=function(k){sRef('bloques/'+k+'/sinAtencion').remove().then(fun
 function renderTareasList(){var d=document.getElementById('tareasList');if(!d)return;var en=Object.entries(tareas);if(!en.length){d.innerHTML='<p class="empty">Sin tareas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],t=e[1];var cfg=TIPOS[t.tipo]||TIPOS['tarea'];return '<div class="iitem"><div class="iitem-info">'+cfg.e+' <strong>'+t.nombre+'</strong> — '+t.dia+' ('+cfg.l+')<div class="iitem-sub">'+t.texto+'</div></div><button class="del-btn" onclick="sRef(\'tareas/'+k+'\').remove()">🗑</button></div>';}).join('');}
 
 // ── BULK ──
-function addBulkRow(){
-  var tr=document.createElement('tr');
-  // Build nombres options including internos
+function buildNombresCheckboxes(rowId){
   var todosNombres=nombres.slice();
   Object.values(internos).forEach(function(i){if(i.nombre&&todosNombres.indexOf(i.nombre)===-1)todosNombres.push(i.nombre);});
-  tr.innerHTML='<td><input type="date" class="dFecha" style="font-size:10px;padding:4px 2px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"></td><td><span class="dLabel" style="font-size:10px;color:#7ec8f7;padding:2px 4px;display:block;text-align:center">—</span></td><td style="min-width:80px"><select class="pNom" multiple style="font-size:10px;padding:2px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%;height:52px">'+todosNombres.map(function(n){return '<option value="'+n+'">'+n+'</option>';}).join('')+'</select></td><td><select class="aSel">'+mkOpts(AREAS,'Área')+'</select></td><td><select class="hSel">'+mkOpts(HORARIOS,'Hor.')+'</select></td><td><select class="tSel" style="font-size:10px;padding:3px 1px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"><option value="">-</option><option value="T1">T1</option><option value="T2">T2</option></select></td><td><select class="kSel" style="font-size:10px;padding:3px 1px;background:rgba(37,99,235,.1);color:#93c5fd;border:1px solid rgba(74,144,217,.2);border-radius:4px;width:100%"><option value="">-</option><option value="Rol A">A</option><option value="Rol B">B</option><option value="Rol C">C</option></select></td><td style="text-align:center"><input type="checkbox" class="saCk"></td><td style="text-align:center"><input type="checkbox" class="lCk"></td><td><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:14px">✕</button></td>';
-  var ck=tr.querySelector('.saCk'),lck=tr.querySelector('.lCk'),pSel=tr.querySelector('.pNom');
+  var cbs=todosNombres.map(function(n){
+    var key=n.replace(/\s/g,'_');
+    return '<label style="display:flex;align-items:center;gap:3px;font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" class="pCheck" value="'+n+'" style="accent-color:var(--accent2)"> '+n.split(' ')[0]+'</label>';
+  }).join('');
+  return '<div class="pCheckPanel" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;min-width:120px">'+cbs+'</div>';
+}
+
+function addBulkRow(){
+  var tr=document.createElement('tr');
+  var nombresPanel=buildNombresCheckboxes();
+  tr.innerHTML='<td><input type="date" class="dFecha" style="font-size:10px;padding:4px 2px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"></td><td><span class="dLabel" style="font-size:10px;color:#7ec8f7;padding:2px 4px;display:block;text-align:center">—</span></td><td>'+nombresPanel+'</td><td><select class="aSel">'+mkOpts(AREAS,'Área')+'</select></td><td><select class="hSel">'+mkOpts(HORARIOS,'Hor.')+'</select></td><td><select class="tSel" style="font-size:10px;padding:3px 1px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"><option value="">-</option><option value="T1">T1</option><option value="T2">T2</option></select></td><td><select class="kSel" style="font-size:10px;padding:3px 1px;background:rgba(37,99,235,.1);color:#93c5fd;border:1px solid rgba(74,144,217,.2);border-radius:4px;width:100%"><option value="">-</option><option value="Rol A">A</option><option value="Rol B">B</option><option value="Rol C">C</option></select></td><td style="text-align:center"><input type="checkbox" class="saCk"></td><td style="text-align:center"><input type="checkbox" class="lCk"></td><td><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:14px">✕</button></td>';
+  var ck=tr.querySelector('.saCk'),lck=tr.querySelector('.lCk');
   var aSel=tr.querySelector('.aSel'),hSel=tr.querySelector('.hSel');
   var dFecha=tr.querySelector('.dFecha'),dLabel=tr.querySelector('.dLabel');
   dFecha.addEventListener('change',function(){
@@ -3413,18 +3421,10 @@ function addBulkRow(){
   });
   tr.querySelector('.aSel').addEventListener('change',function(){tr.querySelector('.tSel').style.opacity=this.value==='Esterilización'?'1':'0.3';});
   ck.addEventListener('change',function(){
-    if(this.checked){pSel.disabled=true;pSel.value='';lck.checked=false;aSel.disabled=false;hSel.disabled=false;}
-    else pSel.disabled=false;
+    if(this.checked){lck.checked=false;}
   });
   lck.addEventListener('change',function(){
-    // 🏖 Libre = servicio/área libre de uso ese bloque: requiere área+horario, no persona
-    if(this.checked){
-      ck.checked=false;
-      pSel.disabled=true;pSel.value='';
-      aSel.disabled=false;hSel.disabled=false;
-    } else {
-      pSel.disabled=false;
-    }
+    if(this.checked){ck.checked=false;}
   });
   document.getElementById('bulkBody').appendChild(tr);
 }
@@ -3472,9 +3472,8 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){
     var fechaVal=fechaInput?fechaInput.value:'';
     var d='';
     if(fechaVal){var fd=new Date(fechaVal+'T12:00:00');var dias2=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];d=dias2[fd.getDay()];}
-    // Get all selected names (multi-select)
-    var pNomEl=r.querySelector('.pNom');
-    var selectedNombres=pNomEl?Array.from(pNomEl.selectedOptions).map(function(o){return o.value;}).filter(Boolean):[];
+    // Get all checked names (checkboxes)
+    var selectedNombres=Array.from(r.querySelectorAll('.pCheck:checked')).map(function(cb){return cb.value;}).filter(Boolean);
     var n=selectedNombres[0]||''; // for single-name fields like clave
     var a=r.querySelector('.aSel')?r.querySelector('.aSel').value:'';
     var h=r.querySelector('.hSel')?r.querySelector('.hSel').value:'';
