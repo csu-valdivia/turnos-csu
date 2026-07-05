@@ -431,6 +431,25 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </details>
           </div>
 
+          <div class="asec" style="border-color:rgba(16,185,129,.3)">
+            <p class="asec-title" style="color:#6ee7b7">🎓 Internos de enfermería</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Los internos responden evaluaciones y reciben supervisión, pero tienen su propio ranking separado del equipo.</p>
+            <div class="frow">
+              <select id="internoNombre" style="flex:2"><option value="">Selecciona colaborador</option></select>
+              <select id="internoGenero" style="width:auto">
+                <option value="F">♀</option>
+                <option value="M">♂</option>
+              </select>
+            </div>
+            <div class="frow" style="margin-top:4px">
+              <input type="date" id="internoIni" placeholder="Fecha inicio">
+              <input type="date" id="internoFin" placeholder="Fecha fin">
+            </div>
+            <button class="btn-add" id="addInternoBtn" style="background:linear-gradient(135deg,#059669,#10b981);margin-top:6px">+ Agregar interno</button>
+            <div class="saved" id="internoSaved">✓ Guardado</div>
+            <div class="ilist" id="internosList"></div>
+          </div>
+
           <div class="asec" style="border-color:rgba(245,158,11,.3)">
             <p class="asec-title" style="color:#f59e0b">🎂 Cumpleaños del equipo</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Agrega la fecha de cumpleaños de cada colaborador. Ese día aparecerá una sorpresa en la app para todo el equipo.</p>
@@ -1020,8 +1039,9 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos'];
 var supervisionData={};
+var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1117,6 +1137,7 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
+  sedeRef('internos').on('value',function(s){internos=s.val()||{};updateSelects();renderInternosList();renderRanking();});
   sedeRef('accesos').on('value',function(s){renderAccesos(s.val()||{});});
   sedeRef('cumpleanos').on('value',function(s){
     var todos=s.val()||{};
@@ -2480,12 +2501,28 @@ function registrarFallo(docId,doc){
   }
 }
 
-function agregarRankingPorPersona(){
-  var porPersona={};
-  // Solo personas con turno esta semana, excluyendo Patricio Baeza
-  var conTurno=Object.values(bloques)
+function esInterno(nombre){
+  return Object.values(internos).some(function(i){return i.nombre===nombre;});
+}
+
+function nombresConTurnoSemanaFiltrado(soloInternos){
+  var con=Object.values(bloques)
     .map(function(b){return b.nombre;})
     .filter(function(n){return n&&n!=='__sa__'&&n.trim().toLowerCase()!=='patricio baeza';});
+  var unicos=[...new Set(con)];
+  if(soloInternos)return unicos.filter(function(n){return esInterno(n);});
+  return unicos.filter(function(n){return !esInterno(n);});
+}
+
+function agregarRankingPorPersona(soloInternos){
+  var porPersona={};
+  var conTurno=Object.values(bloques)
+    .map(function(b){return b.nombre;})
+    .filter(function(n){
+      if(!n||n==='__sa__'||n.trim().toLowerCase()==='patricio baeza')return false;
+      if(soloInternos)return esInterno(n);
+      return !esInterno(n);
+    });
   var unicos=[...new Set(conTurno)];
 
   Object.values(ranking).forEach(function(entradasPersona){
@@ -2550,14 +2587,17 @@ function agregarRankingPorPersona(){
 }
 
 function nombresConTurnoSemana(){
+  return nombresConTurnoSemanaFiltrado(false);
+}
+function _nombresConTurnoSemana_unused(){
   var con=Object.values(bloques)
     .map(function(b){return b.nombre;})
     .filter(function(n){return n&&n!=='__sa__'&&n.trim().toLowerCase()!=='patricio baeza';});
   return [...new Set(con)];
 }
 
-function ordenarRanking(){
-  return agregarRankingPorPersona().sort(function(a,b){
+function ordenarRanking(soloInternos){
+  return agregarRankingPorPersona(soloInternos).sort(function(a,b){
     // 1° Puntos totales acumulados
     if(a.puntos!==b.puntos)return b.puntos-a.puntos;
     // 2° Desempate: menos fallos acumulados
@@ -2621,7 +2661,8 @@ function quienFaltaHoy(){
 }
 
 function renderRanking(){
-  var ordenado=ordenarRanking();
+  var ordenado=ordenarRanking(false); // equipo
+  var ordenadoInternos=ordenarRanking(true); // internos
   var temporizador=fmtTemporizador();
   var falta=quienFaltaHoy();
   var semanaCerrada=temporizador==='🏁 Semana cerrada';
@@ -2716,6 +2757,28 @@ function renderRanking(){
       miniHtml+='</div>';
     }
     miniHtml+='</div>';
+
+    // Ranking de internos (si hay)
+    if(ordenadoInternos.length){
+      miniHtml+='<div class="card" style="margin-bottom:10px;padding:12px 14px;border-color:rgba(16,185,129,.2)">';
+      miniHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-size:10px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.7px">🎓 Ranking Internos</p>'+(temporizador?'<span style="font-size:10px;color:#6ee7b7">'+temporizador+'</span>':'')+'</div>';
+      var medallaI=['🥇','🥈','🥉'];
+      miniHtml+=ordenadoInternos.map(function(r,i){
+        var medal=medallaI[i]||(i+1)+'°';
+        var fallosStr=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
+        var fallosColor=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
+        var esGanadorI=i===0&&semanaCerrada;
+        return '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
+          +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+(esGanadorI?' <span style="color:#6ee7b7;font-size:10px">· Ganador</span>':'')+'</span>'
+          +'<span style="color:#6ee7b7;font-weight:700;flex-shrink:0;margin-left:8px">'+r.puntos+' pts</span>'
+          +'</div>'
+          +'<div style="margin-left:24px;margin-top:1px"><span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span></div>'
+          +'</div>';
+      }).join('');
+      miniHtml+='</div>';
+    }
+
     dMini.innerHTML=miniHtml;
   }
 }
@@ -3334,7 +3397,10 @@ function renderTareasList(){var d=document.getElementById('tareasList');if(!d)re
 // ── BULK ──
 function addBulkRow(){
   var tr=document.createElement('tr');
-  tr.innerHTML='<td><input type="date" class="dFecha" style="font-size:10px;padding:4px 2px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"></td><td><span class="dLabel" style="font-size:10px;color:#7ec8f7;padding:2px 4px;display:block;text-align:center">—</span></td><td><select class="pNom">'+mkOpts(nombres,'Pers.')+'</select></td><td><select class="aSel">'+mkOpts(AREAS,'Área')+'</select></td><td><select class="hSel">'+mkOpts(HORARIOS,'Hor.')+'</select></td><td><select class="tSel" style="font-size:10px;padding:3px 1px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"><option value="">-</option><option value="T1">T1</option><option value="T2">T2</option></select></td><td><select class="kSel" style="font-size:10px;padding:3px 1px;background:rgba(37,99,235,.1);color:#93c5fd;border:1px solid rgba(74,144,217,.2);border-radius:4px;width:100%"><option value="">-</option><option value="Rol A">A</option><option value="Rol B">B</option><option value="Rol C">C</option></select></td><td style="text-align:center"><input type="checkbox" class="saCk"></td><td style="text-align:center"><input type="checkbox" class="lCk"></td><td><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:14px">✕</button></td>';
+  // Build nombres options including internos
+  var todosNombres=nombres.slice();
+  Object.values(internos).forEach(function(i){if(i.nombre&&todosNombres.indexOf(i.nombre)===-1)todosNombres.push(i.nombre);});
+  tr.innerHTML='<td><input type="date" class="dFecha" style="font-size:10px;padding:4px 2px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"></td><td><span class="dLabel" style="font-size:10px;color:#7ec8f7;padding:2px 4px;display:block;text-align:center">—</span></td><td style="min-width:80px"><select class="pNom" multiple style="font-size:10px;padding:2px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%;height:52px">'+todosNombres.map(function(n){return '<option value="'+n+'">'+n+'</option>';}).join('')+'</select></td><td><select class="aSel">'+mkOpts(AREAS,'Área')+'</select></td><td><select class="hSel">'+mkOpts(HORARIOS,'Hor.')+'</select></td><td><select class="tSel" style="font-size:10px;padding:3px 1px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);border-radius:4px;width:100%"><option value="">-</option><option value="T1">T1</option><option value="T2">T2</option></select></td><td><select class="kSel" style="font-size:10px;padding:3px 1px;background:rgba(37,99,235,.1);color:#93c5fd;border:1px solid rgba(74,144,217,.2);border-radius:4px;width:100%"><option value="">-</option><option value="Rol A">A</option><option value="Rol B">B</option><option value="Rol C">C</option></select></td><td style="text-align:center"><input type="checkbox" class="saCk"></td><td style="text-align:center"><input type="checkbox" class="lCk"></td><td><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:14px">✕</button></td>';
   var ck=tr.querySelector('.saCk'),lck=tr.querySelector('.lCk'),pSel=tr.querySelector('.pNom');
   var aSel=tr.querySelector('.aSel'),hSel=tr.querySelector('.hSel');
   var dFecha=tr.querySelector('.dFecha'),dLabel=tr.querySelector('.dLabel');
@@ -3406,19 +3472,28 @@ document.getElementById('saveBulkBtn').addEventListener('click',function(){
     var fechaVal=fechaInput?fechaInput.value:'';
     var d='';
     if(fechaVal){var fd=new Date(fechaVal+'T12:00:00');var dias2=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];d=dias2[fd.getDay()];}
-    var n=r.querySelector('.pNom')?r.querySelector('.pNom').value:'';
+    // Get all selected names (multi-select)
+    var pNomEl=r.querySelector('.pNom');
+    var selectedNombres=pNomEl?Array.from(pNomEl.selectedOptions).map(function(o){return o.value;}).filter(Boolean):[];
+    var n=selectedNombres[0]||''; // for single-name fields like clave
     var a=r.querySelector('.aSel')?r.querySelector('.aSel').value:'';
     var h=r.querySelector('.hSel')?r.querySelector('.hSel').value:'';
     var turno=r.querySelector('.tSel')?r.querySelector('.tSel').value:'';
     var krol=r.querySelector('.kSel')?r.querySelector('.kSel').value:'';
-    // d already computed above from date
     var sinAt=r.querySelector('.saCk')&&r.querySelector('.saCk').checked;
     var libre=r.querySelector('.lCk')&&r.querySelector('.lCk').checked;
     var ssToAdd=[];
     if(d){
       if(sinAt&&a&&h)nv.push({dia:d,nombre:'__sa__',area:a,horario:h,sinAtencion:true});
       else if(libre&&a&&h){ssToAdd.push({dia:d,area:a,horario:h});}
-      else if(n&&a&&h){var blq={dia:d,nombre:n,area:a,horario:h};if(turno)blq.turno=turno;nv.push(blq);}
+      else if(selectedNombres.length&&a&&h){
+        // Generate one block per selected person
+        selectedNombres.forEach(function(nom){
+          var blq={dia:d,nombre:nom,area:a,horario:h};
+          if(turno)blq.turno=turno;
+          nv.push(blq);
+        });
+      }
       if(krol&&n)claveBulk.push({n:n,r:krol});
     }
     ssToAdd.forEach(function(ss){sRef('sinServicios').push(ss);});
@@ -3451,6 +3526,8 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var ok=pBtn('Entrar',function(){
     if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();
       renderSupEstadoHoy();
+      updateInternoNombreSelect();
+      renderInternosList();
       // Update week indicator
       var lbl=document.getElementById('adminSemanaLabel');
       if(lbl){
@@ -3594,6 +3671,41 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
     // Reset toggles
     document.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no');});
     document.getElementById('supPuntaje').textContent='';
+  });
+});
+
+// Internos handlers
+function renderInternosList(){
+  var d=document.getElementById('internosList');if(!d)return;
+  var en=Object.entries(internos);
+  if(!en.length){d.innerHTML='<p class="empty">Sin internos registrados.</p>';return;}
+  d.innerHTML=en.map(function(e){
+    var k=e[0],i=e[1];
+    return '<div class="iitem"><div class="iitem-info"><strong>'+i.nombre+'</strong>'+
+      '<div class="iitem-sub">'+i.ini+' → '+i.fin+'</div></div>'+
+      '<button class="del-btn" onclick="sedeRef(\'internos/'+k+'\').remove()">🗑</button></div>';
+  }).join('');
+}
+
+function updateInternoNombreSelect(){
+  var sel=document.getElementById('internoNombre');if(!sel)return;
+  sel.innerHTML='<option value="">Selecciona colaborador</option>'+
+    nombres.map(function(n){return '<option>'+n+'</option>';}).join('');
+}
+
+document.getElementById('addInternoBtn').addEventListener('click',function(){
+  var n=document.getElementById('internoNombre').value;
+  var g=document.getElementById('internoGenero').value;
+  var ini=document.getElementById('internoIni').value;
+  var fin=document.getElementById('internoFin').value;
+  if(!n||!ini||!fin){alert('Completa nombre, fecha inicio y fecha fin.');return;}
+  var key=n.replace(/\s/g,'_');
+  sedeRef('internos/'+key).set({nombre:n,genero:g,ini:ini,fin:fin}).then(function(){
+    showSaved('internoSaved');
+    document.getElementById('internoNombre').value='';
+    document.getElementById('internoIni').value='';
+    document.getElementById('internoFin').value='';
+    renderInternosList();
   });
 });
 
