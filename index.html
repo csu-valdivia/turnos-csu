@@ -512,6 +512,14 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <input type="text" id="bibCatNueva" placeholder="Nombre de la nueva categoría" style="display:none;margin-bottom:6px">
             <input type="text" id="bibLink" placeholder="Link de Google Drive (https://...)" style="margin-bottom:6px">
             <textarea class="atxt" id="bibDesc" placeholder="Descripción breve (opcional)"></textarea>
+            <div class="frow" style="margin-bottom:6px">
+              <label style="font-size:11px;color:rgba(255,255,255,.4);align-self:center">👁 Visible para:</label>
+              <select id="bibVisibilidad" style="flex:1">
+                <option value="todos">Todos</option>
+                <option value="colaboradores">Solo colaboradores</option>
+                <option value="internos">Solo internos</option>
+              </select>
+            </div>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.7);margin:10px 0;cursor:pointer">
               <input type="checkbox" id="bibObligatoria" style="width:16px;height:16px;accent-color:var(--accent2)">
               📌 Lectura obligatoria (bloquea acceso hasta aprobar)
@@ -769,10 +777,35 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           </div>
 
           <div class="asec" style="border-color:rgba(239,68,68,.25)">
+            <div style="background:rgba(74,144,217,.06);border:1px solid rgba(74,144,217,.2);border-radius:10px;padding:12px;margin-bottom:12px">
+              <p style="font-size:11px;font-weight:700;color:#7ec8f7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🎯 Banco de preguntas activo esta semana</p>
+              <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Selecciona qué protocolos participan en el sorteo. Máximo 4 preguntas por día mezcladas entre los seleccionados.</p>
+              <div id="bancoSelector" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+              <button class="btn-add" id="saveBancoBtn" style="background:linear-gradient(135deg,#1d4ed8,#2563eb)">💾 Guardar selección del banco</button>
+              <div class="saved" id="bancoSaved">✓ Banco actualizado</div>
+            </div>
+
             <p class="asec-title" style="color:#fca5a5">⚠ Cumplimiento de lectura obligatoria</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Estado de aprobación de fichas obligatorias por colaborador.</p>
             <div id="alertasCapacitacion"></div>
             <button class="btn-sec" id="borrarMiRankingBtn" style="margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.4)">🗑 Borrar mis puntos del ranking (admin, no afecta al equipo)</button>
+            <!-- SELECTOR BANCO DE PREGUNTAS -->
+            <div style="background:rgba(74,144,217,.06);border:1px solid rgba(74,144,217,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+              <p style="font-size:10px;font-weight:700;color:#7ec8f7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📚 Banco de preguntas activo esta semana</p>
+              <p style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px">Selecciona qué protocolos participan en el sorteo diario (máx. 4 preguntas/día mezcladas).</p>
+              <div id="bancoPregSel" style="display:flex;flex-direction:column;gap:4px"></div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+                <label style="font-size:11px;color:rgba(255,255,255,.5)">Máx. preguntas/día:</label>
+                <select id="maxPregDia" style="width:60px;font-size:11px">
+                  <option value="2">2</option>
+                  <option value="3" selected>3</option>
+                  <option value="4">4</option>
+                </select>
+              </div>
+              <button class="btn-add" id="guardarBancoBtn" style="margin-top:8px;font-size:11px">💾 Guardar configuración de banco</button>
+              <div class="saved" id="bancoSaved">✓ Guardado</div>
+            </div>
+
             <button class="btn-sec" id="reiniciarTodoBtn" style="margin-bottom:10px;font-size:11px;color:#fca5a5;border-color:rgba(239,68,68,.3)">↺ Reiniciar evaluaciones de todo el equipo (nueva semana)</button>
             <div class="saved" id="reiniciarTodoSaved">✓ Evaluaciones reiniciadas</div>
             <div class="ilist" id="cumplimientoList"></div>
@@ -1045,9 +1078,10 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo'];
 var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
+var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1119,6 +1153,7 @@ function attach(){
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=v||{};renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();});
+  on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
@@ -1145,6 +1180,10 @@ window.setSede=function(sede){
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
   sedeRef('internos').on('value',function(s){internos=s.val()||{};updateSelects();renderInternosList();renderRanking();});
   sedeRef('accesos').on('value',function(s){renderAccesos(s.val()||{});});
+  sedeRef('bancoActivo').on('value',function(s){
+    var banco=s.val()||{};
+    renderBancoSelector(banco);
+  });
   sedeRef('cumpleanos').on('value',function(s){
     var todos=s.val()||{};
     var hoy=hoyStr().substring(5);
@@ -1882,6 +1921,14 @@ function renderBiblioteca(){
   var d=document.getElementById('bibliotecaView');if(!d)return;
   var filtro=document.getElementById('bibFiltro')?document.getElementById('bibFiltro').value:'';
   var en=Object.entries(biblioteca);
+  // Filter by visibilidad based on user type
+  en=en.filter(function(e){
+    var vis=e[1].visibilidad||'todos';
+    if(vis==='todos')return true;
+    if(vis==='internos')return esInterno(curNombre);
+    if(vis==='colaboradores')return !esInterno(curNombre);
+    return true;
+  });
   if(filtro)en=en.filter(function(e){return e[1].categoria===filtro;});
   if(!en.length){d.innerHTML='<div class="no-result"><p style="font-size:32px;margin-bottom:8px">📚</p><p>'+(filtro?'Sin documentos en esta categoría.':'Aún no hay documentos disponibles.')+'</p></div>';return;}
   // Group by category
@@ -1955,7 +2002,8 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
   if(!titulo||!cat||!link){alert('Completa título, categoría y link.');return;}
   if(!link.startsWith('http')){alert('El link debe empezar con http:// o https://');return;}
 
-  var doc={titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now()};
+  var visibilidad=document.getElementById('bibVisibilidad')?document.getElementById('bibVisibilidad').value:'todos';
+  var doc={titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now(),visibilidad:visibilidad};
 
   if(esObligatoria){
     var contenido=document.getElementById('bibContenido').value.trim();
@@ -1998,10 +2046,22 @@ function fichasObligatoriasPendientes(nombre){
   var hoyStr2=hoyStr();
   var hoyObj=new Date();hoyObj.setHours(0,0,0,0);
   var inicioHoy=hoyObj.getTime();
+  // Use bancoConfig if configured, otherwise use all obligatory docs
+  var bancoDocs=bancoConfig.docIds&&bancoConfig.docIds.length?bancoConfig.docIds:null;
   return Object.entries(biblioteca).filter(function(e){
-    var doc=e[1];
+    var docId=e[0],doc=e[1];
     if(!doc.obligatoria)return false;
-    var prog=fichaProgreso[e[0]]&&fichaProgreso[e[0]][key];
+    // Check visibilidad
+    var vis=doc.visibilidad||'todos';
+    if(vis==='internos'&&!esInterno(nombre))return false;
+    if(vis==='colaboradores'&&esInterno(nombre))return false;
+    // If banco configured, only include selected docs
+    if(bancoDocs&&bancoDocs.indexOf(docId)===-1)return false;
+    // Filter by visibilidad
+    var vis=doc.visibilidad||'todos';
+    if(vis==='internos'&&!esInterno(nombre))return false;
+    if(vis==='colaboradores'&&esInterno(nombre))return false;
+    var prog=fichaProgreso[docId]&&fichaProgreso[docId][key];
     // Bloqueado hoy
     if(prog&&prog.bloqueadoFecha===hoyStr2)return true;
     // Ya respondió correctamente hoy (por fecha string)
@@ -2013,7 +2073,7 @@ function fichasObligatoriasPendientes(nombre){
     if(yaEnRanking)return false;
     // Tiene preguntas configuradas
     var preguntas=Object.values(doc.preguntas||{});
-    if(preguntas.length<3)return false;
+    if(preguntas.length<2)return false;
     return true;
   });
 }
@@ -2093,7 +2153,8 @@ function iniciarPreguntasCombinadas(pend){
     });
   });
   var shuffled=poolPreguntas.slice().sort(function(){return Math.random()-0.5;});
-  fichaActualPreguntas=shuffled.slice(0,3);
+  var maxP=bancoConfig.maxPreg||3;
+  fichaActualPreguntas=shuffled.slice(0,maxP);
   fichaActualRespuestas={};
   fichaActualPend=pend; // guardar referencia global para aprobar todos los docs involucrados
 
@@ -2180,7 +2241,7 @@ function mostrarPasoPreguntas(docId,doc,prog){
     return;
   }
   var shuffled=preguntas.slice().sort(function(){return Math.random()-0.5;});
-  fichaActualPreguntas=shuffled.slice(0,3);
+  fichaActualPreguntas=shuffled.slice(0,4); // max 4 preguntas por día
   fichaActualRespuestas={};
 
   var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📌 Evaluación rápida</p>';
@@ -2974,6 +3035,60 @@ function renderAccesos(accesos){
   }).join('');
 }
 
+function renderBancoSel(){
+  var d=document.getElementById('bancoPregSel');if(!d)return;
+  // Get all obligatory docs with questions
+  var docs=Object.entries(biblioteca).filter(function(e){
+    return e[1].obligatoria&&Object.keys(e[1].preguntas||{}).length>=3;
+  });
+  if(!docs.length){d.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.3)">No hay protocolos con banco de preguntas cargado aún.</p>';return;}
+  var selIds=bancoConfig.docIds||[];
+  d.innerHTML=docs.map(function(e){
+    var k=e[0],doc=e[1];
+    var checked=selIds.indexOf(k)>=0?'checked':'';
+    var nPreg=Object.keys(doc.preguntas||{}).length;
+    return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<input type="checkbox" value="'+k+'" '+checked+' style="accent-color:var(--accent2);width:14px;height:14px"> '+
+      '<span style="flex:1">'+doc.titulo+'</span>'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.3)">'+nPreg+' preguntas</span>'+
+      '</label>';
+  }).join('');
+  // Set maxPreg selector
+  var maxSel=document.getElementById('maxPregDia');
+  if(maxSel&&bancoConfig.maxPreg)maxSel.value=String(bancoConfig.maxPreg);
+}
+
+function renderBancoSelector(banco){
+  var d=document.getElementById('bancoSelector');if(!d)return;
+  var docs=Object.entries(biblioteca).filter(function(e){return e[1]&&e[1].obligatoria&&e[1].preguntas&&Object.keys(e[1].preguntas).length>=3;});
+  if(!docs.length){d.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.3)">No hay documentos con banco de preguntas configurado.</p>';return;}
+  d.innerHTML=docs.map(function(e){
+    var k=e[0],doc=e[1];
+    var checked=banco[k]?'checked':'';
+    var nPreg=Object.keys(doc.preguntas||{}).length;
+    return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:6px 8px;background:rgba(255,255,255,.04);border-radius:6px">'+
+      '<input type="checkbox" class="bancoCheck" value="'+k+'" '+checked+' style="accent-color:#2563eb;width:15px;height:15px">'+
+      '<span style="flex:1"><strong>'+doc.titulo+'</strong></span>'+
+      '<span style="color:rgba(255,255,255,.3);font-size:10px">'+nPreg+' preguntas</span>'+
+      '</label>';
+  }).join('');
+}
+
+function getBancosActivos(){
+  // Returns list of [docId, doc] that are active this week
+  var banco={};
+  sedeRef('bancoActivo').once('value',function(){});
+  // Use synchronous cached value from biblioteca
+  var activos=[];
+  Object.entries(biblioteca).forEach(function(e){
+    var k=e[0],doc=e[1];
+    if(!doc||!doc.obligatoria||!doc.preguntas)return;
+    // If bancoActivo has been set, use it; otherwise all obligatory docs are active
+    activos.push([k,doc]);
+  });
+  return activos;
+}
+
 function renderCumplimientoList(){
   var d=document.getElementById('cumplimientoList');if(!d)return;
   var obligatorias=Object.entries(biblioteca).filter(function(e){return e[1].obligatoria;});
@@ -3441,7 +3556,9 @@ function updateQkSelects(){
   var qkA=document.getElementById('qkArea');
   var qkH=document.getElementById('qkHorario');
   if(!qkN)return;
-  qkN.innerHTML='<option value="">Persona</option>'+nombres.map(function(n){return '<option>'+n+'</option>';}).join('');
+  var todosNombresQk=nombres.slice();
+  Object.values(internos).forEach(function(i){if(i.nombre&&todosNombresQk.indexOf(i.nombre)===-1)todosNombresQk.push(i.nombre);});
+  qkN.innerHTML='<option value="">Persona</option>'+todosNombresQk.map(function(n){return '<option>'+n+'</option>';}).join('');
   qkA.innerHTML='<option value="">Área</option>'+AREAS.map(function(a){return '<option>'+a+'</option>';}).join('');
   qkH.innerHTML='<option value="">Horario</option>'+HORARIOS.map(function(h){return '<option>'+h+'</option>';}).join('');
 }
@@ -3534,6 +3651,8 @@ document.getElementById('adminBtn').addEventListener('click',function(){
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
+      sedeRef('bancoActivo').once('value',function(s){renderBancoSelector(s.val()||{});});
+      renderBancoSel();
       // Update week indicator
       var lbl=document.getElementById('adminSemanaLabel');
       if(lbl){
@@ -3835,6 +3954,24 @@ document.getElementById('limpiarPendBtn').addEventListener('click',function(){
       },500);
     });
   });
+});
+
+document.getElementById('guardarBancoBtn').addEventListener('click',function(){
+  var docIds=Array.from(document.querySelectorAll('#bancoPregSel input:checked')).map(function(cb){return cb.value;});
+  var maxPreg=parseInt(document.getElementById('maxPregDia').value)||3;
+  if(!docIds.length){alert('Selecciona al menos un protocolo.');return;}
+  sRef('bancoConfig').set({docIds:docIds,maxPreg:maxPreg}).then(function(){
+    showSaved('bancoSaved');
+    bancoConfig={docIds:docIds,maxPreg:maxPreg};
+  });
+});
+
+document.getElementById('saveBancoBtn').addEventListener('click',function(){
+  var checks=document.querySelectorAll('.bancoCheck');
+  var banco={};
+  checks.forEach(function(cb){if(cb.checked)banco[cb.value]=true;});
+  if(!Object.keys(banco).length){alert('Selecciona al menos un banco de preguntas.');return;}
+  sedeRef('bancoActivo').set(banco).then(function(){showSaved('bancoSaved');});
 });
 
 document.getElementById('reiniciarTodoBtn').addEventListener('click',function(){
