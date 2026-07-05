@@ -697,9 +697,15 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec">
             <p class="asec-title">📋 Asignar tarea / aviso</p>
-            <div class="frow">
-              <select id="tD"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
-              <select id="tN"><option value="">Persona</option></select>
+            <select id="tN" style="margin-bottom:6px"><option value="">Persona</option></select>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px" id="tareaDias">
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Lunes" style="accent-color:var(--accent2)"> Lun</label>
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Martes" style="accent-color:var(--accent2)"> Mar</label>
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Miércoles" style="accent-color:var(--accent2)"> Mié</label>
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Jueves" style="accent-color:var(--accent2)"> Jue</label>
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Viernes" style="accent-color:var(--accent2)"> Vie</label>
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Sábado" style="accent-color:var(--accent2)"> Sáb</label>
+              <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
               <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
@@ -3772,7 +3778,22 @@ document.getElementById('addCobBtn').addEventListener('click',function(){
   sRef('coberturas').push(data).then(function(){['cobP','cobD','cobO','cobDst','cobHor'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('cobHorWrap').style.display='none';showSaved('cobSaved');});
 });
 document.getElementById('addLlBtn').addEventListener('click',function(){var n=document.getElementById('llN').value,d=document.getElementById('llD').value,a=document.getElementById('llA').value,h=document.getElementById('llH').value;if(!n||!d||!a||!h){alert('Completa todos los campos.');return;}sRef('llamados').push({nombre:n,dia:d,area:a,horario:h}).then(function(){['llN','llD','llA','llH'].forEach(function(id){document.getElementById(id).value='';});showSaved('llSaved');setTimeout(function(){genPendientes(function(){});},300);});});
-document.getElementById('addTareaBtn').addEventListener('click',function(){var d=document.getElementById('tD').value,n=document.getElementById('tN').value,t=document.getElementById('tTip').value,x=document.getElementById('tTxt').value.trim();if(!d||!n||!t||!x)return;sRef('tareas').push({dia:d,nombre:n,tipo:t,texto:x}).then(function(){['tD','tN','tTip'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('tTxt').value='';showSaved('tareaSaved');});});
+document.getElementById('addTareaBtn').addEventListener('click',function(){
+  var n=document.getElementById('tN').value;
+  var dias=Array.from(document.querySelectorAll('#tareaDias input:checked')).map(function(cb){return cb.value;});
+  var t=document.getElementById('tTip').value;
+  var x=document.getElementById('tTxt').value.trim();
+  if(!n||!dias.length||!t||!x){alert('Selecciona persona, al menos un día, tipo y descripción.');return;}
+  Promise.all(dias.map(function(dia){
+    return sRef('tareas').push({dia:dia,nombre:n,tipo:t,texto:x});
+  })).then(function(){
+    document.getElementById('tN').value='';
+    document.getElementById('tTip').value='';
+    document.getElementById('tTxt').value='';
+    document.querySelectorAll('#tareaDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
+    showSaved('tareaSaved');
+  });
+});
 document.getElementById('addPendBtn').addEventListener('click',function(){var d=document.getElementById('pD').value,a=document.getElementById('pA').value,h=document.getElementById('pH').value;if(!d||!a||!h)return;sRef('pendientes').push({dia:d,area:a,horario:h,auto:false}).then(function(){['pD','pA','pH'].forEach(function(id){document.getElementById(id).value='';});showSaved('pendSaved');renderPendList();});});
 document.getElementById('addLicBtn').addEventListener('click',function(){var n=document.getElementById('licN').value,ini=document.getElementById('licIni').value,fin=document.getElementById('licFin').value;if(!n||!ini||!fin){alert('Completa todos los campos.');return;}if(ini>fin){alert('Inicio debe ser antes que fin.');return;}sRef('ausencias').push({nombre:n,tipo:'licencia',tipoLabel:'Licencia médica',inicio:ini,fin:fin,motivo:'Licencia médica',estado:'aprobado',ts:Date.now()}).then(function(){var fechas=fechasRango(ini,fin);var dias=fechas.map(function(f){return diaDeDate(f);});var del=Object.entries(bloques).filter(function(e){return e[1].nombre===n&&dias.indexOf(e[1].dia)!==-1;});Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});['licN','licIni','licFin'].forEach(function(id){document.getElementById(id).value='';});showSaved('licSaved');});});
 // Populate ssH with HORARIOS
