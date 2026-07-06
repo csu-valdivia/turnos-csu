@@ -1179,7 +1179,7 @@ function attach(){
   on('coberturas',function(v){coberturas=v;renderCobList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=v||{};renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
-  on('ranking',function(v){ranking=v||{};renderRanking();});
+  on('ranking',function(v){ranking=v||{};renderRanking();if(document.getElementById('tc-estado')&&document.getElementById('tc-estado').style.display!=='none')renderEstado();});
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
@@ -1537,7 +1537,16 @@ window.goTab=function(tab){
   document.querySelectorAll('.tab').forEach(function(t){var m=t.getAttribute('onclick').match(/goTab\('([^']+)'\)/);if(m)t.classList.toggle('active',m[1]===tab);});
   TABS.forEach(function(id){var el=document.getElementById('tc-'+id);if(el)el.classList.toggle('active',id===tab);});
   if(tab==='resumen')renderResumen();
-  if(tab==='estado'){var sel=document.getElementById('estadoSelect');if(sel&&!sel.value&&curNombre){sel.value=curNombre;}renderEstado();}
+  if(tab==='estado'){
+    var sel=document.getElementById('estadoSelect');
+    if(sel&&curNombre){
+      // Make sure the option exists
+      var found=Array.from(sel.options).some(function(o){return o.value===curNombre;});
+      if(!found){var opt=document.createElement('option');opt.value=curNombre;opt.textContent=curNombre;sel.appendChild(opt);}
+      sel.value=curNombre;
+    }
+    renderEstado();
+  }
   if(tab==='cambios')renderCambios();
   if(tab==='ausencias')renderAusencias();
   if(tab==='biblioteca')renderBiblioteca();
@@ -1725,9 +1734,13 @@ function renderAsist(){
 document.getElementById('estadoSelect').addEventListener('change',function(){renderEstado();});
 
 function renderEstado(){
-  var n=document.getElementById('estadoSelect').value;
+  var sel=document.getElementById('estadoSelect');
+  var n=sel?sel.value:'';
+  if(!n)n=curNombre; // fallback to current user
+  if(sel&&n&&sel.value!==n)sel.value=n;
   if(!n){
-    document.getElementById('kpiView').innerHTML='<p style="text-align:center;color:rgba(255,255,255,.3);padding:2rem">Selecciona tu nombre.</p>';
+    var kv=document.getElementById('kpiView');
+    if(kv)kv.innerHTML='<p style="text-align:center;color:rgba(255,255,255,.3);padding:2rem">Selecciona tu nombre.</p>';
     return;
   }
   renderKPIDashboard(n);
