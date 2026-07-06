@@ -553,7 +553,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </label>
             <div id="bibObligWrap" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px;margin-bottom:8px">
               <p style="font-size:11px;font-weight:700;color:#fca5a5;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Contenido a leer</p>
-              <textarea class="atxt" id="bibContenido" placeholder="Texto breve que el colaborador debe leer antes de responder (ej: resumen del protocolo)..." style="min-height:90px;margin-bottom:12px"></textarea>
+              <textarea class="atxt" id="bibContenido" placeholder="Instrucción breve para el colaborador (ej: Lee el protocolo IAAS en la Biblioteca antes de responder. Las preguntas están basadas en ese documento.)" style="min-height:70px;margin-bottom:12px"></textarea>
               <p style="font-size:11px;font-weight:700;color:#fca5a5;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Banco de preguntas (mín. 5, ideal 20-30)</p>
               <div id="bibPreguntasBuilder"></div>
               <button class="btn-sec" id="addPreguntaBtn" type="button" style="margin-top:6px">+ Agregar pregunta</button>
@@ -1109,6 +1109,7 @@ var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros'
 var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
+var bancoActivo={}; // banco activo por sede (nuevo sistema)
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={};
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -2410,22 +2411,22 @@ function fichasObligatoriasPendientes(nombre){
   var hoyObj=new Date();hoyObj.setHours(0,0,0,0);
   var inicioHoy=hoyObj.getTime();
   // Use bancoConfig if configured, otherwise use all obligatory docs
-  var bancoDocs=bancoConfig.docIds&&bancoConfig.docIds.length?bancoConfig.docIds:null;
+  // bancoActivo from sedeRef takes priority over old bancoConfig
+  var bancoActivoKeys=Object.keys(bancoActivo||{});
+  var usarBancoActivo=bancoActivoKeys.length>0;
   return Object.entries(biblioteca).filter(function(e){
     var docId=e[0],doc=e[1];
     if(!doc.obligatoria)return false;
     // Check visible toggle
     if(doc.visible===false)return false;
+    // Check banco cerrado - solo bancos cerrados participan en sorteo
+    if(!doc.bancoCerrado)return false;
     // Check visibilidad
     var vis=doc.visibilidad||'todos';
     if(vis==='internos'&&!esInterno(nombre))return false;
     if(vis==='colaboradores'&&esInterno(nombre))return false;
-    // If banco configured, only include selected docs
-    if(bancoDocs&&bancoDocs.indexOf(docId)===-1)return false;
-    // Filter by visibilidad
-    var vis=doc.visibilidad||'todos';
-    if(vis==='internos'&&!esInterno(nombre))return false;
-    if(vis==='colaboradores'&&esInterno(nombre))return false;
+    // If bancoActivo configured, only include selected docs
+    if(usarBancoActivo&&!bancoActivo[docId])return false;
     var prog=fichaProgreso[docId]&&fichaProgreso[docId][key];
     // Bloqueado hoy
     if(prog&&prog.bloqueadoFecha===hoyStr2)return true;
