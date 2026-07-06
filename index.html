@@ -2186,7 +2186,10 @@ function renderBibAdminList(){
       '<button class="del-btn" style="color:#7ec8f7;font-size:12px" onclick="editarBancoPreguntas(\''+k+'\')" title="Editar preguntas">✏️</button>'+
       '<button class="del-btn" onclick="if(confirm(\'¿Eliminar este documento?\'))sedeRef(\'biblioteca/'+k+'\').remove()">🗑</button>'+
       '</div></div>'+
-      '<button onclick="toggleVisibilidadDoc(\''+k+'\','+(visible?'false':'true')+')" style="width:100%;padding:5px 10px;border-radius:6px;border:none;background:'+toggleColor+';font-family:inherit;font-size:11px;cursor:pointer;text-align:left">'+toggleTxt+'</button>'+
+      '<div style="display:flex;gap:6px">'+
+      '<button onclick="toggleVisibilidadDoc(\''+k+'\','+(visible?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+toggleColor+';font-family:inherit;font-size:11px;cursor:pointer;text-align:left">'+toggleTxt+'</button>'+
+      (doc.obligatoria?'<button onclick="toggleBancoCerrado(\''+k+'\','+(doc.bancoCerrado?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+(doc.bancoCerrado?'rgba(16,185,129,.2)':'rgba(245,158,11,.15)')+';font-family:inherit;font-size:11px;cursor:pointer;text-align:center">'+(doc.bancoCerrado?'<span style="color:#6ee7b7">✅ Banco cerrado</span>':'<span style="color:#fcd34d">⚠ Banco abierto</span>')+'</button>':'')+
+      '</div>'+
       '</div>';
   }).join('');
 }
@@ -2316,6 +2319,16 @@ function editarBancoPreguntas(docId){
     });
   });
 }
+
+window.toggleBancoCerrado=function(docId,nuevoEstado){
+  sedeRef('biblioteca/'+docId+'/bancoCerrado').set(nuevoEstado).then(function(){
+    if(nuevoEstado){
+      var doc=biblioteca[docId];
+      var numPreg=doc&&doc.preguntas?Object.keys(doc.preguntas).length:0;
+      alert('✅ Banco marcado como cerrado con '+numPreg+' preguntas. Listo para el sorteo semanal.');
+    }
+  });
+};
 
 window.toggleVisibilidadDoc=function(docId,nuevoEstado){
   sedeRef('biblioteca/'+docId+'/visible').set(nuevoEstado);
@@ -3414,6 +3427,9 @@ function renderBancoSelector(banco){
   var d=document.getElementById('bancoSelector');if(!d)return;
   var docs=Object.entries(biblioteca).filter(function(e){return e[1]&&e[1].obligatoria&&e[1].preguntas&&Object.keys(e[1].preguntas).length>=3;});
   if(!docs.length){d.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.3)">No hay documentos con banco de preguntas configurado.</p>';return;}
+  var docsCerrados=docs.filter(function(e){return e[1].bancoCerrado;});
+  var docsAbiertos=docs.filter(function(e){return !e[1].bancoCerrado;});
+  if(docsAbiertos.length){d.innerHTML+='<p style="font-size:10px;color:#fcd34d;margin-bottom:4px">⚠ Bancos aún abiertos (no disponibles para sorteo): '+docsAbiertos.map(function(e){return e[1].titulo;}).join(', ')+'</p>';}
   d.innerHTML=docs.map(function(e){
     var k=e[0],doc=e[1];
     var checked=banco[k]?'checked':'';
