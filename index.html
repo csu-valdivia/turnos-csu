@@ -2131,7 +2131,10 @@ function renderBiblioteca(){
   var en=Object.entries(biblioteca);
   // Filter by visibilidad based on user type
   en=en.filter(function(e){
-    var vis=e[1].visibilidad||'todos';
+    var doc=e[1];
+    // Check visible toggle (admin can hide docs from team)
+    if(doc.visible===false)return false;
+    var vis=doc.visibilidad||'todos';
     if(vis==='todos')return true;
     if(vis==='internos')return esInterno(curNombre);
     if(vis==='colaboradores')return !esInterno(curNombre);
@@ -2172,7 +2175,19 @@ function renderBibAdminList(){
   d.innerHTML=en.sort(function(a,b){return(b[1].ts||0)-(a[1].ts||0);}).map(function(e){
     var k=e[0],doc=e[1];
     var numLecturas=doc.lecturas?Object.keys(doc.lecturas).length:0;
-    return '<div class="iitem"><div class="iitem-info">'+bibIcono(doc.categoria)+' <strong>'+doc.titulo+'</strong><div class="iitem-sub">'+doc.categoria+' · '+numLecturas+' lectura'+(numLecturas!==1?'s':'')+'</div></div><button class="del-btn" onclick="if(confirm(\'¿Eliminar este documento?\'))sedeRef(\'biblioteca/'+k+'\').remove()">🗑</button></div>';
+    var numPreg=doc.preguntas?Object.keys(doc.preguntas).length:0;
+    var pregLabel=doc.obligatoria?'<span style="font-size:10px;color:'+(numPreg>=5?'#6ee7b7':'#fca5a5')+';margin-left:4px">'+numPreg+' preg.</span>':'';
+    var visible=doc.visible!==false; // default visible
+    var toggleColor=visible?'rgba(16,185,129,.2)':'rgba(255,255,255,.06)';
+    var toggleTxt=visible?'<span style="color:#6ee7b7;font-size:10px">👁 Visible</span>':'<span style="color:rgba(255,255,255,.3);font-size:10px">🔒 Oculto</span>';
+    return '<div class="iitem" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;align-items:center;justify-content:space-between">'+
+      '<div class="iitem-info">'+bibIcono(doc.categoria)+' <strong>'+doc.titulo+'</strong>'+pregLabel+'<div class="iitem-sub">'+doc.categoria+' · '+numLecturas+' lectura'+(numLecturas!==1?'s':'')+'</div></div>'+
+      '<div style="display:flex;gap:4px;flex-shrink:0">'+
+      '<button class="del-btn" style="color:#7ec8f7;font-size:12px" onclick="editarBancoPreguntas(\''+k+'\')" title="Editar preguntas">✏️</button>'+
+      '<button class="del-btn" onclick="if(confirm(\'¿Eliminar este documento?\'))sedeRef(\'biblioteca/'+k+'\').remove()">🗑</button>'+
+      '</div></div>'+
+      '<button onclick="toggleVisibilidadDoc(\''+k+'\','+(visible?'false':'true')+')" style="width:100%;padding:5px 10px;border-radius:6px;border:none;background:'+toggleColor+';font-family:inherit;font-size:11px;cursor:pointer;text-align:left">'+toggleTxt+'</button>'+
+      '</div>';
   }).join('');
 }
 
@@ -2231,6 +2246,82 @@ function cargarBorradorPreguntas(){
     wrap.parentNode.insertBefore(aviso,wrap);
   }catch(e){}
 }
+
+function editarBancoPreguntas(docId){
+  var doc=biblioteca[docId];
+  if(!doc){alert('Documento no encontrado.');return;}
+  var overlay=document.createElement('div');
+  overlay.id='editPregOverlay';
+  overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:300;background:rgba(10,20,50,.96);overflow-y:auto;padding:20px 16px;box-sizing:border-box';
+
+  var pregActuales=Object.entries(doc.preguntas||{});
+  var html='<div style="max-width:460px;margin:0 auto">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  html+='<p style="font-size:15px;font-weight:700;color:#fff">✏️ Editar banco: '+doc.titulo+'</p>';
+  html+='<button onclick="document.getElementById(\'editPregOverlay\').remove()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;font-family:inherit">✕</button>';
+  html+='</div>';
+  html+='<p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px">Preguntas actuales: '+pregActuales.length+' · Para eliminar una pregunta, bórrala con ✕ y guarda.</p>';
+  html+='<div id="editPregBuilder">';
+  // Load existing questions
+  pregActuales.forEach(function(e,idx){
+    var p=e[1];
+    html+='<div data-pregid="'+e[0]+'" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:8px">';
+    html+='<input type="text" class="pregTxt" value="'+((p.pregunta||'').replace(/"/g,'&quot;'))+'" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">';
+    (p.opciones||[]).forEach(function(op,i){
+      html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+      html+='<input type="radio" name="ecorrecta'+idx+'" class="pregCorrecta" value="'+i+'"'+(p.correcta===i?' checked':'')+' style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent2);margin:0">';
+      html+='<input type="text" class="pregOp" value="'+(op.replace(/"/g,'&quot;'))+'" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1">';
+      html+='</div>';
+    });
+    html+='<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<button type="button" class="btn-sec" id="editAddPregBtn" style="margin-bottom:10px">+ Agregar pregunta nueva</button>';
+  html+='<button type="button" class="btn-add" id="editSavePregBtn" style="background:linear-gradient(135deg,#059669,#10b981)">💾 Guardar banco de preguntas</button>';
+  html+='<div class="saved" id="editPregSaved" style="margin-top:8px">✓ Banco actualizado</div>';
+  html+='</div>';
+  overlay.innerHTML=html;
+  document.body.appendChild(overlay);
+
+  // Add new question row
+  document.getElementById('editAddPregBtn').addEventListener('click',function(){
+    var builder=document.getElementById('editPregBuilder');
+    var idx=builder.children.length;
+    var div=document.createElement('div');
+    div.style.cssText='background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:8px';
+    div.innerHTML='<input type="text" class="pregTxt" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">'+
+      [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="enew'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent2);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
+      '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
+    builder.appendChild(div);
+  });
+
+  // Save all questions
+  document.getElementById('editSavePregBtn').addEventListener('click',function(){
+    var filas=document.querySelectorAll('#editPregBuilder > div');
+    var preguntas={};var idx=0;var error=false;
+    filas.forEach(function(f){
+      var pregTxt=f.querySelector('.pregTxt')?f.querySelector('.pregTxt').value.trim():'';
+      var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
+      var correctaEl=f.querySelector('.pregCorrecta:checked');
+      if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){error=true;return;}
+      preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value)});
+    });
+    if(error){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta).');return;}
+    if(Object.keys(preguntas).length<5){alert('Mínimo 5 preguntas requeridas. Tienes '+Object.keys(preguntas).length+'.');return;}
+    sedeRef('biblioteca/'+docId+'/preguntas').set(preguntas).then(function(){
+      var saved=document.getElementById('editPregSaved');
+      if(saved){saved.style.display='block';setTimeout(function(){saved.style.display='none';},2000);}
+      setTimeout(function(){document.getElementById('editPregOverlay').remove();},1500);
+    });
+  });
+}
+
+window.toggleVisibilidadDoc=function(docId,nuevoEstado){
+  sedeRef('biblioteca/'+docId+'/visible').set(nuevoEstado);
+};
+
+window.editarBancoPreguntas=editarBancoPreguntas;
 
 function addPreguntaRow(){
   var wrap=document.getElementById('bibPreguntasBuilder');
@@ -2310,6 +2401,8 @@ function fichasObligatoriasPendientes(nombre){
   return Object.entries(biblioteca).filter(function(e){
     var docId=e[0],doc=e[1];
     if(!doc.obligatoria)return false;
+    // Check visible toggle
+    if(doc.visible===false)return false;
     // Check visibilidad
     var vis=doc.visibilidad||'todos';
     if(vis==='internos'&&!esInterno(nombre))return false;
