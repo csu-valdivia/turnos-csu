@@ -852,38 +852,63 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               </select>
             </div>
             <div id="supItems" style="margin-top:10px">
-              <div class="sup-item" data-key="puntualidad" data-peso="0.20">
-                <span>⏰ Inicio de jornada puntual en su puesto</span>
-                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              <div class="sup-item" data-key="puntualidad" data-peso="0.20" style="flex-direction:column;align-items:stretch;gap:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+                  <span style="flex:1">⏰ Inicio de jornada puntual en su puesto</span>
+                  <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+                </div>
+                <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
-              <div class="sup-item" data-key="uniforme" data-peso="0.18">
-                <span>👔 Uniforme reglamentario completo y en buen estado</span>
-                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              <div class="sup-item" data-key="uniforme" data-peso="0.18" style="flex-direction:column;align-items:stretch;gap:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+                  <span style="flex:1">👔 Uniforme reglamentario completo y en buen estado</span>
+                  <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+                </div>
+                <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
-              <div class="sup-item" data-key="identificacion" data-peso="0.12">
-                <span>🪪 Identificación institucional visible</span>
-                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              <div class="sup-item" data-key="identificacion" data-peso="0.12" style="flex-direction:column;align-items:stretch;gap:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+                  <span style="flex:1">🪪 Identificación institucional visible</span>
+                  <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+                </div>
+                <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
-              <div class="sup-item" data-key="epp" data-peso="0.15">
-                <span>🦺 EPP correcto según área y procedimiento</span>
-                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              <div class="sup-item" data-key="epp" data-peso="0.15" style="flex-direction:column;align-items:stretch;gap:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+                  <span style="flex:1">🦺 EPP correcto según área y procedimiento</span>
+                  <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+                </div>
+                <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
-              <div class="sup-item" data-key="puesto" data-peso="0.10">
-                <span>🧹 Puesto de trabajo ordenado y limpio</span>
-                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              <div class="sup-item" data-key="puesto" data-peso="0.10" style="flex-direction:column;align-items:stretch;gap:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+                  <span style="flex:1">🧹 Puesto de trabajo ordenado y limpio</span>
+                  <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+                </div>
+                <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
-              <div class="sup-item" data-key="accesorios" data-peso="0.13">
-                <span>💍 Sin accesorios durante acciones clínicas (reloj, joyas)</span>
-                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              <div class="sup-item" data-key="accesorios" data-peso="0.13" style="flex-direction:column;align-items:stretch;gap:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+                  <span style="flex:1">💍 Sin accesorios durante acciones clínicas (reloj, joyas)</span>
+                  <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+                </div>
+                <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
-              <div class="sup-item" data-key="cofia" data-peso="0.09">
-                <span>👩‍⚕️ Cofia o gorro utilizado correctamente</span>
-                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              <div class="sup-item" data-key="cofia" data-peso="0.09" style="flex-direction:column;align-items:stretch;gap:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+                  <span style="flex:1">👩‍⚕️ Cofia o gorro utilizado correctamente</span>
+                  <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+                </div>
+                <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
-              <div class="sup-item" data-key="alimentos" data-peso="0.03">
-                <span>🚫 Sin alimentos ni bebidas en el área de trabajo</span>
-                <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+              <div class="sup-item" data-key="alimentos" data-peso="0.03" style="flex-direction:column;align-items:stretch;gap:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+                  <span style="flex:1">🚫 Sin alimentos ni bebidas en el área de trabajo</span>
+                  <div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>
+                </div>
+                <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
+
             </div>
             <div id="supPuntaje" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:right"></div>
             <button class="btn-add" id="guardarSupBtn" style="margin-top:8px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">💾 Guardar ronda de supervisión</button>
@@ -1855,12 +1880,24 @@ function renderKPIDashboard(nombre){
         var pct=itemCounts[k]?Math.round(itemTotals[k]/itemCounts[k]*100):null;
         var barColor=pct===null?'rgba(255,255,255,.15)':pct>=80?'#6ee7b7':pct>=50?'#fcd34d':'#fca5a5';
         var barW=pct!==null?pct:0;
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
-          '<span style="font-size:12px;color:rgba(255,255,255,.7);flex:1">'+label+'</span>'+
+        // Detect conduct pattern
+        var patron='';
+        if(itemCounts[k]>=3){
+          if(pct===100)patron='<span style="font-size:9px;color:#6ee7b7;margin-left:4px">✓ constante</span>';
+          else if(pct===0)patron='<span style="font-size:9px;color:#fca5a5;margin-left:4px">⚠ patrón negativo</span>';
+          else if(pct<50)patron='<span style="font-size:9px;color:#fca5a5;margin-left:4px">↓ incumplimiento frecuente</span>';
+        }
+        // Retroalimentacion for low items
+        var retro=pct!==null&&pct<70&&SUP_RETROALIMENTACION[k]?
+          '<div style="font-size:10px;color:rgba(255,165,0,.7);padding:4px 0 2px;line-height:1.4">💡 '+SUP_RETROALIMENTACION[k]+'</div>':'';
+        return '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between">'+
+          '<span style="font-size:12px;color:rgba(255,255,255,.7);flex:1">'+label+patron+'</span>'+
           '<div style="display:flex;align-items:center;gap:8px">'+
           '<div style="width:80px;background:rgba(255,255,255,.08);border-radius:4px;height:6px;overflow:hidden"><div style="width:'+barW+'%;height:6px;border-radius:4px;background:'+barColor+'"></div></div>'+
           '<span style="font-size:11px;color:rgba(255,255,255,.4);min-width:28px;text-align:right">'+(pct!==null?pct+'%':'—')+'</span>'+
-          '</div></div>';
+          '</div></div>'+retro+
+          '</div>';
       }).join('');
     }
   }
@@ -3374,6 +3411,16 @@ window.cerrarGanador=function(){
 // ── SUPERVISIÓN ──
 var SUP_PESOS={puntualidad:0.20,uniforme:0.18,identificacion:0.12,epp:0.15,puesto:0.10,accesorios:0.13,cofia:0.09,alimentos:0.03};
 var SUP_LABELS={puntualidad:'⏰ Puntualidad',uniforme:'👔 Uniforme reglamentario',identificacion:'🪪 Identificación visible',epp:'🦺 EPP correcto según área',puesto:'🧹 Puesto ordenado y limpio',accesorios:'💍 Sin accesorios en acciones clínicas',cofia:'👩‍⚕️ Cofia o gorro correcto',alimentos:'🚫 Sin alimentos en el área'};
+var SUP_RETROALIMENTACION={
+  puntualidad:'La puntualidad garantiza la continuidad del turno y la seguridad del paciente. El equipo que recibe el turno depende de tu presencia a la hora exacta.',
+  uniforme:'El uniforme reglamentario reduce el riesgo de transmisión de microorganismos y refuerza la imagen institucional ante pacientes y familias.',
+  identificacion:'La identificación visible genera confianza en el paciente, permite verificar roles y es un requisito de los estándares de acreditación USS.',
+  epp:'El uso correcto de EPP es la barrera principal de protección ante exposición a fluidos, aerosoles y material contaminado. Es obligatorio según protocolo IAAS.',
+  puesto:'Un puesto ordenado y limpio reduce el riesgo de errores clínicos, infecciones cruzadas y accidentes laborales durante la atención.',
+  accesorios:'Los accesorios (reloj, joyas) acumulan microorganismos difíciles de eliminar con la higiene de manos y representan un riesgo de IAAS en procedimientos clínicos.',
+  cofia:'La cofia evita la contaminación del campo clínico con cabello o microorganismos del cuero cabelludo, especialmente en procedimientos de esterilización y pabellón.',
+  alimentos:'Los alimentos en el área de trabajo representan un riesgo de contaminación cruzada, favorecen plagas y están prohibidos por normativa de control de infecciones.'
+};
 
 function calcPuntajeSupDia(nombre,fecha){
   var key=nombre.replace(/\s/g,'_');
@@ -4246,8 +4293,21 @@ function initSupervisionAdmin(){
     btn.addEventListener('click',function(){
       var toggle=this.closest('.sup-toggle');
       toggle.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no');});
-      if(this.classList.contains('sup-yes'))this.classList.add('active-yes');
+      var esNo=this.classList.contains('sup-no');
+      if(!esNo)this.classList.add('active-yes');
       else this.classList.add('active-no');
+      // Show/hide retroalimentacion
+      var item=this.closest('.sup-item');
+      var retro=item?item.querySelector('.sup-retro'):null;
+      if(retro){
+        var key=item.dataset.key;
+        if(esNo&&SUP_RETROALIMENTACION[key]){
+          retro.textContent='💡 '+SUP_RETROALIMENTACION[key];
+          retro.style.display='block';
+        } else {
+          retro.style.display='none';
+        }
+      }
       calcPreviewPuntaje();
     });
   });
