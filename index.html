@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>TurnosCSU — USS Red de Salud</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -315,7 +316,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="tab active" onclick="goTab('panorama')">Panorama</button>
             <button class="tab" onclick="goTab('mis-turnos')">Mis turnos</button>
             <button class="tab" onclick="goTab('asistencia')">Asistencia</button>
-            <button class="tab" onclick="goTab('estado')">Estado</button>
+            <button class="tab" onclick="goTab('estado')">📊 KPIs</button>
           </div>
           <div class="tabs" style="margin-top:4px">
             <button class="tab" onclick="goTab('cambios')">Cambios</button>
@@ -354,7 +355,22 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
         <div class="tc" id="tc-estado">
           <div class="sel-wrap"><select id="estadoSelect" style="background:rgba(255,255,255,.08);color:#fff"><option value="">— Selecciona tu nombre —</option></select></div>
-          <div id="estadoView"></div>
+          <div id="kpiView">
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px" id="kpiCards"></div>
+            <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 8px">Evaluaciones diarias</p>
+            <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+              <div style="display:grid;grid-template-columns:1fr 40px 44px 52px;gap:4px;font-size:10px;color:rgba(255,255,255,.3);padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:4px">
+                <span>Día</span><span style="text-align:center">Pts</span><span style="text-align:center">Fallos</span><span style="text-align:right">Hora</span>
+              </div>
+              <div id="kpiDiasTabla"></div>
+            </div>
+            <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 8px">Supervisión — ítems de la semana</p>
+            <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:12px" id="kpiSupItems"></div>
+            <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 8px">Tendencia semanal</p>
+            <div style="position:relative;height:140px;margin-bottom:12px">
+              <canvas id="kpiTrendChart" role="img" aria-label="Tendencia del puntaje diario de la semana">Tendencia de puntaje diario.</canvas>
+            </div>
+          </div>
         </div>
 
         <div class="tc" id="tc-cambios">
@@ -1165,7 +1181,7 @@ function attach(){
   on('equipoClave',function(v){equipoClave=v||{};renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();});
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
-  on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);});
+  on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
 
@@ -1521,7 +1537,7 @@ window.goTab=function(tab){
   document.querySelectorAll('.tab').forEach(function(t){var m=t.getAttribute('onclick').match(/goTab\('([^']+)'\)/);if(m)t.classList.toggle('active',m[1]===tab);});
   TABS.forEach(function(id){var el=document.getElementById('tc-'+id);if(el)el.classList.toggle('active',id===tab);});
   if(tab==='resumen')renderResumen();
-  if(tab==='estado')renderEstado();
+  if(tab==='estado'){var sel=document.getElementById('estadoSelect');if(sel&&!sel.value&&curNombre){sel.value=curNombre;}renderEstado();}
   if(tab==='cambios')renderCambios();
   if(tab==='ausencias')renderAusencias();
   if(tab==='biblioteca')renderBiblioteca();
@@ -1705,23 +1721,165 @@ function renderAsist(){
   html+='</div></div>';d.innerHTML=html;
 }
 
-// ── ESTADO ──
+// ── KPI DASHBOARD ──
 document.getElementById('estadoSelect').addEventListener('change',function(){renderEstado();});
+
 function renderEstado(){
-  var d=document.getElementById('estadoView');if(!d)return;
   var n=document.getElementById('estadoSelect').value;
-  if(!n){d.innerHTML='<p style="text-align:center;color:rgba(255,255,255,.3);padding:2rem">Selecciona tu nombre.</p>';return;}
-  var ml=Object.values(llamados).filter(function(l){return l.nombre===n;});
-  var enc=Object.values(encargados).filter(function(e){return e.nombre===n;});
-  var cob=Object.values(coberturas).filter(function(c){return c.persona===n;});
-  var clave=getClaveParaDia(dia).find(function(e){return e&&e.n===n;});
-  if(!ml.length&&!enc.length&&!cob.length&&!clave){d.innerHTML='<div style="text-align:center;padding:2.5rem"><p style="font-size:36px;margin-bottom:8px">✅</p><p style="font-size:14px;color:rgba(255,255,255,.4)">Sin estado especial esta semana.</p></div>';return;}
-  var html='';
-  if(clave)html+='<div class="estado-card"><p style="font-size:13px;font-weight:700;color:#fcd34d">🔑 Equipo clave azul'+(clave.r?' · '+clave.r:'')+'</p></div>';
-  enc.forEach(function(e){html+='<div class="estado-card"><p style="font-size:13px;font-weight:700;color:#fcd34d">⭐ Enfermero/a a cargo · '+e.dia+'</p></div>';});
-  ml.forEach(function(l){html+='<div class="estado-card"><p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px">📞 De llamado</p><p style="font-size:12px;color:rgba(255,255,255,.5)">'+l.dia+' · '+l.area+' · '+l.horario+'</p></div>';});
-  cob.forEach(function(c){html+='<div class="estado-card"><p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px">↔ Cobertura cruzada</p><p style="font-size:12px;color:rgba(255,255,255,.5)">'+c.dia+' · <span style="color:#fca5a5">'+c.origen+'</span> → <span style="color:#7ec8f7">'+c.destino+'</span>'+(c.horario?' · '+c.horario:'')+'</p></div>';});
-  d.innerHTML=html;
+  if(!n){
+    document.getElementById('kpiView').innerHTML='<p style="text-align:center;color:rgba(255,255,255,.3);padding:2rem">Selecciona tu nombre.</p>';
+    return;
+  }
+  renderKPIDashboard(n);
+}
+
+function renderKPIDashboard(nombre){
+  var key=nombre.replace(/\s/g,'_');
+  var hoyObj=new Date();hoyObj.setHours(0,0,0,0);
+  var inicioHoy=hoyObj.getTime();
+  var semActual=semanas[W]||{};
+  var semIni=semActual.ini||'';
+  var semFin=semActual.fin||'';
+
+  // Collect weekly ranking entries for this person
+  var misEntradas=[];
+  if(ranking&&ranking[key]){
+    Object.values(ranking[key]).forEach(function(e){
+      if(!e||!e.fecha)return;
+      var fecha=e.fechaStr||'';
+      if(!fecha&&e.fecha){var d=new Date(e.fecha);fecha=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+      if(semIni&&fecha<semIni)return;
+      if(semFin&&fecha>semFin)return;
+      misEntradas.push(e);
+    });
+  }
+  // Group by day
+  var porDia={};
+  misEntradas.forEach(function(e){
+    var fecha=e.fechaStr||'';
+    if(!fecha&&e.fecha){var d=new Date(e.fecha);fecha=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+    if(!porDia[fecha])porDia[fecha]=[];
+    porDia[fecha].push(e);
+  });
+  var diasResp=Object.keys(porDia).length;
+  var totalPts=0,totalFallosW=0,diasSinFallos=0;
+  Object.values(porDia).forEach(function(arr){
+    arr.sort(function(a,b){return (b.fecha||0)-(a.fecha||0);});
+    var ultima=arr[0];
+    totalPts+=(ultima.puntos||0);
+    totalFallosW+=(ultima.intentos||0);
+    if(ultima.sinFallos)diasSinFallos++;
+  });
+  // Ranking position
+  var ordenado=ordenarRanking(esInterno(nombre));
+  var posicion=ordenado.findIndex(function(r){return r.nombre===nombre;})+1;
+
+  // Supervision weekly avg
+  var misRondasSemana=Object.values(supervisionData||{}).filter(function(r){
+    return r&&r.nombre===nombre&&r.fecha>=semIni&&r.fecha<=semFin;
+  });
+  var supProm=misRondasSemana.length?Math.round(misRondasSemana.reduce(function(a,r){return a+(r.puntaje||0);},0)/misRondasSemana.length):null;
+
+  // 1. KPI Cards
+  var cards=document.getElementById('kpiCards');
+  if(cards)cards.innerHTML=
+    kpiCard('Puntaje total',totalPts+' pts','acumulados en la semana')+
+    kpiCard('Días respondidos',diasResp+'/5',diasSinFallos+' días sin fallos')+
+    (supProm!==null?kpiCard('Supervisión promedio',supProm+'%',misRondasSemana.length+' rondas registradas'):kpiCard('Supervisión','—','Sin rondas aún'))+
+    kpiCard('Posición ranking',posicion?'#'+posicion:'—','de '+ordenado.length+' participantes');
+
+  // 2. Tabla días
+  var tabla=document.getElementById('kpiDiasTabla');
+  if(tabla){
+    var diasSemana=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+    var fechasPorDia={};
+    if(semIni){
+      var base=new Date(semIni+'T12:00:00');
+      for(var i=0;i<5;i++){
+        var d2=new Date(base);d2.setDate(base.getDate()+i);
+        var f=d2.getFullYear()+'-'+pad(d2.getMonth()+1)+'-'+pad(d2.getDate());
+        fechasPorDia[diasSemana[i]]=f;
+      }
+    }
+    tabla.innerHTML=diasSemana.map(function(dia){
+      var fecha=fechasPorDia[dia]||'';
+      var entradasDia=fecha&&porDia[fecha]?porDia[fecha]:[];
+      entradasDia.sort(function(a,b){return (b.fecha||0)-(a.fecha||0);});
+      var ultima=entradasDia[0];
+      if(!ultima)return '<div style="display:grid;grid-template-columns:1fr 40px 44px 52px;gap:4px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;opacity:.35"><span>'+dia+'</span><span style="text-align:center">—</span><span style="text-align:center">—</span><span style="text-align:right">—</span></div>';
+      var ptColor=ultima.sinFallos?'#6ee7b7':'#fcd34d';
+      var badgeColor=ultima.intentos===0?'rgba(16,185,129,.2)':ultima.intentos<=2?'rgba(245,158,11,.2)':'rgba(239,68,68,.2)';
+      var badgeTxt=ultima.intentos===0?'#6ee7b7':ultima.intentos<=2?'#fcd34d':'#fca5a5';
+      return '<div style="display:grid;grid-template-columns:1fr 40px 44px 52px;gap:4px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;align-items:center">'+
+        '<span style="color:#fff">'+dia+'</span>'+
+        '<span style="text-align:center;color:'+ptColor+';font-weight:700">'+(ultima.puntos||0)+'</span>'+
+        '<span style="text-align:center"><span style="font-size:10px;padding:2px 5px;border-radius:4px;background:'+badgeColor+';color:'+badgeTxt+'">'+(ultima.intentos||0)+'</span></span>'+
+        '<span style="text-align:right;color:rgba(255,255,255,.4);font-size:11px">'+(ultima.horaStr||'—')+'</span>'+
+        '</div>';
+    }).join('');
+  }
+
+  // 3. Supervision items
+  var supItems=document.getElementById('kpiSupItems');
+  if(supItems){
+    if(!misRondasSemana.length){supItems.innerHTML='<p style="font-size:12px;color:rgba(255,255,255,.3);text-align:center;padding:8px">Sin rondas de supervisión registradas aún.</p>';}
+    else{
+      var itemTotals={};
+      var itemCounts={};
+      misRondasSemana.forEach(function(r){
+        Object.entries(SUP_PESOS).forEach(function(e){
+          var k=e[0];
+          if(!itemTotals[k])itemTotals[k]=0;
+          if(!itemCounts[k])itemCounts[k]=0;
+          if(r.items&&r.items[k]!==undefined){itemTotals[k]+=(r.items[k]||0);itemCounts[k]++;}
+        });
+      });
+      supItems.innerHTML=Object.entries(SUP_LABELS).map(function(e){
+        var k=e[0],label=e[1];
+        var pct=itemCounts[k]?Math.round(itemTotals[k]/itemCounts[k]*100):null;
+        var barColor=pct===null?'rgba(255,255,255,.15)':pct>=80?'#6ee7b7':pct>=50?'#fcd34d':'#fca5a5';
+        var barW=pct!==null?pct:0;
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
+          '<span style="font-size:12px;color:rgba(255,255,255,.7);flex:1">'+label+'</span>'+
+          '<div style="display:flex;align-items:center;gap:8px">'+
+          '<div style="width:80px;background:rgba(255,255,255,.08);border-radius:4px;height:6px;overflow:hidden"><div style="width:'+barW+'%;height:6px;border-radius:4px;background:'+barColor+'"></div></div>'+
+          '<span style="font-size:11px;color:rgba(255,255,255,.4);min-width:28px;text-align:right">'+(pct!==null?pct+'%':'—')+'</span>'+
+          '</div></div>';
+      }).join('');
+    }
+  }
+
+  // 4. Trend chart
+  var canvas=document.getElementById('kpiTrendChart');
+  if(canvas){
+    if(window._kpiChart)window._kpiChart.destroy();
+    var diasSem2=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+    var base2=semIni?new Date(semIni+'T12:00:00'):null;
+    var dataLine=diasSem2.map(function(dia,i){
+      if(!base2)return null;
+      var d3=new Date(base2);d3.setDate(base2.getDate()+i);
+      var f=d3.getFullYear()+'-'+pad(d3.getMonth()+1)+'-'+pad(d3.getDate());
+      if(!porDia[f])return null;
+      var arr2=porDia[f];arr2.sort(function(a,b){return (b.fecha||0)-(a.fecha||0);});
+      return arr2[0]?arr2[0].puntos:null;
+    });
+    window._kpiChart=new Chart(canvas,{
+      type:'line',
+      data:{
+        labels:['Lun','Mar','Mié','Jue','Vie'],
+        datasets:[{label:'Puntaje',data:dataLine,borderColor:'#2a78d6',backgroundColor:'rgba(42,120,214,.1)',borderWidth:2,pointBackgroundColor:'#2a78d6',pointRadius:5,fill:true,tension:.3,spanGaps:false}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'rgba(255,255,255,.3)',font:{size:11}},grid:{color:'rgba(255,255,255,.06)'},border:{display:false}},y:{min:0,max:12,ticks:{color:'rgba(255,255,255,.3)',font:{size:11},stepSize:5},grid:{color:'rgba(255,255,255,.06)'},border:{display:false}}}}
+    });
+  }
+}
+
+function kpiCard(title,val,sub){
+  return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px">'+
+    '<p style="font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">'+title+'</p>'+
+    '<p style="font-size:22px;font-weight:700;color:#fff;line-height:1;margin-bottom:2px">'+val+'</p>'+
+    '<p style="font-size:11px;color:rgba(255,255,255,.4)">'+sub+'</p>'+
+    '</div>';
 }
 
 // ── CAMBIOS ──
