@@ -2183,9 +2183,54 @@ document.getElementById('bibCatSel').addEventListener('change',function(){
 document.getElementById('bibObligatoria').addEventListener('change',function(){
   document.getElementById('bibObligWrap').style.display=this.checked?'block':'none';
   if(this.checked&&!document.getElementById('bibPreguntasBuilder').children.length){
-    addPreguntaRow();addPreguntaRow();addPreguntaRow();addPreguntaRow();addPreguntaRow();
+    cargarBorradorPreguntas();
+    if(!document.getElementById('bibPreguntasBuilder').children.length){
+      addPreguntaRow();addPreguntaRow();addPreguntaRow();addPreguntaRow();addPreguntaRow();
+    }
   }
 });
+
+function saveBorradorPreguntas(){
+  var wrap=document.getElementById('bibPreguntasBuilder');
+  if(!wrap)return;
+  var titulo=document.getElementById('bibTitulo')?document.getElementById('bibTitulo').value:'';
+  var pregs=Array.from(wrap.querySelectorAll('div')).map(function(div){
+    var txt=div.querySelector('.pregTxt')?div.querySelector('.pregTxt').value:'';
+    var ops=Array.from(div.querySelectorAll('.pregOp')).map(function(o){return o.value;});
+    var corr=div.querySelector('.pregCorrecta:checked');
+    return {pregunta:txt,opciones:ops,correcta:corr?parseInt(corr.value):null};
+  }).filter(function(p){return p.pregunta;});
+  var contenido=document.getElementById('bibContenido')?document.getElementById('bibContenido').value:'';
+  if(pregs.length||contenido)localStorage.setItem('tcsu_borrador_bib_'+S,JSON.stringify({titulo:titulo,pregs:pregs,contenido:contenido,ts:Date.now()}));
+}
+
+function cargarBorradorPreguntas(){
+  var data=localStorage.getItem('tcsu_borrador_bib_'+S);
+  if(!data)return;
+  try{
+    var b=JSON.parse(data);
+    if(!b.pregs||!b.pregs.length)return;
+    var ahora=Date.now();
+    if(ahora-b.ts>24*60*60*1000)return; // borrador expira en 24h
+    var wrap=document.getElementById('bibPreguntasBuilder');
+    if(!wrap||wrap.children.length)return; // no sobreescribir si ya hay preguntas
+    if(b.titulo&&document.getElementById('bibTitulo'))document.getElementById('bibTitulo').value=b.titulo;
+    if(b.contenido&&document.getElementById('bibContenido'))document.getElementById('bibContenido').value=b.contenido;
+    wrap.innerHTML='';
+    b.pregs.forEach(function(p,idx){
+      addPreguntaRow();
+      var div=wrap.children[wrap.children.length-1];
+      if(div.querySelector('.pregTxt'))div.querySelector('.pregTxt').value=p.pregunta||'';
+      var ops=div.querySelectorAll('.pregOp');
+      (p.opciones||[]).forEach(function(op,i){if(ops[i])ops[i].value=op;});
+      if(p.correcta!==null){var r=div.querySelectorAll('.pregCorrecta')[p.correcta];if(r)r.checked=true;}
+    });
+    var aviso=document.createElement('div');
+    aviso.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#fcd34d;display:flex;justify-content:space-between;align-items:center';
+    aviso.innerHTML='<span>📝 Borrador recuperado ('+b.pregs.length+' preguntas)</span><button onclick="localStorage.removeItem(\'tcsu_borrador_bib_'+S+'\');this.closest(\'div\').remove()" style="font-size:10px;background:none;border:none;color:#fcd34d;cursor:pointer;font-family:inherit">✕ Limpiar</button>';
+    wrap.parentNode.insertBefore(aviso,wrap);
+  }catch(e){}
+}
 
 function addPreguntaRow(){
   var wrap=document.getElementById('bibPreguntasBuilder');
@@ -2194,8 +2239,13 @@ function addPreguntaRow(){
   div.style.cssText='background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:8px';
   div.innerHTML='<input type="text" class="pregTxt" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">'+
     [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="correcta'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--green);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
-    '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
+    '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove();saveBorradorPreguntas()">✕ Quitar pregunta</button>';
   wrap.appendChild(div);
+  // Auto-save on input
+  div.querySelectorAll('input').forEach(function(inp){
+    inp.addEventListener('input',saveBorradorPreguntas);
+    inp.addEventListener('change',saveBorradorPreguntas);
+  });
 }
 document.getElementById('addPreguntaBtn').addEventListener('click',addPreguntaRow);
 
@@ -2243,6 +2293,7 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
     document.getElementById('bibObligWrap').style.display='none';
     document.getElementById('bibContenido').value='';
     document.getElementById('bibPreguntasBuilder').innerHTML='';
+    localStorage.removeItem('tcsu_borrador_bib_'+S);
     showSaved('bibSaved');
   });
 });
