@@ -408,6 +408,17 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="saved" id="avisoSaved">✓ Publicado</div>
           </div>
 
+          <div class="asec" style="border-color:rgba(251,191,36,.3)">
+            <p class="asec-title" style="color:#fcd34d">📣 Anuncio de capacitación al equipo</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Genera un anuncio cuando un colaborador deba capacitar al equipo por haber necesitado apoyo en una evaluación.</p>
+            <select id="capColaborador" style="margin-bottom:6px"><option value="">Selecciona colaborador que capacitará</option></select>
+            <input type="text" id="capTema" placeholder="Tema a capacitar (ej: Clave Azul)" style="margin-bottom:6px">
+            <input type="date" id="capFecha" style="margin-bottom:6px">
+            <input type="time" id="capHora" placeholder="Hora" style="margin-bottom:6px">
+            <button class="btn-add" id="saveCapBtn" style="background:linear-gradient(135deg,#d97706,#fcd34d);color:#1a1a1a">📣 Publicar anuncio de capacitación</button>
+            <div class="saved" id="capSaved">✓ Anuncio publicado</div>
+          </div>
+
           <div class="asec">
             <p class="asec-title">📅 Gestión de semanas</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Crea las semanas que necesites con anticipación. Puedes cargar un mes completo de una vez.</p>
@@ -1363,11 +1374,23 @@ window.forzarActualizar=function(){
 
 function showApp(){
   document.getElementById('emailView').style.display='none';
-  // Registrar acceso
+  // Registrar acceso - solo lunes a viernes, primera vez del día
   if(curNombre&&curNombre.trim().toLowerCase()!=='patricio baeza'){
-    var ahora=new Date();
-    var horaStr=pad(ahora.getHours())+':'+pad(ahora.getMinutes());
-    sedeRef('accesos').push({nombre:curNombre,fecha:hoyStr(),hora:horaStr,ts:Date.now()});
+    var ahoraReg=new Date();
+    var diaSemanaReg=ahoraReg.getDay(); // 0=Dom,6=Sáb
+    if(diaSemanaReg>=1&&diaSemanaReg<=5){ // Solo Lun-Vie
+      var horaStrReg=pad(ahoraReg.getHours())+':'+pad(ahoraReg.getMinutes());
+      var hoyReg=hoyStr();
+      var keyReg=curNombre.replace(/\s/g,'_');
+      // Verificar si ya registró hoy en asistencia
+      sRef('asistencia/'+keyReg).once('value',function(s){
+        if(!s.val()){ // Solo si no hay registro de hoy
+          sRef('asistencia/'+keyReg).set(horaStrReg);
+        }
+      });
+      // Registrar en log de accesos (siempre, para historial)
+      sedeRef('accesos').push({nombre:curNombre,fecha:hoyReg,hora:horaStrReg,ts:Date.now()});
+    }
   }
   // 1. Bienvenida de semana nueva (solo una vez por semana por persona)
   if(verificarBienvenidaSemana())return;
@@ -1506,7 +1529,21 @@ window.goTab=function(tab){
 };
 
 // ── AVISO ──
-function renderAviso(txt){var d=document.getElementById('avisoBanner');if(!txt||typeof txt!=='string'){d.innerHTML='';return;}d.innerHTML='<div class="aviso"><div><div class="aviso-tit">Aviso de la semana</div><p>'+txt+'</p></div></div>';}
+function renderAviso(txt){
+  var d=document.getElementById('avisoBanner');
+  if(!txt||typeof txt!=='string'){d.innerHTML='';return;}
+  var esCap=txt.startsWith('📣 CAPACITACIÓN AL EQUIPO');
+  if(esCap){
+    var lineas=txt.split('\n');
+    var html='<div class="aviso" style="background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.3)">';
+    html+='<div><div class="aviso-tit" style="color:#fcd34d">'+lineas[0]+'</div>';
+    lineas.slice(1).forEach(function(l){if(l)html+='<p style="font-size:13px;line-height:1.6">'+l+'</p>';});
+    html+='</div></div>';
+    d.innerHTML=html;
+  } else {
+    d.innerHTML='<div class="aviso"><div><div class="aviso-tit">Aviso de la semana</div><p>'+txt+'</p></div></div>';
+  }
+}
 
 // ── NOMBRES ──
 function renderNombresList(){var d=document.getElementById('nombresList');if(!d)return;if(!nombres.length){d.innerHTML='<p class="empty">Sin personal.</p>';return;}d.innerHTML=nombres.map(function(n,i){return '<div class="iitem"><div class="iitem-info">'+n+'</div><button class="del-btn" onclick="delNombre('+i+')">🗑</button></div>';}).join('');}
@@ -1605,7 +1642,7 @@ function renderMisTurnos(nombre){
   cobP.forEach(function(cv){html+='<div style="background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.2);border-radius:10px;padding:10px 14px;margin-bottom:8px"><p style="font-size:13px;font-weight:700;color:#7ec8f7;margin-bottom:4px">↔ Cobertura cruzada</p><p style="font-size:12px;color:rgba(255,255,255,.5)">'+cv.dia+' · Deja <span style="color:#fca5a5">'+cv.origen+'</span> → cubre <span style="color:#7ec8f7">'+cv.destino+'</span>'+(cv.horario?' · '+cv.horario:'')+'</p></div>';});
 
   var reg=asistencia[nombre.replace(/\s/g,'_')];
-  var btnLl=reg?'<button class="btn-ll ok" disabled>✓ Llegué a las '+reg+'</button>':'<button class="btn-ll" onclick="marcarLl(\''+nombre+'\')">📍 Marcar llegada</button>';
+  var btnLl=reg?'<div class="btn-ll ok" style="cursor:default">✓ Acceso registrado a las '+reg+'</div>':'';
 
   DIAS.forEach(function(dia){
     // Clave azul badge per day
@@ -3651,6 +3688,9 @@ document.getElementById('adminBtn').addEventListener('click',function(){
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
+      // Populate capacitacion selector
+      var capSel=document.getElementById('capColaborador');
+      if(capSel){capSel.innerHTML='<option value="">Selecciona colaborador que capacitará</option>'+nombres.map(function(n){return '<option>'+n+'</option>';}).join('');}
       sedeRef('bancoActivo').once('value',function(s){renderBancoSelector(s.val()||{});});
       renderBancoSel();
       // Update week indicator
@@ -3665,6 +3705,23 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   row.appendChild(ok);box.appendChild(pinIn);box.appendChild(err);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
   setTimeout(function(){pinIn.focus();},100);
   pinIn.addEventListener('keydown',function(e){if(e.key==='Enter')ok.click();});
+});
+
+document.getElementById('saveCapBtn').addEventListener('click',function(){
+  var col=document.getElementById('capColaborador').value;
+  var tema=document.getElementById('capTema').value.trim();
+  var fecha=document.getElementById('capFecha').value;
+  var hora=document.getElementById('capHora').value;
+  if(!col||!tema||!fecha){alert('Completa colaborador, tema y fecha.');return;}
+  var horaStr=hora?(' a las '+hora):'';
+  var msg='📣 CAPACITACIÓN AL EQUIPO\n'+col+' nos capacitará sobre:\n"'+tema+'"\nFecha: '+fecha+horaStr+'\n\nEsta capacitación es parte del proceso de mejora continua de nuestro equipo. ¡Los esperamos a todos!';
+  sRef('aviso').set(msg).then(function(){
+    showSaved('capSaved');
+    document.getElementById('capColaborador').value='';
+    document.getElementById('capTema').value='';
+    document.getElementById('capFecha').value='';
+    document.getElementById('capHora').value='';
+  });
 });
 
 document.getElementById('saveAvisoBtn').addEventListener('click',function(){var v=document.getElementById('avisoTxt').value.trim();if(!v)return;sRef('aviso').set(v).then(function(){showSaved('avisoSaved');});});
