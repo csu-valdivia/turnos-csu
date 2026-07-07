@@ -2517,13 +2517,13 @@ function fichasObligatoriasPendientes(nombre){
     var prog=fichaProgreso[docId]&&fichaProgreso[docId][key];
     // Bloqueado hoy
     if(prog&&prog.bloqueadoFecha===hoyStr2)return true;
-    // Ya respondió correctamente hoy (por fecha string)
-    if(prog&&prog.ultimaAprobacion===hoyStr2)return false;
-    // También verificar por timestamp en ranking (más confiable)
+    // Verificar por timestamp en ranking PRIMERO (más confiable — no depende de sync de fichaProgreso)
     var yaEnRanking=ranking[key]&&Object.values(ranking[key]).some(function(e2){
       return e2&&e2.fecha&&e2.fecha>=inicioHoy;
     });
     if(yaEnRanking)return false;
+    // También verificar por fecha en fichaProgreso
+    if(prog&&prog.ultimaAprobacion===hoyStr2)return false;
     // Tiene preguntas configuradas
     var preguntas=Object.values(doc.preguntas||{});
     if(preguntas.length<2)return false;
