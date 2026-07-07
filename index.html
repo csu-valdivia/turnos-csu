@@ -1233,7 +1233,15 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
-  sedeRef('internos').on('value',function(s){internos=s.val()||{};updateSelects();renderInternosList();updateQkSelects();setTimeout(function(){renderRanking();},200);});
+  // Load internos FIRST with once() to ensure it's available for ranking
+  sedeRef('internos').once('value',function(s){
+    internos=s.val()||{};
+    // Then set up the live listener
+    sedeRef('internos').on('value',function(s2){
+      internos=s2.val()||{};
+      updateSelects();renderInternosList();updateQkSelects();renderRanking();
+    });
+  });
   sedeRef('accesos').on('value',function(s){renderAccesos(s.val()||{});});
   sedeRef('bancoActivo').on('value',function(s){
     var banco=s.val()||{};
