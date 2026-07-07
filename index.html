@@ -3187,9 +3187,12 @@ function _nombresConTurnoSemana_unused(){
 
 function ordenarRanking(soloInternos){
   return agregarRankingPorPersona(soloInternos).sort(function(a,b){
-    // 1° Puntos totales acumulados
-    if(a.puntos!==b.puntos)return b.puntos-a.puntos;
-    // 2° Desempate: menos fallos acumulados
+    // 1° Puntaje final combinado (preguntas 50% + supervisión 50%)
+    // Si hay supervisión, usar puntajeFinal; si no, usar puntos como proxy
+    var pA=a.puntajeFinal||a.puntos;
+    var pB=b.puntajeFinal||b.puntos;
+    if(pA!==pB)return pB-pA;
+    // 2° Desempate: menos fallos
     if(a.totalFallos!==b.totalFallos)return a.totalFallos-b.totalFallos;
     // 3° Desempate: tiempo promedio más rápido
     return a.promedioDuracionMs-b.promedioDuracionMs;
@@ -3250,8 +3253,12 @@ function quienFaltaHoy(){
 }
 
 function renderRanking(){
-  var ordenado=ordenarRanking(false); // equipo
-  var ordenadoInternos=ordenarRanking(true); // internos
+  // Build internos name set for reliable separation
+  var internosSet={};
+  Object.values(internos).forEach(function(i){if(i.nombre)internosSet[i.nombre.trim().toLowerCase()]=true;});
+  var hayInternos=Object.keys(internosSet).length>0;
+  var ordenado=ordenarRanking(false); // equipo (excluye internos)
+  var ordenadoInternos=hayInternos?ordenarRanking(true):[]; // internos solo si hay
   var temporizador=fmtTemporizador();
   var falta=quienFaltaHoy();
   var semanaCerrada=temporizador==='🏁 Semana cerrada';
@@ -3348,8 +3355,7 @@ function renderRanking(){
     miniHtml+='</div>';
 
     // Ranking de internos (solo si hay internos registrados Y tienen datos)
-    var internosRegistrados=Object.values(internos).length>0;
-    if(internosRegistrados&&ordenadoInternos.length){
+    if(hayInternos&&ordenadoInternos.length){
       miniHtml+='<div class="card" style="margin-bottom:10px;padding:12px 14px;border-color:rgba(16,185,129,.2)">';
       miniHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-size:10px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.7px">🎓 Ranking Internos</p>'+(temporizador?'<span style="font-size:10px;color:#6ee7b7">'+temporizador+'</span>':'')+'</div>';
       var medallaI=['🥇','🥈','🥉'];
