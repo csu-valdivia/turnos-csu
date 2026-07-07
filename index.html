@@ -1233,7 +1233,7 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
-  sedeRef('internos').on('value',function(s){internos=s.val()||{};updateSelects();renderInternosList();renderRanking();});
+  sedeRef('internos').on('value',function(s){internos=s.val()||{};updateSelects();renderInternosList();updateQkSelects();setTimeout(function(){renderRanking();},200);});
   sedeRef('accesos').on('value',function(s){renderAccesos(s.val()||{});});
   sedeRef('bancoActivo').on('value',function(s){
     var banco=s.val()||{};
@@ -3084,7 +3084,10 @@ function registrarFallo(docId,doc){
 }
 
 function esInterno(nombre){
-  return Object.values(internos).some(function(i){return i.nombre===nombre;});
+  if(!nombre||!internos||!Object.keys(internos).length)return false;
+  return Object.values(internos).some(function(i){
+    return i.nombre&&i.nombre.trim().toLowerCase()===nombre.trim().toLowerCase();
+  });
 }
 
 function nombresConTurnoSemanaFiltrado(soloInternos){
@@ -3098,12 +3101,16 @@ function nombresConTurnoSemanaFiltrado(soloInternos){
 
 function agregarRankingPorPersona(soloInternos){
   var porPersona={};
+  // Get internos names list for reliable comparison
+  var internosNombres=Object.values(internos).map(function(i){return i.nombre;});
+  var hayInternos=internosNombres.length>0;
   var conTurno=Object.values(bloques)
     .map(function(b){return b.nombre;})
     .filter(function(n){
       if(!n||n==='__sa__'||n.trim().toLowerCase()==='patricio baeza')return false;
-      if(soloInternos)return esInterno(n);
-      return !esInterno(n);
+      var esInt=hayInternos&&internosNombres.indexOf(n)!==-1;
+      if(soloInternos)return esInt;
+      return !esInt;
     });
   var unicos=[...new Set(conTurno)];
 
@@ -3340,8 +3347,9 @@ function renderRanking(){
     }
     miniHtml+='</div>';
 
-    // Ranking de internos (si hay)
-    if(ordenadoInternos.length){
+    // Ranking de internos (solo si hay internos registrados Y tienen datos)
+    var internosRegistrados=Object.values(internos).length>0;
+    if(internosRegistrados&&ordenadoInternos.length){
       miniHtml+='<div class="card" style="margin-bottom:10px;padding:12px 14px;border-color:rgba(16,185,129,.2)">';
       miniHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-size:10px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.7px">🎓 Ranking Internos</p>'+(temporizador?'<span style="font-size:10px;color:#6ee7b7">'+temporizador+'</span>':'')+'</div>';
       var medallaI=['🥇','🥈','🥉'];
