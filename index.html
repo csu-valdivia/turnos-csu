@@ -3172,13 +3172,16 @@ function agregarRankingPorPersona(soloInternos){
       if(r&&r.nombre===p.nombre&&r.fecha&&diasUnicos.indexOf(r.fecha)===-1)diasUnicos.push(r.fecha);
     });
     var totalFinal=0;var diasConDatos=0;
+    var sumSup=0;var diasConSup=0;
     diasUnicos.forEach(function(fecha){
       var res=calcPuntajeFinalDia(p.nombre,fecha);
       if(res&&res.total!==null){totalFinal+=res.total;diasConDatos++;}
       else if(res&&res.preguntas>0){totalFinal+=res.preguntas*0.5;diasConDatos++;} // solo preguntas ese día
+      if(res&&res.supervision!==null&&res.supervision!==undefined){sumSup+=res.supervision;diasConSup++;}
     });
     p.puntajeFinal=diasConDatos?Math.round(totalFinal/diasConDatos*100):0;
     p.diasEvaluados=diasConDatos;
+    p.supervisionProm=diasConSup?Math.round(sumSup/diasConSup*100):null;
     return p;
   });
 }
@@ -3291,7 +3294,8 @@ function renderRanking(){
         var promStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
         var fallosStr2=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor2=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
-        var sub=r.veces+' día'+(r.veces!==1?'s':'')+' · <span style="color:'+fallosColor2+'">'+fallosStr2+'</span> '+liderTag;
+        var supStr2=(r.supervisionProm!==null&&r.supervisionProm!==undefined)?' · <span style="color:#a78bfa">👁 '+r.supervisionProm+'%</span>':' · <span style="color:rgba(255,255,255,.25)">👁 sin supervisión</span>';
+        var sub=r.veces+' día'+(r.veces!==1?'s':'')+' · <span style="color:'+fallosColor2+'">'+fallosStr2+'</span>'+supStr2+' '+liderTag;
         return '<div class="iitem" style="padding:7px 0"><div class="iitem-info" style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.puntos+' pts</span></div>';
       }).join('');
     }
@@ -3345,7 +3349,8 @@ function renderRanking(){
         var scoreColor='#7ec8f7';
         var fallosStr=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
-        var subInfo='<span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span>';
+        var supStrMini=(r.supervisionProm!==null&&r.supervisionProm!==undefined)?' · <span style="color:#a78bfa">👁 '+r.supervisionProm+'%</span>':'';
+        var subInfo='<span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span><span style="font-size:10px">'+supStrMini+'</span>';
         return '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
           +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+etiqueta+infoHoy+'</span>'
