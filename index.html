@@ -3107,6 +3107,63 @@ function nombresConTurnoSemanaFiltrado(soloInternos){
   return unicos.filter(function(n){return !esInterno(n);});
 }
 
+// ── TABLA DE PONDERACIONES DEL RANKING ──
+// Suma = 1.00. Si un componente no tiene datos (ej. sin supervisión),
+// los pesos restantes se renormalizan para que sigan sumando 1.00.
+var RANK_PESOS={constancia:0.20,conocimiento:0.40,supervision:0.30,precision:0.10};
+var RANK_LABELS={constancia:'Constancia',conocimiento:'Conocimiento',supervision:'Supervisión',precision:'Precisión'};
+
+// Días hábiles (Lun-Vie, sin feriados) transcurridos de la semana activa hasta hoy
+function diasHabilesSemana(){
+  var sem=semanas[W]||{};
+  if(!sem.ini||!sem.fin)return 0;
+  var hoy=hoyStr();
+  var tope=hoy<sem.fin?hoy:sem.fin;
+  if(tope<sem.ini)return 0;
+  return fechasRango(sem.ini,tope).filter(function(f){
+    var dow=new Date(f+'T12:00:00').getDay();
+    if(dow===0||dow===6)return false;      // sin fin de semana
+    if(esFeriado(diaDeDate(f)))return false; // sin feriados
+    return true;
+  }).length;
+}
+
+// Aplica RANK_PESOS a los componentes de una persona → score 0-100 + desglose
+// promSupEquipo: promedio de supervisión del grupo (0-1) usado para imputar a quien no fue supervisado.
+// Si nadie del grupo tiene supervisión (promSupEquipo===null), se renormalizan los pesos restantes.
+function calcScorePonderado(p,diasHabiles,promSupEquipo){
+  var comp={};
+  comp.constancia=diasHabiles>0?Math.min(p.veces/diasHabiles,1):0;
+  comp.conocimiento=p.veces>0?Math.min(p.puntos/(p.veces*10),1):0;
+  var intentosTot=p.veces+p.totalFallos;
+  comp.precision=intentosTot>0?1-(p.totalFallos/intentosTot):0;
+
+  var tieneSup=(p.supervisionProm!==null&&p.supervisionProm!==undefined);
+  p.supImputada=false;
+  if(tieneSup){
+    comp.supervision=p.supervisionProm/100;
+  } else if(promSupEquipo!==null&&promSupEquipo!==undefined){
+    comp.supervision=promSupEquipo; // imputación neutral: promedio del equipo
+    p.supImputada=true;
+  } else {
+    comp.supervision=null; // nadie tiene supervisión → renormalizar
+  }
+
+  // Renormalizar pesos sobre los componentes con datos
+  var pesoDisp=0;
+  Object.keys(RANK_PESOS).forEach(function(k){if(comp[k]!==null)pesoDisp+=RANK_PESOS[k];});
+  var score=0;
+  if(pesoDisp>0){
+    Object.keys(RANK_PESOS).forEach(function(k){
+      if(comp[k]!==null)score+=comp[k]*(RANK_PESOS[k]/pesoDisp);
+    });
+  }
+  p.comp=comp;
+  p.pesoDisponible=pesoDisp;
+  p.scoreFinal=Math.round(score*100);
+  return p;
+}
+
 function agregarRankingPorPersona(soloInternos){
   var porPersona={};
   // Get internos names list for reliable comparison
@@ -3159,7 +3216,7 @@ function agregarRankingPorPersona(soloInternos){
       p.totalFallos+=(ultima.intentos||0);
     });
   });
-  return Object.values(porPersona).map(function(p){
+  var lista=Object.values(porPersona).map(function(p){
     p.promedioDuracionMs=p.veces?Math.round(p.totalDuracionMs/p.veces):0;
     // Calcular puntaje combinado semanal (50% preguntas + 50% supervisión)
     var diasUnicos=[];
@@ -3184,6 +3241,11 @@ function agregarRankingPorPersona(soloInternos){
     p.supervisionProm=diasConSup?Math.round(sumSup/diasConSup*100):null;
     return p;
   });
+  var diasHab=diasHabilesSemana();
+  // Promedio de supervisión del grupo (solo con quienes SÍ tienen dato) → base de imputación
+  var conSup=lista.filter(function(p){return p.supervisionProm!==null&&p.supervisionProm!==undefined;});
+  var promSupEquipo=conSup.length?(conSup.reduce(function(a,p){return a+p.supervisionProm;},0)/conSup.length)/100:null;
+  return lista.map(function(p){return calcScorePonderado(p,diasHab,promSupEquipo);});
 }
 
 function nombresConTurnoSemana(){
@@ -3198,11 +3260,8 @@ function _nombresConTurnoSemana_unused(){
 
 function ordenarRanking(soloInternos){
   return agregarRankingPorPersona(soloInternos).sort(function(a,b){
-    // 1° Puntaje final combinado (preguntas 50% + supervisión 50%)
-    // Si hay supervisión, usar puntajeFinal; si no, usar puntos como proxy
-    var pA=a.puntajeFinal||a.puntos;
-    var pB=b.puntajeFinal||b.puntos;
-    if(pA!==pB)return pB-pA;
+    // 1° Score ponderado según RANK_PESOS (escala única 0-100)
+    if(a.scoreFinal!==b.scoreFinal)return b.scoreFinal-a.scoreFinal;
     // 2° Desempate: menos fallos
     if(a.totalFallos!==b.totalFallos)return a.totalFallos-b.totalFallos;
     // 3° Desempate: tiempo promedio más rápido
@@ -3213,9 +3272,9 @@ function ordenarRanking(soloInternos){
 function hayEmpateGanador(ordenado){
   if(ordenado.length<2)return false;
   var primero=ordenado[0],segundo=ordenado[1];
-  return primero.puntos===segundo.puntos&&
+  return primero.scoreFinal===segundo.scoreFinal&&
          primero.totalFallos===segundo.totalFallos&&
-         Math.abs(primero.promedioDuracionMs-segundo.promedioDuracionMs)<1000; // menos de 1 seg de diferencia = empate
+         Math.abs(primero.promedioDuracionMs-segundo.promedioDuracionMs)<1000; // menos de 1 seg = empate
 }
 
 function fmtDuracion(ms){
@@ -3294,9 +3353,19 @@ function renderRanking(){
         var promStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
         var fallosStr2=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor2=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
-        var supStr2=(r.supervisionProm!==null&&r.supervisionProm!==undefined)?' · <span style="color:#a78bfa">👁 '+r.supervisionProm+'%</span>':' · <span style="color:rgba(255,255,255,.25)">👁 sin supervisión</span>';
-        var sub=r.veces+' día'+(r.veces!==1?'s':'')+' · <span style="color:'+fallosColor2+'">'+fallosStr2+'</span>'+supStr2+' '+liderTag;
-        return '<div class="iitem" style="padding:7px 0"><div class="iitem-info" style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.puntos+' pts</span></div>';
+        var sub=r.veces+' día'+(r.veces!==1?'s':'')+' · <span style="color:'+fallosColor2+'">'+fallosStr2+'</span> '+liderTag;
+        var desglose='';
+        if(adminUnlocked){
+          var supTxt=r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%';
+          desglose='<div style="margin-left:32px;margin-top:3px;font-size:10px;color:rgba(255,255,255,.4);display:flex;flex-wrap:wrap;gap:8px">'
+            +'<span>📅 Const '+Math.round(r.comp.constancia*100)+'%</span>'
+            +'<span>🧠 Conoc '+Math.round(r.comp.conocimiento*100)+'%</span>'
+            +'<span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁 Superv '+supTxt+(r.supImputada?' (imputado)':'')+'</span>'
+            +'<span>🎯 Prec '+Math.round(r.comp.precision*100)+'%</span>'
+            +(r.comp.supervision===null?'<span style="color:#fcd34d">⚖ pesos renormalizados</span>':'')
+            +'</div>';
+        }
+        return '<div class="iitem" style="padding:7px 0;display:block"><div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.scoreFinal+' pts</span></div>'+desglose+'</div>';
       }).join('');
     }
     if(falta.length&&!semanaCerrada){
@@ -3344,13 +3413,14 @@ function renderRanking(){
           i===0&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🏆 Ganador</span>':
           esEmpate?'<span style="color:#fcd34d;font-size:10px"> · Empate</span>':
           i===0?'<span style="color:#fcd34d;font-size:10px"> · Líder</span>':'';
-        var scoreStr=r.puntos+' pts';
-        var promedioStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
+        var scoreStr=r.scoreFinal+' pts';
         var scoreColor='#7ec8f7';
         var fallosStr=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
-        var supStrMini=(r.supervisionProm!==null&&r.supervisionProm!==undefined)?' · <span style="color:#a78bfa">👁 '+r.supervisionProm+'%</span>':'';
-        var subInfo='<span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span><span style="font-size:10px">'+supStrMini+'</span>';
+        var subInfo='<span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span>';
+        if(adminUnlocked){
+          subInfo+='<div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:1px">📅'+Math.round(r.comp.constancia*100)+'% · 🧠'+Math.round(r.comp.conocimiento*100)+'% · <span style="color:#a78bfa">👁'+(r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%')+'</span> · 🎯'+Math.round(r.comp.precision*100)+'%</div>';
+        }
         return '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
           +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+etiqueta+infoHoy+'</span>'
@@ -3380,7 +3450,7 @@ function renderRanking(){
         return '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
           +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+(esGanadorI?' <span style="color:#6ee7b7;font-size:10px">· Ganador</span>':'')+'</span>'
-          +'<span style="color:#6ee7b7;font-weight:700;flex-shrink:0;margin-left:8px">'+r.puntos+' pts</span>'
+          +'<span style="color:#6ee7b7;font-weight:700;flex-shrink:0;margin-left:8px">'+r.scoreFinal+' pts</span>'
           +'</div>'
           +'<div style="margin-left:24px;margin-top:1px"><span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span></div>'
           +'</div>';
@@ -3478,6 +3548,7 @@ function calcPuntajeFinalDia(nombre,fecha){
       return e&&e.fecha&&e.fecha>=hoyObj.getTime()&&e.fecha<finDia;
     });
     if(entradasDia.length){
+      entradasDia.sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}); // asegurar orden cronológico
       var pts=entradasDia[entradasDia.length-1].puntos||0;
       puntPreg=pts/10; // normalizar a 0-1
     }
