@@ -3107,11 +3107,13 @@ function nombresConTurnoSemanaFiltrado(soloInternos){
   return unicos.filter(function(n){return !esInterno(n);});
 }
 
-// ── TABLA DE PONDERACIONES DEL RANKING ──
-// Suma = 1.00. Si un componente no tiene datos (ej. sin supervisión),
-// los pesos restantes se renormalizan para que sigan sumando 1.00.
-var RANK_PESOS={constancia:0.20,conocimiento:0.40,supervision:0.30,precision:0.10};
-var RANK_LABELS={constancia:'Constancia',conocimiento:'Conocimiento',supervision:'Supervisión',precision:'Precisión'};
+// ── CRITERIOS DE ORDEN DEL RANKING ──
+// 1° Días respondidos (barrera dura: más días SIEMPRE va primero)
+// 2° Puntaje de desempeño = 50% evaluación + 50% supervisión (solo desempata entre iguales días)
+// 3° Menos fallos  ·  4° Menor tiempo promedio
+// No se usa "Precisión" como componente: es redundante con Evaluación (los puntos ya castigan el fallo).
+var RANK_PESOS={conocimiento:0.50,supervision:0.50};
+var RANK_LABELS={conocimiento:'Evaluación',supervision:'Supervisión'};
 
 // Días hábiles (Lun-Vie, sin feriados) transcurridos de la semana activa hasta hoy
 function diasHabilesSemana(){
@@ -3128,28 +3130,23 @@ function diasHabilesSemana(){
   }).length;
 }
 
-// Aplica RANK_PESOS a los componentes de una persona → score 0-100 + desglose
-// promSupEquipo: promedio de supervisión del grupo (0-1) usado para imputar a quien no fue supervisado.
-// Si nadie del grupo tiene supervisión (promSupEquipo===null), se renormalizan los pesos restantes.
+// Calcula el puntaje de desempeño (0-100) que actúa como SEGUNDO criterio de orden.
+// promSupEquipo: promedio de supervisión del grupo (0-1), imputado a quien no fue supervisado.
 function calcScorePonderado(p,diasHabiles,promSupEquipo){
   var comp={};
-  comp.constancia=diasHabiles>0?Math.min(p.veces/diasHabiles,1):0;
   comp.conocimiento=p.veces>0?Math.min(p.puntos/(p.veces*10),1):0;
-  var intentosTot=p.veces+p.totalFallos;
-  comp.precision=intentosTot>0?1-(p.totalFallos/intentosTot):0;
 
   var tieneSup=(p.supervisionProm!==null&&p.supervisionProm!==undefined);
   p.supImputada=false;
   if(tieneSup){
     comp.supervision=p.supervisionProm/100;
   } else if(promSupEquipo!==null&&promSupEquipo!==undefined){
-    comp.supervision=promSupEquipo; // imputación neutral: promedio del equipo
+    comp.supervision=promSupEquipo; // imputación neutral: promedio del grupo
     p.supImputada=true;
   } else {
-    comp.supervision=null; // nadie tiene supervisión → renormalizar
+    comp.supervision=null; // nadie del grupo tiene supervisión → solo evaluación
   }
 
-  // Renormalizar pesos sobre los componentes con datos
   var pesoDisp=0;
   Object.keys(RANK_PESOS).forEach(function(k){if(comp[k]!==null)pesoDisp+=RANK_PESOS[k];});
   var score=0;
@@ -3158,8 +3155,10 @@ function calcScorePonderado(p,diasHabiles,promSupEquipo){
       if(comp[k]!==null)score+=comp[k]*(RANK_PESOS[k]/pesoDisp);
     });
   }
+  // Constancia se guarda solo como dato informativo — NO entra en el score.
+  comp.constancia=diasHabiles>0?Math.min(p.veces/diasHabiles,1):0;
   p.comp=comp;
-  p.pesoDisponible=pesoDisp;
+  p.diasHabiles=diasHabiles;
   p.scoreFinal=Math.round(score*100);
   return p;
 }
@@ -3178,6 +3177,8 @@ function agregarRankingPorPersona(soloInternos){
       return !esInt;
     });
   var unicos=[...new Set(conTurno)];
+  var permitidos={};
+  unicos.forEach(function(n){permitidos[n.trim().toLowerCase()]=true;});
 
   Object.values(ranking).forEach(function(entradasPersona){
     if(!entradasPersona||typeof entradasPersona!=='object')return;
@@ -3189,6 +3190,8 @@ function agregarRankingPorPersona(soloInternos){
     Object.values(entradasPersona).forEach(function(e){
       if(!e||!e.nombre)return;
       if(e.nombre.trim().toLowerCase()==='patricio baeza')return;
+      // Solo personas del grupo solicitado (colaboradores o internos, nunca mezclados)
+      if(!permitidos[e.nombre.trim().toLowerCase()])return;
       // Usar fechaStr si existe, si no calcular desde timestamp
       var fecha=e.fechaStr||'';
       if(!fecha&&e.fecha){
@@ -3260,11 +3263,13 @@ function _nombresConTurnoSemana_unused(){
 
 function ordenarRanking(soloInternos){
   return agregarRankingPorPersona(soloInternos).sort(function(a,b){
-    // 1° Score ponderado según RANK_PESOS (escala única 0-100)
+    // 1° Días respondidos (criterio dominante — más días siempre va primero)
+    if(a.veces!==b.veces)return b.veces-a.veces;
+    // 2° Puntaje de desempeño (50% evaluación + 50% supervisión)
     if(a.scoreFinal!==b.scoreFinal)return b.scoreFinal-a.scoreFinal;
-    // 2° Desempate: menos fallos
+    // 3° Desempate: menos fallos
     if(a.totalFallos!==b.totalFallos)return a.totalFallos-b.totalFallos;
-    // 3° Desempate: tiempo promedio más rápido
+    // 4° Desempate: tiempo promedio más rápido
     return a.promedioDuracionMs-b.promedioDuracionMs;
   });
 }
@@ -3272,7 +3277,8 @@ function ordenarRanking(soloInternos){
 function hayEmpateGanador(ordenado){
   if(ordenado.length<2)return false;
   var primero=ordenado[0],segundo=ordenado[1];
-  return primero.scoreFinal===segundo.scoreFinal&&
+  return primero.veces===segundo.veces&&
+         primero.scoreFinal===segundo.scoreFinal&&
          primero.totalFallos===segundo.totalFallos&&
          Math.abs(primero.promedioDuracionMs-segundo.promedioDuracionMs)<1000; // menos de 1 seg = empate
 }
@@ -3346,26 +3352,30 @@ function renderRanking(){
     if(!ordenado.length){
       html+='<p class="empty">Aún nadie ha completado una evaluación esta semana.</p>';
     } else {
+      var grupoPrev=null;
       html+=ordenado.map(function(r,i){
         var medalla=medallas[i]||('#'+(i+1));
         var esLider=i===0;
         var liderTag=esLider&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':esLider?'<span style="color:#fcd34d;font-size:10px">● Lider</span>':'';
-        var promStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
+        // Separador de grupo: los días son el 1er criterio de orden
+        var sep='';
+        if(r.veces!==grupoPrev){
+          grupoPrev=r.veces;
+          sep='<div style="display:flex;align-items:center;gap:8px;margin:'+(i===0?'2px':'10px')+' 0 4px"><div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div><span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.32);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap">Respondieron '+r.veces+' de '+r.diasHabiles+' días</span><div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div></div>';
+        }
         var fallosStr2=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor2=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
-        var sub=r.veces+' día'+(r.veces!==1?'s':'')+' · <span style="color:'+fallosColor2+'">'+fallosStr2+'</span> '+liderTag;
+        var sub='<span style="color:'+fallosColor2+'">'+fallosStr2+'</span> '+liderTag;
         var desglose='';
         if(adminUnlocked){
           var supTxt=r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%';
           desglose='<div style="margin-left:32px;margin-top:3px;font-size:10px;color:rgba(255,255,255,.4);display:flex;flex-wrap:wrap;gap:8px">'
-            +'<span>📅 Const '+Math.round(r.comp.constancia*100)+'%</span>'
-            +'<span>🧠 Conoc '+Math.round(r.comp.conocimiento*100)+'%</span>'
+            +'<span style="color:#7ec8f7">1° '+r.veces+'/'+r.diasHabiles+' días</span>'
+            +'<span>2° 🧠 Eval '+Math.round(r.comp.conocimiento*100)+'%</span>'
             +'<span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁 Superv '+supTxt+(r.supImputada?' (imputado)':'')+'</span>'
-            +'<span>🎯 Prec '+Math.round(r.comp.precision*100)+'%</span>'
-            +(r.comp.supervision===null?'<span style="color:#fcd34d">⚖ pesos renormalizados</span>':'')
             +'</div>';
         }
-        return '<div class="iitem" style="padding:7px 0;display:block"><div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.scoreFinal+' pts</span></div>'+desglose+'</div>';
+        return sep+'<div class="iitem" style="padding:7px 0;display:block"><div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.scoreFinal+' pts</span></div>'+desglose+'</div>';
       }).join('');
     }
     if(falta.length&&!semanaCerrada){
@@ -3386,8 +3396,14 @@ function renderRanking(){
       miniHtml+='<p style="font-size:12px;color:rgba(255,255,255,.3)">Aún sin participantes esta semana.</p>';
     } else {
       var hoyObj2=new Date();hoyObj2.setHours(0,0,0,0);var inicioHoy2=hoyObj2.getTime();
+      var grupoPrevMini=null;
       miniHtml+=ordenado.map(function(r,i){
         var medal=medallas[i]||(i+1)+'°';
+        var sepMini='';
+        if(r.veces!==grupoPrevMini){
+          grupoPrevMini=r.veces;
+          sepMini='<div style="font-size:9px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.5px;padding:'+(i===0?'0':'6px')+' 0 3px;font-weight:700">'+r.veces+' de '+r.diasHabiles+' días</div>';
+        }
         var key=r.nombre.replace(/\s/g,'_');
         var horaHoy='',durHoy='';
         if(ranking[key]){
@@ -3408,7 +3424,7 @@ function renderRanking(){
           if(durHoy)infoHoy+='⏱'+durHoy;
           infoHoy+='</span>';
         }
-        var esEmpate=hayEmpate&&(i===0||i===1)&&ordenado[0].puntos===r.puntos;
+        var esEmpate=hayEmpate&&(i===0||i===1)&&ordenado[0].veces===r.veces&&ordenado[0].scoreFinal===r.scoreFinal;
         var etiqueta=esEmpate&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🤝 Co-ganador</span>':
           i===0&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🏆 Ganador</span>':
           esEmpate?'<span style="color:#fcd34d;font-size:10px"> · Empate</span>':
@@ -3417,11 +3433,11 @@ function renderRanking(){
         var scoreColor='#7ec8f7';
         var fallosStr=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
-        var subInfo='<span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span>';
+        var subInfo='<span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span>';
         if(adminUnlocked){
-          subInfo+='<div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:1px">📅'+Math.round(r.comp.constancia*100)+'% · 🧠'+Math.round(r.comp.conocimiento*100)+'% · <span style="color:#a78bfa">👁'+(r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%')+'</span> · 🎯'+Math.round(r.comp.precision*100)+'%</div>';
+          subInfo+='<div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:1px">1°'+r.veces+'/'+r.diasHabiles+'d · 🧠'+Math.round(r.comp.conocimiento*100)+'% · <span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁'+(r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%')+'</span></div>';
         }
-        return '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+        return sepMini+'<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
           +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+etiqueta+infoHoy+'</span>'
           +'<span style="color:'+scoreColor+';font-weight:700;flex-shrink:0;margin-left:8px">'+scoreStr+'</span>'
@@ -3442,17 +3458,23 @@ function renderRanking(){
       miniHtml+='<div class="card" style="margin-bottom:10px;padding:12px 14px;border-color:rgba(16,185,129,.2)">';
       miniHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-size:10px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.7px">🎓 Ranking Internos</p>'+(temporizador?'<span style="font-size:10px;color:#6ee7b7">'+temporizador+'</span>':'')+'</div>';
       var medallaI=['🥇','🥈','🥉'];
+      var grupoPrevInt=null;
       miniHtml+=ordenadoInternos.map(function(r,i){
         var medal=medallaI[i]||(i+1)+'°';
+        var sepInt='';
+        if(r.veces!==grupoPrevInt){
+          grupoPrevInt=r.veces;
+          sepInt='<div style="font-size:9px;color:rgba(110,231,183,.35);text-transform:uppercase;letter-spacing:.5px;padding:'+(i===0?'0':'6px')+' 0 3px;font-weight:700">'+r.veces+' de '+r.diasHabiles+' días</div>';
+        }
         var fallosStr=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
         var esGanadorI=i===0&&semanaCerrada;
-        return '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+        return sepInt+'<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
           +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+(esGanadorI?' <span style="color:#6ee7b7;font-size:10px">· Ganador</span>':'')+'</span>'
           +'<span style="color:#6ee7b7;font-weight:700;flex-shrink:0;margin-left:8px">'+r.scoreFinal+' pts</span>'
           +'</div>'
-          +'<div style="margin-left:24px;margin-top:1px"><span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span></div>'
+          +'<div style="margin-left:24px;margin-top:1px"><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span></div>'
           +'</div>';
       }).join('');
       miniHtml+='</div>';
