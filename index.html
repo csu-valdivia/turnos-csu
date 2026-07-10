@@ -1295,7 +1295,15 @@ window.setSede=function(sede){
   });
   var primerCargaBib=true,ultimoBibCount=0;
   sedeRef('biblioteca').on('value',function(s){
+    // Recordar qué paneles de temas estaban abiertos antes de repintar
+    var abiertos=Array.from(document.querySelectorAll('[id^="temas-"]'))
+      .filter(function(el){return el.style.display!=='none';})
+      .map(function(el){return el.id.slice(6);});
     biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();
+    abiertos.forEach(function(docId){
+      var el=document.getElementById('temas-'+docId);
+      if(el){el.style.display='block';renderTemasPanel(docId);}
+    });
     if(curNombre&&W&&document.getElementById('appView').style.display!=='none')verificarFichasPendientes();
     var totalAhora=Object.keys(biblioteca).length;
     if(!primerCargaBib&&totalAhora>ultimoBibCount)reproducirAlerta();
@@ -2423,12 +2431,26 @@ function renderBibAdminList(){
     var visible=doc.visible!==false; // default visible
     var toggleColor=visible?'rgba(16,185,129,.2)':'rgba(255,255,255,.06)';
     var toggleTxt=visible?'<span style="color:#6ee7b7;font-size:10px">👁 Visible</span>':'<span style="color:rgba(255,255,255,.3);font-size:10px">🔒 Oculto</span>';
+    var vis=doc.visibilidad||'todos';
+    var visMeta={todos:{t:'👥 Todos',c:'#93c5fd',bg:'rgba(74,144,217,.15)'},
+                 colaboradores:{t:'🩺 Colaboradores',c:'#fcd34d',bg:'rgba(251,191,36,.15)'},
+                 internos:{t:'🎓 Internos',c:'#6ee7b7',bg:'rgba(16,185,129,.15)'}}[vis];
+    var visBadge='<span style="font-size:9px;font-weight:700;color:'+visMeta.c+';background:'+visMeta.bg+';padding:2px 7px;border-radius:20px;margin-left:6px;white-space:nowrap">'+visMeta.t+'</span>';
     return '<div class="iitem" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;align-items:center;justify-content:space-between">'+
-      '<div class="iitem-info">'+bibIcono(doc.categoria)+' <strong>'+doc.titulo+'</strong>'+pregLabel+'<div class="iitem-sub">'+doc.categoria+' · '+numLecturas+' lectura'+(numLecturas!==1?'s':'')+'</div></div>'+
+      '<div class="iitem-info">'+bibIcono(doc.categoria)+' <strong>'+doc.titulo+'</strong>'+pregLabel+visBadge+'<div class="iitem-sub">'+doc.categoria+' · '+numLecturas+' lectura'+(numLecturas!==1?'s':'')+'</div></div>'+
       '<div style="display:flex;gap:4px;flex-shrink:0">'+
       '<button class="del-btn" style="color:#7ec8f7;font-size:12px" onclick="editarBancoPreguntas(\''+k+'\')" title="Editar preguntas">✏️</button>'+
       '<button class="del-btn" onclick="if(confirm(\'¿Eliminar este documento?\'))sedeRef(\'biblioteca/'+k+'\').remove()">🗑</button>'+
       '</div></div>'+
+      '<div style="display:flex;gap:6px;align-items:center">'+
+      '<label style="font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0">Material visible para:</label>'+
+      '<select onchange="cambiarVisibilidadDoc(\''+k+'\',this.value)" style="flex:1;font-size:11px;padding:4px 6px;height:auto">'+
+        '<option value="todos"'+(vis==='todos'?' selected':'')+'>👥 Todos</option>'+
+        '<option value="colaboradores"'+(vis==='colaboradores'?' selected':'')+'>🩺 Solo colaboradores</option>'+
+        '<option value="internos"'+(vis==='internos'?' selected':'')+'>🎓 Solo internos</option>'+
+      '</select>'+
+      '</div>'+
+      (doc.obligatoria&&numPreg>0?'<button onclick="toggleTemasPanel(\''+k+'\')" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(126,200,247,.25);background:rgba(74,144,217,.08);font-family:inherit;font-size:11px;cursor:pointer;color:#7ec8f7;text-align:left">🎯 Asignar temas de preguntas por grupo</button><div id="temas-'+k+'" style="display:none"></div>':'')+
       '<div style="display:flex;gap:6px">'+
       '<button onclick="toggleVisibilidadDoc(\''+k+'\','+(visible?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+toggleColor+';font-family:inherit;font-size:11px;cursor:pointer;text-align:left">'+toggleTxt+'</button>'+
       (doc.obligatoria?'<button onclick="toggleBancoCerrado(\''+k+'\','+(doc.bancoCerrado?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+(doc.bancoCerrado?'rgba(16,185,129,.2)':'rgba(245,158,11,.15)')+';font-family:inherit;font-size:11px;cursor:pointer;text-align:center">'+(doc.bancoCerrado?'<span style="color:#6ee7b7">✅ Banco cerrado</span>':'<span style="color:#fcd34d">⚠ Banco abierto</span>')+'</button>':'')+
@@ -2579,6 +2601,73 @@ window.toggleVisibilidadDoc=function(docId,nuevoEstado){
   sedeRef('biblioteca/'+docId+'/visible').set(nuevoEstado);
 };
 
+// Cambia el grupo al que se dirigen las preguntas de un documento ya creado
+window.cambiarVisibilidadDoc=function(docId,nuevoGrupo){
+  if(['todos','colaboradores','internos'].indexOf(nuevoGrupo)===-1)return;
+  sedeRef('biblioteca/'+docId+'/visibilidad').set(nuevoGrupo);
+};
+
+// Asigna un tema de preguntas a un grupo específico
+window.cambiarVisibilidadTema=function(docId,tema,nuevoGrupo){
+  if(['todos','colaboradores','internos'].indexOf(nuevoGrupo)===-1)return;
+  sedeRef('biblioteca/'+docId+'/temasVis/'+temaKey(tema)).set({tema:tema,grupo:nuevoGrupo});
+};
+
+window.toggleTemasPanel=function(docId){
+  var d=document.getElementById('temas-'+docId);if(!d)return;
+  if(d.style.display!=='none'){d.style.display='none';d.innerHTML='';return;}
+  d.style.display='block';
+  renderTemasPanel(docId);
+};
+
+function renderTemasPanel(docId){
+  var d=document.getElementById('temas-'+docId);if(!d)return;
+  var doc=biblioteca[docId];if(!doc)return;
+  var temas=temasDeDoc(doc);
+  var docVis=doc.visibilidad||'todos';
+  var conteo={};
+  Object.values(doc.preguntas||{}).forEach(function(p){
+    var t=p.tema||'General';conteo[t]=(conteo[t]||0)+1;
+  });
+  // Resumen: cuántas preguntas termina viendo cada grupo
+  var nCol=0,nInt=0;
+  temas.forEach(function(t){
+    var g=temaGrupo(doc,t);
+    if(g==='todos'){nCol+=conteo[t];nInt+=conteo[t];}
+    else if(g==='colaboradores')nCol+=conteo[t];
+    else nInt+=conteo[t];
+  });
+  var alerta='';
+  if(nCol<2||nInt<2){
+    alerta='<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:10px;color:#fca5a5">'
+      +'⚠ Se necesitan mínimo 2 preguntas por grupo para que el documento entre al sorteo.'
+      +(nCol<2?'<br>🩺 Colaboradores: solo '+nCol+'.':'')
+      +(nInt<2?'<br>🎓 Internos: solo '+nInt+'.':'')
+      +'</div>';
+  }
+  d.innerHTML='<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px;margin-top:5px">'
+    +alerta
+    +'<div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.35);margin-bottom:6px">'
+      +'<span>Preguntas que recibe cada grupo:</span>'
+      +'<span><span style="color:#fcd34d">🩺 '+nCol+'</span> · <span style="color:#6ee7b7">🎓 '+nInt+'</span></span>'
+    +'</div>'
+    +temas.map(function(t){
+      var g=temaGrupo(doc,t);
+      var heredado=!temaConfigurado(doc,t);
+      return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0">'
+        +'<span style="flex:1;font-size:11px;color:rgba(255,255,255,.7);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t)
+          +' <span style="color:rgba(255,255,255,.25)">('+conteo[t]+')</span>'
+          +(heredado?' <span style="color:rgba(255,255,255,.2);font-size:9px">heredado</span>':'')+'</span>'
+        +'<select onchange="cambiarVisibilidadTema(\''+docId+'\',this.dataset.tema,this.value)" data-tema="'+esc(t)+'" style="font-size:10px;padding:3px 5px;height:auto;flex-shrink:0">'
+          +'<option value="todos"'+(g==='todos'?' selected':'')+'>👥 Todos</option>'
+          +'<option value="colaboradores"'+(g==='colaboradores'?' selected':'')+'>🩺 Colab.</option>'
+          +'<option value="internos"'+(g==='internos'?' selected':'')+'>🎓 Internos</option>'
+        +'</select></div>';
+    }).join('')
+    +'<p style="font-size:9px;color:rgba(255,255,255,.25);margin-top:5px">Los temas sin asignar heredan la visibilidad del material ('+docVis+').</p>'
+    +'</div>';
+}
+
 window.editarBancoPreguntas=editarBancoPreguntas;
 
 function addPreguntaRow(){
@@ -2682,8 +2771,8 @@ function fichasObligatoriasPendientes(nombre){
     if(yaEnRanking)return false;
     // También verificar por fecha en fichaProgreso
     if(prog&&prog.ultimaAprobacion===hoyStr2)return false;
-    // Tiene preguntas configuradas
-    var preguntas=Object.values(doc.preguntas||{});
+    // Tiene preguntas configuradas PARA ESTA PERSONA (según tema × grupo)
+    var preguntas=preguntasParaPersona(doc,nombre);
     if(preguntas.length<2)return false;
     return true;
   });
@@ -2756,10 +2845,11 @@ function mostrarPasoLecturaCombinado(pend,idx){
 
 function iniciarPreguntasCombinadas(pend){
   // Combinar preguntas de TODOS los documentos pendientes en un solo pool
+  // Solo entran los temas asignados al grupo de la persona (o 'todos')
   var poolPreguntas=[];
   pend.forEach(function(e){
     var docId=e[0],doc=e[1];
-    Object.values(doc.preguntas||{}).forEach(function(p){
+    preguntasParaPersona(doc,curNombre).forEach(function(p){
       poolPreguntas.push(Object.assign({},p,{_docId:docId,_docTitulo:doc.titulo}));
     });
   });
@@ -2844,9 +2934,51 @@ function mostrarPasoLectura(docId,doc,prog){
   });
 }
 
+// ── VISIBILIDAD DE PREGUNTAS POR TEMA ──
+// doc.temasVis = {claveCodificada: {tema:'Nombre', grupo:'todos'|'colaboradores'|'internos'}}
+// Se codifica la clave porque Firebase no admite . # $ / [ ] y los temas son texto libre.
+// Un tema sin configurar hereda la visibilidad del documento.
+function grupoDe(nombre){return esInterno(nombre)?'internos':'colaboradores';}
+
+function temaKey(tema){
+  return btoa(unescape(encodeURIComponent(tema))).replace(/[=+/]/g,'');
+}
+
+// Grupo asignado a un tema (o el heredado del documento)
+function temaGrupo(doc,tema){
+  var tv=doc.temasVis||{};
+  var found=Object.values(tv).find(function(x){return x&&x.tema===tema;});
+  return (found&&found.grupo)||doc.visibilidad||'todos';
+}
+
+function temaConfigurado(doc,tema){
+  var tv=doc.temasVis||{};
+  return Object.values(tv).some(function(x){return x&&x.tema===tema;});
+}
+
+function temaVisibleFor(doc,tema,nombre){
+  var g=temaGrupo(doc,tema);
+  if(g==='todos')return true;
+  return g===grupoDe(nombre);
+}
+
+// Preguntas de un documento que corresponden a la persona indicada
+function preguntasParaPersona(doc,nombre){
+  return Object.values(doc.preguntas||{}).filter(function(p){
+    return temaVisibleFor(doc,p.tema||'General',nombre);
+  });
+}
+
+// Lista de temas únicos presentes en un documento
+function temasDeDoc(doc){
+  var set={};
+  Object.values(doc.preguntas||{}).forEach(function(p){set[p.tema||'General']=true;});
+  return Object.keys(set).sort();
+}
+
 function mostrarPasoPreguntas(docId,doc,prog){
   var v=document.getElementById('fichaObligView');
-  var preguntas=Object.values(doc.preguntas||{});
+  var preguntas=preguntasParaPersona(doc,curNombre);
   if(preguntas.length<2){
     aprobarFicha(docId);
     return;
