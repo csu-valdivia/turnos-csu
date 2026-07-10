@@ -428,7 +428,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </select>
             <textarea class="atxt" id="avisoTxt" placeholder="Aviso para todo el equipo..."></textarea>
             <button class="btn-add" id="saveAvisoBtn">Publicar</button>
-            <button class="btn-dng" id="clearAvisoBtn" style="margin-top:4px">Eliminar aviso</button>
+            <button class="btn-dng" id="clearAvisoBtn" style="margin-top:4px">🗑 Borrar TODOS los avisos</button>
             <div class="saved" id="avisoSaved">✓ Publicado</div>
           </div>
 
@@ -1620,29 +1620,73 @@ function avisoAvatarSvg(tipo){
   html+='</div>';
   return html;
 }
-function renderAviso(v){
-  var d=document.getElementById('avisoBanner');
-  if(!v){d.innerHTML='';return;}
-  var texto,tipo;
-  if(typeof v==='string'){
-    // Compatibilidad con avisos antiguos guardados como texto plano
-    var esCapLegado=v.startsWith('📣 CAPACITACIÓN AL EQUIPO');
-    tipo=esCapLegado?'capacitacion':'normal';
-    texto=esCapLegado?v.replace(/^📣 CAPACITACIÓN AL EQUIPO\n?/,''):v;
-  } else {
-    texto=v.texto||'';
-    tipo=v.tipo||'normal';
-  }
-  if(!texto){d.innerHTML='';return;}
+function avisoCardHtml(key,texto,tipo,fecha){
   var titulos={normal:'Aviso de la semana',capacitacion:'Capacitación al equipo',urgente:'Aviso urgente',celebracion:'Para celebrar'};
   var bordes={normal:'rgba(74,144,217,.3)',capacitacion:'rgba(251,191,36,.3)',urgente:'rgba(239,68,68,.35)',celebracion:'rgba(16,185,129,.3)'};
   var fondos={normal:'rgba(74,144,217,.08)',capacitacion:'rgba(251,191,36,.08)',urgente:'rgba(239,68,68,.08)',celebracion:'rgba(16,185,129,.08)'};
   var titColor={normal:'#7ec8f7',capacitacion:'#fcd34d',urgente:'#fca5a5',celebracion:'#6ee7b7'};
-  d.innerHTML='<div class="aviso" style="background:'+(fondos[tipo]||fondos.normal)+';border-color:'+(bordes[tipo]||bordes.normal)+'">'+
+  var fechaHtml=fecha?'<p style="font-size:10px;color:rgba(255,255,255,.3);margin-top:4px">'+new Date(fecha).toLocaleDateString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</p>':'';
+  return '<div class="aviso" style="background:'+(fondos[tipo]||fondos.normal)+';border-color:'+(bordes[tipo]||bordes.normal)+';margin-bottom:0">'+
     avisoAvatarSvg(tipo)+
-    '<div><div class="aviso-tit" style="color:'+(titColor[tipo]||titColor.normal)+'">'+(titulos[tipo]||titulos.normal)+'</div><p style="color:rgba(255,255,255,.75);white-space:pre-line">'+texto+'</p></div>'+
+    '<div style="flex:1"><div class="aviso-tit" style="color:'+(titColor[tipo]||titColor.normal)+'">'+(titulos[tipo]||titulos.normal)+'</div>'+
+    '<p style="color:rgba(255,255,255,.75);white-space:pre-line">'+texto+'</p>'+fechaHtml+'</div>'+
+    '<button onclick="borrarAviso(\''+key+'\')" title="Eliminar este aviso" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:14px;cursor:pointer;padding:0 0 0 8px;flex-shrink:0">✕</button>'+
     '</div>';
 }
+window.borrarAviso=function(key){
+  if(!confirm('¿Eliminar este aviso? Esta acción no afecta a los demás avisos.'))return;
+  if(key==='__legacy__')sRef('aviso').remove();
+  else sRef('aviso/'+key).remove();
+};
+var avisoItems=[],avisoIdx=0,avisoTimer=null;
+function renderAviso(v){
+  var d=document.getElementById('avisoBanner');
+  if(avisoTimer){clearInterval(avisoTimer);avisoTimer=null;}
+  if(!v||(typeof v==='object'&&!Object.keys(v).length)){d.innerHTML='';avisoItems=[];return;}
+  var items=[];
+  if(typeof v==='string'){
+    // Compatibilidad con el formato antiguo: un solo aviso guardado como texto plano
+    var esCapLegado=v.startsWith('📣 CAPACITACIÓN AL EQUIPO');
+    items.push({key:'__legacy__',texto:esCapLegado?v.replace(/^📣 CAPACITACIÓN AL EQUIPO\n?/,''):v,tipo:esCapLegado?'capacitacion':'normal',fecha:0});
+  } else if(v.texto){
+    // Compatibilidad con el formato intermedio: un solo aviso {texto,tipo} sin lista
+    items.push({key:'__legacy__',texto:v.texto,tipo:v.tipo||'normal',fecha:0});
+  } else {
+    Object.keys(v).forEach(function(k){
+      var e=v[k];
+      if(e&&e.texto)items.push({key:k,texto:e.texto,tipo:e.tipo||'normal',fecha:e.fecha||0});
+    });
+    // Los urgentes siempre primero; dentro de cada grupo, el más reciente primero
+    items.sort(function(a,b){
+      var pa=a.tipo==='urgente'?0:1,pb=b.tipo==='urgente'?0:1;
+      return pa!==pb?pa-pb:b.fecha-a.fecha;
+    });
+  }
+  avisoItems=items;
+  avisoIdx=0;
+  if(!avisoItems.length){d.innerHTML='';return;}
+  pintarAvisoActual();
+  if(avisoItems.length>1){
+    avisoTimer=setInterval(function(){avisoIdx=(avisoIdx+1)%avisoItems.length;pintarAvisoActual();},6000);
+  }
+}
+function pintarAvisoActual(){
+  var d=document.getElementById('avisoBanner');
+  var it=avisoItems[avisoIdx];
+  if(!it){d.innerHTML='';return;}
+  var html=avisoCardHtml(it.key,it.texto,it.tipo,it.fecha);
+  if(avisoItems.length>1){
+    html+='<div style="display:flex;gap:5px;justify-content:center;margin:8px 0 1rem">'+avisoItems.map(function(_,i){
+      return '<span onclick="irAAviso('+i+')" style="width:6px;height:6px;border-radius:50%;cursor:pointer;background:'+(i===avisoIdx?'rgba(255,255,255,.7)':'rgba(255,255,255,.2)')+'"></span>';
+    }).join('')+'</div>';
+  }
+  d.innerHTML=html;
+}
+window.irAAviso=function(i){
+  avisoIdx=i;
+  pintarAvisoActual();
+  if(avisoTimer){clearInterval(avisoTimer);avisoTimer=setInterval(function(){avisoIdx=(avisoIdx+1)%avisoItems.length;pintarAvisoActual();},6000);}
+};
 
 // ── NOMBRES ──
 function renderNombresList(){var d=document.getElementById('nombresList');if(!d)return;if(!nombres.length){d.innerHTML='<p class="empty">Sin personal.</p>';return;}d.innerHTML=nombres.map(function(n,i){return '<div class="iitem"><div class="iitem-info">'+n+'</div><button class="del-btn" onclick="delNombre('+i+')">🗑</button></div>';}).join('');}
@@ -4265,7 +4309,7 @@ document.getElementById('saveCapBtn').addEventListener('click',function(){
   if(!col||!tema||!fecha){alert('Completa colaborador, tema y fecha.');return;}
   var horaStr=hora?(' a las '+hora):'';
   var msg=col+' nos capacitará sobre:\n"'+tema+'"\nFecha: '+fecha+horaStr+'\n\nEsta capacitación es parte del proceso de mejora continua de nuestro equipo. ¡Los esperamos a todos!';
-  sRef('aviso').set({texto:msg,tipo:'capacitacion'}).then(function(){
+  sRef('aviso').push({texto:msg,tipo:'capacitacion',fecha:Date.now()}).then(function(){
     showSaved('capSaved');
     document.getElementById('capColaborador').value='';
     document.getElementById('capTema').value='';
@@ -4274,8 +4318,8 @@ document.getElementById('saveCapBtn').addEventListener('click',function(){
   });
 });
 
-document.getElementById('saveAvisoBtn').addEventListener('click',function(){var v=document.getElementById('avisoTxt').value.trim();if(!v)return;var tp=document.getElementById('avisoTipo').value||'normal';sRef('aviso').set({texto:v,tipo:tp}).then(function(){showSaved('avisoSaved');});});
-document.getElementById('clearAvisoBtn').addEventListener('click',function(){sRef('aviso').remove();document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';});
+document.getElementById('saveAvisoBtn').addEventListener('click',function(){var v=document.getElementById('avisoTxt').value.trim();if(!v)return;var tp=document.getElementById('avisoTipo').value||'normal';sRef('aviso').push({texto:v,tipo:tp,fecha:Date.now()}).then(function(){showSaved('avisoSaved');document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';});});
+document.getElementById('clearAvisoBtn').addEventListener('click',function(){if(!confirm('Esto borra TODOS los avisos activos (no solo el que estás escribiendo). ¿Continuar?'))return;sRef('aviso').remove();document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';});
 document.getElementById('addSemanaBtn').addEventListener('click',function(){
   var ini=document.getElementById('semIniNew').value;
   var fin=document.getElementById('semFinNew').value;
