@@ -4374,6 +4374,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
 });
 
 document.getElementById('saveCapBtn').addEventListener('click',function(){
+  if(!W){alert('⚠ No hay una semana confirmada. Confirma una semana antes de publicar el anuncio.');return;}
   var col=document.getElementById('capColaborador').value;
   var tema=document.getElementById('capTema').value.trim();
   var fecha=document.getElementById('capFecha').value;
@@ -4387,12 +4388,19 @@ document.getElementById('saveCapBtn').addEventListener('click',function(){
     document.getElementById('capTema').value='';
     document.getElementById('capFecha').value='';
     document.getElementById('capHora').value='';
-  });
+  }).catch(function(err){alert('❌ No se pudo publicar el anuncio: '+err.message);console.error('saveCapBtn',err);});
 });
 
-document.getElementById('saveAvisoBtn').addEventListener('click',function(){var v=document.getElementById('avisoTxt').value.trim();if(!v)return;var tp=document.getElementById('avisoTipo').value||'normal';sRef('aviso').push({texto:v,tipo:tp,fecha:Date.now()}).then(function(){showSaved('avisoSaved');document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';});});
-document.getElementById('clearAvisoBtn').addEventListener('click',function(){if(!confirm('Esto borra TODOS los avisos generales activos (no solo el que estás escribiendo). ¿Continuar?'))return;sRef('aviso').remove();document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';});
-document.getElementById('clearCapBtn').addEventListener('click',function(){if(!confirm('Esto borra TODOS los anuncios de capacitación activos. ¿Continuar?'))return;sRef('avisoCap').remove();});
+document.getElementById('saveAvisoBtn').addEventListener('click',function(){
+  if(!W){alert('⚠ No hay una semana confirmada. Confirma una semana antes de publicar el aviso.');return;}
+  var v=document.getElementById('avisoTxt').value.trim();if(!v)return;
+  var tp=document.getElementById('avisoTipo').value||'normal';
+  sRef('aviso').push({texto:v,tipo:tp,fecha:Date.now()}).then(function(){
+    showSaved('avisoSaved');document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';
+  }).catch(function(err){alert('❌ No se pudo publicar el aviso: '+err.message);console.error('saveAvisoBtn',err);});
+});
+document.getElementById('clearAvisoBtn').addEventListener('click',function(){if(!confirm('Esto borra TODOS los avisos generales activos (no solo el que estás escribiendo). ¿Continuar?'))return;sRef('aviso').remove().then(function(){document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';}).catch(function(err){alert('❌ No se pudo borrar: '+err.message);});});
+document.getElementById('clearCapBtn').addEventListener('click',function(){if(!confirm('Esto borra TODOS los anuncios de capacitación activos. ¿Continuar?'))return;sRef('avisoCap').remove().catch(function(err){alert('❌ No se pudo borrar: '+err.message);});});
 document.getElementById('addSemanaBtn').addEventListener('click',function(){
   var ini=document.getElementById('semIniNew').value;
   var fin=document.getElementById('semFinNew').value;
