@@ -637,6 +637,30 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               </div>
             </details>
 
+            <!-- CARGA MASIVA RECESO -->
+            <details style="margin-bottom:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:8px;padding:8px">
+              <summary style="font-size:11px;font-weight:700;color:#6ee7b7;cursor:pointer;list-style:none">🏖 Receso académico — carga masiva para TODOS</summary>
+              <div style="margin-top:10px">
+                <p style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px">Para las semanas de vacaciones de estudiantes (invierno/verano): asigna el mismo horario de entrada y salida a TODOS los colaboradores e internos registrados, sin asignarlos a un área clínica. Se aplica solo a la semana que tengas confirmada ahora — y esa semana deja de contar como "sin cobertura" automáticamente.</p>
+                <div class="frow">
+                  <div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.4)">Entrada</label><input type="time" id="recesoEntrada" value="08:00" style="width:100%"></div>
+                  <div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.4)">Salida</label><input type="time" id="recesoSalida" value="17:00" style="width:100%"></div>
+                </div>
+                <input type="text" id="recesoActividad" placeholder="Actividad de la semana (opcional, ej: Inventario general de insumos)" style="margin-top:8px;width:100%">
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px" id="recesoDias">
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Lunes" checked style="accent-color:var(--green)"> Lun</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Martes" checked style="accent-color:var(--green)"> Mar</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Miércoles" checked style="accent-color:var(--green)"> Mié</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Jueves" checked style="accent-color:var(--green)"> Jue</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Viernes" checked style="accent-color:var(--green)"> Vie</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Sábado" style="accent-color:var(--green)"> Sáb</label>
+                </div>
+                <button class="btn-add" id="recesoGuardar" style="margin-top:8px;background:linear-gradient(135deg,#059669,#10b981)">🏖 Cargar receso académico para TODOS</button>
+                <button class="btn-dng" id="recesoQuitar" style="margin-top:4px">🗑 Quitar carga de receso de esta semana</button>
+                <div class="saved" id="recesoSaved">✓ Cargado</div>
+              </div>
+            </details>
+
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">T=Turno (Esterilización) · 🔑=Equipo clave · S/A=Sin atención · 🏖=Libre</p>
             <table class="bulk-tbl">
               <thead><tr><th>Fecha</th><th>Día</th><th>Personas</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#93c5fd">🔑</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead>
@@ -4002,9 +4026,13 @@ function franjaTieneSinAtencion(dia,area,ini,fin){
 
 function verificar(){
   var def=[];
+  var diasReceso={};
+  Object.values(bloques).forEach(function(b){if(b&&b.receso&&b.dia)diasReceso[b.dia]=true;});
   REGLAS.forEach(function(r){r.dias.forEach(function(dia){
     // Skip feriados
     if(esFeriado(dia))return;
+    // Skip días marcados como receso académico (carga masiva sin área clínica)
+    if(diasReceso[dia])return;
     // Skip if marked as Sin Servicio (Dispensario manual block)
     if(r.opcional&&franjaEsSinServicio(dia,r.area,r.ini,r.fin))return;
 
@@ -4354,6 +4382,45 @@ document.getElementById('qkGuardar').addEventListener('click',function(){
   Promise.all(bloquesSem.map(function(b){return sRef('bloques').push(b);})).then(function(){
     showSaved('qkSaved');
     document.querySelectorAll('#qkDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
+  });
+});
+
+document.getElementById('recesoGuardar').addEventListener('click',function(){
+  if(!W){alert('⚠ Confirma una semana primero antes de cargar el receso.');return;}
+  var entrada=document.getElementById('recesoEntrada').value;
+  var salida=document.getElementById('recesoSalida').value;
+  if(!entrada||!salida){alert('Completa la hora de entrada y salida.');return;}
+  var horario=entrada+'–'+salida;
+  var actividad=document.getElementById('recesoActividad').value.trim();
+  var dias=Array.from(document.querySelectorAll('#recesoDias input:checked')).map(function(cb){return cb.value;});
+  if(!dias.length){alert('Marca al menos un día.');return;}
+  var todosNombres=nombres.slice();
+  Object.values(internos).forEach(function(i){if(i.nombre&&todosNombres.indexOf(i.nombre)===-1)todosNombres.push(i.nombre);});
+  if(!todosNombres.length){alert('No hay colaboradores ni internos registrados en esta sede.');return;}
+  if(!confirm('Esto va a cargar el horario '+horario+' en modo receso académico (sin área clínica) para las '+todosNombres.length+' personas registradas (colaboradores + internos), en '+dias.length+' día'+(dias.length!==1?'s':'')+' de esta semana.'+(actividad?'\n\nActividad: '+actividad:'')+'\n\n¿Continuar?'))return;
+  var nuevos=[];
+  todosNombres.forEach(function(n){
+    dias.forEach(function(dia){
+      nuevos.push(sRef('bloques').push({dia:dia,nombre:n,area:'Receso Académico',horario:horario,receso:true}));
+      if(actividad)nuevos.push(sRef('tareas').push({dia:dia,nombre:n,tipo:'tarea',texto:actividad,receso:true}));
+    });
+  });
+  Promise.all(nuevos).then(function(){
+    showSaved('recesoSaved');
+  });
+});
+
+document.getElementById('recesoQuitar').addEventListener('click',function(){
+  if(!W){alert('⚠ No hay semana confirmada.');return;}
+  var bloquesAEliminar=Object.entries(bloques).filter(function(e){return e[1]&&e[1].receso;});
+  var tareasAEliminar=Object.entries(tareas).filter(function(e){return e[1]&&e[1].receso;});
+  if(!bloquesAEliminar.length&&!tareasAEliminar.length){alert('No hay carga de receso en esta semana.');return;}
+  if(!confirm('¿Eliminar los '+bloquesAEliminar.length+' bloques'+(tareasAEliminar.length?' y '+tareasAEliminar.length+' tareas':'')+' de receso cargados esta semana?'))return;
+  Promise.all(
+    bloquesAEliminar.map(function(e){return sRef('bloques/'+e[0]).remove();})
+    .concat(tareasAEliminar.map(function(e){return sRef('tareas/'+e[0]).remove();}))
+  ).then(function(){
+    showSaved('recesoSaved');
   });
 });
 
