@@ -1144,7 +1144,7 @@ var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var bancoActivo={}; // banco activo por sede (nuevo sistema)
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={};
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},ganadorDeclarado=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
@@ -1216,6 +1216,7 @@ function attach(){
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=v||{};renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();if(document.getElementById('tc-estado')&&document.getElementById('tc-estado').style.display!=='none')renderEstado();});
+  on('ganadorDeclarado',function(v){ganadorDeclarado=(v&&v.nombre)?v:null;renderRanking();});
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
@@ -1415,7 +1416,7 @@ window.cambiarSemana=function(){
   // responder, lo que a veces no ocurría de forma confiable en conexiones débiles).
   bloques={};tareas={};pendientes={};asistencia={};notas={};visto={};cambios={};ausencias={};
   llamados={};encargados={};coberturas={};sinServicios={};equipoClave={};ranking={};
-  bancoConfig={docIds:[],maxPreg:3};supervisionData={};feriados={};
+  bancoConfig={docIds:[],maxPreg:3};supervisionData={};feriados={};ganadorDeclarado=null;
   avisoCarrusel.clear();avisoCapCarrusel.clear();
   document.getElementById('adminPanel').classList.remove('open');
   mostrarConfirmacionSemana();
@@ -2919,6 +2920,9 @@ function aprobarTodosFichaCombinada(pend){
       duracionMs:duracionMs,sinFallos:sinFallos,intentos:fallosHoyMax,
       puntos:sinFallos?10:5,fecha:Date.now(),fechaStr:hoy,horaStr:horaStr
     });
+    // Respaldo: registrar acceso también al responder (no solo al abrir la app),
+    // así no se pierde el registro si la PWA queda abierta varios días sin recargar.
+    if(curNombre&&curNombre.trim().toLowerCase()!=='patricio baeza')sedeRef('accesos').push({nombre:curNombre,fecha:hoy,hora:horaStr,ts:Date.now()});
   }
   fichaInicioMs=0;
 
@@ -3050,6 +3054,9 @@ function aprobarFicha(docId){
       fechaStr:hoy,
       horaStr:horaStr
     });
+    // Respaldo: registrar acceso también al responder (no solo al abrir la app),
+    // así no se pierde el registro si la PWA queda abierta varios días sin recargar.
+    if(curNombre&&curNombre.trim().toLowerCase()!=='patricio baeza')sedeRef('accesos').push({nombre:curNombre,fecha:hoy,hora:horaStr,ts:Date.now()});
   }
   fichaInicioMs=0;
 
@@ -3313,7 +3320,9 @@ function agregarRankingPorPersona(soloInternos){
       p.totalFallos+=(ultima.intentos||0);
     });
   });
-  return Object.values(porPersona).map(function(p){
+  return Object.values(porPersona).filter(function(p){
+    return unicos.indexOf(p.nombre)!==-1;
+  }).map(function(p){
     p.promedioDuracionMs=p.veces?Math.round(p.totalDuracionMs/p.veces):0;
     // Calcular puntaje combinado semanal (50% preguntas + 50% supervisión)
     var diasUnicos=[];
@@ -3349,14 +3358,15 @@ function _nombresConTurnoSemana_unused(){
 
 function ordenarRanking(soloInternos){
   return agregarRankingPorPersona(soloInternos).sort(function(a,b){
-    // 1° Puntaje final combinado (preguntas 50% + supervisión 50%)
-    // Si hay supervisión, usar puntajeFinal; si no, usar puntos como proxy
+    // 1° Cantidad de días que respondió — criterio principal, nadie con menos días puede pasar a alguien con más
+    if(a.veces!==b.veces)return b.veces-a.veces;
+    // 2° Puntaje combinado: puntos por responder + supervisión (criterios ya definidos)
     var pA=a.puntajeFinal||a.puntos;
     var pB=b.puntajeFinal||b.puntos;
     if(pA!==pB)return pB-pA;
-    // 2° Desempate: menos fallos
+    // 3° Desempate: menos fallos
     if(a.totalFallos!==b.totalFallos)return a.totalFallos-b.totalFallos;
-    // 3° Desempate: tiempo promedio más rápido
+    // 4° Desempate: tiempo promedio más rápido
     return a.promedioDuracionMs-b.promedioDuracionMs;
   });
 }
@@ -3375,18 +3385,29 @@ function fmtDuracion(ms){
   return min+':'+(seg<10?'0':'')+seg;
 }
 
+function fechaCierreSemana(wId){
+  var sem=semanas[wId];
+  if(!sem||!sem.ini||!sem.fin)return null;
+  var d=new Date(sem.ini+'T12:00:00');
+  var finD=new Date(sem.fin+'T12:00:00');
+  var guard=0;
+  while(d<=finD&&guard<14){
+    if(d.getDay()===5)return new Date(d.getFullYear(),d.getMonth(),d.getDate(),20,0,0,0); // viernes 20:00
+    d.setDate(d.getDate()+1);guard++;
+  }
+  // Si la semana no incluye un viernes (caso raro), usar el último día a las 23:59:59 como respaldo
+  return new Date(sem.fin+'T23:59:59');
+}
 function fmtTemporizador(){
   if(!W||!semanas[W])return '';
-  var fin=semanas[W].fin;
-  if(!fin)return '';
-  var hoy=hoyStr();
-  if(hoy>fin)return '🏁 Semana cerrada';
-  var msRestantes=new Date(fin+'T23:59:59').getTime()-Date.now();
+  var cierre=fechaCierreSemana(W);
+  if(!cierre)return '';
+  var msRestantes=cierre.getTime()-Date.now();
   if(msRestantes<=0)return '🏁 Semana cerrada';
   var dias=Math.floor(msRestantes/(1000*60*60*24));
   var hrs=Math.floor((msRestantes%(1000*60*60*24))/(1000*60*60));
   if(dias>0)return '⏱ Cierra en '+dias+' día'+(dias!==1?'s':'')+' y '+hrs+'h';
-  return '⏱ Cierra hoy';
+  return '⏱ Cierra hoy a las 20:00';
 }
 
 function quienFaltaHoy(){
@@ -3424,8 +3445,9 @@ function renderRanking(){
   var temporizador=fmtTemporizador();
   var falta=quienFaltaHoy();
   var semanaCerrada=temporizador==='🏁 Semana cerrada';
+  if(semanaCerrada&&!ganadorDeclarado)intentarDeclararGanador();
   var hayEmpate=hayEmpateGanador(ordenado);
-  if(semanaCerrada&&ordenado.length&&!document.getElementById('ganadorOverlay')&&document.getElementById('appView').style.display!=='none'){
+  if(semanaCerrada&&ganadorDeclarado&&!document.getElementById('ganadorOverlay')&&document.getElementById('appView').style.display!=='none'){
     setTimeout(mostrarGanadorSemana,1000);
   }
   var medallas=['🥇','🥈','🥉'];
@@ -3440,8 +3462,8 @@ function renderRanking(){
     } else {
       html+=ordenado.map(function(r,i){
         var medalla=medallas[i]||('#'+(i+1));
-        var esLider=i===0;
-        var liderTag=esLider&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':esLider?'<span style="color:#fcd34d;font-size:10px">● Lider</span>':'';
+        var esGanadorDeclarado=semanaCerrada&&ganadorDeclarado&&r.nombre===ganadorDeclarado.nombre;
+        var liderTag=esGanadorDeclarado?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':(i===0&&!semanaCerrada)?'<span style="color:#fcd34d;font-size:10px">● Lider</span>':'';
         var promStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
         var fallosStr2=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor2=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
@@ -3490,10 +3512,10 @@ function renderRanking(){
           infoHoy+='</span>';
         }
         var esEmpate=hayEmpate&&(i===0||i===1)&&ordenado[0].puntos===r.puntos;
-        var etiqueta=esEmpate&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🤝 Co-ganador</span>':
-          i===0&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🏆 Ganador</span>':
-          esEmpate?'<span style="color:#fcd34d;font-size:10px"> · Empate</span>':
-          i===0?'<span style="color:#fcd34d;font-size:10px"> · Líder</span>':'';
+        var esGanadorDeclarado=semanaCerrada&&ganadorDeclarado&&r.nombre===ganadorDeclarado.nombre;
+        var etiqueta=esGanadorDeclarado?'<span style="color:#fcd34d;font-size:10px"> · 🏆 Ganador</span>':
+          (i===0&&!semanaCerrada&&esEmpate)?'<span style="color:#fcd34d;font-size:10px"> · Empate</span>':
+          (i===0&&!semanaCerrada)?'<span style="color:#fcd34d;font-size:10px"> · Líder</span>':'';
         var scoreStr=r.puntos+' pts';
         var promedioStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
         var scoreColor='#7ec8f7';
@@ -3541,10 +3563,27 @@ function renderRanking(){
   }
 }
 
-function mostrarGanadorSemana(){
-  var ordenado=ordenarRanking();
+function intentarDeclararGanador(){
+  if(!W||ganadorDeclarado)return;
+  var cierre=fechaCierreSemana(W);
+  if(!cierre||Date.now()<cierre.getTime())return;
+  var ordenado=ordenarRanking(false);
   if(!ordenado.length)return;
-  var ganador=ordenado[0];
+  // Verificar en Firebase (no solo en memoria local) que nadie más lo haya declarado ya,
+  // para evitar que dos dispositivos abiertos al mismo tiempo lo sobrescriban.
+  sRef('ganadorDeclarado').once('value',function(s){
+    if(s.val())return;
+    var g=ordenado[0];
+    sRef('ganadorDeclarado').set({
+      nombre:g.nombre,puntos:g.puntos,veces:g.veces,
+      promedioDuracionMs:g.promedioDuracionMs,totalFallos:g.totalFallos,
+      declaradoEn:Date.now()
+    });
+  });
+}
+function mostrarGanadorSemana(){
+  if(!ganadorDeclarado)return;
+  var ganador=ganadorDeclarado;
   var key=ganador.nombre.replace(/\s/g,'_');
   // Get gender from cumpleanos data or default to F
   sedeRef('cumpleanos').once('value',function(s){
