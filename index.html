@@ -2525,6 +2525,7 @@ function editarBancoPreguntas(docId){
       html+='</div>';
     });
     html+='<input type="text" class="pregTema" value="'+((p.tema||'').replace(/"/g,'&quot;'))+'" placeholder="Tema (ej: Higiene de manos, EPP...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04)">';
+    html+='<textarea class="pregExplicacion" placeholder="Explicación (se muestra si falla esta pregunta)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);min-height:44px">'+((p.explicacion||'').replace(/</g,'&lt;'))+'</textarea>';
     html+='<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
     html+='</div>';
   });
@@ -2545,6 +2546,7 @@ function editarBancoPreguntas(docId){
     div.innerHTML='<input type="text" class="pregTxt" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">'+
       [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="enew'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent2);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
       '<input type="text" class="pregTema" placeholder="Tema (ej: Higiene de manos, EPP...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04)">'+
+      '<textarea class="pregExplicacion" placeholder="Explicación (se muestra si falla esta pregunta)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);min-height:44px"></textarea>'+
       '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
     builder.appendChild(div);
   });
@@ -2558,7 +2560,9 @@ function editarBancoPreguntas(docId){
       var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
       var correctaEl=f.querySelector('.pregCorrecta:checked');
       if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){error=true;return;}
-      var temaEl2=f.querySelector('.pregTema');var tema2=temaEl2?temaEl2.value.trim():'General';preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema2||'General'});
+      var temaEl2=f.querySelector('.pregTema');var tema2=temaEl2?temaEl2.value.trim():'General';
+      var expEl=f.querySelector('.pregExplicacion');var exp=expEl?expEl.value.trim():'';
+      preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema2||'General',explicacion:exp});
     });
     if(error){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta).');return;}
     if(Object.keys(preguntas).length<5){alert('Mínimo 5 preguntas requeridas. Tienes '+Object.keys(preguntas).length+'.');return;}
@@ -2805,10 +2809,31 @@ function hookPreguntasCombinadasEvents(){
     });
   });
   document.getElementById('enviarRespBtn').addEventListener('click',function(){
-    var todasCorrectas=Object.values(fichaActualRespuestas).every(function(v){return v===true;});
-    if(todasCorrectas)aprobarTodosFichaCombinada(fichaActualPend);
-    else registrarFalloCombinado(fichaActualPend);
+    var correctasArr=fichaActualPreguntas.map(function(p,i){return fichaActualRespuestas[i]===true;});
+    mostrarRevisionRespuestas(fichaActualPreguntas,correctasArr,function(todasCorrectas){
+      if(todasCorrectas)aprobarTodosFichaCombinada(fichaActualPend);
+      else registrarFalloCombinado(fichaActualPend);
+    });
   });
+}
+
+function mostrarRevisionRespuestas(preguntas,correctasArr,onContinuar){
+  var v=document.getElementById('fichaObligView');
+  var todasCorrectas=correctasArr.every(function(v2){return v2===true;});
+  var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#7ec8f7;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px">📋 Revisión de respuestas</p>';
+  preguntas.forEach(function(p,i){
+    var ok=correctasArr[i]===true;
+    html+='<div style="margin-bottom:14px;padding:12px;border-radius:10px;background:'+(ok?'rgba(16,185,129,.06)':'rgba(239,68,68,.06)')+';border:1px solid '+(ok?'rgba(16,185,129,.25)':'rgba(239,68,68,.25)')+'">';
+    html+='<p style="font-size:13px;font-weight:600;margin-bottom:6px">'+(ok?'✅':'❌')+' '+(i+1)+'. '+p.pregunta+'</p>';
+    if(!ok){
+      html+='<p style="font-size:12px;color:#6ee7b7;margin-bottom:4px">Respuesta correcta: '+(p.opciones&&p.opciones[p.correcta]||'')+'</p>';
+      if(p.explicacion)html+='<p style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.6;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08)">'+p.explicacion+'</p>';
+    }
+    html+='</div>';
+  });
+  html+='<button class="btn-add" id="continuarRevisionBtn">Continuar →</button></div>';
+  v.innerHTML=html;
+  document.getElementById('continuarRevisionBtn').addEventListener('click',function(){onContinuar(todasCorrectas);});
 }
 
 var fichaActualPend=[];
@@ -2881,12 +2906,14 @@ function mostrarPasoPreguntas(docId,doc,prog){
       alert('Responde todas las preguntas antes de continuar.');
       return;
     }
-    var correctas=fichaActualPreguntas.every(function(p,i){return fichaActualRespuestas[i]===p.correcta;});
-    if(correctas){
-      aprobarFicha(docId);
-    } else {
-      registrarFallo(docId,doc);
-    }
+    var correctasArr=fichaActualPreguntas.map(function(p,i){return fichaActualRespuestas[i]===p.correcta;});
+    mostrarRevisionRespuestas(fichaActualPreguntas,correctasArr,function(todasCorrectas){
+      if(todasCorrectas){
+        aprobarFicha(docId);
+      } else {
+        registrarFallo(docId,doc);
+      }
+    });
   });
 }
 
