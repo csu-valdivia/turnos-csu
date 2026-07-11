@@ -26,9 +26,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 .hero{background:linear-gradient(180deg,var(--bg2),var(--bg));padding:1.75rem 1.25rem 1.25rem;text-align:center}
 .logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px}
 .uss-icon{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#1a3a6b,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.4);position:relative;flex-shrink:0}
-.uss-icon::before{content:'';position:absolute;width:34px;height:12px;background:rgba(255,255,255,.9);border-radius:2px}
-.uss-icon::after{content:'';position:absolute;width:12px;height:34px;background:rgba(255,255,255,.9);border-radius:2px}
-.uss-label{position:absolute;font-size:10px;font-weight:900;color:#1a3a6b;z-index:1;letter-spacing:-.3px}
+@keyframes crossPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+.uss-icon::before{content:'';position:absolute;width:34px;height:12px;background:rgba(255,255,255,.9);border-radius:2px;animation:crossPulse 1.3s ease-in-out infinite}
+.uss-icon::after{content:'';position:absolute;width:12px;height:34px;background:rgba(255,255,255,.9);border-radius:2px;animation:crossPulse 1.3s ease-in-out infinite}
 .app-name{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px}
 .app-sub{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase}
 .semana-badge{display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 16px;font-size:12px;color:rgba(255,255,255,.6);margin-top:8px}
@@ -240,7 +240,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 <div class="wrap">
   <div class="hero">
     <div class="logo-row">
-      <div class="uss-icon"><span class="uss-label">USS</span></div>
+      <div class="uss-icon"></div>
       <span class="app-name">TurnosCSU</span>
     </div>
     <div class="app-sub">USS — Red de Salud</div>
@@ -3270,19 +3270,6 @@ function nombresConTurnoSemanaFiltrado(soloInternos){
 
 function agregarRankingPorPersona(soloInternos){
   var porPersona={};
-  // Get internos names list for reliable comparison
-  var internosNombres=Object.values(internos).map(function(i){return i.nombre;});
-  var hayInternos=internosNombres.length>0;
-  var conTurno=Object.values(bloques)
-    .map(function(b){return b.nombre;})
-    .filter(function(n){
-      if(!n||n==='__sa__'||n.trim().toLowerCase()==='patricio baeza')return false;
-      var esInt=hayInternos&&internosNombres.indexOf(n)!==-1;
-      if(soloInternos)return esInt;
-      return !esInt;
-    });
-  var unicos=[...new Set(conTurno)];
-
   Object.values(ranking).forEach(function(entradasPersona){
     if(!entradasPersona||typeof entradasPersona!=='object')return;
     // Agrupar por fecha para contar días únicos — solo fechas dentro de la semana activa
@@ -3320,8 +3307,12 @@ function agregarRankingPorPersona(soloInternos){
       p.totalFallos+=(ultima.intentos||0);
     });
   });
+  // Separar internos de equipo usando el registro de internos directamente
+  // (NO depender de si tienen un bloque/turno asignado esa semana — eso puede faltar o no calzar
+  // por nombre, y dejaba la lista completa vacía cuando bloques no tenía datos para nadie).
   return Object.values(porPersona).filter(function(p){
-    return unicos.indexOf(p.nombre)!==-1;
+    var esInt=esInterno(p.nombre);
+    return soloInternos?esInt:!esInt;
   }).map(function(p){
     p.promedioDuracionMs=p.veces?Math.round(p.totalDuracionMs/p.veces):0;
     // Calcular puntaje combinado semanal (50% preguntas + 50% supervisión)
