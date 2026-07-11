@@ -2579,12 +2579,11 @@ function editarBancoPreguntas(docId){
 }
 
 window.toggleBancoCerrado=function(docId,nuevoEstado){
+  var doc=biblioteca[docId];
+  var numPreg=doc&&doc.preguntas?Object.keys(doc.preguntas).length:0;
+  if(nuevoEstado&&numPreg<5){alert('⚠ Este banco tiene '+numPreg+' pregunta'+(numPreg!==1?'s':'')+'. Se necesitan mínimo 5 para cerrarlo y que entre al sorteo. Complétalas con ✏️ Editar banco.');return;}
   sedeRef('biblioteca/'+docId+'/bancoCerrado').set(nuevoEstado).then(function(){
-    if(nuevoEstado){
-      var doc=biblioteca[docId];
-      var numPreg=doc&&doc.preguntas?Object.keys(doc.preguntas).length:0;
-      alert('✅ Banco marcado como cerrado con '+numPreg+' preguntas. Listo para el sorteo semanal.');
-    }
+    if(nuevoEstado)alert('✅ Banco marcado como cerrado con '+numPreg+' preguntas. Listo para el sorteo semanal.');
   });
 };
 
@@ -2609,6 +2608,7 @@ function addPreguntaRow(){
   div.innerHTML='<input type="text" class="pregTxt" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">'+
     [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="correcta'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--green);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
     '<input type="text" class="pregTema" placeholder="Tema (ej: Higiene de manos, EPP, Antisépticos...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)">'+
+    '<textarea class="pregExplicacion" placeholder="Explicación (se muestra si falla esta pregunta) — opcional" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12);min-height:44px"></textarea>'+
     '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove();saveBorradorPreguntas()">✕ Quitar pregunta</button>';
   wrap.appendChild(div);
   // Auto-save on input
@@ -2634,22 +2634,24 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
   var doc={titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now(),visibilidad:visibilidad};
 
   if(esObligatoria){
+    doc.obligatoria=true;
     var contenido=document.getElementById('bibContenido').value.trim();
-    if(!contenido){alert('Escribe el contenido breve que el colaborador debe leer.');return;}
+    if(contenido)doc.contenido=contenido;
     var filas=document.querySelectorAll('#bibPreguntasBuilder > div');
     var preguntas=[];
     var errorPreg=false;
     filas.forEach(function(f){
       var pregTxt=f.querySelector('.pregTxt').value.trim();
+      if(!pregTxt)return; // fila vacía: se ignora, no es error
       var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
       var correctaEl=f.querySelector('.pregCorrecta:checked');
-      if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){errorPreg=true;return;}
-      var temaEl=f.querySelector('.pregTema');var tema=temaEl?temaEl.value.trim():'';preguntas.push({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema||'General'});
+      if(ops.some(function(o){return !o;})||!correctaEl){errorPreg=true;return;}
+      var temaEl=f.querySelector('.pregTema');var tema=temaEl?temaEl.value.trim():'';
+      var expEl=f.querySelector('.pregExplicacion');var exp=expEl?expEl.value.trim():'';
+      preguntas.push({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema||'General',explicacion:exp});
     });
-    if(errorPreg||preguntas.length<5){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta). Mínimo 5 preguntas para una ficha obligatoria.');return;}
-    doc.obligatoria=true;
-    doc.contenido=contenido;
-    doc.preguntas=preguntas;
+    if(errorPreg){alert('Una pregunta tiene texto pero le faltan opciones o marcar la correcta. Complétala o bórrala antes de guardar.');return;}
+    if(preguntas.length)doc.preguntas=preguntas;
   }
 
   sedeRef('biblioteca').push(doc).then(function(){
