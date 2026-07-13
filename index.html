@@ -26,9 +26,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 .hero{background:linear-gradient(180deg,var(--bg2),var(--bg));padding:1.75rem 1.25rem 1.25rem;text-align:center}
 .logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px}
 .uss-icon{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#1a3a6b,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.4);position:relative;flex-shrink:0}
-@keyframes crossPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
-.uss-icon::before{content:'';position:absolute;width:34px;height:12px;background:rgba(255,255,255,.9);border-radius:2px;animation:crossPulse 1.3s ease-in-out infinite}
-.uss-icon::after{content:'';position:absolute;width:12px;height:34px;background:rgba(255,255,255,.9);border-radius:2px;animation:crossPulse 1.3s ease-in-out infinite}
+.uss-icon::before{content:'';position:absolute;width:34px;height:12px;background:rgba(255,255,255,.9);border-radius:2px}
+.uss-icon::after{content:'';position:absolute;width:12px;height:34px;background:rgba(255,255,255,.9);border-radius:2px}
+.uss-label{position:absolute;font-size:10px;font-weight:900;color:#1a3a6b;z-index:1;letter-spacing:-.3px}
 .app-name{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px}
 .app-sub{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase}
 .semana-badge{display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 16px;font-size:12px;color:rgba(255,255,255,.6);margin-top:8px}
@@ -234,13 +234,32 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 .footer{text-align:center;margin-top:3rem;padding:1.25rem;border-top:1px solid rgba(255,255,255,.06)}
 .footer p{font-size:11px;color:rgba(255,255,255,.25);line-height:1.8}
 .footer strong{color:rgba(255,255,255,.45)}
+/* ANUNCIOS */
+.anun{background:#16233d;border:1.5px solid #d97706;border-left:5px solid #fcd34d;border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:center;position:relative}
+.anun-svg{flex-shrink:0;width:96px;height:82px}
+.anun-tit{font-size:17px;font-weight:700;color:#fcd34d;margin-bottom:3px}
+.anun-l{font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.85)}
+.anun-meta{font-size:10px;font-weight:700;color:#fcd34d;letter-spacing:1px;opacity:.7;margin-bottom:2px}
+.anun-x{position:absolute;top:7px;right:9px;background:none;border:none;color:rgba(255,255,255,.3);font-size:15px;cursor:pointer;padding:2px 5px;line-height:1;font-family:inherit}
+.anun-x:active{color:#fca5a5}
+.anun-dots{display:flex;gap:4px;justify-content:center;margin:-2px 0 10px}
+.anun-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.18)}
+.anun-dot.on{background:#fcd34d}
+.hbob{animation:hbob 1.6s ease-in-out infinite;transform-origin:46px 62px}
+@keyframes hbob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(-1.5deg)}}
+.hw1,.hw2,.hw3{animation:hpul 1.6s ease-out infinite;transform-origin:74px 44px}
+.hw2{animation-delay:.25s}.hw3{animation-delay:.5s}
+@keyframes hpul{0%{opacity:0;transform:scale(.7)}30%{opacity:.95}100%{opacity:0;transform:scale(1.2)}}
+.anun-fade{animation:anfade .45s ease}
+@keyframes anfade{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.hbob,.hw1,.hw2,.hw3,.anun-fade{animation:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="hero">
     <div class="logo-row">
-      <div class="uss-icon"></div>
+      <div class="uss-icon"><span class="uss-label">USS</span></div>
       <span class="app-name">TurnosCSU</span>
     </div>
     <div class="app-sub">USS — Red de Salud</div>
@@ -308,8 +327,8 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
       <!-- APP -->
       <div id="appView" style="display:none">
+        <div id="anunciosBanner"></div>
         <div id="avisoBanner"></div>
-        <div id="avisoCapBanner"></div>
         <div id="rankingMiniCard"></div>
 
         <div style="margin-bottom:4px">
@@ -421,14 +440,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec">
             <p class="asec-title">📢 Aviso general</p>
-            <select id="avisoTipo" style="margin-bottom:6px">
-              <option value="normal">🤖 Normal</option>
-              <option value="urgente">❗ Urgente</option>
-              <option value="celebracion">🎉 Celebración</option>
-            </select>
             <textarea class="atxt" id="avisoTxt" placeholder="Aviso para todo el equipo..."></textarea>
             <button class="btn-add" id="saveAvisoBtn">Publicar</button>
-            <button class="btn-dng" id="clearAvisoBtn" style="margin-top:4px">🗑 Borrar TODOS los avisos generales</button>
+            <button class="btn-dng" id="clearAvisoBtn" style="margin-top:4px">Eliminar aviso</button>
             <div class="saved" id="avisoSaved">✓ Publicado</div>
           </div>
 
@@ -440,8 +454,8 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <input type="date" id="capFecha" style="margin-bottom:6px">
             <input type="time" id="capHora" placeholder="Hora" style="margin-bottom:6px">
             <button class="btn-add" id="saveCapBtn" style="background:linear-gradient(135deg,#d97706,#fcd34d);color:#1a1a1a">📣 Publicar anuncio de capacitación</button>
-            <button class="btn-dng" id="clearCapBtn" style="margin-top:4px">🗑 Borrar TODOS los anuncios de capacitación</button>
             <div class="saved" id="capSaved">✓ Anuncio publicado</div>
+            <div id="anunciosAdmin" style="margin-top:10px"></div>
           </div>
 
           <div class="asec">
@@ -634,30 +648,6 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
                 </div>
                 <button class="btn-add" id="qkGuardar" style="margin-top:8px">⚡ Guardar turno semanal</button>
                 <div class="saved" id="qkSaved">✓ Guardado</div>
-              </div>
-            </details>
-
-            <!-- CARGA MASIVA RECESO -->
-            <details style="margin-bottom:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:8px;padding:8px">
-              <summary style="font-size:11px;font-weight:700;color:#6ee7b7;cursor:pointer;list-style:none">🏖 Receso académico — carga masiva para TODOS</summary>
-              <div style="margin-top:10px">
-                <p style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px">Para las semanas de vacaciones de estudiantes (invierno/verano): asigna el mismo horario de entrada y salida a TODOS los colaboradores e internos registrados, sin asignarlos a un área clínica. Se aplica solo a la semana que tengas confirmada ahora — y esa semana deja de contar como "sin cobertura" automáticamente.</p>
-                <div class="frow">
-                  <div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.4)">Entrada</label><input type="time" id="recesoEntrada" value="08:00" style="width:100%"></div>
-                  <div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.4)">Salida</label><input type="time" id="recesoSalida" value="17:00" style="width:100%"></div>
-                </div>
-                <input type="text" id="recesoActividad" placeholder="Actividad de la semana (opcional, ej: Inventario general de insumos)" style="margin-top:8px;width:100%">
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px" id="recesoDias">
-                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Lunes" checked style="accent-color:var(--green)"> Lun</label>
-                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Martes" checked style="accent-color:var(--green)"> Mar</label>
-                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Miércoles" checked style="accent-color:var(--green)"> Mié</label>
-                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Jueves" checked style="accent-color:var(--green)"> Jue</label>
-                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Viernes" checked style="accent-color:var(--green)"> Vie</label>
-                  <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" value="Sábado" style="accent-color:var(--green)"> Sáb</label>
-                </div>
-                <button class="btn-add" id="recesoGuardar" style="margin-top:8px;background:linear-gradient(135deg,#059669,#10b981)">🏖 Cargar receso académico para TODOS</button>
-                <button class="btn-dng" id="recesoQuitar" style="margin-top:4px">🗑 Quitar carga de receso de esta semana</button>
-                <div class="saved" id="recesoSaved">✓ Cargado</div>
               </div>
             </details>
 
@@ -1163,12 +1153,13 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios'];
 var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var bancoActivo={}; // banco activo por sede (nuevo sistema)
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},ganadorDeclarado=null;
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={};
+var anunIdx=0,anunTimer=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
 var listeners=[];
@@ -1201,7 +1192,7 @@ function attach(){
   primerCargaNotas=true;ultimasNovedadesCount=0;
   primerCargaBloques=true;ultimosBloquesCount=0;
   on('aviso',function(v){renderAviso(v);});
-  on('avisoCap',function(v){renderAvisoCap(v);});
+  on('anuncios',function(v){anuncios=v||{};anunIdx=0;renderAnuncios();renderAnunciosAdmin();});
   on('bloques',function(v){
     bloques=v;renderPanorama();renderBloquesList();renderResumen();renderHeatMap();if(curNombre)renderMisTurnos(curNombre);
     var totalAhora=Object.keys(bloques).length;
@@ -1240,7 +1231,6 @@ function attach(){
   on('sinServicios',function(v){sinServicios=v;renderSSList();renderPanorama();setTimeout(function(){genPendientes(function(){});},300);});
   on('equipoClave',function(v){equipoClave=v||{};renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();if(document.getElementById('tc-estado')&&document.getElementById('tc-estado').style.display!=='none')renderEstado();});
-  on('ganadorDeclarado',function(v){ganadorDeclarado=(v&&v.nombre)?v:null;renderRanking();});
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
@@ -1258,6 +1248,7 @@ function detectarSemanaActual(){
 window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
   bloques={};tareas={};pendientes={};nombres=[];supervisionData={};asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave={};sinServicios={};biblioteca={};fichaProgreso={};ranking={};curNombre='';semanas={};
+  anuncios={};anunIdx=0;if(anunTimer){clearInterval(anunTimer);anunTimer=null;}
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -1304,7 +1295,15 @@ window.setSede=function(sede){
   });
   var primerCargaBib=true,ultimoBibCount=0;
   sedeRef('biblioteca').on('value',function(s){
+    // Recordar qué paneles de temas estaban abiertos antes de repintar
+    var abiertos=Array.from(document.querySelectorAll('[id^="temas-"]'))
+      .filter(function(el){return el.style.display!=='none';})
+      .map(function(el){return el.id.slice(6);});
     biblioteca=s.val()||{};renderBiblioteca();renderBibAdminList();
+    abiertos.forEach(function(docId){
+      var el=document.getElementById('temas-'+docId);
+      if(el){el.style.display='block';renderTemasPanel(docId);}
+    });
     if(curNombre&&W&&document.getElementById('appView').style.display!=='none')verificarFichasPendientes();
     var totalAhora=Object.keys(biblioteca).length;
     if(!primerCargaBib&&totalAhora>ultimoBibCount)reproducirAlerta();
@@ -1434,14 +1433,6 @@ window.entrarAdminSinSemana=function(){
 
 window.cambiarSemana=function(){
   detach();W='';adminUnlocked=false;
-  // Reset TODAS las variables de datos de la semana (antes solo se limpiaban los listeners,
-  // no las variables — por eso el ranking y otros datos de la semana anterior quedaban
-  // "pegados" en memoria hasta que el listener de Firebase de la semana nueva alcanzara a
-  // responder, lo que a veces no ocurría de forma confiable en conexiones débiles).
-  bloques={};tareas={};pendientes={};asistencia={};notas={};visto={};cambios={};ausencias={};
-  llamados={};encargados={};coberturas={};sinServicios={};equipoClave={};ranking={};
-  bancoConfig={docIds:[],maxPreg:3};supervisionData={};feriados={};ganadorDeclarado=null;
-  avisoCarrusel.clear();avisoCapCarrusel.clear();
   document.getElementById('adminPanel').classList.remove('open');
   mostrarConfirmacionSemana();
 };
@@ -1467,6 +1458,7 @@ window.forzarActualizar=function(){
 
 function showApp(){
   document.getElementById('emailView').style.display='none';
+  renderAnuncios(); // curNombre ya está definido: filtra descartados por persona
   // Registrar acceso - solo lunes a viernes, primera vez del día
   if(curNombre&&curNombre.trim().toLowerCase()!=='patricio baeza'){
     var ahoraReg=new Date();
@@ -1475,10 +1467,10 @@ function showApp(){
       var horaStrReg=pad(ahoraReg.getHours())+':'+pad(ahoraReg.getMinutes());
       var hoyReg=hoyStr();
       var keyReg=curNombre.replace(/\s/g,'_');
-      // Verificar si ya registró hoy en asistencia
-      sRef('asistencia/'+keyReg).once('value',function(s){
+      // Verificar si ya registró HOY (indexado por fecha, no por semana)
+      sRef('asistencia/'+keyReg+'/'+hoyReg).once('value',function(s){
         if(!s.val()){ // Solo si no hay registro de hoy
-          sRef('asistencia/'+keyReg).set(horaStrReg);
+          sRef('asistencia/'+keyReg+'/'+hoyReg).set(horaStrReg);
         }
       });
       // Registrar en log de accesos (siempre, para historial)
@@ -1631,159 +1623,136 @@ window.goTab=function(tab){
 };
 
 // ── AVISO ──
-function avisoAvatarSvg(tipo){
-  var c=tipo==='urgente'?'#fca5a5':tipo==='capacitacion'?'#fcd34d':tipo==='celebracion'?'#6ee7b7':'#7ec8f7';
-  var style='<style>'+
-    '@keyframes rBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}'+
-    '.rBody{animation:rBounce 1s ease-in-out infinite}'+
-    '@keyframes armR{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-22deg)}}'+
-    '@keyframes armL{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(22deg)}}'+
-    '.armR{animation:armR .5s ease-in-out infinite;transform-origin:83px 100px}'+
-    '.armL{animation:armL .5s ease-in-out infinite;transform-origin:17px 100px}'+
-    (tipo==='capacitacion'?
-      '@keyframes bookWobble{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}'+
-      '.bookWobble{animation:bookWobble 1.4s ease-in-out infinite;transform-origin:50px 120px}'+
-      '@keyframes sparkle{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}'+
-      '.spk1{animation:sparkle 1.3s ease-in-out infinite}.spk2{animation:sparkle 1.3s ease-in-out infinite .5s}'
-    :'')+
-    (tipo==='urgente'?
-      '@keyframes alertPulse{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(1.4)}}'+
-      '.alertPulse{animation:alertPulse 1s ease-out infinite;transform-origin:50px 48px}'
-    :'')+
-    (tipo==='celebracion'?
-      '@keyframes confetti{0%,100%{transform:translateY(0);opacity:.9}50%{transform:translateY(-6px);opacity:.4}}'+
-      '.cf1{animation:confetti 1.1s ease-in-out infinite}.cf2{animation:confetti 1.1s ease-in-out infinite .3s}.cf3{animation:confetti 1.1s ease-in-out infinite .6s}'
-    :'')+
-    '</style>';
-  var accesorio='';
-  if(tipo==='capacitacion')accesorio='<polygon points="50,6 22,20 50,28 78,20" fill="'+c+'"/><line x1="72" y1="20" x2="72" y2="32" stroke="'+c+'" stroke-width="1.5"/><circle cx="72" cy="33" r="2.5" fill="'+c+'"/>';
-  else if(tipo==='urgente')accesorio='<polygon points="50,2 42,16 58,16" fill="'+c+'"/><text x="50" y="14" text-anchor="middle" font-size="8" font-weight="700" fill="#0f172a">!</text>';
-  else if(tipo==='celebracion')accesorio='<polygon points="50,2 38,22 62,22" fill="'+c+'"/><circle cx="50" cy="2" r="3" fill="#fff"/><circle class="cf1" cx="18" cy="20" r="2.5" fill="#6ee7b7"/><circle class="cf2" cx="82" cy="14" r="2.5" fill="#fcd34d"/><circle class="cf3" cx="72" cy="30" r="2.5" fill="#f472b6"/>';
-  var extra=tipo==='urgente'?'<circle class="alertPulse" cx="50" cy="48" r="30" fill="none" stroke="'+c+'" stroke-width="2"/>':'';
-  var boca=tipo==='urgente'?'<path d="M40 62 Q50 57 60 62" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>':
-    tipo==='celebracion'?'<path d="M38 60 Q50 68 62 60" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>':
-    '<path d="M40 60 Q50 66 60 60" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>';
-  var libro=tipo==='capacitacion'?
-    '<g class="bookWobble">'+
-    '<path d="M50 100 L28 95 L28 118 L50 123 Z" fill="'+c+'" stroke="#0f172a" stroke-width="1"/>'+
-    '<path d="M50 100 L72 95 L72 118 L50 123 Z" fill="#fde68a" stroke="#0f172a" stroke-width="1"/>'+
-    '<line x1="50" y1="100" x2="50" y2="123" stroke="#0f172a" stroke-width="1"/>'+
-    '<line x1="33" y1="102" x2="45" y2="105" stroke="#0f172a" stroke-width="1" opacity=".4"/>'+
-    '<line x1="33" y1="108" x2="45" y2="111" stroke="#0f172a" stroke-width="1" opacity=".4"/>'+
-    '<line x1="55" y1="105" x2="67" y2="102" stroke="#0f172a" stroke-width="1" opacity=".4"/>'+
-    '<line x1="55" y1="111" x2="67" y2="108" stroke="#0f172a" stroke-width="1" opacity=".4"/>'+
-    '</g><text x="20" y="90" class="spk1" font-size="10" fill="'+c+'">✦</text><text x="80" y="86" class="spk2" font-size="8" fill="'+c+'">✦</text>'
-    :'';
-  return '<div style="width:60px;height:84px;flex-shrink:0">'+
-    '<svg width="60" height="84" viewBox="0 0 100 140">'+style+
-    '<g class="rBody">'+
-    '<line x1="50" y1="10" x2="50" y2="18" stroke="'+c+'" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="7" r="4" fill="'+c+'"/>'+
-    accesorio+extra+
-    '<rect x="24" y="90" width="52" height="38" rx="18" fill="'+c+'"/><rect x="24" y="90" width="52" height="15" rx="18" fill="rgba(255,255,255,.16)"/>'+
-    '<g class="armL"><rect x="10" y="93" width="15" height="36" rx="7.5" fill="'+c+'"/></g>'+
-    '<g class="armR"><rect x="75" y="93" width="15" height="36" rx="7.5" fill="'+c+'"/></g>'+
-    (tipo!=='capacitacion'?'<rect x="43" y="104" width="14" height="5" rx="2.5" fill="#0f172a"/>':'')+
-    '<circle cx="50" cy="48" r="30" fill="rgba(255,255,255,.05)" stroke="'+c+'" stroke-width="2"/>'+
-    '<ellipse cx="40" cy="34" rx="14" ry="8" fill="rgba(255,255,255,.08)"/>'+
-    '<rect x="28" y="36" width="44" height="28" rx="14" fill="#0f172a"/>'+
-    '<circle cx="42" cy="50" r="6.5" fill="#fff"/><circle cx="58" cy="50" r="6.5" fill="#fff"/>'+
-    '<circle cx="42" cy="51" r="3.5" fill="'+c+'"/><circle cx="58" cy="51" r="3.5" fill="'+c+'"/>'+
-    '<circle cx="43.5" cy="49" r="1.2" fill="#fff"/><circle cx="59.5" cy="49" r="1.2" fill="#fff"/>'+
-    boca+libro+
-    '</g></svg></div>';
-}
-function avisoCardHtml(key,texto,tipo,fecha,nodo){
-  var titulos={normal:'Aviso de la semana',capacitacion:'Capacitación al equipo',urgente:'Aviso urgente',celebracion:'Para celebrar'};
-  var bordes={normal:'rgba(74,144,217,.3)',capacitacion:'rgba(251,191,36,.3)',urgente:'rgba(239,68,68,.35)',celebracion:'rgba(16,185,129,.3)'};
-  var fondos={normal:'rgba(74,144,217,.08)',capacitacion:'rgba(251,191,36,.08)',urgente:'rgba(239,68,68,.08)',celebracion:'rgba(16,185,129,.08)'};
-  var titColor={normal:'#7ec8f7',capacitacion:'#fcd34d',urgente:'#fca5a5',celebracion:'#6ee7b7'};
-  var fechaHtml=fecha?'<p style="font-size:10px;color:rgba(255,255,255,.3);margin-top:4px">'+new Date(fecha).toLocaleDateString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</p>':'';
-  return '<div class="aviso" style="background:'+(fondos[tipo]||fondos.normal)+';border-color:'+(bordes[tipo]||bordes.normal)+';margin-bottom:0;align-items:center">'+
-    avisoAvatarSvg(tipo)+
-    '<div style="flex:1"><div class="aviso-tit" style="color:'+(titColor[tipo]||titColor.normal)+'">'+(titulos[tipo]||titulos.normal)+'</div>'+
-    '<p style="color:rgba(255,255,255,.75);white-space:pre-line">'+texto+'</p>'+fechaHtml+'</div>'+
-    '<button onclick="borrarAviso(\''+key+'\',\''+nodo+'\')" title="Eliminar este aviso" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:14px;cursor:pointer;padding:0 0 0 8px;flex-shrink:0;align-self:flex-start">✕</button>'+
-    '</div>';
-}
-window.borrarAviso=function(key,nodo){
-  if(!confirm('¿Eliminar este aviso? Esta acción no afecta a los demás avisos.'))return;
-  if(key==='__legacy__')sRef(nodo).remove();
-  else sRef(nodo+'/'+key).remove();
-};
-function parseAvisoGeneral(v){
-  var items=[];
-  if(!v)return items;
-  if(typeof v==='string'){
-    // Compatibilidad con el formato antiguo (antes de hoy): un solo aviso guardado como texto plano
-    var esCapLegado=v.startsWith('📣 CAPACITACIÓN AL EQUIPO');
-    items.push({key:'__legacy__',texto:esCapLegado?v.replace(/^📣 CAPACITACIÓN AL EQUIPO\n?/,''):v,tipo:esCapLegado?'capacitacion':'normal',fecha:0});
-  } else if(v.texto){
-    // Compatibilidad con el formato intermedio (de hace un rato): un solo aviso {texto,tipo} sin lista
-    items.push({key:'__legacy__',texto:v.texto,tipo:v.tipo||'normal',fecha:0});
-  } else {
-    Object.keys(v).forEach(function(k){
-      var e=v[k];
-      if(e&&e.texto)items.push({key:k,texto:e.texto,tipo:e.tipo||'normal',fecha:e.fecha||0});
-    });
-    // Los urgentes siempre primero; dentro de cada grupo, el más reciente primero
-    items.sort(function(a,b){
-      var pa=a.tipo==='urgente'?0:1,pb=b.tipo==='urgente'?0:1;
-      return pa!==pb?pa-pb:b.fecha-a.fecha;
-    });
-  }
-  return items;
-}
-function parseAvisoCap(v){
-  var items=[];
-  if(!v)return items;
-  Object.keys(v).forEach(function(k){
-    var e=v[k];
-    if(e&&e.texto)items.push({key:k,texto:e.texto,tipo:'capacitacion',fecha:e.fecha||0});
+// ── ANUNCIOS (carrusel, descarte por persona) ──
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
-  items.sort(function(a,b){return b.fecha-a.fecha;});
-  return items;
 }
-function crearCarruselAviso(containerId,nodo,refName,formatter){
-  var items=[],idx=0,timer=null;
+
+function heraldoSVG(){
+  return '<svg class="anun-svg" viewBox="0 0 110 90" aria-hidden="true">'
+    +'<ellipse cx="46" cy="82" rx="26" ry="4" fill="#fcd34d" opacity=".22"/>'
+    +'<g class="hbob">'
+    +'<path d="M36 80 L40 60 L54 60 L58 80 Z" fill="#2E75B6"/>'
+    +'<circle cx="47" cy="45" r="11" fill="#f2c9a0"/>'
+    +'<path d="M36 43 a11 11 0 0 1 22 0 l-3 -3 a8 8 0 0 0 -16 0 Z" fill="#5b3a21"/>'
+    +'<circle cx="52" cy="46" r="1.5" fill="#1a1a1a"/>'
+    +'<ellipse cx="56" cy="51" rx="3.5" ry="3" fill="#f2c9a0"/>'
+    +'<path d="M59 50 L80 44 L80 55 Z" fill="#d97706"/>'
+    +'<path d="M79 41 L90 36 L90 63 L79 58 Z" fill="#fcd34d"/>'
+    +'<path d="M79 41 L90 36 L90 49 L79 49 Z" fill="#fde68a"/>'
+    +'<path d="M42 62 L33 72 L38 76 L46 67 Z" fill="#2E75B6"/>'
+    +'<path d="M53 60 L62 53 L66 57 L57 64 Z" fill="#2E75B6"/>'
+    +'</g>'
+    +'<path class="hw1" d="M95 42 a12 12 0 0 1 0 16" fill="none" stroke="#fcd34d" stroke-width="2.2" stroke-linecap="round"/>'
+    +'<path class="hw2" d="M101 37 a19 19 0 0 1 0 26" fill="none" stroke="#fcd34d" stroke-width="2.2" stroke-linecap="round"/>'
+    +'<path class="hw3" d="M107 32 a26 26 0 0 1 0 36" fill="none" stroke="#fcd34d" stroke-width="2.2" stroke-linecap="round"/>'
+    +'</svg>';
+}
+
+// Anuncios visibles para la persona actual (no descartados y no vencidos)
+function anunciosVisibles(){
+  if(!curNombre)return [];
+  var k=curNombre.replace(/\s/g,'_');
+  var hoy=hoyStr();
+  return Object.keys(anuncios||{}).map(function(id){
+    var a=anuncios[id]||{};a._id=id;return a;
+  }).filter(function(a){
+    if(!a.tema)return false;
+    if(a.descartadoPor&&a.descartadoPor[k])return false;
+    if(a.fecha&&a.fecha<hoy)return false; // ya pasó la capacitación
+    return true;
+  }).sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+}
+
+window.descartarAnuncio=function(id){
+  if(!curNombre)return;
+  var k=curNombre.replace(/\s/g,'_');
+  // Actualización optimista: no esperar el eco de Firebase
+  if(anuncios[id]){
+    if(!anuncios[id].descartadoPor)anuncios[id].descartadoPor={};
+    anuncios[id].descartadoPor[k]=true;
+  }
+  anunIdx=0;
+  renderAnuncios();
+  sedeRef('anuncios/'+id+'/descartadoPor/'+k).set(true);
+};
+
+function renderAnuncios(){
+  var d=document.getElementById('anunciosBanner');if(!d)return;
+  if(anunTimer){clearInterval(anunTimer);anunTimer=null;}
+  var lista=anunciosVisibles();
+  if(!lista.length){d.innerHTML='';return;}
+  if(anunIdx>=lista.length)anunIdx=0;
+
   function pintar(){
-    var d=document.getElementById(containerId);
-    var it=items[idx];
-    if(!it){d.innerHTML='';return;}
-    var html=avisoCardHtml(it.key,it.texto,it.tipo,it.fecha,nodo);
-    if(items.length>1){
-      html+='<div style="display:flex;gap:5px;justify-content:center;margin:8px 0 1rem">'+items.map(function(_,i){
-        return '<span onclick="'+refName+'.ir('+i+')" style="width:6px;height:6px;border-radius:50%;cursor:pointer;background:'+(i===idx?'rgba(255,255,255,.7)':'rgba(255,255,255,.2)')+'"></span>';
+    var a=lista[anunIdx];
+    var horaTxt=a.hora?(' · '+a.hora+' h'):'';
+    var contador=lista.length>1?'ANUNCIO '+(anunIdx+1)+' DE '+lista.length:'ANUNCIO';
+    var html='<div class="anun anun-fade">'+heraldoSVG()
+      +'<button class="anun-x" aria-label="Descartar anuncio" onclick="descartarAnuncio(\''+a._id+'\')">✕</button>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div class="anun-meta">'+contador+'</div>'
+      +'<div class="anun-tit">¡Atención, atención!</div>'
+      +'<div class="anun-l">'+esc(a.colaborador)+' nos capacitará sobre:</div>'
+      +'<div class="anun-l" style="font-weight:700;color:#fff">«'+esc(a.tema)+'»</div>'
+      +'<div class="anun-l" style="color:#93c5fd;margin-top:3px">'+esc(a.fecha||'')+horaTxt+'</div>'
+      +'</div></div>';
+    if(lista.length>1){
+      html+='<div class="anun-dots">'+lista.map(function(_,i){
+        return '<div class="anun-dot'+(i===anunIdx?' on':'')+'"></div>';
       }).join('')+'</div>';
     }
     d.innerHTML=html;
   }
-  function arrancar(){
-    if(timer)clearInterval(timer);
-    timer=items.length>1?setInterval(function(){idx=(idx+1)%items.length;pintar();},6000):null;
-  }
-  return {
-    render:function(v){
-      if(timer){clearInterval(timer);timer=null;}
-      items=formatter(v);
-      idx=0;
-      var d=document.getElementById(containerId);
-      if(!items.length){d.innerHTML='';return;}
+  pintar();
+  if(lista.length>1){
+    anunTimer=setInterval(function(){
+      var actual=anunciosVisibles();
+      if(actual.length<2){renderAnuncios();return;}
+      anunIdx=(anunIdx+1)%actual.length;
       pintar();
-      arrancar();
-    },
-    ir:function(i){idx=i;pintar();arrancar();},
-    clear:function(){
-      if(timer){clearInterval(timer);timer=null;}
-      items=[];idx=0;
-      var d=document.getElementById(containerId);
-      if(d)d.innerHTML='';
-    }
-  };
+    },6000);
+  }
 }
-var avisoCarrusel=crearCarruselAviso('avisoBanner','aviso','avisoCarrusel',parseAvisoGeneral);
-var avisoCapCarrusel=crearCarruselAviso('avisoCapBanner','avisoCap','avisoCapCarrusel',parseAvisoCap);
-function renderAviso(v){avisoCarrusel.render(v);}
-function renderAvisoCap(v){avisoCapCarrusel.render(v);}
+
+function renderAnunciosAdmin(){
+  var d=document.getElementById('anunciosAdmin');if(!d)return;
+  var ids=Object.keys(anuncios||{}).sort(function(a,b){return (anuncios[a].ts||0)-(anuncios[b].ts||0);});
+  if(!ids.length){d.innerHTML='<p style="font-size:10px;color:rgba(255,255,255,.3)">Sin anuncios activos.</p>';return;}
+  d.innerHTML='<p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Anuncios activos ('+ids.length+')</p>'
+    +ids.map(function(id){
+      var a=anuncios[id];
+      var vistos=a.descartadoPor?Object.keys(a.descartadoPor).length:0;
+      var vencido=a.fecha&&a.fecha<hoyStr();
+      return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+        +'<span style="color:'+(vencido?'rgba(255,255,255,.3)':'#fcd34d')+'">📣 '+esc(a.tema)+'<span style="color:rgba(255,255,255,.3)"> · '+esc(a.colaborador)+' · '+esc(a.fecha||'')+(vencido?' (vencido)':'')+' · descartado por '+vistos+'</span></span>'
+        +'<button class="del-btn" style="font-size:10px;color:#fca5a5;background:none;border:none;cursor:pointer;font-family:inherit;flex-shrink:0" onclick="borrarAnuncio(\''+id+'\')">✕ Borrar</button>'
+        +'</div>';
+    }).join('');
+}
+
+window.borrarAnuncio=function(id){
+  if(!confirm('¿Borrar este anuncio para todo el equipo?'))return;
+  sedeRef('anuncios/'+id).remove();
+};
+
+function renderAviso(txt){
+  var d=document.getElementById('avisoBanner');
+  if(!txt||typeof txt!=='string'){d.innerHTML='';return;}
+  var esCap=txt.startsWith('📣 CAPACITACIÓN AL EQUIPO');
+  if(esCap){
+    var lineas=txt.split('\n');
+    var html='<div class="aviso" style="background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.3)">';
+    html+='<div><div class="aviso-tit" style="color:#fcd34d">'+lineas[0]+'</div>';
+    lineas.slice(1).forEach(function(l){if(l)html+='<p style="font-size:13px;line-height:1.6">'+l+'</p>';});
+    html+='</div></div>';
+    d.innerHTML=html;
+  } else {
+    d.innerHTML='<div class="aviso"><div><div class="aviso-tit">Aviso de la semana</div><p>'+txt+'</p></div></div>';
+  }
+}
 
 // ── NOMBRES ──
 function renderNombresList(){var d=document.getElementById('nombresList');if(!d)return;if(!nombres.length){d.innerHTML='<p class="empty">Sin personal.</p>';return;}d.innerHTML=nombres.map(function(n,i){return '<div class="iitem"><div class="iitem-info">'+n+'</div><button class="del-btn" onclick="delNombre('+i+')">🗑</button></div>';}).join('');}
@@ -1791,10 +1760,20 @@ window.delNombre=function(i){var a=nombres.slice();a.splice(i,1);sRef('nombres')
 
 // ── PANORAMA ──
 window.chDay=function(d){panIdx=Math.max(0,Math.min(DIAS.length-1,panIdx+d));renderPanorama();};
+// Hora de acceso registrada HOY por una persona.
+// Formato nuevo: asistencia[key] = {'2026-07-09':'08:14', ...}
+// Formato antiguo (semanas previas): asistencia[key] = '08:14'
+function accesoHoy(nombre){
+  var v=asistencia[nombre.replace(/\s/g,'_')];
+  if(!v)return null;
+  if(typeof v==='object')return v[hoyStr()]||null;
+  return v; // retrocompatibilidad
+}
+
 function getChipClass(b,area,dia){
   if(b.sinAtencion)return 'chip chip-sa';
   var nombre=b.nombre||'';
-  var pr=asistencia[nombre.replace(/\s/g,'_')];
+  var pr=accesoHoy(nombre);
   var isEnc=Object.values(encargados).some(function(e){return e.nombre===nombre&&e.dia===dia;});
   var claveE=getClaveParaDia(dia).find(function(e){return e&&e.n===nombre;});
   var cob=Object.values(coberturas).find(function(cv){return cv.persona===nombre&&cv.dia===dia;});
@@ -1881,7 +1860,7 @@ function renderMisTurnos(nombre){
   var cobP=Object.values(coberturas).filter(function(cv){return cv.persona===nombre;});
   cobP.forEach(function(cv){html+='<div style="background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.2);border-radius:10px;padding:10px 14px;margin-bottom:8px"><p style="font-size:13px;font-weight:700;color:#7ec8f7;margin-bottom:4px">↔ Cobertura cruzada</p><p style="font-size:12px;color:rgba(255,255,255,.5)">'+cv.dia+' · Deja <span style="color:#fca5a5">'+cv.origen+'</span> → cubre <span style="color:#7ec8f7">'+cv.destino+'</span>'+(cv.horario?' · '+cv.horario:'')+'</p></div>';});
 
-  var reg=asistencia[nombre.replace(/\s/g,'_')];
+  var reg=accesoHoy(nombre);
   var btnLl=reg?'<div class="btn-ll ok" style="cursor:default">✓ Acceso registrado a las '+reg+'</div>':'';
 
   DIAS.forEach(function(dia){
@@ -1916,7 +1895,7 @@ function renderMisTurnos(nombre){
   if(!found)html+='<div class="no-result"><p style="font-size:32px;margin-bottom:8px">👤</p><p>Sin turnos esta semana.</p></div>';
   d.innerHTML=html;
 }
-window.marcarLl=function(n){var now=new Date();sRef('asistencia/'+n.replace(/\s/g,'_')).set(pad(now.getHours())+':'+pad(now.getMinutes()));};
+window.marcarLl=function(n){var now=new Date();sRef('asistencia/'+n.replace(/\s/g,'_')+'/'+hoyStr()).set(pad(now.getHours())+':'+pad(now.getMinutes()));};
 window.marcarVisto=function(k,btn){sRef('visto/'+k).set(true).then(function(){btn.textContent='✓ Leído';btn.classList.add('leido');});};
 window.dejarNota=function(n,dia){
   var m=mkOverlay();var nk=n.replace(/\s/g,'_')+'_'+dia;
@@ -1936,12 +1915,12 @@ window.dejarNota=function(n,dia){
 function renderAsist(){
   var d=document.getElementById('asistView');if(!d)return;
   if(!nombres.length){d.innerHTML='<p style="text-align:center;color:rgba(255,255,255,.3);padding:2rem">Sin personal registrado.</p>';return;}
-  var pr=nombres.filter(function(n){return asistencia[n.replace(/\s/g,'_')];}).length;
+  var pr=nombres.filter(function(n){return accesoHoy(n);}).length;
   var pct=nombres.length?Math.round(pr/nombres.length*100):0;
   var html='<div class="asist-wrap"><p style="font-size:11px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Asistencia hoy — '+pr+'/'+nombres.length+'</p>';
   html+='<div class="cob-bar"><div class="cob-fill" style="width:'+pct+'%"></div></div>';
   html+='<p style="font-size:11px;color:rgba(255,255,255,.3);margin-top:5px;text-align:right">'+pct+'%</p><div style="margin-top:10px">';
-  nombres.forEach(function(n){var r=asistencia[n.replace(/\s/g,'_')];html+='<div class="asist-row"><span>'+n+'</span>'+(r?'<span style="font-size:11px;color:#6ee7b7;font-weight:600">✓ '+r+'</span>':'<span style="font-size:11px;color:rgba(255,255,255,.25)">Sin registrar</span>')+'</div>';});
+  nombres.forEach(function(n){var r=accesoHoy(n);html+='<div class="asist-row"><span>'+n+'</span>'+(r?'<span style="font-size:11px;color:#6ee7b7;font-weight:600">✓ '+r+'</span>':'<span style="font-size:11px;color:rgba(255,255,255,.25)">Sin registrar</span>')+'</div>';});
   html+='</div></div>';d.innerHTML=html;
 }
 
@@ -2437,17 +2416,7 @@ if(bibFiltroEl)bibFiltroEl.addEventListener('change',renderBiblioteca);
 
 window.marcarLecturaDoc=function(k){
   if(!curNombre)return;
-  var key=curNombre.replace(/\s/g,'_');
-  var ref=sedeRef('biblioteca/'+k+'/lecturas/'+key);
-  ref.once('value',function(s){
-    var actual=s.val();
-    if(actual&&typeof actual==='object'){
-      ref.update({count:(actual.count||1)+1,ultima:Date.now()});
-    } else {
-      // Primera vez con el formato nuevo (o compatibilidad con el formato antiguo de solo timestamp)
-      ref.set({count:1,primera:Date.now(),ultima:Date.now()});
-    }
-  });
+  sedeRef('biblioteca/'+k+'/lecturas/'+curNombre.replace(/\s/g,'_')).set(Date.now());
 };
 
 function renderBibAdminList(){
@@ -2458,37 +2427,34 @@ function renderBibAdminList(){
     var k=e[0],doc=e[1];
     var numLecturas=doc.lecturas?Object.keys(doc.lecturas).length:0;
     var numPreg=doc.preguntas?Object.keys(doc.preguntas).length:0;
-    var pregLabel=numPreg>0?'<span style="font-size:10px;color:'+(numPreg>=5?'#6ee7b7':'#fca5a5')+';margin-left:4px">'+numPreg+' preg.</span>':'';
+    var pregLabel=doc.obligatoria?'<span style="font-size:10px;color:'+(numPreg>=5?'#6ee7b7':'#fca5a5')+';margin-left:4px">'+numPreg+' preg.</span>':'';
     var visible=doc.visible!==false; // default visible
     var toggleColor=visible?'rgba(16,185,129,.2)':'rgba(255,255,255,.06)';
     var toggleTxt=visible?'<span style="color:#6ee7b7;font-size:10px">👁 Visible</span>':'<span style="color:rgba(255,255,255,.3);font-size:10px">🔒 Oculto</span>';
-    var visGrupo=doc.visibilidad||'todos';
-    var visGrupoLabel=visGrupo==='colaboradores'?'👥 Solo colaboradores':visGrupo==='internos'?'🎓 Solo internos':'🌐 Todos';
-    var lecturasDetalle=doc.lecturas?Object.entries(doc.lecturas).sort(function(a,b){
-      var ta=(a[1]&&typeof a[1]==='object')?a[1].ultima:a[1];
-      var tb=(b[1]&&typeof b[1]==='object')?b[1].ultima:b[1];
-      return (tb||0)-(ta||0);
-    }).map(function(le){
-      var v=le[1];
-      var cuenta=(v&&typeof v==='object')?(v.count||1):1;
-      var ultimaTs=(v&&typeof v==='object')?v.ultima:v;
-      var fechaFmt=new Date(ultimaTs).toLocaleDateString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span>'+le[0].replace(/_/g,' ')+' <span style="color:rgba(255,255,255,.3)">×'+cuenta+'</span></span><span style="color:rgba(255,255,255,.4)">'+fechaFmt+'</span></div>';
-    }).join(''):'';
-    var lecturasPanel=numLecturas>0?'<details style="margin-top:2px"><summary style="font-size:10px;color:#7ec8f7;cursor:pointer;list-style:none">👥 Ver quién lo leyó y cuándo ('+numLecturas+')</summary><div style="margin-top:6px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px">'+lecturasDetalle+'</div></details>':'';
+    var vis=doc.visibilidad||'todos';
+    var visMeta={todos:{t:'👥 Todos',c:'#93c5fd',bg:'rgba(74,144,217,.15)'},
+                 colaboradores:{t:'🩺 Colaboradores',c:'#fcd34d',bg:'rgba(251,191,36,.15)'},
+                 internos:{t:'🎓 Internos',c:'#6ee7b7',bg:'rgba(16,185,129,.15)'}}[vis];
+    var visBadge='<span style="font-size:9px;font-weight:700;color:'+visMeta.c+';background:'+visMeta.bg+';padding:2px 7px;border-radius:20px;margin-left:6px;white-space:nowrap">'+visMeta.t+'</span>';
     return '<div class="iitem" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;align-items:center;justify-content:space-between">'+
-      '<div class="iitem-info">'+bibIcono(doc.categoria)+' <strong>'+doc.titulo+'</strong>'+pregLabel+'<div class="iitem-sub">'+doc.categoria+' · '+numLecturas+' lectura'+(numLecturas!==1?'s':'')+'</div></div>'+
+      '<div class="iitem-info">'+bibIcono(doc.categoria)+' <strong>'+doc.titulo+'</strong>'+pregLabel+visBadge+'<div class="iitem-sub">'+doc.categoria+' · '+numLecturas+' lectura'+(numLecturas!==1?'s':'')+'</div></div>'+
       '<div style="display:flex;gap:4px;flex-shrink:0">'+
       '<button class="del-btn" style="color:#7ec8f7;font-size:12px" onclick="editarBancoPreguntas(\''+k+'\')" title="Editar preguntas">✏️</button>'+
       '<button class="del-btn" onclick="if(confirm(\'¿Eliminar este documento?\'))sedeRef(\'biblioteca/'+k+'\').remove()">🗑</button>'+
       '</div></div>'+
-      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
-      '<button onclick="toggleVisibilidadDoc(\''+k+'\','+(visible?'false':'true')+')" style="flex:1;min-width:90px;padding:5px 10px;border-radius:6px;border:none;background:'+toggleColor+';font-family:inherit;font-size:11px;cursor:pointer;text-align:left">'+toggleTxt+'</button>'+
-      '<button onclick="ciclarVisibilidadGrupo(\''+k+'\',\''+(doc.visibilidad||'todos')+'\')" style="flex:1;min-width:90px;padding:5px 10px;border-radius:6px;border:none;background:rgba(124,58,237,.15);font-family:inherit;font-size:11px;cursor:pointer;text-align:center;color:#c4b5fd">'+visGrupoLabel+'</button>'+
-      '<button onclick="toggleObligatoria(\''+k+'\','+(doc.obligatoria?'false':'true')+')" style="flex:1;min-width:90px;padding:5px 10px;border-radius:6px;border:none;background:'+(doc.obligatoria?'rgba(74,144,217,.2)':'rgba(255,255,255,.06)')+';font-family:inherit;font-size:11px;cursor:pointer;text-align:center">'+(doc.obligatoria?'<span style="color:#7ec8f7">📌 Obligatoria</span>':'<span style="color:rgba(255,255,255,.35)">📄 Solo lectura</span>')+'</button>'+
-      (doc.obligatoria?'<button onclick="toggleBancoCerrado(\''+k+'\','+(doc.bancoCerrado?'false':'true')+')" style="flex:1;min-width:90px;padding:5px 10px;border-radius:6px;border:none;background:'+(doc.bancoCerrado?'rgba(16,185,129,.2)':'rgba(245,158,11,.15)')+';font-family:inherit;font-size:11px;cursor:pointer;text-align:center">'+(doc.bancoCerrado?'<span style="color:#6ee7b7">✅ Banco cerrado</span>':'<span style="color:#fcd34d">⚠ Banco abierto</span>')+'</button>':'')+
+      '<div style="display:flex;gap:6px;align-items:center">'+
+      '<label style="font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0">Material visible para:</label>'+
+      '<select onchange="cambiarVisibilidadDoc(\''+k+'\',this.value)" style="flex:1;font-size:11px;padding:4px 6px;height:auto">'+
+        '<option value="todos"'+(vis==='todos'?' selected':'')+'>👥 Todos</option>'+
+        '<option value="colaboradores"'+(vis==='colaboradores'?' selected':'')+'>🩺 Solo colaboradores</option>'+
+        '<option value="internos"'+(vis==='internos'?' selected':'')+'>🎓 Solo internos</option>'+
+      '</select>'+
       '</div>'+
-      lecturasPanel+
+      (doc.obligatoria&&numPreg>0?'<button onclick="toggleTemasPanel(\''+k+'\')" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(126,200,247,.25);background:rgba(74,144,217,.08);font-family:inherit;font-size:11px;cursor:pointer;color:#7ec8f7;text-align:left">🎯 Asignar temas de preguntas por grupo</button><div id="temas-'+k+'" style="display:none"></div>':'')+
+      '<div style="display:flex;gap:6px">'+
+      '<button onclick="toggleVisibilidadDoc(\''+k+'\','+(visible?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+toggleColor+';font-family:inherit;font-size:11px;cursor:pointer;text-align:left">'+toggleTxt+'</button>'+
+      (doc.obligatoria?'<button onclick="toggleBancoCerrado(\''+k+'\','+(doc.bancoCerrado?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+(doc.bancoCerrado?'rgba(16,185,129,.2)':'rgba(245,158,11,.15)')+';font-family:inherit;font-size:11px;cursor:pointer;text-align:center">'+(doc.bancoCerrado?'<span style="color:#6ee7b7">✅ Banco cerrado</span>':'<span style="color:#fcd34d">⚠ Banco abierto</span>')+'</button>':'')+
+      '</div>'+
       '</div>';
   }).join('');
 }
@@ -2576,7 +2542,6 @@ function editarBancoPreguntas(docId){
       html+='</div>';
     });
     html+='<input type="text" class="pregTema" value="'+((p.tema||'').replace(/"/g,'&quot;'))+'" placeholder="Tema (ej: Higiene de manos, EPP...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04)">';
-    html+='<textarea class="pregExplicacion" placeholder="Explicación (se muestra si falla esta pregunta)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);min-height:44px">'+((p.explicacion||'').replace(/</g,'&lt;'))+'</textarea>';
     html+='<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
     html+='</div>';
   });
@@ -2597,7 +2562,6 @@ function editarBancoPreguntas(docId){
     div.innerHTML='<input type="text" class="pregTxt" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">'+
       [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="enew'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent2);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
       '<input type="text" class="pregTema" placeholder="Tema (ej: Higiene de manos, EPP...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04)">'+
-      '<textarea class="pregExplicacion" placeholder="Explicación (se muestra si falla esta pregunta)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);min-height:44px"></textarea>'+
       '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
     builder.appendChild(div);
   });
@@ -2611,9 +2575,7 @@ function editarBancoPreguntas(docId){
       var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
       var correctaEl=f.querySelector('.pregCorrecta:checked');
       if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){error=true;return;}
-      var temaEl2=f.querySelector('.pregTema');var tema2=temaEl2?temaEl2.value.trim():'General';
-      var expEl=f.querySelector('.pregExplicacion');var exp=expEl?expEl.value.trim():'';
-      preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema2||'General',explicacion:exp});
+      var temaEl2=f.querySelector('.pregTema');var tema2=temaEl2?temaEl2.value.trim():'General';preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema2||'General'});
     });
     if(error){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta).');return;}
     if(Object.keys(preguntas).length<5){alert('Mínimo 5 preguntas requeridas. Tienes '+Object.keys(preguntas).length+'.');return;}
@@ -2626,24 +2588,85 @@ function editarBancoPreguntas(docId){
 }
 
 window.toggleBancoCerrado=function(docId,nuevoEstado){
-  var doc=biblioteca[docId];
-  var numPreg=doc&&doc.preguntas?Object.keys(doc.preguntas).length:0;
-  if(nuevoEstado&&numPreg<5){alert('⚠ Este banco tiene '+numPreg+' pregunta'+(numPreg!==1?'s':'')+'. Se necesitan mínimo 5 para cerrarlo y que entre al sorteo. Complétalas con ✏️ Editar banco.');return;}
   sedeRef('biblioteca/'+docId+'/bancoCerrado').set(nuevoEstado).then(function(){
-    if(nuevoEstado)alert('✅ Banco marcado como cerrado con '+numPreg+' preguntas. Listo para el sorteo semanal.');
+    if(nuevoEstado){
+      var doc=biblioteca[docId];
+      var numPreg=doc&&doc.preguntas?Object.keys(doc.preguntas).length:0;
+      alert('✅ Banco marcado como cerrado con '+numPreg+' preguntas. Listo para el sorteo semanal.');
+    }
   });
 };
 
 window.toggleVisibilidadDoc=function(docId,nuevoEstado){
   sedeRef('biblioteca/'+docId+'/visible').set(nuevoEstado);
 };
-window.toggleObligatoria=function(docId,nuevoEstado){
-  sedeRef('biblioteca/'+docId+'/obligatoria').set(nuevoEstado);
+
+// Cambia el grupo al que se dirigen las preguntas de un documento ya creado
+window.cambiarVisibilidadDoc=function(docId,nuevoGrupo){
+  if(['todos','colaboradores','internos'].indexOf(nuevoGrupo)===-1)return;
+  sedeRef('biblioteca/'+docId+'/visibilidad').set(nuevoGrupo);
 };
-window.ciclarVisibilidadGrupo=function(docId,actual){
-  var siguiente=actual==='todos'?'colaboradores':actual==='colaboradores'?'internos':'todos';
-  sedeRef('biblioteca/'+docId+'/visibilidad').set(siguiente);
+
+// Asigna un tema de preguntas a un grupo específico
+window.cambiarVisibilidadTema=function(docId,tema,nuevoGrupo){
+  if(['todos','colaboradores','internos'].indexOf(nuevoGrupo)===-1)return;
+  sedeRef('biblioteca/'+docId+'/temasVis/'+temaKey(tema)).set({tema:tema,grupo:nuevoGrupo});
 };
+
+window.toggleTemasPanel=function(docId){
+  var d=document.getElementById('temas-'+docId);if(!d)return;
+  if(d.style.display!=='none'){d.style.display='none';d.innerHTML='';return;}
+  d.style.display='block';
+  renderTemasPanel(docId);
+};
+
+function renderTemasPanel(docId){
+  var d=document.getElementById('temas-'+docId);if(!d)return;
+  var doc=biblioteca[docId];if(!doc)return;
+  var temas=temasDeDoc(doc);
+  var docVis=doc.visibilidad||'todos';
+  var conteo={};
+  Object.values(doc.preguntas||{}).forEach(function(p){
+    var t=p.tema||'General';conteo[t]=(conteo[t]||0)+1;
+  });
+  // Resumen: cuántas preguntas termina viendo cada grupo
+  var nCol=0,nInt=0;
+  temas.forEach(function(t){
+    var g=temaGrupo(doc,t);
+    if(g==='todos'){nCol+=conteo[t];nInt+=conteo[t];}
+    else if(g==='colaboradores')nCol+=conteo[t];
+    else nInt+=conteo[t];
+  });
+  var alerta='';
+  if(nCol<2||nInt<2){
+    alerta='<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:10px;color:#fca5a5">'
+      +'⚠ Se necesitan mínimo 2 preguntas por grupo para que el documento entre al sorteo.'
+      +(nCol<2?'<br>🩺 Colaboradores: solo '+nCol+'.':'')
+      +(nInt<2?'<br>🎓 Internos: solo '+nInt+'.':'')
+      +'</div>';
+  }
+  d.innerHTML='<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px;margin-top:5px">'
+    +alerta
+    +'<div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.35);margin-bottom:6px">'
+      +'<span>Preguntas que recibe cada grupo:</span>'
+      +'<span><span style="color:#fcd34d">🩺 '+nCol+'</span> · <span style="color:#6ee7b7">🎓 '+nInt+'</span></span>'
+    +'</div>'
+    +temas.map(function(t){
+      var g=temaGrupo(doc,t);
+      var heredado=!temaConfigurado(doc,t);
+      return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0">'
+        +'<span style="flex:1;font-size:11px;color:rgba(255,255,255,.7);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t)
+          +' <span style="color:rgba(255,255,255,.25)">('+conteo[t]+')</span>'
+          +(heredado?' <span style="color:rgba(255,255,255,.2);font-size:9px">heredado</span>':'')+'</span>'
+        +'<select onchange="cambiarVisibilidadTema(\''+docId+'\',this.dataset.tema,this.value)" data-tema="'+esc(t)+'" style="font-size:10px;padding:3px 5px;height:auto;flex-shrink:0">'
+          +'<option value="todos"'+(g==='todos'?' selected':'')+'>👥 Todos</option>'
+          +'<option value="colaboradores"'+(g==='colaboradores'?' selected':'')+'>🩺 Colab.</option>'
+          +'<option value="internos"'+(g==='internos'?' selected':'')+'>🎓 Internos</option>'
+        +'</select></div>';
+    }).join('')
+    +'<p style="font-size:9px;color:rgba(255,255,255,.25);margin-top:5px">Los temas sin asignar heredan la visibilidad del material ('+docVis+').</p>'
+    +'</div>';
+}
 
 window.editarBancoPreguntas=editarBancoPreguntas;
 
@@ -2655,7 +2678,6 @@ function addPreguntaRow(){
   div.innerHTML='<input type="text" class="pregTxt" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:12px">'+
     [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="correcta'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--green);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
     '<input type="text" class="pregTema" placeholder="Tema (ej: Higiene de manos, EPP, Antisépticos...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)">'+
-    '<textarea class="pregExplicacion" placeholder="Explicación (se muestra si falla esta pregunta) — opcional" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12);min-height:44px"></textarea>'+
     '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove();saveBorradorPreguntas()">✕ Quitar pregunta</button>';
   wrap.appendChild(div);
   // Auto-save on input
@@ -2681,24 +2703,22 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
   var doc={titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now(),visibilidad:visibilidad};
 
   if(esObligatoria){
-    doc.obligatoria=true;
     var contenido=document.getElementById('bibContenido').value.trim();
-    if(contenido)doc.contenido=contenido;
+    if(!contenido){alert('Escribe el contenido breve que el colaborador debe leer.');return;}
     var filas=document.querySelectorAll('#bibPreguntasBuilder > div');
     var preguntas=[];
     var errorPreg=false;
     filas.forEach(function(f){
       var pregTxt=f.querySelector('.pregTxt').value.trim();
-      if(!pregTxt)return; // fila vacía: se ignora, no es error
       var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
       var correctaEl=f.querySelector('.pregCorrecta:checked');
-      if(ops.some(function(o){return !o;})||!correctaEl){errorPreg=true;return;}
-      var temaEl=f.querySelector('.pregTema');var tema=temaEl?temaEl.value.trim():'';
-      var expEl=f.querySelector('.pregExplicacion');var exp=expEl?expEl.value.trim():'';
-      preguntas.push({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema||'General',explicacion:exp});
+      if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){errorPreg=true;return;}
+      var temaEl=f.querySelector('.pregTema');var tema=temaEl?temaEl.value.trim():'';preguntas.push({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema||'General'});
     });
-    if(errorPreg){alert('Una pregunta tiene texto pero le faltan opciones o marcar la correcta. Complétala o bórrala antes de guardar.');return;}
-    if(preguntas.length)doc.preguntas=preguntas;
+    if(errorPreg||preguntas.length<5){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta). Mínimo 5 preguntas para una ficha obligatoria.');return;}
+    doc.obligatoria=true;
+    doc.contenido=contenido;
+    doc.preguntas=preguntas;
   }
 
   sedeRef('biblioteca').push(doc).then(function(){
@@ -2751,8 +2771,8 @@ function fichasObligatoriasPendientes(nombre){
     if(yaEnRanking)return false;
     // También verificar por fecha en fichaProgreso
     if(prog&&prog.ultimaAprobacion===hoyStr2)return false;
-    // Tiene preguntas configuradas
-    var preguntas=Object.values(doc.preguntas||{});
+    // Tiene preguntas configuradas PARA ESTA PERSONA (según tema × grupo)
+    var preguntas=preguntasParaPersona(doc,nombre);
     if(preguntas.length<2)return false;
     return true;
   });
@@ -2825,10 +2845,11 @@ function mostrarPasoLecturaCombinado(pend,idx){
 
 function iniciarPreguntasCombinadas(pend){
   // Combinar preguntas de TODOS los documentos pendientes en un solo pool
+  // Solo entran los temas asignados al grupo de la persona (o 'todos')
   var poolPreguntas=[];
   pend.forEach(function(e){
     var docId=e[0],doc=e[1];
-    Object.values(doc.preguntas||{}).forEach(function(p){
+    preguntasParaPersona(doc,curNombre).forEach(function(p){
       poolPreguntas.push(Object.assign({},p,{_docId:docId,_docTitulo:doc.titulo}));
     });
   });
@@ -2869,31 +2890,10 @@ function hookPreguntasCombinadasEvents(){
     });
   });
   document.getElementById('enviarRespBtn').addEventListener('click',function(){
-    var correctasArr=fichaActualPreguntas.map(function(p,i){return fichaActualRespuestas[i]===true;});
-    mostrarRevisionRespuestas(fichaActualPreguntas,correctasArr,function(todasCorrectas){
-      if(todasCorrectas)aprobarTodosFichaCombinada(fichaActualPend);
-      else registrarFalloCombinado(fichaActualPend);
-    });
+    var todasCorrectas=Object.values(fichaActualRespuestas).every(function(v){return v===true;});
+    if(todasCorrectas)aprobarTodosFichaCombinada(fichaActualPend);
+    else registrarFalloCombinado(fichaActualPend);
   });
-}
-
-function mostrarRevisionRespuestas(preguntas,correctasArr,onContinuar){
-  var v=document.getElementById('fichaObligView');
-  var todasCorrectas=correctasArr.every(function(v2){return v2===true;});
-  var html='<div class="card"><p style="font-size:11px;font-weight:700;color:#7ec8f7;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px">📋 Revisión de respuestas</p>';
-  preguntas.forEach(function(p,i){
-    var ok=correctasArr[i]===true;
-    html+='<div style="margin-bottom:14px;padding:12px;border-radius:10px;background:'+(ok?'rgba(16,185,129,.06)':'rgba(239,68,68,.06)')+';border:1px solid '+(ok?'rgba(16,185,129,.25)':'rgba(239,68,68,.25)')+'">';
-    html+='<p style="font-size:13px;font-weight:600;margin-bottom:6px">'+(ok?'✅':'❌')+' '+(i+1)+'. '+p.pregunta+'</p>';
-    if(!ok){
-      html+='<p style="font-size:12px;color:#6ee7b7;margin-bottom:4px">Respuesta correcta: '+(p.opciones&&p.opciones[p.correcta]||'')+'</p>';
-      if(p.explicacion)html+='<p style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.6;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08)">'+p.explicacion+'</p>';
-    }
-    html+='</div>';
-  });
-  html+='<button class="btn-add" id="continuarRevisionBtn">Continuar →</button></div>';
-  v.innerHTML=html;
-  document.getElementById('continuarRevisionBtn').addEventListener('click',function(){onContinuar(todasCorrectas);});
 }
 
 var fichaActualPend=[];
@@ -2934,9 +2934,51 @@ function mostrarPasoLectura(docId,doc,prog){
   });
 }
 
+// ── VISIBILIDAD DE PREGUNTAS POR TEMA ──
+// doc.temasVis = {claveCodificada: {tema:'Nombre', grupo:'todos'|'colaboradores'|'internos'}}
+// Se codifica la clave porque Firebase no admite . # $ / [ ] y los temas son texto libre.
+// Un tema sin configurar hereda la visibilidad del documento.
+function grupoDe(nombre){return esInterno(nombre)?'internos':'colaboradores';}
+
+function temaKey(tema){
+  return btoa(unescape(encodeURIComponent(tema))).replace(/[=+/]/g,'');
+}
+
+// Grupo asignado a un tema (o el heredado del documento)
+function temaGrupo(doc,tema){
+  var tv=doc.temasVis||{};
+  var found=Object.values(tv).find(function(x){return x&&x.tema===tema;});
+  return (found&&found.grupo)||doc.visibilidad||'todos';
+}
+
+function temaConfigurado(doc,tema){
+  var tv=doc.temasVis||{};
+  return Object.values(tv).some(function(x){return x&&x.tema===tema;});
+}
+
+function temaVisibleFor(doc,tema,nombre){
+  var g=temaGrupo(doc,tema);
+  if(g==='todos')return true;
+  return g===grupoDe(nombre);
+}
+
+// Preguntas de un documento que corresponden a la persona indicada
+function preguntasParaPersona(doc,nombre){
+  return Object.values(doc.preguntas||{}).filter(function(p){
+    return temaVisibleFor(doc,p.tema||'General',nombre);
+  });
+}
+
+// Lista de temas únicos presentes en un documento
+function temasDeDoc(doc){
+  var set={};
+  Object.values(doc.preguntas||{}).forEach(function(p){set[p.tema||'General']=true;});
+  return Object.keys(set).sort();
+}
+
 function mostrarPasoPreguntas(docId,doc,prog){
   var v=document.getElementById('fichaObligView');
-  var preguntas=Object.values(doc.preguntas||{});
+  var preguntas=preguntasParaPersona(doc,curNombre);
   if(preguntas.length<2){
     aprobarFicha(docId);
     return;
@@ -2966,14 +3008,12 @@ function mostrarPasoPreguntas(docId,doc,prog){
       alert('Responde todas las preguntas antes de continuar.');
       return;
     }
-    var correctasArr=fichaActualPreguntas.map(function(p,i){return fichaActualRespuestas[i]===p.correcta;});
-    mostrarRevisionRespuestas(fichaActualPreguntas,correctasArr,function(todasCorrectas){
-      if(todasCorrectas){
-        aprobarFicha(docId);
-      } else {
-        registrarFallo(docId,doc);
-      }
-    });
+    var correctas=fichaActualPreguntas.every(function(p,i){return fichaActualRespuestas[i]===p.correcta;});
+    if(correctas){
+      aprobarFicha(docId);
+    } else {
+      registrarFallo(docId,doc);
+    }
   });
 }
 
@@ -3007,9 +3047,6 @@ function aprobarTodosFichaCombinada(pend){
       duracionMs:duracionMs,sinFallos:sinFallos,intentos:fallosHoyMax,
       puntos:sinFallos?10:5,fecha:Date.now(),fechaStr:hoy,horaStr:horaStr
     });
-    // Respaldo: registrar acceso también al responder (no solo al abrir la app),
-    // así no se pierde el registro si la PWA queda abierta varios días sin recargar.
-    if(curNombre&&curNombre.trim().toLowerCase()!=='patricio baeza')sedeRef('accesos').push({nombre:curNombre,fecha:hoy,hora:horaStr,ts:Date.now()});
   }
   fichaInicioMs=0;
 
@@ -3141,9 +3178,6 @@ function aprobarFicha(docId){
       fechaStr:hoy,
       horaStr:horaStr
     });
-    // Respaldo: registrar acceso también al responder (no solo al abrir la app),
-    // así no se pierde el registro si la PWA queda abierta varios días sin recargar.
-    if(curNombre&&curNombre.trim().toLowerCase()!=='patricio baeza')sedeRef('accesos').push({nombre:curNombre,fecha:hoy,hora:horaStr,ts:Date.now()});
   }
   fichaInicioMs=0;
 
@@ -3355,8 +3389,72 @@ function nombresConTurnoSemanaFiltrado(soloInternos){
   return unicos.filter(function(n){return !esInterno(n);});
 }
 
+// ── CRITERIOS DE ORDEN DEL RANKING ──
+// 1° Días respondidos (barrera dura: más días SIEMPRE va primero)
+// 2° Puntaje de desempeño = 50% evaluación + 50% supervisión (solo desempata entre iguales días)
+// 3° Menos fallos  ·  4° Menor tiempo promedio
+// No se usa "Precisión" como componente: es redundante con Evaluación (los puntos ya castigan el fallo).
+var RANK_PESOS={conocimiento:0.50,supervision:0.50};
+var RANK_LABELS={conocimiento:'Evaluación',supervision:'Supervisión'};
+
+// Días hábiles (Lun-Vie, sin feriados) transcurridos de la semana activa hasta hoy
+function diasHabilesSemana(){
+  var sem=semanas[W]||{};
+  if(!sem.ini||!sem.fin)return 0;
+  var hoy=hoyStr();
+  var tope=hoy<sem.fin?hoy:sem.fin;
+  if(tope<sem.ini)return 0;
+  return fechasRango(sem.ini,tope).filter(function(f){
+    var dow=new Date(f+'T12:00:00').getDay();
+    if(dow===0||dow===6)return false;      // sin fin de semana
+    if(esFeriado(diaDeDate(f)))return false; // sin feriados
+    return true;
+  }).length;
+}
+
+// Calcula el puntaje de desempeño (0-100) que actúa como SEGUNDO criterio de orden.
+// promSupEquipo: promedio de supervisión del grupo (0-1), imputado a quien no fue supervisado.
+function calcScorePonderado(p,diasHabiles,promSupEquipo){
+  var comp={};
+  comp.conocimiento=p.veces>0?Math.min(p.puntos/(p.veces*10),1):0;
+
+  var tieneSup=(p.supervisionProm!==null&&p.supervisionProm!==undefined);
+  p.supImputada=false;
+  if(tieneSup){
+    comp.supervision=p.supervisionProm/100;
+  } else if(promSupEquipo!==null&&promSupEquipo!==undefined){
+    comp.supervision=promSupEquipo; // imputación neutral: promedio del grupo
+    p.supImputada=true;
+  } else {
+    comp.supervision=null; // nadie del grupo tiene supervisión → solo evaluación
+  }
+
+  var pesoDisp=0;
+  Object.keys(RANK_PESOS).forEach(function(k){if(comp[k]!==null)pesoDisp+=RANK_PESOS[k];});
+  var score=0;
+  if(pesoDisp>0){
+    Object.keys(RANK_PESOS).forEach(function(k){
+      if(comp[k]!==null)score+=comp[k]*(RANK_PESOS[k]/pesoDisp);
+    });
+  }
+  // Constancia se guarda solo como dato informativo — NO entra en el score.
+  comp.constancia=diasHabiles>0?Math.min(p.veces/diasHabiles,1):0;
+  p.comp=comp;
+  p.diasHabiles=diasHabiles;
+  p.scoreFinal=Math.round(score*100);
+  return p;
+}
+
 function agregarRankingPorPersona(soloInternos){
   var porPersona={};
+  // Set de internos según el REGISTRO de internos (fuente de verdad de quién es interno),
+  // no según la grilla de turnos. Un interno que respondió debe aparecer aunque no tenga
+  // turno cargado en bloques esta semana.
+  var internosSet={};
+  Object.values(internos).forEach(function(i){
+    if(i&&i.nombre)internosSet[i.nombre.trim().toLowerCase()]=true;
+  });
+
   Object.values(ranking).forEach(function(entradasPersona){
     if(!entradasPersona||typeof entradasPersona!=='object')return;
     // Agrupar por fecha para contar días únicos — solo fechas dentro de la semana activa
@@ -3366,7 +3464,12 @@ function agregarRankingPorPersona(soloInternos){
     var semFin=semActual.fin||'';
     Object.values(entradasPersona).forEach(function(e){
       if(!e||!e.nombre)return;
-      if(e.nombre.trim().toLowerCase()==='patricio baeza')return;
+      var nk=e.nombre.trim().toLowerCase();
+      if(nk==='patricio baeza')return;
+      // Separación por grupo según el registro de internos (no según turnos)
+      var esInt=internosSet[nk]===true;
+      if(soloInternos&&!esInt)return;
+      if(!soloInternos&&esInt)return;
       // Usar fechaStr si existe, si no calcular desde timestamp
       var fecha=e.fechaStr||'';
       if(!fecha&&e.fecha){
@@ -3394,13 +3497,7 @@ function agregarRankingPorPersona(soloInternos){
       p.totalFallos+=(ultima.intentos||0);
     });
   });
-  // Separar internos de equipo usando el registro de internos directamente
-  // (NO depender de si tienen un bloque/turno asignado esa semana — eso puede faltar o no calzar
-  // por nombre, y dejaba la lista completa vacía cuando bloques no tenía datos para nadie).
-  return Object.values(porPersona).filter(function(p){
-    var esInt=esInterno(p.nombre);
-    return soloInternos?esInt:!esInt;
-  }).map(function(p){
+  var lista=Object.values(porPersona).map(function(p){
     p.promedioDuracionMs=p.veces?Math.round(p.totalDuracionMs/p.veces):0;
     // Calcular puntaje combinado semanal (50% preguntas + 50% supervisión)
     var diasUnicos=[];
@@ -3413,15 +3510,23 @@ function agregarRankingPorPersona(soloInternos){
       if(r&&r.nombre===p.nombre&&r.fecha&&diasUnicos.indexOf(r.fecha)===-1)diasUnicos.push(r.fecha);
     });
     var totalFinal=0;var diasConDatos=0;
+    var sumSup=0;var diasConSup=0;
     diasUnicos.forEach(function(fecha){
       var res=calcPuntajeFinalDia(p.nombre,fecha);
       if(res&&res.total!==null){totalFinal+=res.total;diasConDatos++;}
       else if(res&&res.preguntas>0){totalFinal+=res.preguntas*0.5;diasConDatos++;} // solo preguntas ese día
+      if(res&&res.supervision!==null&&res.supervision!==undefined){sumSup+=res.supervision;diasConSup++;}
     });
     p.puntajeFinal=diasConDatos?Math.round(totalFinal/diasConDatos*100):0;
     p.diasEvaluados=diasConDatos;
+    p.supervisionProm=diasConSup?Math.round(sumSup/diasConSup*100):null;
     return p;
   });
+  var diasHab=diasHabilesSemana();
+  // Promedio de supervisión del grupo (solo con quienes SÍ tienen dato) → base de imputación
+  var conSup=lista.filter(function(p){return p.supervisionProm!==null&&p.supervisionProm!==undefined;});
+  var promSupEquipo=conSup.length?(conSup.reduce(function(a,p){return a+p.supervisionProm;},0)/conSup.length)/100:null;
+  return lista.map(function(p){return calcScorePonderado(p,diasHab,promSupEquipo);});
 }
 
 function nombresConTurnoSemana(){
@@ -3436,12 +3541,10 @@ function _nombresConTurnoSemana_unused(){
 
 function ordenarRanking(soloInternos){
   return agregarRankingPorPersona(soloInternos).sort(function(a,b){
-    // 1° Cantidad de días que respondió — criterio principal, nadie con menos días puede pasar a alguien con más
+    // 1° Días respondidos (criterio dominante — más días siempre va primero)
     if(a.veces!==b.veces)return b.veces-a.veces;
-    // 2° Puntaje combinado: puntos por responder + supervisión (criterios ya definidos)
-    var pA=a.puntajeFinal||a.puntos;
-    var pB=b.puntajeFinal||b.puntos;
-    if(pA!==pB)return pB-pA;
+    // 2° Puntaje de desempeño (50% evaluación + 50% supervisión)
+    if(a.scoreFinal!==b.scoreFinal)return b.scoreFinal-a.scoreFinal;
     // 3° Desempate: menos fallos
     if(a.totalFallos!==b.totalFallos)return a.totalFallos-b.totalFallos;
     // 4° Desempate: tiempo promedio más rápido
@@ -3452,9 +3555,10 @@ function ordenarRanking(soloInternos){
 function hayEmpateGanador(ordenado){
   if(ordenado.length<2)return false;
   var primero=ordenado[0],segundo=ordenado[1];
-  return primero.puntos===segundo.puntos&&
+  return primero.veces===segundo.veces&&
+         primero.scoreFinal===segundo.scoreFinal&&
          primero.totalFallos===segundo.totalFallos&&
-         Math.abs(primero.promedioDuracionMs-segundo.promedioDuracionMs)<1000; // menos de 1 seg de diferencia = empate
+         Math.abs(primero.promedioDuracionMs-segundo.promedioDuracionMs)<1000; // menos de 1 seg = empate
 }
 
 function fmtDuracion(ms){
@@ -3463,29 +3567,18 @@ function fmtDuracion(ms){
   return min+':'+(seg<10?'0':'')+seg;
 }
 
-function fechaCierreSemana(wId){
-  var sem=semanas[wId];
-  if(!sem||!sem.ini||!sem.fin)return null;
-  var d=new Date(sem.ini+'T12:00:00');
-  var finD=new Date(sem.fin+'T12:00:00');
-  var guard=0;
-  while(d<=finD&&guard<14){
-    if(d.getDay()===5)return new Date(d.getFullYear(),d.getMonth(),d.getDate(),20,0,0,0); // viernes 20:00
-    d.setDate(d.getDate()+1);guard++;
-  }
-  // Si la semana no incluye un viernes (caso raro), usar el último día a las 23:59:59 como respaldo
-  return new Date(sem.fin+'T23:59:59');
-}
 function fmtTemporizador(){
   if(!W||!semanas[W])return '';
-  var cierre=fechaCierreSemana(W);
-  if(!cierre)return '';
-  var msRestantes=cierre.getTime()-Date.now();
+  var fin=semanas[W].fin;
+  if(!fin)return '';
+  var hoy=hoyStr();
+  if(hoy>fin)return '🏁 Semana cerrada';
+  var msRestantes=new Date(fin+'T23:59:59').getTime()-Date.now();
   if(msRestantes<=0)return '🏁 Semana cerrada';
   var dias=Math.floor(msRestantes/(1000*60*60*24));
   var hrs=Math.floor((msRestantes%(1000*60*60*24))/(1000*60*60));
   if(dias>0)return '⏱ Cierra en '+dias+' día'+(dias!==1?'s':'')+' y '+hrs+'h';
-  return '⏱ Cierra hoy a las 20:00';
+  return '⏱ Cierra hoy';
 }
 
 function quienFaltaHoy(){
@@ -3523,9 +3616,8 @@ function renderRanking(){
   var temporizador=fmtTemporizador();
   var falta=quienFaltaHoy();
   var semanaCerrada=temporizador==='🏁 Semana cerrada';
-  if(semanaCerrada&&!ganadorDeclarado)intentarDeclararGanador();
   var hayEmpate=hayEmpateGanador(ordenado);
-  if(semanaCerrada&&ganadorDeclarado&&!document.getElementById('ganadorOverlay')&&document.getElementById('appView').style.display!=='none'){
+  if(semanaCerrada&&ordenado.length&&!document.getElementById('ganadorOverlay')&&document.getElementById('appView').style.display!=='none'){
     setTimeout(mostrarGanadorSemana,1000);
   }
   var medallas=['🥇','🥈','🥉'];
@@ -3538,15 +3630,30 @@ function renderRanking(){
     if(!ordenado.length){
       html+='<p class="empty">Aún nadie ha completado una evaluación esta semana.</p>';
     } else {
+      var grupoPrev=null;
       html+=ordenado.map(function(r,i){
         var medalla=medallas[i]||('#'+(i+1));
-        var esGanadorDeclarado=semanaCerrada&&ganadorDeclarado&&r.nombre===ganadorDeclarado.nombre;
-        var liderTag=esGanadorDeclarado?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':(i===0&&!semanaCerrada)?'<span style="color:#fcd34d;font-size:10px">● Lider</span>':'';
-        var promStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
+        var esLider=i===0;
+        var liderTag=esLider&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px;font-weight:700">🏆 Ganador de la semana</span>':esLider?'<span style="color:#fcd34d;font-size:10px">● Lider</span>':'';
+        // Separador de grupo: los días son el 1er criterio de orden
+        var sep='';
+        if(r.veces!==grupoPrev){
+          grupoPrev=r.veces;
+          sep='<div style="display:flex;align-items:center;gap:8px;margin:'+(i===0?'2px':'10px')+' 0 4px"><div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div><span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.32);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap">Respondieron '+r.veces+' de '+r.diasHabiles+' días</span><div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div></div>';
+        }
         var fallosStr2=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor2=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
-        var sub=r.veces+' día'+(r.veces!==1?'s':'')+' · <span style="color:'+fallosColor2+'">'+fallosStr2+'</span> '+liderTag;
-        return '<div class="iitem" style="padding:7px 0"><div class="iitem-info" style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.puntos+' pts</span></div>';
+        var sub='<span style="color:'+fallosColor2+'">'+fallosStr2+'</span> '+liderTag;
+        var desglose='';
+        if(adminUnlocked){
+          var supTxt=r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%';
+          desglose='<div style="margin-left:32px;margin-top:3px;font-size:10px;color:rgba(255,255,255,.4);display:flex;flex-wrap:wrap;gap:8px">'
+            +'<span style="color:#7ec8f7">1° '+r.veces+'/'+r.diasHabiles+' días</span>'
+            +'<span>2° 🧠 Eval '+Math.round(r.comp.conocimiento*100)+'%</span>'
+            +'<span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁 Superv '+supTxt+(r.supImputada?' (imputado)':'')+'</span>'
+            +'</div>';
+        }
+        return sep+'<div class="iitem" style="padding:7px 0;display:block"><div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.scoreFinal+' pts</span></div>'+desglose+'</div>';
       }).join('');
     }
     if(falta.length&&!semanaCerrada){
@@ -3567,8 +3674,14 @@ function renderRanking(){
       miniHtml+='<p style="font-size:12px;color:rgba(255,255,255,.3)">Aún sin participantes esta semana.</p>';
     } else {
       var hoyObj2=new Date();hoyObj2.setHours(0,0,0,0);var inicioHoy2=hoyObj2.getTime();
+      var grupoPrevMini=null;
       miniHtml+=ordenado.map(function(r,i){
         var medal=medallas[i]||(i+1)+'°';
+        var sepMini='';
+        if(r.veces!==grupoPrevMini){
+          grupoPrevMini=r.veces;
+          sepMini='<div style="font-size:9px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.5px;padding:'+(i===0?'0':'6px')+' 0 3px;font-weight:700">'+r.veces+' de '+r.diasHabiles+' días</div>';
+        }
         var key=r.nombre.replace(/\s/g,'_');
         var horaHoy='',durHoy='';
         if(ranking[key]){
@@ -3589,18 +3702,20 @@ function renderRanking(){
           if(durHoy)infoHoy+='⏱'+durHoy;
           infoHoy+='</span>';
         }
-        var esEmpate=hayEmpate&&(i===0||i===1)&&ordenado[0].puntos===r.puntos;
-        var esGanadorDeclarado=semanaCerrada&&ganadorDeclarado&&r.nombre===ganadorDeclarado.nombre;
-        var etiqueta=esGanadorDeclarado?'<span style="color:#fcd34d;font-size:10px"> · 🏆 Ganador</span>':
-          (i===0&&!semanaCerrada&&esEmpate)?'<span style="color:#fcd34d;font-size:10px"> · Empate</span>':
-          (i===0&&!semanaCerrada)?'<span style="color:#fcd34d;font-size:10px"> · Líder</span>':'';
-        var scoreStr=r.puntos+' pts';
-        var promedioStr=r.diasEvaluados>0?Math.round(r.puntos/r.diasEvaluados)+' pts/día':'';
+        var esEmpate=hayEmpate&&(i===0||i===1)&&ordenado[0].veces===r.veces&&ordenado[0].scoreFinal===r.scoreFinal;
+        var etiqueta=esEmpate&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🤝 Co-ganador</span>':
+          i===0&&semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🏆 Ganador</span>':
+          esEmpate?'<span style="color:#fcd34d;font-size:10px"> · Empate</span>':
+          i===0?'<span style="color:#fcd34d;font-size:10px"> · Líder</span>':'';
+        var scoreStr=r.scoreFinal+' pts';
         var scoreColor='#7ec8f7';
         var fallosStr=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
-        var subInfo='<span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span>';
-        return '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+        var subInfo='<span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span>';
+        if(adminUnlocked){
+          subInfo+='<div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:1px">1°'+r.veces+'/'+r.diasHabiles+'d · 🧠'+Math.round(r.comp.conocimiento*100)+'% · <span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁'+(r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%')+'</span></div>';
+        }
+        return sepMini+'<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
           +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+etiqueta+infoHoy+'</span>'
           +'<span style="color:'+scoreColor+';font-weight:700;flex-shrink:0;margin-left:8px">'+scoreStr+'</span>'
@@ -3621,17 +3736,23 @@ function renderRanking(){
       miniHtml+='<div class="card" style="margin-bottom:10px;padding:12px 14px;border-color:rgba(16,185,129,.2)">';
       miniHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-size:10px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.7px">🎓 Ranking Internos</p>'+(temporizador?'<span style="font-size:10px;color:#6ee7b7">'+temporizador+'</span>':'')+'</div>';
       var medallaI=['🥇','🥈','🥉'];
+      var grupoPrevInt=null;
       miniHtml+=ordenadoInternos.map(function(r,i){
         var medal=medallaI[i]||(i+1)+'°';
+        var sepInt='';
+        if(r.veces!==grupoPrevInt){
+          grupoPrevInt=r.veces;
+          sepInt='<div style="font-size:9px;color:rgba(110,231,183,.35);text-transform:uppercase;letter-spacing:.5px;padding:'+(i===0?'0':'6px')+' 0 3px;font-weight:700">'+r.veces+' de '+r.diasHabiles+' días</div>';
+        }
         var fallosStr=r.totalFallos>0?r.totalFallos+' fallo'+(r.totalFallos!==1?'s':''):'sin fallos';
         var fallosColor=r.totalFallos===0?'#6ee7b7':r.totalFallos<=2?'#fcd34d':'#fca5a5';
         var esGanadorI=i===0&&semanaCerrada;
-        return '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+        return sepInt+'<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'
           +'<span>'+medal+' <strong>'+r.nombre+'</strong>'+(esGanadorI?' <span style="color:#6ee7b7;font-size:10px">· Ganador</span>':'')+'</span>'
-          +'<span style="color:#6ee7b7;font-weight:700;flex-shrink:0;margin-left:8px">'+r.puntos+' pts</span>'
+          +'<span style="color:#6ee7b7;font-weight:700;flex-shrink:0;margin-left:8px">'+r.scoreFinal+' pts</span>'
           +'</div>'
-          +'<div style="margin-left:24px;margin-top:1px"><span style="color:rgba(255,255,255,.3);font-size:10px">'+r.veces+' día'+(r.veces!==1?'s':'')+' · </span><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span></div>'
+          +'<div style="margin-left:24px;margin-top:1px"><span style="font-size:10px;color:'+fallosColor+'">'+fallosStr+'</span></div>'
           +'</div>';
       }).join('');
       miniHtml+='</div>';
@@ -3641,27 +3762,10 @@ function renderRanking(){
   }
 }
 
-function intentarDeclararGanador(){
-  if(!W||ganadorDeclarado)return;
-  var cierre=fechaCierreSemana(W);
-  if(!cierre||Date.now()<cierre.getTime())return;
-  var ordenado=ordenarRanking(false);
-  if(!ordenado.length)return;
-  // Verificar en Firebase (no solo en memoria local) que nadie más lo haya declarado ya,
-  // para evitar que dos dispositivos abiertos al mismo tiempo lo sobrescriban.
-  sRef('ganadorDeclarado').once('value',function(s){
-    if(s.val())return;
-    var g=ordenado[0];
-    sRef('ganadorDeclarado').set({
-      nombre:g.nombre,puntos:g.puntos,veces:g.veces,
-      promedioDuracionMs:g.promedioDuracionMs,totalFallos:g.totalFallos,
-      declaradoEn:Date.now()
-    });
-  });
-}
 function mostrarGanadorSemana(){
-  if(!ganadorDeclarado)return;
-  var ganador=ganadorDeclarado;
+  var ordenado=ordenarRanking();
+  if(!ordenado.length)return;
+  var ganador=ordenado[0];
   var key=ganador.nombre.replace(/\s/g,'_');
   // Get gender from cumpleanos data or default to F
   sedeRef('cumpleanos').once('value',function(s){
@@ -3744,6 +3848,7 @@ function calcPuntajeFinalDia(nombre,fecha){
       return e&&e.fecha&&e.fecha>=hoyObj.getTime()&&e.fecha<finDia;
     });
     if(entradasDia.length){
+      entradasDia.sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}); // asegurar orden cronológico
       var pts=entradasDia[entradasDia.length-1].puntos||0;
       puntPreg=pts/10; // normalizar a 0-1
     }
@@ -4049,13 +4154,9 @@ function franjaTieneSinAtencion(dia,area,ini,fin){
 
 function verificar(){
   var def=[];
-  var diasReceso={};
-  Object.values(bloques).forEach(function(b){if(b&&b.receso&&b.dia)diasReceso[b.dia]=true;});
   REGLAS.forEach(function(r){r.dias.forEach(function(dia){
     // Skip feriados
     if(esFeriado(dia))return;
-    // Skip días marcados como receso académico (carga masiva sin área clínica)
-    if(diasReceso[dia])return;
     // Skip if marked as Sin Servicio (Dispensario manual block)
     if(r.opcional&&franjaEsSinServicio(dia,r.area,r.ini,r.fin))return;
 
@@ -4408,45 +4509,6 @@ document.getElementById('qkGuardar').addEventListener('click',function(){
   });
 });
 
-document.getElementById('recesoGuardar').addEventListener('click',function(){
-  if(!W){alert('⚠ Confirma una semana primero antes de cargar el receso.');return;}
-  var entrada=document.getElementById('recesoEntrada').value;
-  var salida=document.getElementById('recesoSalida').value;
-  if(!entrada||!salida){alert('Completa la hora de entrada y salida.');return;}
-  var horario=entrada+'–'+salida;
-  var actividad=document.getElementById('recesoActividad').value.trim();
-  var dias=Array.from(document.querySelectorAll('#recesoDias input:checked')).map(function(cb){return cb.value;});
-  if(!dias.length){alert('Marca al menos un día.');return;}
-  var todosNombres=nombres.slice();
-  Object.values(internos).forEach(function(i){if(i.nombre&&todosNombres.indexOf(i.nombre)===-1)todosNombres.push(i.nombre);});
-  if(!todosNombres.length){alert('No hay colaboradores ni internos registrados en esta sede.');return;}
-  if(!confirm('Esto va a cargar el horario '+horario+' en modo receso académico (sin área clínica) para las '+todosNombres.length+' personas registradas (colaboradores + internos), en '+dias.length+' día'+(dias.length!==1?'s':'')+' de esta semana.'+(actividad?'\n\nActividad: '+actividad:'')+'\n\n¿Continuar?'))return;
-  var nuevos=[];
-  todosNombres.forEach(function(n){
-    dias.forEach(function(dia){
-      nuevos.push(sRef('bloques').push({dia:dia,nombre:n,area:'Receso Académico',horario:horario,receso:true}));
-      if(actividad)nuevos.push(sRef('tareas').push({dia:dia,nombre:n,tipo:'tarea',texto:actividad,receso:true}));
-    });
-  });
-  Promise.all(nuevos).then(function(){
-    showSaved('recesoSaved');
-  });
-});
-
-document.getElementById('recesoQuitar').addEventListener('click',function(){
-  if(!W){alert('⚠ No hay semana confirmada.');return;}
-  var bloquesAEliminar=Object.entries(bloques).filter(function(e){return e[1]&&e[1].receso;});
-  var tareasAEliminar=Object.entries(tareas).filter(function(e){return e[1]&&e[1].receso;});
-  if(!bloquesAEliminar.length&&!tareasAEliminar.length){alert('No hay carga de receso en esta semana.');return;}
-  if(!confirm('¿Eliminar los '+bloquesAEliminar.length+' bloques'+(tareasAEliminar.length?' y '+tareasAEliminar.length+' tareas':'')+' de receso cargados esta semana?'))return;
-  Promise.all(
-    bloquesAEliminar.map(function(e){return sRef('bloques/'+e[0]).remove();})
-    .concat(tareasAEliminar.map(function(e){return sRef('tareas/'+e[0]).remove();}))
-  ).then(function(){
-    showSaved('recesoSaved');
-  });
-});
-
 document.getElementById('addRowBtn').addEventListener('click',addBulkRow);
 document.getElementById('saveBulkBtn').addEventListener('click',function(){
   if(!W){
@@ -4510,7 +4572,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -4534,33 +4596,23 @@ document.getElementById('adminBtn').addEventListener('click',function(){
 });
 
 document.getElementById('saveCapBtn').addEventListener('click',function(){
-  if(!W){alert('⚠ No hay una semana confirmada. Confirma una semana antes de publicar el anuncio.');return;}
   var col=document.getElementById('capColaborador').value;
   var tema=document.getElementById('capTema').value.trim();
   var fecha=document.getElementById('capFecha').value;
   var hora=document.getElementById('capHora').value;
   if(!col||!tema||!fecha){alert('Completa colaborador, tema y fecha.');return;}
-  var horaStr=hora?(' a las '+hora):'';
-  var msg=col+' nos capacitará sobre:\n"'+tema+'"\nFecha: '+fecha+horaStr+'\n\nEsta capacitación es parte del proceso de mejora continua de nuestro equipo. ¡Los esperamos a todos!';
-  sRef('avisoCap').push({texto:msg,fecha:Date.now()}).then(function(){
+  sedeRef('anuncios').push({colaborador:col,tema:tema,fecha:fecha,hora:hora||'',ts:Date.now()}).then(function(){
     showSaved('capSaved');
     document.getElementById('capColaborador').value='';
     document.getElementById('capTema').value='';
     document.getElementById('capFecha').value='';
     document.getElementById('capHora').value='';
-  }).catch(function(err){alert('❌ No se pudo publicar el anuncio: '+err.message);console.error('saveCapBtn',err);});
+    renderAnunciosAdmin();
+  });
 });
 
-document.getElementById('saveAvisoBtn').addEventListener('click',function(){
-  if(!W){alert('⚠ No hay una semana confirmada. Confirma una semana antes de publicar el aviso.');return;}
-  var v=document.getElementById('avisoTxt').value.trim();if(!v)return;
-  var tp=document.getElementById('avisoTipo').value||'normal';
-  sRef('aviso').push({texto:v,tipo:tp,fecha:Date.now()}).then(function(){
-    showSaved('avisoSaved');document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';
-  }).catch(function(err){alert('❌ No se pudo publicar el aviso: '+err.message);console.error('saveAvisoBtn',err);});
-});
-document.getElementById('clearAvisoBtn').addEventListener('click',function(){if(!confirm('Esto borra TODOS los avisos generales activos (no solo el que estás escribiendo). ¿Continuar?'))return;sRef('aviso').remove().then(function(){document.getElementById('avisoTxt').value='';document.getElementById('avisoTipo').value='normal';}).catch(function(err){alert('❌ No se pudo borrar: '+err.message);});});
-document.getElementById('clearCapBtn').addEventListener('click',function(){if(!confirm('Esto borra TODOS los anuncios de capacitación activos. ¿Continuar?'))return;sRef('avisoCap').remove().catch(function(err){alert('❌ No se pudo borrar: '+err.message);});});
+document.getElementById('saveAvisoBtn').addEventListener('click',function(){var v=document.getElementById('avisoTxt').value.trim();if(!v)return;sRef('aviso').set(v).then(function(){showSaved('avisoSaved');});});
+document.getElementById('clearAvisoBtn').addEventListener('click',function(){sRef('aviso').remove();document.getElementById('avisoTxt').value='';});
 document.getElementById('addSemanaBtn').addEventListener('click',function(){
   var ini=document.getElementById('semIniNew').value;
   var fin=document.getElementById('semFinNew').value;
@@ -4939,7 +4991,7 @@ document.getElementById('migrarBtn').addEventListener('click',function(){
   if(!nom)nom=ini+' al '+fin;
   if(!confirm('¿Migrar todos los datos antiguos de '+S+' a la semana "'+nom+'"? Esto puede tardar unos segundos.'))return;
 
-  var CAMPOS_MIGRAR=['bloques','tareas','pendientes','asistencia','notas','visto','cambios','ausencias','llamados','encargados','coberturas','equipoClave','sinServicios','aviso','avisoCap'];
+  var CAMPOS_MIGRAR=['bloques','tareas','pendientes','asistencia','notas','visto','cambios','ausencias','llamados','encargados','coberturas','equipoClave','sinServicios','aviso'];
 
   // 1. Crear la semana nueva
   var nuevaSemanaRef=sedeRef('semanas').push({ini:ini,fin:fin,nombre:nom});
