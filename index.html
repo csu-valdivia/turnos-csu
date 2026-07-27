@@ -776,7 +776,10 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option><option value="clinicaprivada">⚪ Clínica Privada</option></select>
+            </div>
+            <div class="frow" id="tJornadaWrap" style="display:none">
+              <select id="tJornada"><option value="AM (08:00–13:00)">Jornada AM · 08:00–13:00</option><option value="PM (14:00–20:00)">Jornada PM · 14:00–20:00</option><option value="Sábado (09:00–14:00)">Sábado · 09:00–14:00</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
             <button class="btn-add" id="addTareaBtn">Agregar</button>
@@ -4803,18 +4806,32 @@ document.getElementById('addCobBtn').addEventListener('click',function(){
   sRef('coberturas').push(data).then(function(){['cobP','cobD','cobO','cobDst','cobHor'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('cobHorWrap').style.display='none';showSaved('cobSaved');});
 });
 document.getElementById('addLlBtn').addEventListener('click',function(){var n=document.getElementById('llN').value,d=document.getElementById('llD').value,a=document.getElementById('llA').value,h=document.getElementById('llH').value;if(!n||!d||!a||!h){alert('Completa todos los campos.');return;}sRef('llamados').push({nombre:n,dia:d,area:a,horario:h}).then(function(){['llN','llD','llA','llH'].forEach(function(id){document.getElementById(id).value='';});showSaved('llSaved');setTimeout(function(){genPendientes(function(){});},300);});});
+var CLINICA_PRIVADA_DESC='Responsabilidades de Clínica Privada:\n• Mantener los box de atención con insumos suficientes\n• Coordinar el aseo de la unidad\n• Gestión de ropa / REAS\n• Retiro de material contaminado\n• Dejar al profesional con todo lo necesario para atender';
+document.getElementById('tTip').addEventListener('change',function(){
+  var esCP=this.value==='clinicaprivada';
+  document.getElementById('tJornadaWrap').style.display=esCP?'flex':'none';
+  var txt=document.getElementById('tTxt');
+  if(esCP){
+    if(!txt.value.trim())txt.value=CLINICA_PRIVADA_DESC;
+  } else if(txt.value.trim()===CLINICA_PRIVADA_DESC){
+    txt.value='';
+  }
+});
 document.getElementById('addTareaBtn').addEventListener('click',function(){
   var n=document.getElementById('tN').value;
   var dias=Array.from(document.querySelectorAll('#tareaDias input:checked')).map(function(cb){return cb.value;});
   var t=document.getElementById('tTip').value;
   var x=document.getElementById('tTxt').value.trim();
   if(!n||!dias.length||!t||!x){alert('Selecciona persona, al menos un día, tipo y descripción.');return;}
+  var jornada=(t==='clinicaprivada')?document.getElementById('tJornada').value:'';
+  var textoFinal=jornada?('['+jornada+']\n'+x):x;
   Promise.all(dias.map(function(dia){
-    return sRef('tareas').push({dia:dia,nombre:n,tipo:t,texto:x});
+    return sRef('tareas').push({dia:dia,nombre:n,tipo:t,texto:textoFinal});
   })).then(function(){
     document.getElementById('tN').value='';
     document.getElementById('tTip').value='';
     document.getElementById('tTxt').value='';
+    document.getElementById('tJornadaWrap').style.display='none';
     document.querySelectorAll('#tareaDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
     showSaved('tareaSaved');
   });
