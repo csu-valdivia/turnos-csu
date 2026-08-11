@@ -2545,8 +2545,14 @@ function editarBancoPreguntas(docId){
   // Load existing questions
   pregActuales.forEach(function(e,idx){
     var p=e[1];
+    var esCompleja=(p.tipo==='compleja')||((p.pregunta||'').split('\n').length>2);
     html+='<div data-pregid="'+e[0]+'" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:8px">';
-    html+='<textarea class="pregTxt" rows="4" placeholder="Pregunta '+(idx+1)+' — puedes escribir varias líneas (ej. aseveraciones I, II, III, IV)" style="margin-bottom:6px;font-size:13px;line-height:1.5;min-height:80px;resize:vertical;width:100%">'+((p.pregunta||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</textarea>';
+    html+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0">Tipo:</span>'+
+      '<label style="font-size:11px;color:#7ec8f7;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="radio" name="etipo'+idx+'" class="pregTipo" value="simple"'+(esCompleja?'':' checked')+' style="accent-color:#7ec8f7;margin:0"> Simple</label>'+
+      '<label style="font-size:11px;color:#fcd34d;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="radio" name="etipo'+idx+'" class="pregTipo" value="compleja"'+(esCompleja?' checked':'')+' style="accent-color:#fcd34d;margin:0"> Compleja (aseveraciones)</label>'+
+      '</div>';
+    html+='<textarea class="pregTxt" rows="'+(esCompleja?9:4)+'" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:13px;line-height:1.5;min-height:'+(esCompleja?170:80)+'px;resize:vertical;width:100%">'+((p.pregunta||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</textarea>';
     (p.opciones||[]).forEach(function(op,i){
       html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
       html+='<input type="radio" name="ecorrecta'+idx+'" class="pregCorrecta" value="'+i+'"'+(p.correcta===i?' checked':'')+' style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent2);margin:0">';
@@ -2565,17 +2571,46 @@ function editarBancoPreguntas(docId){
   overlay.innerHTML=html;
   document.body.appendChild(overlay);
 
+  // Activar selector Simple/Compleja en las preguntas existentes ya renderizadas
+  document.querySelectorAll('#editPregBuilder > div').forEach(function(div){
+    var ta=div.querySelector('.pregTxt');
+    div.querySelectorAll('.pregTipo').forEach(function(r){
+      r.addEventListener('change',function(){
+        if(this.value==='compleja'){
+          ta.rows=9;ta.style.minHeight='170px';
+          if(!ta.value.trim())ta.value='Enunciado de la pregunta. Analice las siguientes aseveraciones:\nI. \nII. \nIII. \nIV. \nEs o son CORRECTAS:';
+        } else {ta.rows=4;ta.style.minHeight='80px';}
+      });
+    });
+  });
+
   // Add new question row
   document.getElementById('editAddPregBtn').addEventListener('click',function(){
     var builder=document.getElementById('editPregBuilder');
     var idx=builder.children.length;
     var div=document.createElement('div');
     div.style.cssText='background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:8px';
-    div.innerHTML='<textarea class="pregTxt" rows="4" placeholder="Pregunta '+(idx+1)+' — puedes escribir varias líneas (ej. aseveraciones I, II, III, IV)" style="margin-bottom:6px;font-size:13px;line-height:1.5;min-height:80px;resize:vertical;width:100%"></textarea>'+
+    div.innerHTML='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'+
+        '<span style="font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0">Tipo:</span>'+
+        '<label style="font-size:11px;color:#7ec8f7;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="radio" name="etipoN'+idx+'" class="pregTipo" value="simple" checked style="accent-color:#7ec8f7;margin:0"> Simple</label>'+
+        '<label style="font-size:11px;color:#fcd34d;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="radio" name="etipoN'+idx+'" class="pregTipo" value="compleja" style="accent-color:#fcd34d;margin:0"> Compleja (aseveraciones)</label>'+
+        '</div>'+
+      '<textarea class="pregTxt" rows="4" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:13px;line-height:1.5;min-height:80px;resize:vertical;width:100%"></textarea>'+
       [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="enew'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent2);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
       '<input type="text" class="pregTema" placeholder="Tema (ej: Higiene de manos, EPP...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04)">'+
       '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
     builder.appendChild(div);
+    var ta=div.querySelector('.pregTxt');
+    div.querySelectorAll('.pregTipo').forEach(function(r){
+      r.addEventListener('change',function(){
+        if(this.value==='compleja'){
+          ta.rows=9;ta.style.minHeight='170px';
+          if(!ta.value.trim())ta.value='Enunciado de la pregunta. Analice las siguientes aseveraciones:\nI. \nII. \nIII. \nIV. \nEs o son CORRECTAS:';
+          var ops=div.querySelectorAll('.pregOp');var pl=['Solo I y II','Solo I, II y III','Solo III y IV','Todas las anteriores'];
+          ops.forEach(function(o,i){if(!o.value.trim())o.placeholder=pl[i];});
+        } else {ta.rows=4;ta.style.minHeight='80px';}
+      });
+    });
   });
 
   // Save all questions
