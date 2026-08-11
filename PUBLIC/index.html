@@ -1153,12 +1153,12 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion'];
 var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var bancoActivo={}; // banco activo por sede (nuevo sistema)
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={};
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={};
 var anunIdx=0,anunTimer=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1249,6 +1249,7 @@ window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
   bloques={};tareas={};pendientes={};nombres=[];supervisionData={};asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave={};sinServicios={};biblioteca={};fichaProgreso={};ranking={};curNombre='';semanas={};
   anuncios={};anunIdx=0;if(anunTimer){clearInterval(anunTimer);anunTimer=null;}
+  anunciosCapacitacion={};
   document.getElementById('sedeView').style.display='none';
   document.getElementById('mainView').style.display='block';
   document.getElementById('sedeTag').textContent=sede;
@@ -1257,6 +1258,12 @@ window.setSede=function(sede){
   // Cargar nombres/correos (nivel sede) y la lista de semanas
   sedeRef('nombres').on('value',function(s){nombres=Array.isArray(s.val())?s.val():Object.values(s.val()||{});updateSelects();renderNombresList();renderAsist();renderResumen();checkEmailPrompt();});
   sedeRef('correos').on('value',function(s){correos=s.val()||{};});
+  sedeRef('anunciosCapacitacion').on('value',function(s){
+    anunciosCapacitacion=s.val()||{};
+    if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none'){
+      verificarAnuncioCapacitacion();
+    }
+  });
   // Load internos FIRST with once() to ensure it's available for ranking
   sedeRef('internos').once('value',function(s){
     internos=s.val()||{};
@@ -1481,6 +1488,8 @@ function showApp(){
   if(verificarBienvenidaSemana())return;
   // 2. Check cumpleanos
   if(verificarCumpleanos())return;
+  // 2b. Anuncio de capacitación por 3 fallos (se muestra sobre la app, no bloquea el flujo)
+  setTimeout(verificarAnuncioCapacitacion,800);
   // 3. Then fichas obligatorias
   if(verificarFichasPendientes())return;
   document.getElementById('fichaObligView').style.display='none';
@@ -2578,7 +2587,7 @@ function editarBancoPreguntas(docId){
       var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
       var correctaEl=f.querySelector('.pregCorrecta:checked');
       if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){error=true;return;}
-      var temaEl2=f.querySelector('.pregTema');var tema2=temaEl2?temaEl2.value.trim():'General';preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema2||'General'});
+      var temaEl2=f.querySelector('.pregTema');var tema2=temaEl2?temaEl2.value.trim():'General';var tipoEl2=f.querySelector('.pregTipo:checked');var tipo2=tipoEl2?tipoEl2.value:'simple';preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema2||'General',tipo:tipo2});
     });
     if(error){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta).');return;}
     if(Object.keys(preguntas).length<5){alert('Mínimo 5 preguntas requeridas. Tienes '+Object.keys(preguntas).length+'.');return;}
@@ -2678,13 +2687,36 @@ function addPreguntaRow(){
   var idx=wrap.children.length;
   var div=document.createElement('div');
   div.style.cssText='background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:8px';
-  div.innerHTML='<textarea class="pregTxt" rows="4" placeholder="Pregunta '+(idx+1)+' — puedes escribir varias líneas (ej. aseveraciones I, II, III, IV)" style="margin-bottom:6px;font-size:13px;line-height:1.5;min-height:80px;resize:vertical;width:100%"></textarea>'+
+  div.innerHTML='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0">Tipo:</span>'+
+      '<label style="font-size:11px;color:#7ec8f7;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="radio" name="tipo'+idx+'" class="pregTipo" value="simple" checked style="accent-color:#7ec8f7;margin:0"> Simple</label>'+
+      '<label style="font-size:11px;color:#fcd34d;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="radio" name="tipo'+idx+'" class="pregTipo" value="compleja" style="accent-color:#fcd34d;margin:0"> Compleja (aseveraciones)</label>'+
+      '</div>'+
+    '<textarea class="pregTxt" rows="4" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:13px;line-height:1.5;min-height:80px;resize:vertical;width:100%"></textarea>'+
     [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="correcta'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--green);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
     '<input type="text" class="pregTema" placeholder="Tema (ej: Higiene de manos, EPP, Antisépticos...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)">'+
     '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove();saveBorradorPreguntas()">✕ Quitar pregunta</button>';
   wrap.appendChild(div);
+  // Selector de tipo: al elegir "compleja", cargar plantilla guía y agrandar
+  var ta=div.querySelector('.pregTxt');
+  div.querySelectorAll('.pregTipo').forEach(function(r){
+    r.addEventListener('change',function(){
+      if(this.value==='compleja'){
+        ta.rows=9;ta.style.minHeight='170px';
+        if(!ta.value.trim()){
+          ta.value='Enunciado de la pregunta. Analice las siguientes aseveraciones:\nI. \nII. \nIII. \nIV. \nEs o son CORRECTAS:';
+        }
+        var ops=div.querySelectorAll('.pregOp');
+        var plantillaOps=['Solo I y II','Solo I, II y III','Solo III y IV','Todas las anteriores'];
+        ops.forEach(function(o,i){if(!o.value.trim())o.placeholder=plantillaOps[i];});
+      } else {
+        ta.rows=4;ta.style.minHeight='80px';
+      }
+      saveBorradorPreguntas();
+    });
+  });
   // Auto-save on input
-  div.querySelectorAll('input').forEach(function(inp){
+  div.querySelectorAll('input,textarea').forEach(function(inp){
     inp.addEventListener('input',saveBorradorPreguntas);
     inp.addEventListener('change',saveBorradorPreguntas);
   });
@@ -2716,7 +2748,7 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
       var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
       var correctaEl=f.querySelector('.pregCorrecta:checked');
       if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){errorPreg=true;return;}
-      var temaEl=f.querySelector('.pregTema');var tema=temaEl?temaEl.value.trim():'';preguntas.push({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema||'General'});
+      var temaEl=f.querySelector('.pregTema');var tema=temaEl?temaEl.value.trim():'';var tipoEl=f.querySelector('.pregTipo:checked');var tipo=tipoEl?tipoEl.value:'simple';preguntas.push({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema||'General',tipo:tipo});
     });
     if(errorPreg||preguntas.length<5){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta). Mínimo 5 preguntas para una ficha obligatoria.');return;}
     doc.obligatoria=true;
@@ -3118,6 +3150,119 @@ window.cerrarRetroalimentacion=function(){
   goTab('estado');
 };
 
+// Avatar de profesional de salud capacitando (por género), para el anuncio de capacitación
+function svgCapacitador(genero){
+  var anim='<style>@keyframes capBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}@keyframes capPtr{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(6deg)}}.capB{animation:capBob 1.9s ease-in-out infinite;transform-origin:90px 150px}.capP{animation:capPtr 1.9s ease-in-out infinite;transform-origin:44px 78px}</style>';
+  var pelo = genero==='M'
+    ? '<path d="M65 60 q0 -30 25 -30 q25 0 25 30 q-8 -12 -25 -12 q-17 0 -25 12 Z" fill="#22d3ee"/><path d="M65 60 q8 -8 25 -8 q17 0 25 8 l0 -6 q-8 -8 -25 -8 q-17 0 -25 8 Z" fill="#67e8f9"/>'
+    : '<path d="M64 64 q-4 -34 26 -34 q30 0 26 34 q-6 22 -12 30 q-2 -18 -6 -30 q-7 -6 -14 -6 q-7 0 -14 6 q-4 12 -6 30 q-6 -8 -12 -30 Z" fill="#3b1a0a"/><path d="M65 58 q0 -28 25 -28 q25 0 25 28 q-8 -12 -25 -12 q-17 0 -25 12 Z" fill="#22d3ee"/><path d="M65 58 q8 -8 25 -8 q17 0 25 8 l0 -6 q-8 -8 -25 -8 q-17 0 -25 8 Z" fill="#67e8f9"/>';
+  var mejillas = genero==='F' ? '<ellipse cx="76" cy="72" rx="6" ry="3.5" fill="#fca5a5" opacity=".4"/><ellipse cx="106" cy="72" rx="6" ry="3.5" fill="#fca5a5" opacity=".4"/>' : '';
+  var bocaColor = genero==='M' ? '#b45309' : '#be185d';
+  var piernas = genero==='M'
+    ? '<ellipse cx="82" cy="228" rx="10" ry="4" fill="#e2e8f0"/><ellipse cx="104" cy="228" rx="10" ry="4" fill="#e2e8f0"/>'
+    : '<rect x="76" y="192" width="13" height="34" rx="5" fill="#e8b48a"/><rect x="97" y="192" width="13" height="34" rx="5" fill="#e8b48a"/><ellipse cx="82" cy="228" rx="10" ry="4" fill="#be185d"/><ellipse cx="104" cy="228" rx="10" ry="4" fill="#be185d"/>';
+  return '<svg width="150" height="220" viewBox="0 0 180 250" style="display:block;margin:0 auto">'+anim+
+    '<g class="capP"><rect x="42" y="44" width="4" height="66" rx="2" fill="#e2e8f0" transform="rotate(26 44 78)"/></g>'+
+    '<g class="capB">'+
+    '<path d="M63 112 q27 -14 54 0 l6 82 q-30 10 -66 0 Z" fill="#0d9488"/>'+
+    '<path d="M90 104 l-14 8 v18 h28 v-18 Z" fill="#0f766e"/>'+
+    '<rect x="83" y="86" width="14" height="20" rx="4" fill="#e8b48a"/>'+
+    '<ellipse cx="90" cy="62" rx="25" ry="26" fill="#e8b48a"/>'+
+    pelo+
+    '<ellipse cx="81" cy="62" rx="4" ry="4.5" fill="#fff"/><circle cx="82" cy="63" r="2.3" fill="#1e293b"/>'+
+    '<ellipse cx="100" cy="62" rx="4" ry="4.5" fill="#fff"/><circle cx="101" cy="63" r="2.3" fill="#1e293b"/>'+
+    mejillas+
+    '<path d="M81 76 q9 6 18 0" stroke="'+bocaColor+'" stroke-width="2.2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M73 136 q-4 20 0 40" stroke="#5eead4" stroke-width="2" fill="none"/><circle cx="73" cy="178" r="4" fill="#5eead4"/>'+
+    (genero==='M'?'<rect x="75" y="192" width="13" height="34" rx="5" fill="#334155"/><rect x="97" y="192" width="13" height="34" rx="5" fill="#334155"/>':'')+
+    piernas+
+    '</g></svg>';
+}
+
+// Cola de anuncios de capacitación pendientes de mostrar a esta persona
+function anunciosCapPendientes(){
+  if(!curNombre)return [];
+  var vistoKey='anunCapVistos_'+S;
+  var vistos={};
+  try{vistos=JSON.parse(localStorage.getItem(vistoKey)||'{}');}catch(e){}
+  var hoy=hoyStr();
+  return Object.keys(anunciosCapacitacion||{}).map(function(id){
+    var a=anunciosCapacitacion[id]||{};a._id=id;return a;
+  }).filter(function(a){
+    if(!a.nombre||!a.tema)return false;
+    if(a.fechaStr!==hoy)return false;        // solo los de hoy
+    if(vistos[a._id])return false;            // no repetir a quien ya lo vio
+    return true;
+  }).sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+}
+
+function marcarAnuncioCapVisto(id){
+  var vistoKey='anunCapVistos_'+S;
+  var vistos={};
+  try{vistos=JSON.parse(localStorage.getItem(vistoKey)||'{}');}catch(e){}
+  vistos[id]=true;
+  try{localStorage.setItem(vistoKey,JSON.stringify(vistos));}catch(e){}
+}
+
+function verificarAnuncioCapacitacion(){
+  var pend=anunciosCapPendientes();
+  if(!pend.length)return false;
+  mostrarAnuncioCapacitacion(pend[0]);
+  return true;
+}
+
+function mostrarAnuncioCapacitacion(a){
+  if(document.getElementById('anunCapOverlay'))return;
+  marcarAnuncioCapVisto(a._id);
+  var gen=a.genero||'F';
+  var articulo=gen==='M'?'El':'La';
+  var rol=gen==='M'?'capacitador':'capacitadora';
+  var ov=document.createElement('div');
+  ov.id='anunCapOverlay';
+  ov.className='overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML='<div style="max-width:420px;width:100%;background:#16233d;border:2px solid #d97706;border-radius:20px;padding:24px 20px;text-align:center;position:relative">'+
+    '<div style="font-size:15px;font-weight:800;color:#fcd34d;letter-spacing:1px;margin-bottom:4px">📣 ¡ATENCIÓN, ATENCIÓN!</div>'+
+    svgCapacitador(gen)+
+    '<div style="font-size:18px;font-weight:800;color:#fff;margin-top:8px">'+esc(a.nombre)+'</div>'+
+    '<div style="font-size:14px;color:rgba(255,255,255,.85);margin-top:6px;line-height:1.5">'+articulo+' '+rol+' realizará una capacitación al equipo sobre:</div>'+
+    '<div style="font-size:15px;font-weight:700;color:#fcd34d;margin-top:6px">«'+esc(a.tema)+'»</div>'+
+    '<div style="font-size:12px;color:#93c5fd;margin-top:10px;font-style:italic">Próximamente se anunciará fecha, hora y lugar.</div>'+
+    '<button id="anunCapCerrar" style="margin-top:18px;background:linear-gradient(135deg,#d97706,#fcd34d);color:#1a1a1a;border:none;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Entendido</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('anunCapCerrar').addEventListener('click',function(){
+    ov.remove();
+    // Encadenar si hay más pendientes
+    setTimeout(verificarAnuncioCapacitacion,300);
+  });
+}
+
+// Género registrado de una persona ('M'/'F', default 'F')
+function generoDe(nombre){
+  var nk=nombre.trim().toLowerCase();
+  var arr=Array.isArray(nombres)?nombres:Object.values(nombres||{});
+  for(var i=0;i<arr.length;i++){
+    var e=arr[i];
+    if(!e)continue;
+    var n=(typeof e==='object')?(e.nombre||''):String(e);
+    if(n.trim().toLowerCase()===nk){
+      return (typeof e==='object'&&e.genero)?e.genero:'F';
+    }
+  }
+  return 'F';
+}
+
+// Tema en el que la persona registró más fallos hoy dentro de un documento
+function temaConMasFallosHoy(doc){
+  // Si el documento tiene un solo tema, devolverlo directo
+  var temas={};
+  (Object.values(doc.preguntas||{})).forEach(function(p){temas[p.tema||'General']=true;});
+  var lista=Object.keys(temas);
+  if(lista.length===1)return lista[0];
+  return null; // varios temas: se usa el título del documento como respaldo
+}
+
 function registrarFalloCombinado(pend){
   var key=curNombre.replace(/\s/g,'_');
   var hoy=hoyStr();
@@ -3130,7 +3275,12 @@ function registrarFalloCombinado(pend){
     if(fallosHoy>=3){
       data.bloqueadoFecha=hoy;
       bloqueoActivado=true;
-      sedeRef('alertasCapacitacion').push({nombre:curNombre,documento:doc.titulo,docId:docId,fecha:Date.now(),fechaStr:hoy});
+      // Tema con más fallos hoy en este documento (para la capacitación)
+      var temaFallado=temaConMasFallosHoy(doc)||doc.titulo;
+      var gen=generoDe(curNombre);
+      sedeRef('alertasCapacitacion').push({nombre:curNombre,documento:doc.titulo,docId:docId,tema:temaFallado,genero:gen,fecha:Date.now(),fechaStr:hoy});
+      // Anuncio automático estilo overlay para todo el equipo
+      sedeRef('anunciosCapacitacion').push({nombre:curNombre,genero:gen,tema:temaFallado,documento:doc.titulo,fechaStr:hoy,ts:Date.now()});
     }
     if(!fichaProgreso[docId])fichaProgreso[docId]={};
     fichaProgreso[docId][key]=data;
