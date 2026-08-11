@@ -2626,7 +2626,8 @@ function editarBancoPreguntas(docId){
     });
     if(error){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta).');return;}
     if(Object.keys(preguntas).length<5){alert('Mínimo 5 preguntas requeridas. Tienes '+Object.keys(preguntas).length+'.');return;}
-    sedeRef('biblioteca/'+docId+'/preguntas').set(preguntas).then(function(){
+    // Guardar preguntas Y marcar como obligatoria (para que aparezca el botón de banco cerrado y entre al sorteo)
+    sedeRef('biblioteca/'+docId).update({preguntas:preguntas,obligatoria:true}).then(function(){
       var saved=document.getElementById('editPregSaved');
       if(saved){saved.style.display='block';setTimeout(function(){saved.style.display='none';},2000);}
       setTimeout(function(){document.getElementById('editPregOverlay').remove();},1500);
