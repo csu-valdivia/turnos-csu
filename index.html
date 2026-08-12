@@ -4020,9 +4020,9 @@ var KPI_SERVICIOS={
   ]},
   dispensario:{nombre:'📦 Dispensario',indicadores:[
     {key:'disp_unidades_vencidas',label:'Unidades vencidas (para valorizar)',tipo:'conteo',valorizable:true},
-    {key:'disp_entregas_total',label:'Entregas realizadas',tipo:'conteo'},
-    {key:'disp_entregas_error',label:'Entregas con error',tipo:'conteo'},
-    {key:'disp_tasa_error',label:'% de entregas con error',tipo:'tasa',num:'disp_entregas_error',den:'disp_entregas_total'},
+    {key:'disp_abiertos_revisados',label:'Insumos abiertos revisados (con vida útil tras apertura)',tipo:'conteo'},
+    {key:'disp_abiertos_sin_rotular',label:'De esos, sin fecha de apertura rotulada',tipo:'conteo'},
+    {key:'disp_tasa_rotulados',label:'% correctamente rotulados',tipo:'tasa',num:'disp_abiertos_sin_rotular',den:'disp_abiertos_revisados',complemento:true},
     {key:'disp_quiebres',label:'Quiebres de stock evitables',tipo:'conteo'}
   ]},
   rayos:{nombre:'📸 Rayos odontológicos',indicadores:[
@@ -4994,7 +4994,7 @@ function renderKpiFormulario(servicio){
     if(ind.tipo==='tasa'){
       html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;margin-bottom:4px;background:rgba(16,185,129,.08);border-radius:6px">'+
         '<span style="font-size:12px;color:#6ee7b7">'+ind.label+'</span>'+
-        '<span class="kpi-tasa" data-key="'+ind.key+'" data-num="'+ind.num+'" data-den="'+ind.den+'" style="font-size:14px;font-weight:700;color:#6ee7b7">—</span>'+
+        '<span class="kpi-tasa" data-key="'+ind.key+'" data-num="'+ind.num+'" data-den="'+ind.den+'" data-comp="'+(ind.complemento?'1':'0')+'" style="font-size:14px;font-weight:700;color:#6ee7b7">—</span>'+
         '</div>';
     } else {
       var extra=ind.valorizable?' <span style="color:#fcd34d;font-size:9px">💲 valorizable</span>':'';
@@ -5016,8 +5016,12 @@ function renderKpiFormulario(servicio){
       var nv=num?parseFloat(num.value):NaN, dv=den?parseFloat(den.value):NaN;
       if(!isNaN(nv)&&!isNaN(dv)&&dv>0){
         var t=Math.round(nv/dv*1000)/10;
+        var esComp=el.dataset.comp==='1';
+        if(esComp)t=Math.round((100-t)*10)/10; // % correctos = 100 - % fallos
         el.textContent=t+'%';
-        el.style.color=t<=5?'#6ee7b7':t<=15?'#fcd34d':'#fca5a5';
+        // Semáforo: para tasa normal, bajo=bueno; para complemento (% cumplimiento), alto=bueno
+        if(esComp)el.style.color=t>=90?'#6ee7b7':t>=75?'#fcd34d':'#fca5a5';
+        else el.style.color=t<=5?'#6ee7b7':t<=15?'#fcd34d':'#fca5a5';
       } else el.textContent='—';
     });
   }
@@ -5032,7 +5036,11 @@ function renderKpiFormulario(servicio){
     // Tasas calculadas
     svc.indicadores.filter(function(i){return i.tipo==='tasa';}).forEach(function(ind){
       var nv=valores[ind.num],dv=valores[ind.den];
-      if(nv!==undefined&&dv!==undefined&&dv>0)valores[ind.key]=Math.round(nv/dv*1000)/10;
+      if(nv!==undefined&&dv!==undefined&&dv>0){
+        var t=Math.round(nv/dv*1000)/10;
+        if(ind.complemento)t=Math.round((100-t)*10)/10;
+        valores[ind.key]=t;
+      }
     });
     var semId=isoSemanaActual();
     var registro={servicio:servicio,semana:semId,fechaStr:hoyStr(),valores:valores,ts:Date.now()};
