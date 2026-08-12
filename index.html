@@ -954,6 +954,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="saved" id="supSaved">✓ Ronda guardada</div>
           </div>
 
+          <div class="asec" style="border:1px solid rgba(16,185,129,.25)">
+            <p class="asec-title" style="color:#6ee7b7">📈 Indicadores operacionales (registro semanal)</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Cantidades por servicio. Las tasas se calculan solas. Alimenta el dashboard de gerencia.</p>
+            <select id="kpiServicio" style="width:100%;margin-bottom:6px"><option value="">Selecciona servicio</option></select>
+            <div id="kpiFormulario"></div>
+          </div>
+
           <div class="asec">
             <p class="asec-title">📦 Bloques cargados</p>
             <div class="ilist" id="bloquesList"></div>
@@ -1171,7 +1178,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal'];
 var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
@@ -4003,6 +4010,36 @@ var SUP_PESOS={puntualidad:0.20,uniforme:0.18,identificacion:0.12,epp:0.15,puest
 
 // Ítems específicos por estación (se suman a los base cuando se elige una estación).
 // Cada ítem mide un aspecto de calidad, seguridad, trazabilidad o normativa del puesto.
+// ── FASE 1: INDICADORES DE CANTIDAD (registro semanal por servicio) ──
+// tipo 'conteo' = número simple · tipo 'tasa' = se calcula de num/den · 'monto' = cantidad×costo (Fase 2)
+var KPI_SERVICIOS={
+  esterilizacion:{nombre:'♻️ Esterilización',indicadores:[
+    {key:'est_ciclos_total',label:'Ciclos realizados en la semana',tipo:'conteo'},
+    {key:'est_ciclos_reproceso',label:'Ciclos con reproceso',tipo:'conteo'},
+    {key:'est_tasa_reproceso',label:'% con reproceso',tipo:'tasa',num:'est_ciclos_reproceso',den:'est_ciclos_total',invertir:false}
+  ]},
+  dispensario:{nombre:'📦 Dispensario',indicadores:[
+    {key:'disp_unidades_vencidas',label:'Unidades vencidas (para valorizar)',tipo:'conteo',valorizable:true},
+    {key:'disp_entregas_total',label:'Entregas realizadas',tipo:'conteo'},
+    {key:'disp_entregas_error',label:'Entregas con error',tipo:'conteo'},
+    {key:'disp_tasa_error',label:'% de entregas con error',tipo:'tasa',num:'disp_entregas_error',den:'disp_entregas_total'},
+    {key:'disp_quiebres',label:'Quiebres de stock evitables',tipo:'conteo'}
+  ]},
+  rayos:{nombre:'📸 Rayos odontológicos',indicadores:[
+    {key:'rayos_estudios_total',label:'Estudios realizados',tipo:'conteo'},
+    {key:'rayos_repeticiones',label:'Disparos repetidos',tipo:'conteo'},
+    {key:'rayos_tasa_repeticion',label:'% de repetición radiográfica',tipo:'tasa',num:'rayos_repeticiones',den:'rayos_estudios_total'}
+  ]},
+  pabellon:{nombre:'🦷 Pabellón',indicadores:[
+    {key:'pab_horas_perdidas',label:'Horas de pabellón perdidas (causa evitable)',tipo:'conteo',decimal:true},
+    {key:'pab_cancelaciones',label:'Cancelaciones por causa del centro',tipo:'conteo'}
+  ]},
+  clinica:{nombre:'🏥 Clínica privada',indicadores:[
+    {key:'cli_horas_perdidas',label:'Horas de capacidad clínica perdidas',tipo:'conteo',decimal:true},
+    {key:'cli_cancelaciones',label:'Cancelaciones por causa del centro',tipo:'conteo'}
+  ]}
+};
+
 var SUP_ESTACIONES={
   rayos:{nombre:'📸 Rayos dentales',items:[
     {key:'rayos_repeticion',label:'📸 Estudios sin repetición de disparo (sin sobreexposición al paciente)'},
@@ -4795,7 +4832,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -4930,6 +4967,80 @@ function renderItemsEstacion(estacion){
     });
   });
   calcPreviewPuntaje();
+}
+
+// ── REGISTRO SEMANAL DE INDICADORES (Fase 1) ──
+function initKpiAdmin(){
+  var sel=document.getElementById('kpiServicio');
+  if(!sel)return;
+  sel.innerHTML='<option value="">Selecciona servicio</option>'+
+    Object.keys(KPI_SERVICIOS).map(function(k){return '<option value="'+k+'">'+KPI_SERVICIOS[k].nombre+'</option>';}).join('');
+  sel.onchange=function(){renderKpiFormulario(this.value);};
+  renderKpiFormulario('');
+}
+
+function isoSemanaActual(){
+  // Identificador de semana: usa la semana activa W si existe, si no la fecha
+  return W||('fecha-'+hoyStr());
+}
+
+function renderKpiFormulario(servicio){
+  var cont=document.getElementById('kpiFormulario');
+  if(!cont)return;
+  if(!servicio||!KPI_SERVICIOS[servicio]){cont.innerHTML='';return;}
+  var svc=KPI_SERVICIOS[servicio];
+  var html='';
+  svc.indicadores.forEach(function(ind){
+    if(ind.tipo==='tasa'){
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;margin-bottom:4px;background:rgba(16,185,129,.08);border-radius:6px">'+
+        '<span style="font-size:12px;color:#6ee7b7">'+ind.label+'</span>'+
+        '<span class="kpi-tasa" data-key="'+ind.key+'" data-num="'+ind.num+'" data-den="'+ind.den+'" style="font-size:14px;font-weight:700;color:#6ee7b7">—</span>'+
+        '</div>';
+    } else {
+      var extra=ind.valorizable?' <span style="color:#fcd34d;font-size:9px">💲 valorizable</span>':'';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 8px;margin-bottom:4px">'+
+        '<span style="font-size:12px;color:rgba(255,255,255,.75);flex:1">'+ind.label+extra+'</span>'+
+        '<input type="number" class="kpi-input" data-key="'+ind.key+'" min="0" '+(ind.decimal?'step="0.5"':'step="1"')+' placeholder="0" style="width:70px;font-size:13px;text-align:center;padding:4px">'+
+        '</div>';
+    }
+  });
+  html+='<button class="btn-add" id="guardarKpiBtn" style="margin-top:8px;background:linear-gradient(135deg,#059669,#6ee7b7)">💾 Guardar indicadores de la semana</button>'+
+    '<div class="saved" id="kpiSaved">✓ Indicadores guardados</div>';
+  cont.innerHTML=html;
+
+  // Cálculo de tasas en vivo
+  function recalcTasas(){
+    cont.querySelectorAll('.kpi-tasa').forEach(function(el){
+      var num=cont.querySelector('.kpi-input[data-key="'+el.dataset.num+'"]');
+      var den=cont.querySelector('.kpi-input[data-key="'+el.dataset.den+'"]');
+      var nv=num?parseFloat(num.value):NaN, dv=den?parseFloat(den.value):NaN;
+      if(!isNaN(nv)&&!isNaN(dv)&&dv>0){
+        var t=Math.round(nv/dv*1000)/10;
+        el.textContent=t+'%';
+        el.style.color=t<=5?'#6ee7b7':t<=15?'#fcd34d':'#fca5a5';
+      } else el.textContent='—';
+    });
+  }
+  cont.querySelectorAll('.kpi-input').forEach(function(inp){inp.addEventListener('input',recalcTasas);});
+
+  document.getElementById('guardarKpiBtn').addEventListener('click',function(){
+    var valores={};var hayAlgo=false;
+    cont.querySelectorAll('.kpi-input').forEach(function(inp){
+      if(inp.value!==''){valores[inp.dataset.key]=parseFloat(inp.value);hayAlgo=true;}
+    });
+    if(!hayAlgo){alert('Ingresa al menos un valor.');return;}
+    // Tasas calculadas
+    svc.indicadores.filter(function(i){return i.tipo==='tasa';}).forEach(function(ind){
+      var nv=valores[ind.num],dv=valores[ind.den];
+      if(nv!==undefined&&dv!==undefined&&dv>0)valores[ind.key]=Math.round(nv/dv*1000)/10;
+    });
+    var semId=isoSemanaActual();
+    var registro={servicio:servicio,semana:semId,fechaStr:hoyStr(),valores:valores,ts:Date.now()};
+    // Guardar por servicio+semana (sobreescribe si ya existe esa semana)
+    sedeRef('kpiSemanal/'+semId+'_'+servicio).set(registro).then(function(){
+      showSaved('kpiSaved');
+    });
+  });
 }
 
 function initSupervisionAdmin(){
@@ -5108,10 +5219,12 @@ window.abrirDashboardGestion=function(){
 function calcularYMostrarGestion(){
   Promise.all([
     sedeRef('semanas').once('value'),
-    sedeRef('supervision').once('value')
+    sedeRef('supervision').once('value'),
+    sedeRef('kpiSemanal').once('value')
   ]).then(function(results){
     var semanasAll=results[0].val()||{};
     var supAll=results[1].val()||{};
+    var kpiAll=results[2].val()||{};
     var ids=Object.keys(semanasAll).sort(function(a,b){
       return (semanasAll[a].ini||'').localeCompare(semanasAll[b].ini||'');
     });
@@ -5123,6 +5236,7 @@ function calcularYMostrarGestion(){
     Promise.all(promesas).then(function(datosSemanas){
       var metricas=procesarMetricas(datosSemanas);
       metricas.supervision=procesarSupervision(supAll);
+      metricas.kpi=procesarKpiSemanal(kpiAll);
       renderDashboardContenido(metricas);
     });
   });
@@ -5245,6 +5359,7 @@ function renderDashboardContenido(m){
         return '<span style="background:#fef3e0;color:#92400e;font-size:11px;padding:4px 10px;border-radius:20px">🏆 '+nom+' ×'+m.ganadoresUnicos[nom]+'</span>';
       }).join('')+
     '</div>'+
+    seccionKpiHTML(m.kpi)+
     seccionSupervisionHTML(m.supervision)+
     '<div style="border-top:1px solid #eee;padding-top:14px;margin-top:8px">'+
       '<div style="font-size:14px;font-weight:700;color:#1a1a2e;margin-bottom:8px">Qué retorna esta inversión</div>'+
@@ -5270,6 +5385,61 @@ function renderDashboardContenido(m){
           scales:{y:{min:0,max:100,ticks:{callback:function(v){return v+'%';}}},x:{}}}});
     }
   },100);
+}
+
+// Procesa los indicadores operacionales semanales por servicio
+function procesarKpiSemanal(kpiAll){
+  var regs=Object.values(kpiAll||{}).filter(function(r){return r&&r.servicio&&r.valores;});
+  if(!regs.length)return null;
+  var porServicio={};
+  regs.forEach(function(r){
+    if(!porServicio[r.servicio])porServicio[r.servicio]={registros:0,vals:{}};
+    porServicio[r.servicio].registros++;
+    Object.keys(r.valores).forEach(function(k){
+      if(!porServicio[r.servicio].vals[k])porServicio[r.servicio].vals[k]={suma:0,n:0};
+      porServicio[r.servicio].vals[k].suma+=r.valores[k];
+      porServicio[r.servicio].vals[k].n++;
+    });
+  });
+  // Extraer los indicadores destacados por servicio
+  var resumen=[];
+  Object.keys(porServicio).forEach(function(sv){
+    if(!KPI_SERVICIOS[sv])return;
+    var datos=porServicio[sv].vals;
+    var destacados=[];
+    KPI_SERVICIOS[sv].indicadores.forEach(function(ind){
+      if(datos[ind.key]){
+        var v=datos[ind.key];
+        if(ind.tipo==='tasa'){
+          destacados.push({label:ind.label,valor:Math.round(v.suma/v.n*10)/10+'%',tipo:'tasa'});
+        } else if(ind.tipo==='conteo'){
+          destacados.push({label:ind.label,valor:Math.round(v.suma),tipo:'conteo'});
+        }
+      }
+    });
+    resumen.push({servicio:sv,nombre:KPI_SERVICIOS[sv].nombre,semanas:porServicio[sv].registros,indicadores:destacados});
+  });
+  return resumen;
+}
+
+function seccionKpiHTML(kpi){
+  if(!kpi||!kpi.length)return '';
+  var html='<div style="border-top:1px solid #eee;padding-top:14px;margin-top:14px">'+
+    '<div style="font-size:14px;font-weight:700;color:#1a1a2e;margin-bottom:10px">Indicadores operacionales por servicio</div>';
+  kpi.forEach(function(s){
+    if(!s.indicadores.length)return;
+    html+='<div style="background:#f7f9fc;border-radius:8px;padding:10px;margin-bottom:8px">'+
+      '<div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:6px">'+s.nombre+' <span style="font-size:10px;color:#999;font-weight:400">· '+s.semanas+' semana'+(s.semanas!==1?'s':'')+'</span></div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    s.indicadores.forEach(function(i){
+      html+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px">'+
+        '<div style="font-size:16px;font-weight:800;color:#2563eb">'+i.valor+'</div>'+
+        '<div style="font-size:10px;color:#666">'+i.label+'</div></div>';
+    });
+    html+='</div></div>';
+  });
+  html+='</div>';
+  return html;
 }
 
 function seccionSupervisionHTML(sup){
