@@ -441,7 +441,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(16,185,129,.1));border:1px solid rgba(59,130,246,.3)">
             <p class="asec-title" style="color:#7ec8f7">📊 Informe de gestión para gerencia</p>
-            <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Panel con métricas del programa: desempeño, participación, supervisión e incentivo. Exportable a PDF.</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Panel con métricas del programa: desempeño, participación y supervisión. Exportable a PDF.</p>
             <button class="btn-add" id="abrirDashboardBtn" style="background:linear-gradient(135deg,#2563eb,#10b981)">📊 Abrir dashboard de gestión</button>
           </div>
 
@@ -880,6 +880,15 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
                 <option value="tarde">🌆 Tarde</option>
               </select>
             </div>
+            <div class="frow" style="margin-top:6px">
+              <select id="supEstacion" style="flex:1">
+                <option value="">🏥 Estación (opcional — agrega ítems específicos)</option>
+                <option value="rayos">📸 Rayos dentales</option>
+                <option value="esterilizacion">♻️ Esterilización</option>
+                <option value="dispensario">📦 Dispensario</option>
+                <option value="pabellon">🦷 Pabellón / Clínica</option>
+              </select>
+            </div>
             <div id="supItems" style="margin-top:10px">
               <div class="sup-item" data-key="puntualidad" data-peso="0.20" style="flex-direction:column;align-items:stretch;gap:0">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
@@ -939,6 +948,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               </div>
 
             </div>
+            <div id="supItemsEstacion" style="margin-top:4px"></div>
             <div id="supPuntaje" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:right"></div>
             <button class="btn-add" id="guardarSupBtn" style="margin-top:8px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">💾 Guardar ronda de supervisión</button>
             <div class="saved" id="supSaved">✓ Ronda guardada</div>
@@ -3990,6 +4000,36 @@ window.cerrarGanador=function(){
 
 // ── SUPERVISIÓN ──
 var SUP_PESOS={puntualidad:0.20,uniforme:0.18,identificacion:0.12,epp:0.15,puesto:0.10,accesorios:0.13,cofia:0.09,alimentos:0.03};
+
+// Ítems específicos por estación (se suman a los base cuando se elige una estación).
+// Cada ítem mide un aspecto de calidad, seguridad, trazabilidad o normativa del puesto.
+var SUP_ESTACIONES={
+  rayos:{nombre:'📸 Rayos dentales',items:[
+    {key:'rayos_repeticion',label:'📸 Estudios sin repetición de disparo (sin sobreexposición al paciente)'},
+    {key:'rayos_proteccion',label:'🛡️ Uso correcto de protección radiológica'},
+    {key:'rayos_registro',label:'📋 Registro dosimétrico y de estudios al día'}
+  ]},
+  esterilizacion:{nombre:'♻️ Esterilización',items:[
+    {key:'est_pasos',label:'✅ Pasos del proceso completos y en orden'},
+    {key:'est_trazabilidad',label:'🔖 Trazabilidad correcta del material'},
+    {key:'est_marcaje',label:'🕒 Marcaje de entrada/salida del material registrado'},
+    {key:'est_reproceso',label:'♻️ Ciclo sin reproceso'}
+  ]},
+  dispensario:{nombre:'📦 Dispensario',items:[
+    {key:'disp_vigencia',label:'📅 Insumos vigentes (sin productos caducados)'},
+    {key:'disp_reas',label:'🗑️ REAS con peso y rotulación correcta'},
+    {key:'disp_entrega',label:'✅ Entregas sin error, según solicitud'},
+    {key:'disp_stock',label:'📊 Sin quiebres de stock evitables'}
+  ]},
+  pabellon:{nombre:'🦷 Pabellón / Clínica',items:[
+    {key:'pab_preparacion',label:'✅ Box e instrumental preparados a tiempo'},
+    {key:'pab_instrumental',label:'🔧 Instrumental completo, sin faltantes'},
+    {key:'pab_reas',label:'🗑️ Manejo de residuos correcto'},
+    {key:'pab_reposicion',label:'📦 Reposición oportuna de insumos'}
+  ]}
+};
+// Ítem transversal de trazabilidad (aplica a todas las estaciones)
+var SUP_ITEM_REGISTROS={key:'registros_al_dia',label:'📋 Registros clínicos al día y claros'};
 var SUP_LABELS={puntualidad:'⏰ Puntualidad',uniforme:'👔 Uniforme reglamentario',identificacion:'🪪 Identificación visible',epp:'🦺 EPP correcto según área',puesto:'🧹 Puesto ordenado y limpio',accesorios:'💍 Sin accesorios en acciones clínicas',cofia:'👩‍⚕️ Cofia o gorro correcto',alimentos:'🚫 Sin alimentos en el área'};
 var SUP_RETROALIMENTACION={
   puntualidad:'La puntualidad garantiza la continuidad del turno y la seguridad del paciente. El equipo que recibe el turno depende de tu presencia a la hora exacta.',
@@ -4861,12 +4901,50 @@ document.getElementById('saveCumpBtn').addEventListener('click',function(){
 });
 
 // Supervision admin handlers
+// Inyecta los ítems específicos de una estación (más el ítem transversal de registros)
+function renderItemsEstacion(estacion){
+  var cont=document.getElementById('supItemsEstacion');
+  if(!cont)return;
+  if(!estacion||!SUP_ESTACIONES[estacion]){cont.innerHTML='';calcPreviewPuntaje();return;}
+  var est=SUP_ESTACIONES[estacion];
+  var items=est.items.concat([SUP_ITEM_REGISTROS]);
+  var html='<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(167,139,250,.3)">'+
+    '<p style="font-size:10px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ítems de '+est.nombre+'</p>';
+  items.forEach(function(it){
+    html+='<div class="sup-item sup-item-est" data-key="'+it.key+'" style="flex-direction:column;align-items:stretch;gap:0">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
+      '<span style="flex:1;font-size:13px">'+it.label+'</span>'+
+      '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
+      '</div></div>';
+  });
+  html+='</div>';
+  cont.innerHTML=html;
+  // Enganchar toggles de los ítems nuevos
+  cont.querySelectorAll('.sup-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var toggle=this.closest('.sup-toggle');
+      toggle.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no');});
+      if(this.classList.contains('sup-no'))this.classList.add('active-no');
+      else this.classList.add('active-yes');
+      calcPreviewPuntaje();
+    });
+  });
+  calcPreviewPuntaje();
+}
+
 function initSupervisionAdmin(){
   var supNom=document.getElementById('supNombre');
   if(!supNom)return;
   supNom.innerHTML='<option value="">Selecciona colaborador</option>'+
     nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';})
     .map(function(n){return '<option>'+n+'</option>';}).join('');
+
+  // Selector de estación: inyecta ítems específicos
+  var supEst=document.getElementById('supEstacion');
+  if(supEst){
+    supEst.onchange=function(){renderItemsEstacion(this.value);};
+    renderItemsEstacion(supEst.value);
+  }
 
   // Toggle buttons
   document.querySelectorAll('.sup-btn').forEach(function(btn){
@@ -4897,20 +4975,31 @@ function calcPreviewPuntaje(){
   var total=0;var respondidos=0;
   document.querySelectorAll('#supItems .sup-item').forEach(function(item){
     var peso=parseFloat(item.dataset.peso);
-    var activo=item.querySelector('.sup-btn.active-yes,sup-btn.active-no');
-    var yes=item.querySelector('.sup-btn.active-yes');
     if(item.querySelector('.active-yes')||item.querySelector('.active-no')){
       respondidos++;
       if(item.querySelector('.active-yes'))total+=peso;
     }
   });
+  // Cumplimiento de estación (aparte)
+  var estItems=document.querySelectorAll('#supItemsEstacion .sup-item-est');
+  var estOk=0,estResp=0;
+  estItems.forEach(function(item){
+    if(item.querySelector('.active-yes')){estResp++;estOk++;}
+    else if(item.querySelector('.active-no'))estResp++;
+  });
   var el=document.getElementById('supPuntaje');
-  if(el&&respondidos>0)el.textContent='Puntaje parcial: '+Math.round(total*100)+'%';
+  if(el){
+    var txt='';
+    if(respondidos>0)txt='Base: '+Math.round(total*100)+'%';
+    if(estItems.length>0&&estResp>0)txt+=(txt?' · ':'')+'Estación: '+Math.round(estOk/estItems.length*100)+'%';
+    el.textContent=txt;
+  }
 }
 
 document.getElementById('guardarSupBtn').addEventListener('click',function(){
   var nombre=document.getElementById('supNombre').value;
   var ronda=document.getElementById('supRonda').value;
+  var estacion=document.getElementById('supEstacion')?document.getElementById('supEstacion').value:'';
   if(!nombre){alert('Selecciona un colaborador.');return;}
   var items={};var todosRespondidos=true;
   document.querySelectorAll('#supItems .sup-item').forEach(function(item){
@@ -4919,23 +5008,40 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
     else if(item.querySelector('.active-no'))items[key]=0;
     else todosRespondidos=false;
   });
-  if(!todosRespondidos){alert('Evalúa todos los ítems antes de guardar.');return;}
+  if(!todosRespondidos){alert('Evalúa todos los ítems base antes de guardar.');return;}
+  // Ítems de estación (si se seleccionó una)
+  var itemsEstacion={};var estacionCompleta=true;
+  document.querySelectorAll('#supItemsEstacion .sup-item-est').forEach(function(item){
+    var key=item.dataset.key;
+    if(item.querySelector('.active-yes'))itemsEstacion[key]=1;
+    else if(item.querySelector('.active-no'))itemsEstacion[key]=0;
+    else estacionCompleta=false;
+  });
+  if(estacion&&!estacionCompleta){alert('Evalúa todos los ítems de la estación antes de guardar.');return;}
   var hoy=hoyStr();
-  // Verificar si ya existe esa ronda hoy
   var yaExiste=Object.values(supervisionData||{}).some(function(r){
     return r&&r.nombre===nombre&&r.fecha===hoy&&r.ronda===ronda;
   });
   if(yaExiste){if(!confirm('Ya existe una ronda de '+ronda+' para '+nombre+' hoy. ¿Sobreescribir?'))return;}
   var puntaje=0;
   Object.entries(SUP_PESOS).forEach(function(e){if(items[e[0]]===1)puntaje+=e[1];});
-  sRef('supervision').push({
+  var registro={
     nombre:nombre,ronda:ronda,fecha:hoy,items:items,
     puntaje:Math.round(puntaje*100),ts:Date.now()
-  }).then(function(){
+  };
+  if(estacion){
+    registro.estacion=estacion;
+    registro.itemsEstacion=itemsEstacion;
+    // Cumplimiento de estación: % de ítems en cumplimiento
+    var keysEst=Object.keys(itemsEstacion);
+    var okEst=keysEst.filter(function(k){return itemsEstacion[k]===1;}).length;
+    registro.puntajeEstacion=keysEst.length?Math.round(okEst/keysEst.length*100):null;
+  }
+  sRef('supervision').push(registro).then(function(){
     showSaved('supSaved');
-    // Reset toggles
     document.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no');});
     document.getElementById('supPuntaje').textContent='';
+    var se=document.getElementById('supEstacion');if(se){se.value='';renderItemsEstacion('');}
   });
 });
 
@@ -5000,12 +5106,15 @@ window.abrirDashboardGestion=function(){
 
 // Lee TODAS las semanas de Firebase y calcula las métricas de gestión
 function calcularYMostrarGestion(){
-  sedeRef('semanas').once('value',function(snap){
-    var semanasAll=snap.val()||{};
+  Promise.all([
+    sedeRef('semanas').once('value'),
+    sedeRef('supervision').once('value')
+  ]).then(function(results){
+    var semanasAll=results[0].val()||{};
+    var supAll=results[1].val()||{};
     var ids=Object.keys(semanasAll).sort(function(a,b){
       return (semanasAll[a].ini||'').localeCompare(semanasAll[b].ini||'');
     });
-    // Para cada semana, leer su ranking y calcular métricas
     var promesas=ids.map(function(id){
       return sedeRef('semanas/'+id+'/ranking').once('value').then(function(s){
         return {id:id,sem:semanasAll[id],ranking:s.val()||{}};
@@ -5013,9 +5122,35 @@ function calcularYMostrarGestion(){
     });
     Promise.all(promesas).then(function(datosSemanas){
       var metricas=procesarMetricas(datosSemanas);
+      metricas.supervision=procesarSupervision(supAll);
       renderDashboardContenido(metricas);
     });
   });
+}
+
+// Procesa la supervisión: cumplimiento base y por estación
+function procesarSupervision(supAll){
+  var rondas=Object.values(supAll||{}).filter(function(r){return r&&r.nombre;});
+  if(!rondas.length)return null;
+  var sumBase=0,nBase=0;
+  var porEstacion={};
+  rondas.forEach(function(r){
+    if(typeof r.puntaje==='number'){sumBase+=r.puntaje;nBase++;}
+    if(r.estacion&&typeof r.puntajeEstacion==='number'){
+      if(!porEstacion[r.estacion])porEstacion[r.estacion]={suma:0,n:0};
+      porEstacion[r.estacion].suma+=r.puntajeEstacion;
+      porEstacion[r.estacion].n++;
+    }
+  });
+  var estaciones=Object.keys(porEstacion).map(function(k){
+    return {estacion:k,nombre:(SUP_ESTACIONES[k]?SUP_ESTACIONES[k].nombre:k),
+      promedio:Math.round(porEstacion[k].suma/porEstacion[k].n),rondas:porEstacion[k].n};
+  });
+  return {
+    totalRondas:rondas.length,
+    promedioBase:nBase?Math.round(sumBase/nBase):null,
+    estaciones:estaciones
+  };
 }
 
 function procesarMetricas(datosSemanas){
@@ -5093,7 +5228,7 @@ function renderDashboardContenido(m){
       '<div style="font-size:13px;color:#666">Centro de Salud Universitario USS Valdivia · '+m.nSemanas+' semanas · '+fecha+'</div>'+
     '</div>'+
     '<div style="background:#eef4ff;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#1a1a2e;line-height:1.5">'+
-      'Una tarde libre semanal para quien lidera el ranking incentiva que todo el equipo estudie a diario. '+
+      'El programa de evaluación diaria con reconocimiento al mejor desempeño impulsa que el equipo estudie de forma continua. '+
       'El desempeño mejoró '+(m.mejora>=0?'+':'')+m.mejora+' puntos porcentuales en el período, con participación sostenida y a costo marginal.</div>'+
     '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">'+
       dashKPI('Desempeño','+'+m.mejora+'%','vs inicio del programa','#10b981')+
@@ -5104,12 +5239,13 @@ function renderDashboardContenido(m){
     '<div style="font-size:14px;font-weight:700;color:#1a1a2e;margin-bottom:6px">Evolución del desempeño semanal</div>'+
     '<div style="position:relative;height:220px;margin-bottom:20px"><canvas id="dashTrendCanvas"></canvas></div>'+
     '<div style="font-size:14px;font-weight:700;color:#1a1a2e;margin-bottom:4px">Rotación de ganadores</div>'+
-    '<div style="font-size:12px;color:#666;margin-bottom:8px">El incentivo motiva a todo el equipo: '+m.nGanadoresDistintos+' personas distintas han liderado el ranking, no siempre la misma.</div>'+
+    '<div style="font-size:12px;color:#666;margin-bottom:8px">'+m.nGanadoresDistintos+' personas distintas han liderado el ranking a lo largo del período — el desafío moviliza a todo el equipo, no siempre a la misma persona.</div>'+
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px">'+
       Object.keys(m.ganadoresUnicos).sort(function(a,b){return m.ganadoresUnicos[b]-m.ganadoresUnicos[a];}).map(function(nom){
         return '<span style="background:#fef3e0;color:#92400e;font-size:11px;padding:4px 10px;border-radius:20px">🏆 '+nom+' ×'+m.ganadoresUnicos[nom]+'</span>';
       }).join('')+
     '</div>'+
+    seccionSupervisionHTML(m.supervision)+
     '<div style="border-top:1px solid #eee;padding-top:14px;margin-top:8px">'+
       '<div style="font-size:14px;font-weight:700;color:#1a1a2e;margin-bottom:8px">Qué retorna esta inversión</div>'+
       '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">'+
@@ -5134,6 +5270,27 @@ function renderDashboardContenido(m){
           scales:{y:{min:0,max:100,ticks:{callback:function(v){return v+'%';}}},x:{}}}});
     }
   },100);
+}
+
+function seccionSupervisionHTML(sup){
+  if(!sup||!sup.totalRondas)return '';
+  var html='<div style="border-top:1px solid #eee;padding-top:14px;margin-top:14px">'+
+    '<div style="font-size:14px;font-weight:700;color:#1a1a2e;margin-bottom:4px">Supervisión clínica en terreno</div>'+
+    '<div style="font-size:12px;color:#666;margin-bottom:10px">'+sup.totalRondas+' rondas registradas'+
+      (sup.promedioBase!==null?' · cumplimiento base '+sup.promedioBase+'%':'')+'</div>';
+  if(sup.estaciones&&sup.estaciones.length){
+    html+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">';
+    sup.estaciones.forEach(function(e){
+      var color=e.promedio>=85?'#10b981':e.promedio>=70?'#d97706':'#dc2626';
+      html+='<div style="background:#f7f9fc;border-radius:8px;padding:10px">'+
+        '<div style="font-size:12px;color:#1a1a2e;font-weight:700">'+e.nombre+'</div>'+
+        '<div style="font-size:18px;font-weight:800;color:'+color+'">'+e.promedio+'%</div>'+
+        '<div style="font-size:10px;color:#999">'+e.rondas+' ronda'+(e.rondas!==1?'s':'')+'</div></div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  return html;
 }
 
 function dashKPI(label,valor,sub,color){
