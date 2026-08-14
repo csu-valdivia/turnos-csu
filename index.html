@@ -1179,7 +1179,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes'];
 var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
@@ -1288,6 +1288,7 @@ window.setSede=function(sede){
   sedeRef('invStock').on('value',function(s){invStock=s.val()||{};});
   sedeRef('invMovimientos').on('value',function(s){invMovimientos=s.val()||{};});
   sedeRef('invAsignaciones').on('value',function(s){invAsignaciones=s.val()||{};});
+  sedeRef('invLotes').on('value',function(s){invLotes=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
     anunciosCapacitacion=s.val()||{};
     if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none'){
@@ -5522,7 +5523,7 @@ var BODEGAS={
   sub_rayos:{nombre:'📸 Rayos',tipo:'sub'}
 };
 var INV_EJEMPLO=[["530105","1 ESCOBILLA QUIRURGICA","INSUMOS CLINICOS",70],["513100","1 BAJADA SUERO UNIDAD","INSUMOS ODONTOLOGICOS",5],["514107","1 BATA CAMISA PACIENTE UNIDAD","INSUMOS CLINICOS",21],["501100","1 CUBRE CALZADO BOLSA","ELEMENTOS PROTECCION PERSONAL",6],["190100","1 KIT DE PABELLON UNIDAD","INSUMOS ODONTOLOGICOS",61],["743127","1 TUBO ASPIRACION 3 METROS","INSUMOS PABELLON",25],["118107","1 CLORHEXIDINA ORALGENE 2% CAJA","INSUMOS ODONTOLOGICOS",8],["500101","1 GORRO PLANO DESECHABLE BOLSA","DISPOSITIVOS MEDICOS",6],["104102","1 AGUJA DENTAL LARGA DESECHABLE CAJA","INSUMOS CLINICOS",3],["537102","1 CINTA REACTIVA GLUCOTEST UNIDAD","INSUMOS ODONTOLOGICOS",3],["512110","1 HOJA BISTURI N° 15 C CAJA","INSUMOS CLINICOS",2],["141104","1 JERINGA DESECHABLE 20 CC CAJA","INSUMOS CLINICOS",1],["147101","1 MASCARILLA CAJA","ELEMENTOS PROTECCION PERSONAL",118],["506100","1 MICROPORE CINTA ADHESIVA 2,5 CAJA","INSUMOS CLINICOS",44],["506102","1 MICROPORE CINTA ADHESIVA 5CM. UNIDAD","INSUMOS CLINICOS",6],["161104","1 SUERO FISIOLOGICO AMPOLLA 20 CC UNIDAD","INSUMOS CLINICOS",210],["165100","1 VASOS DESECHABLES PAQUETE","INSUMOS OFICINA",4],["107116","1 ALCOHOL PAD UNIDAD","INSUMOS ASEO",2],["131109","1 GUANTES ESTERILES 7 CAJA","ELEMENTOS PROTECCION PERSONAL",6],["131111","1 GUANTES ESTERILES 8 CAJA","ELEMENTOS PROTECCION PERSONAL",4],["131110","1 GUANTES ESTERILES 7 1/2 CAJA","ELEMENTOS PROTECCION PERSONAL",1],["510100","1 PARCHE CURITA CAJA","INSUMOS CLINICOS",6],["110120","1 ANESTESIA AL 4% CAJA","INSUMOS ODONTOLOGICOS",1],["824390","1 MARIPOSA 23 G VACUTAINER CAJA","INSUMOS CLINICOS",1],["131129","1 GUANTES DE LATEX S CAJA","ELEMENTOS PROTECCION PERSONAL",23],["104101","1 AGUJA DENTAL CORTA DESECHABLES CAJA","INSUMOS CLINICOS",4],["554104","1 CATETER INTRAVENOSO 22G UNIDAD","INSUMOS CLINICOS",50],["554103","1 CATETER INTRAVENOSO 20G UNIDAD","INSUMOS CLINICOS",50],["131104","1 GUANTES DE VINILO S CAJA","ELEMENTOS PROTECCION PERSONAL",29],["131108","1 GUANTES ESTERILES 6 1/2 CAJA","ELEMENTOS PROTECCION PERSONAL",3],["131115","1 GUANTES DE VINILO M CAJA","ELEMENTOS PROTECCION PERSONAL",66],["131116","1 GUANTES ESTERILES 6 CAJA","ELEMENTOS PROTECCION PERSONAL",3],["131117","1 GUANTES DE VINILO L CAJA","ELEMENTOS PROTECCION PERSONAL",9],["131122","1 GUANTES DE NITRILO XS CAJA","ELEMENTOS PROTECCION PERSONAL",17],["131125","1 GUANTES DE ALTO RIESGO S UNIDAD","ELEMENTOS PROTECCION PERSONAL",2],["131130","1 GUANTES DE LATEX M CAJA","ELEMENTOS PROTECCION PERSONAL",38],["131131","1 GUANTES DE LATEX XS CAJA","ELEMENTOS PROTECCION PERSONAL",27],["131132","1 GUANTES DE LATEX L CAJA","INSUMOS ODONTOLOGICOS",12],["523107","1 SUTURA ESTRIL 5-0 MONONYLON 45 CM CAJA","INSUMOS ODONTOLOGICOS",6],["523123","1 SUTURA NYLON 3/0 SOBRES","DISPOSITIVOS MEDICOS",4],["523110","1 SUTURA ESTERIL 3-0 CATGUT CAJA","INSUMOS ODONTOLOGICOS",4],["140101","1 JABÓN DE CLORHEXIDINA AL 2% BOTELLA","INSUMOS ASEO",3],["166100","1 YESO PIEDRA AMARILLO BOLSA","INSUMOS ODONTOLOGICOS",42],["107100","1 ALCOHOL DE QUEMAR CAJA","INSUMOS CLINICOS",10],["107105","1 ALCOHOL PURO 70° CAJA","INSUMOS CLINICOS",10],["166103","1 YESO ORTOPEDICO BOLSA","INSUMOS ODONTOLOGICOS",2],["148108","1 SILICONA PESADA POR CONDENSACIÓN CAJA","INSUMOS ODONTOLOGICOS",6],["523101","1 SUTURA ESTERIL 4-0 SEDA 45 CM CAJA","INSUMOS ODONTOLOGICOS",3],["523106","1 SUTURA ESTERIL 4-0 MONONYLON 45 CM BOLSA","INSUMOS ODONTOLOGICOS",5],["824392","1 SUTURA ACIDO POLIGLICOLICO 4/0 CAJA","INSUMOS ODONTOLOGICOS",3],["824393","1 SUTURA NYLON 6.0 CAJA","INSUMOS ODONTOLOGICOS",5],["143107","1 EDTA 17 % BOTELLA","INSUMOS ODONTOLOGICOS",1],["171103","1 TEFLON UNIDAD","INSUMOS ODONTOLOGICOS",3],["167111","1 LAMINA PLACA CRISTAL (BIOART) PAQUETE","INSUMOS ODONTOLOGICOS",1],["115100","1 CONOS GUTAPERCHA N° 30 0.2% CAJA","INSUMOS ODONTOLOGICOS",4],["115104","1 CONOS GUTAPERCHA N° 60 0.2% CAJA","INSUMOS ODONTOLOGICOS",4],["115113","1 CONOS GUTAPERCHA N° 15 0.2% CAJA","INSUMOS ODONTOLOGICOS",3],["115105","1 CONOS GUTAPERCHA N° 70 0.2% CAJA","INSUMOS ODONTOLOGICOS",5],["115110","1 CONOS GUTAPERCHA N° 20 0.2% CAJA","INSUMOS ODONTOLOGICOS",5],["115129","1 CONOS DE GUTAPERCHA 45-80 CAJA","INSUMOS ODONTOLOGICOS",1],["740116","1 PUNTA INTRORALES AMARILLAS BOLSA","INSUMOS ODONTOLOGICOS",18],["740112","1 PUNTAS MEZC. GARANT AMARILLAS 3 M 71462 BOLSA","INSUMOS ODONTOLOGICOS",31],["117104","1 CUÑAS DE MADERA SURTIDA CAJA","INSUMOS ODONTOLOGICOS",8],["4","1 DISCOS SOFLEX CAJA","INSUMOS ODONTOLOGICOS",2],["121100","1 DISCO CARBURUNDUM CAJA","INSUMOS ODONTOLOGICOS",3],["171100","1 PAPEL ARTICULAR RECTO CAJA","INSUMOS ODONTOLOGICOS",31],["171101","1 PAPEL ARTICULAR ARCADA CAJA","INSUMOS ODONTOLOGICOS",19],["115128","1 CONOS DE PAPEL N° 60 CAJA","INSUMOS ODONTOLOGICOS",14],["115127","1 CONOS DE PAPEL N° 55 CAJA","INSUMOS ODONTOLOGICOS",30],["115125","1 CONOS DE PAPEL N° 45 CAJA","INSUMOS ODONTOLOGICOS",7],["115133","1 CONOS DE PAPEL N° 30 CAJA","INSUMOS ODONTOLOGICOS",7],["115123","1 CONOS DE PAPEL N° 35 CAJA","INSUMOS ODONTOLOGICOS",19],["115122","1 CONOS DE PAPEL N° 25 CAJA","INSUMOS ODONTOLOGICOS",2],["115124","1 CONOS DE PAPEL N° 40 CAJA","INSUMOS ODONTOLOGICOS",4],["115126","1 CONOS DE PAPEL N° 50 CAJA","INSUMOS ODONTOLOGICOS",8],["115253","1 CONOS GUTTA DIADENT N°25 4MM CAJA","INSUMOS ODONTOLOGICOS",26],["115249","1 CONOS GUTAPERCHA N°35 0.4% CAJA","INSUMOS ODONTOLOGICOS",8],["115254","1 CONOS GUTAPERCHA N°30 0.4% CAJA","INSUMOS ODONTOLOGICOS",11],["115250","1 CONOS GUTAPERCHA N°40 0.4% CAJA","INSUMOS ODONTOLOGICOS",3],["132100","1 GUTAPERCHA CAJA","INSUMOS ODONTOLOGICOS",1],["101105","1 ACRILICO TERMOCURABLE TRANSPARENTE MARCHE FRASCO","INSUMOS ODONTOLOGICOS",7],["101106","1 ACRILICO AUTOCURABLE TRANSPARENTE MARCHE FRASCO","INSUMOS ODONTOLOGICOS",9],["101104","1 ACRILICO AUTOCURABLE ROSADO MARCHE FRASCO","INSUMOS ODONTOLOGICOS",16],["101116","1 ACRILICO AUTOCURABLE N° 46 MARCHE FRASCO","INSUMOS ODONTOLOGICOS",18],["112166","1 CEMENTO RELYX ULTIMATE CLICCKER REFILL CAJA","INSUMOS ODONTOLOGICOS",1],["136100","1 HUINCHA CELULOIDE PAQUETE","INSUMOS ODONTOLOGICOS",25],["172100","1 EUCALIPTOL FRASCO","INSUMOS ODONTOLOGICOS",1],["136101","1 HUINCHA DE LIJA METALICA UNIDAD","INSUMOS ODONTOLOGICOS",6],["134106","1 HILO DENTAL ORAL B S / CERA UNIDAD","INSUMOS ODONTOLOGICOS",1],["129100","1 GODIVA PAQUETE","INSUMOS ODONTOLOGICOS",1],["134102","1 HILO RETRACTOR Nº1 FRASCO","INSUMOS ODONTOLOGICOS",5],["134105","1 HILO RETRACTO Nº2 FRASCO","INSUMOS ODONTOLOGICOS",3],["134107","1 HILO RETRACTOR N º0 FRASCO","INSUMOS ODONTOLOGICOS",5],["110105","1 ANESTESIA AL 2 % C/VASO CAJA","INSUMOS ODONTOLOGICOS",2],["110106","1 ANESTESIA AL 3% S/VASO CAJA","INSUMOS ODONTOLOGICOS",3],["128101","1 GELITA CAJA","INSUMOS ODONTOLOGICOS",4],["740145","1 PUNTA DESECHABLE JERINGA TRIPLE PAQUETE","INSUMOS ODONTOLOGICOS",1],["136102","1 HUINCHA PARA RESINA GRUESA CAJA","INSUMOS ODONTOLOGICOS",3],["136103","1 HUINCHA PARA RESINA FINA CAJA","INSUMOS ODONTOLOGICOS",8],["137100","1 BANDA MATRIZ METALICA 5MM UNIDAD","INSUMOS ODONTOLOGICOS",29],["199102","1 MICRO-BRUSH UNIDAD","INSUMOS ODONTOLOGICOS",1],["154100","1 PASTA PROFILACTICA CON FLUOR CAJA","INSUMOS ODONTOLOGICOS",2],["112130","1 VIDRIO IONOMERO DE RESTAURACIÓN (KETAC MOLAR) BOLSA","INSUMOS ODONTOLOGICOS",2],["112150","1 CEMENTO PROVISORIO PROVICOL CAJA","INSUMOS ODONTOLOGICOS",1],["126100","1 FORMOCRESOL FRASCO","INSUMOS ODONTOLOGICOS",1],["128102","1 HEMOSTATICO CAJA","INSUMOS ODONTOLOGICOS",1],["112120","1 CEMENTO TOPSEAL O AH-PLUS ENDODONCIA CAJA","INSUMOS ODONTOLOGICOS",2],["102105","1 ADHESIVO SINGLE BOND 2 FRASCO","INSUMOS ODONTOLOGICOS",3],["114140","1 RESINA Z350 FLOW A3 JERINGA","INSUMOS ODONTOLOGICOS",2],["114149","1 RESINA Z350 A3 DENTINA JERINGA","INSUMOS ODONTOLOGICOS",2],["114171","1 RESINA Z350 A1 BODY JERINGA","INSUMOS ODONTOLOGICOS",1],["114166","1 RESINA Z350 A2 BODY JERINGA","INSUMOS ODONTOLOGICOS",3],["114143","1 RESINA Z350 FLOW A2 JERINGA","INSUMOS ODONTOLOGICOS",2],["159105","1 SELLANTE CLIMPRO CAJA","INSUMOS ODONTOLOGICOS",1],["102126","1 ADHESIVO SINGLE BOND UNIVERSAL UNIDAD","INSUMOS ODONTOLOGICOS",1],["128105","1 BARRERA GINGIVAL CAJA","INSUMOS ODONTOLOGICOS",1],["112111","1 DYCAL CAJA","INSUMOS ODONTOLOGICOS",1],["100103","1 ACIDO FLUORHIDRICO 10 % JERINGA","INSUMOS ESTETICA",1],["112104","1 FERMIN / COLTOSOL CAJA","INSUMOS ODONTOLOGICOS",3],["138104","1 BARNIZ DE FLUOR CAJA","INSUMOS ODONTOLOGICOS",10],["148114","1 ACTIVADOR CAJA","INSUMOS ODONTOLOGICOS",8],["101110","1 ACRILICO DURALAY ROJO POLVO-LIQUIDO FRASCO","INSUMOS ODONTOLOGICOS",5],["148115","1 ALGINATO NORMAL BOLSA","INSUMOS ODONTOLOGICOS",4],["141107","1 JERINGA DESECHABLE 3 CC CAJA","INSUMOS CLINICOS",1],["141101","1 JERINGA DESECHABLE 5 CC CAJA","INSUMOS CLINICOS",2],["137153","1 BANDA MATRIZ METALICA 7MM UNIDAD","INSUMOS ODONTOLOGICOS",22],["144123","1 LIMAS P/ HUESO UNIDAD","INSUMOS CLINICOS",11],["715107","1 CURETA GRACEY 15/16 HU-FRIEDY UNIDAD","INSUMOS CLINICOS",3],["111100","1 CANULA ASPIRACION SURGISTIP MICRO CAJA","INSUMOS CLINICOS",12],["113104","1 CERA ROSADA CAJA","INSUMOS ODONTOLOGICOS",4],["740141","1 PUNTAS MEZCLADORA PARACORE BOLSA","INSUMOS ODONTOLOGICOS",10],["509108","1 GASA APOSITO ESTERIL 5X5 CAJA","INSUMOS CLINICOS",39],["112108","1 VIDRIO IONOMERO DE CEMENTACIÓN (MERON) CAJA","INSUMOS ODONTOLOGICOS",4],["824388","1 MARIPOSA 21 G VACUTAINER CAJA","INSUMOS CLINICOS",3],["151100","1 MONOMERO AUTOCURABLE FRASCO","INSUMOS ODONTOLOGICOS",1],["101108","1 ACRILICO AUTOCURABLE N° 41 MARCHE FRASCO","INSUMOS ODONTOLOGICOS",3],["142101","1 LACA BASE SUPERIOR CAJA","INSUMOS ODONTOLOGICOS",1],["185101","1 CUBETAS DESECHABLES UNIDAD","INSUMOS ODONTOLOGICOS",2],["113106","1 CERA AMARILLA CAJA","INSUMOS ODONTOLOGICOS",3],["147106","1 MASCARILLA KN95 CAJA","ELEMENTOS PROTECCION PERSONAL",30],["503100","1 INDICADOR P/ ESTERILIZ. X VAPOR UNIDAD","INSUMOS ODONTOLOGICOS",1],["502116","1 PAPEL P/ ESTERILIZ. C / FUELLE 30X100 ROLLO","INSUMOS ESTERILIZACION",15],["502114","1 PAPEL P/ ESTERILIZ. C / FUELLE 20X100 CAJA","INSUMOS ESTERILIZACION",14],["824413","1 PAPEL P/ESTERILIZ. S/FUELLE 30CM ROLLO","INSUMOS ESTERILIZACION",22],["140100","1 JABÓN DETERGENTE ENZIMÁTICO BIDÓN","INSUMOS ASEO",11],["502106","1 PAPEL P/ ESTERILIZ. S/ FUELLE 20 CM CAJA","INSUMOS ESTERILIZACION",15],["502100","1 PAPEL P/ESTERILIZ. S/FUELLE 10CM ROLLO","INSUMOS ESTERILIZACION",11],["502117","1 PAPEL P/ ESTERILIZ. S / FUELLE 5X200 CAJA","INSUMOS ESTERILIZACION",13],["502108","1 PAPEL P/ ESTERILIZ. S/ FUELLE 7,5 CM ROLLO","INSUMOS ESTERILIZACION",12],["146101","1 ACEITE LUBRICANTE UNIDAD","INSUMOS ODONTOLOGICOS",1],["175102","1 PECHERA PLASTICA UNIDAD","ELEMENTOS PROTECCION PERSONAL",3040],["124100","1 EYECTOR BOLSA","INSUMOS ODONTOLOGICOS",4],["505100","1 BAJA-LENGUA MADERA UNIDAD","INSUMOS CLINICOS",5500],["512100","1 HOJA BISTURI N° 11 CAJA","INSUMOS CLINICOS",4],["178101","1 HOJA BISTURI N° 15 CAJA","INSUMOS ODONTOLOGICOS",5],["824385","1 HISOPO GASA NO TEJIDA CAJA","INSUMOS CLINICOS",2],["141112","1 JERINGA TUBERCULINA 1ML 27G X 1/2' CAJA","INSUMOS CLINICOS",1],["141103","1 JERINGA DESECHABLE 10 CC CAJA","INSUMOS CLINICOS",1],["777201","1 PLACA FOSFORO N°2 CAJA","INSUMOS RAYOS X",10],["777202","1 PLACA FOSFORO N°0 CAJA","INSUMOS RAYOS X",5],["824398","1 TUBO VACUETTE TAPA ROJA 10 ML PAQUETE","INSUMOS ODONTOLOGICOS",3],["554100","1 CATETER INTRAVENOSO UNIDAD","INSUMOS CLINICOS",4],["760100","1 LENTES PROTECTORES MARCO/ COLOR USA UNIDAD","DISPOSITIVOS MEDICOS",14],["101114","1 ACRILICO CORONA AUTOCURABLE COLOR 42 FRASCO","INSUMOS ODONTOLOGICOS",6],["824399","1 TUBO VACUETTE TAPA BLANCA 6ML PAQUETE","INSUMOS ODONTOLOGICOS",2],["502110","1 PAPEL ALUSA TRANSPARENTE UNIDAD","INSUMOS CLINICOS",17],["504104","1 CONTROL BIOLOGICO AUTOCLAVE","INSUMOS ESTERILIZACION",62],["503101","1 CEPILLO ERGONOMETRICO LAVADO ESTERILIZACION","INSUMOS ESTERILIZACION",29],["824386","1 INDICADOR LECTURA RAPIDA VAPOR ATTES 1292 CAJA","DISPOSITIVOS MEDICOS",1],["530103","1 ESCOBILLA LIMPIA FRESAS UNIDAD","DISPOSITIVOS MEDICOS",26],["514101","1 BATA QUIRURGICA L UNIDAD","ELEMENTOS PROTECCION PERSONAL",126],["504103","1 CONTROL BOWIE-DICK AUTOCLAVE PAQUETE","0",144],["130103","1 GOMA DIQUE CON LATEX AZUL CAJA","INSUMOS ODONTOLOGICOS",4],["135100","1 HIPOCLORITO BOTELLA","INSUMOS ODONTOLOGICOS",8],["161102","1 SUERO FISIOLOGICO 9% 250 ML BOTELLA","INSUMOS CLINICOS",10],["141108","1 JERINGA MONOJET PARA ENDODONCIA CAJA","INSUMOS ODONTOLOGICOS",2],["112102","1 VIDRIO IONOMERO (CHEMFIL) CAJA","INSUMOS ODONTOLOGICOS",2],["515112","1 PAÑO QUIRURGICO FENESTRADO 80X80 CM UNIDAD","INSUMOS ESTERILIZACION",100],["110113","1 ENDOICE (CLORURO DE ETILO) BOTELLE","INSUMOS ODONTOLOGICOS",1],["100101","1 ACIDO ORTOFOSFORICO 37% JERINGA","INSUMOS ESTETICA",2],["560102","1 FUNDA PROTECTORA PLUS ADULTO N°2 CAJA","INSUMOS CLINICOS",10],["560103","1 FUNDA PROTECTORA PLUS PEDIÁTRICA N°0 CAJA","INSUMOS CLINICOS",5],["101100","1 ACONDICIONADOR DE TEJIDO CAJA","INSUMOS ODONTOLOGICOS",3],["101103","1 ACRILICO AUTOCURABLE CUBETA NARANJO MARCHE FRASCO","INSUMOS ODONTOLOGICOS",9],["824424","1 ACRILICO DURALAY POLVO LIQUIDO 80 GRS. CLEAR CAJA","INSUMOS ODONTOLOGICOS",7],["104111","1 AGUJA DENTAL EXTRA CORTA CAJA","INSUMOS CLINICOS",2],["105100","1 AISLANTE ACRILICO ACRYFOIL UNIDAD","INSUMOS ODONTOLOGICOS",4],["106115","1 ALAMBRE ACERO FEDERHARD .070 ROLLO","INSUMOS ODONTOLOGICOS",7],["106103","1 ALAMBRE LATON BLANDO 0.5 UNIDAD","INSUMOS ODONTOLOGICOS",1],["108101","1 ALGODON PRENSADO HIDROFILO BOLSA","INSUMOS CLINICOS",1],["112165","1 BIODENTINE (SUSTITUTO BIOACTIVO DE DENTINA) CAJA","INSUMOS ODONTOLOGICOS",2],["112112","1 CEMENTO DE RESINA TEMPORAL (RELYX TEMP O SIMILAR) CAJA","INSUMOS ODONTOLOGICOS",8],["112106","1 CEMENTO GROSSMAN FRASCO","INSUMOS ODONTOLOGICOS",10],["112158","1 CEMENTO PARACORE RESINA C/ PARABOND CAJA","INSUMOS ODONTOLOGICOS",6],["112149","1 CEMENTO PROVISORIO FERMIT CAJA","INSUMOS ODONTOLOGICOS",2],["113108","1 CERA TREFILADA UNIDAD","INSUMOS ODONTOLOGICOS",6],["118102","1 CLORHEXIDINA ORALGENE 0,12% BIDÓN","INSUMOS ODONTOLOGICOS",5],["115136","1 CONOS DE PAPEL N° 15 CAJA","INSUMOS ODONTOLOGICOS",4],["115137","1 CONOS DE PAPEL N° 20 CAJA","INSUMOS ODONTOLOGICOS",3],["115134","1 CONOS DE PAPEL N° 70 CAJA","INSUMOS ODONTOLOGICOS",8],["115135","1 CONOS DE PAPEL N° 80 CAJA","INSUMOS ODONTOLOGICOS",9],["115107","1 CONOS GUTAPERCHA N° 25 0.2% CAJA","INSUMOS ODONTOLOGICOS",3],["115109","1 CONOS GUTAPERCHA N° 40 0.2% CAJA","INSUMOS ODONTOLOGICOS",3],["115101","1 CONOS GUTAPERCHA N° 45 0.2% CAJA","INSUMOS ODONTOLOGICOS",4],["115102","1 CONOS GUTAPERCHA N° 50 0.2% CAJA","INSUMOS ODONTOLOGICOS",3],["115106","1 CONOS GUTAPERCHA N° 80 0.2% CAJA","INSUMOS ODONTOLOGICOS",9],["115108","1 CONOS GUTAPERCHA Nº 35 0.2% CAJA","INSUMOS ODONTOLOGICOS",4],["115112","1 CONOS PAPEL 15-40 CAJA","INSUMOS ODONTOLOGICOS",7],["115111","1 CONOS PAPEL 45-80 CAJA","INSUMOS ODONTOLOGICOS",6],["116103","1 CORONA MET. MOL. N° 2-3-4-5 SUP. UNIDAD","INSUMOS ODONTOLOGICOS",177],["116102","1 CORONAS DE CELULOIDE ANTERIOR NIÑO UNIDAD","INSUMOS ODONTOLOGICOS",2],["121107","1 DISCO ABRASIVO 22 MM UNIDAD","INSUMOS ODONTOLOGICOS",4],["121127","1 DISCOS SOF-LEX 1/2\" 4931 FINO BOLSA","INSUMOS ODONTOLOGICOS",1],["121129","1 DISCOS SOF-LEX XT 1/2\" 4931 MEDIANO BOLSA","INSUMOS ODONTOLOGICOS",15],["121128","1 DISCOS SOF-LEX XT 1/2\" 4931 SUPER FINO BOLSA","INSUMOS ODONTOLOGICOS",0],["123101","1 EUGENOL FRASCO","INSUMOS ODONTOLOGICOS",2],["112109","1 FERMIT/PROVICOL CAJA","INSUMOS ODONTOLOGICOS",0],["112143","1 GLYDE FILE PREP CAJA","INSUMOS ODONTOLOGICOS",2],["130105","1 GOMA DIQUE SIN LATEX CAJA","INSUMOS ODONTOLOGICOS",1],["131123","1 GUANTES DE NITRILO L CAJA","ELEMENTOS PROTECCION PERSONAL",10],["131121","1 GUANTES DE NITRILO M CAJA","ELEMENTOS PROTECCION PERSONAL",74],["131120","1 GUANTES DE NITRILO S CAJA","ELEMENTOS PROTECCION PERSONAL",220],["824384","1 GUANTES DE VINILO XS CAJA","INSUMOS ODONTOLOGICOS",5],["133101","1 HIDRÓXIDO DE CALCIO FRASCO","INSUMOS ODONTOLOGICOS",7],["512108","1 HOJA BISTURI N° 12 CAJA","INSUMOS CLINICOS",3],["159110","1 INFILTRANTE DE CARIES CAJA","INSUMOS ODONTOLOGICOS",1],["168113","1 IONOMERO DE VIDRIO RIVA SELF CURE RESTAURACION SDI CAJA","INSUMOS ODONTOLOGICOS",2],["141102","1 JERINGA DESECHABLE 1 CC CAJA","INSUMOS CLINICOS",4],["101121","1 KIT ALIKE CAJA","INSUMOS ODONTOLOGICOS",3],["167102","1 LAMINA FOTOCURADO SUPERIOR BOLSA","INSUMOS ODONTOLOGICOS",7],["151101","1 MONOMERO DURALAY FRASCO","INSUMOS ODONTOLOGICOS",25],["151108","1 MONOMERO TERMOCURABLE/NORMAL MARCHE FRASCO","INSUMOS ODONTOLOGICOS",48],["152101","1 OXIDO DE ALUMINIO FRASCO","INSUMOS ODONTOLOGICOS",2],["515109","1 PAÑO CLINICO FENESTRADO 50X50 CMS. UNIDAD","INSUMOS ESTERILIZACION",256],["825123","1 PAPEL INDICADOR PH (TIRAS X 100UND) CAJA","INSUMOS ESTERILIZACION",1],["153100","1 PARAMONOCLOROFENOL CAJA","INSUMOS ODONTOLOGICOS",5],["148101","1 PASTA ZINQUENOLICA (CAVEX) CAJA","INSUMOS ODONTOLOGICOS",3],["176103","1 PERNOS F/ VIDRIO REFORPOST N° 1 CAJA","INSUMOS ODONTOLOGICOS",6],["176134","1 PERNOS F/ VIDRIO REFORPOST N° 2 CAJA","INSUMOS ODONTOLOGICOS",3],["176135","1 PERNOS F/ VIDRIO REFORPOST N° 3 CAJA","INSUMOS ODONTOLOGICOS",3],["176100","1 PERNOS METALICO PARA PROVISORIO BOLSA","INSUMOS ODONTOLOGICOS",4],["176101","1 PERNOS MOOSER 135-08 MAILLEFER CAJA","INSUMOS ODONTOLOGICOS",4],["176139","1 PERNOS WHITEPOST 0.5 CON FRESA CAJA","INSUMOS ODONTOLOGICOS",3],["772107","1 PISTOLA RIVA APLICADOR UNIDAD","INSUMOS ODONTOLOGICOS",4],["102115","1 PROSIL SILANO JERINGA","INSUMOS ODONTOLOGICOS",6],["740139","1 PUNTA ACCUDOSE FLEXIBLE REPOSICION X 12 UNIDADES BOLSA","INSUMOS ODONTOLOGICOS",9],["740125","1 PUNTA APLICADORA VITREMER BOLSA","INSUMOS ODONTOLOGICOS",6],["740143","1 PUNTAS PROTEM 4 BOLSA","INSUMOS ODONTOLOGICOS",9],["148155","1 RELINE REBASADO DURO DE AUTOCURADO FRASCO","INSUMOS ODONTOLOGICOS",1],["114165","1 RESINA FILTEX SUPREME A-3 ESMALTE UNIDAD","INSUMOS ODONTOLOGICOS",8],["114173","1 RESINA FILTEX SUPREME B-1 BODY UNIDAD","INSUMOS ODONTOLOGICOS",7],["114174","1 RESINA FILTEX SUPREME B-2 BODY UNIDAD","INSUMOS ODONTOLOGICOS",5],["114254","1 RESINA REFORZADA EVERX FLOW JERINGA","INSUMOS ODONTOLOGICOS",1],["114144","1 RESINA Z350 A1 DENTINA JERINGA","INSUMOS ODONTOLOGICOS",5],["114147","1 RESINA Z350 A2 ESMALTE JERINGA","INSUMOS ODONTOLOGICOS",1],["114167","1 RESINA Z350 A3 BODY JERINGA","INSUMOS ODONTOLOGICOS",3],["163105","1 REVELADOR DE PLACA (CARISTOP O SIMILAR) CAJA","INSUMOS ODONTOLOGICOS",14],["824500","1 SILI SPRAY (ADHESIVO CUBETA SPRAY) FRASCO","INSUMOS ODONTOLOGICOS",10],["148139","1 SILICONA LIVIANA POR ADICIÓN CAJA","INSUMOS ODONTOLOGICOS",2],["148113","1 SILICONA LIVIANA POR CONDENSACIÓN CAJA","INSUMOS ODONTOLOGICOS",25],["148119","1 SILICONA MEDIANA POR CONDENSACIÓN (INACTIVA) UNIDAD","INSUMOS ODONTOLOGICOS",37],["148140","1 SILICONA PESADA POR ADICIÓN CAJA","INSUMOS ODONTOLOGICOS",4],["824367","1 SUERO FISIOLOGICO 100ML UNIDAD","INSUMOS CLINICOS",60],["523100","1 SUTURA ESTERIL 3-0 SEDA 45 CM CAJA","INSUMOS ODONTOLOGICOS",5],["148154","1 UFI GEL HARD CAJA","INSUMOS ODONTOLOGICOS",2],["164100","1 VASELINA LIQUIDA BOTELLA","INSUMOS CLINICOS",3],["164101","1 VASELINA SOLIDA BOTELLA","INSUMOS CLINICOS",1],["112107","1 VIDRIO IONOMERO DE BASE (VITREBOND) CAJA","INSUMOS ODONTOLOGICOS",4],["112136","1 VIDRIO IONOMERO DE CEMENTACIÓN (KETAC CEM) CAJA","INSUMOS ODONTOLOGICOS",7],["166101","1 YESO TALLER BOLSA","INSUMOS ODONTOLOGICOS",65],["166102","1 YESO VELMIX BOLSA","INSUMOS ODONTOLOGICOS",30],["169100","1 YODOFORMO FRASCO","INSUMOS ODONTOLOGICOS",2]];
-var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={};
+var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={};
 
 // Cálculo de ROP: (demanda diaria × lead time) + stock seguridad. Si no hay datos, usa el manual.
 function calcularROP(item){
@@ -5544,10 +5545,12 @@ function estadoStock(cantidad,rop){
 // Genera lista de alarmas de reposición (ordenadas por ABC luego por criticidad)
 function alarmasReposicion(){
   var alarmas=[];
-  Object.keys(invStock||{}).forEach(function(bodId){
-    var stockBod=invStock[bodId]||{};
-    Object.keys(stockBod).forEach(function(cod){
-      var cant=Number(stockBod[cod])||0;
+  Object.keys(BODEGAS).forEach(function(bodId){
+    // Insumos con lotes en esta bodega
+    var codsBod={};
+    Object.keys((invLotes[bodId]||{})).forEach(function(c){codsBod[c]=1;});
+    Object.keys(codsBod).forEach(function(cod){
+      var cant=stockUnidades(bodId,cod);
       var item=invCatalogo[cod]; if(!item)return;
       var rop=calcularROP(item);
       var est=estadoStock(cant,rop);
@@ -5619,28 +5622,51 @@ window.bodTab=function(v){
   if(v==='alarmas')c.innerHTML=vistaAlarmas();
   else if(v==='stock')c.innerHTML=vistaStock();
   else if(v==='catalogo'){c.innerHTML=vistaCatalogo();setTimeout(function(){if(document.getElementById('bodCatLista'))filtrarCatalogo('');},30);}
-  else if(v==='movimiento'){c.innerHTML=vistaMovimiento();setTimeout(function(){if(document.getElementById('movSubcontenido'))movSubtab('entrega');},30);}
+  else if(v==='movimiento'){c.innerHTML=vistaMovimiento();setTimeout(function(){if(document.getElementById('movSubcontenido'))movSubtab('ingreso');},30);}
 };
 
 function vistaAlarmas(){
-  var alarmas=alarmasReposicion();
   var n=Object.keys(invCatalogo).length;
   if(!n)return '<div style="background:#16233d;border-radius:12px;padding:30px;text-align:center;color:rgba(255,255,255,.5)">Aún no hay insumos cargados. Ve a <b style="color:#fbbf24">Catálogo</b> para cargar la base, o súbela cuando tengas el inventario real.</div>';
-  if(!alarmas.length)return '<div style="background:#16233d;border-radius:12px;padding:30px;text-align:center;color:#6ee7b7">✓ Todo en orden. Ningún insumo bajo el punto de reposición.</div>';
-  var html='<div style="background:#16233d;border-radius:12px;padding:14px">'+
-    '<div style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:10px">'+alarmas.length+' insumo(s) requieren atención · ordenados por criticidad y clase ABC</div>';
-  alarmas.forEach(function(a){
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:rgba(255,255,255,.03);border-left:3px solid '+a.estado.color+';border-radius:6px">'+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:13px;color:#fff;font-weight:600">'+esc(a.desc)+' <span style="font-size:10px;background:'+(a.abc==='A'?'#dc2626':a.abc==='B'?'#d97706':'#6b7280')+';color:#fff;padding:1px 6px;border-radius:10px">'+a.abc+'</span></div>'+
-        '<div style="font-size:11px;color:rgba(255,255,255,.5)">'+a.bodNombre+' · cód '+a.cod+'</div>'+
-      '</div>'+
-      '<div style="text-align:right">'+
-        '<div style="font-size:13px;font-weight:700;color:'+a.estado.color+'">'+a.estado.txt+'</div>'+
-        '<div style="font-size:11px;color:rgba(255,255,255,.6)">Stock: '+a.cantidad+(a.rop!=null?' / ROP '+a.rop:'')+(a.reponer?' · reponer '+a.reponer:'')+'</div>'+
-      '</div>'+
-    '</div>';
-  });
+  var reposicion=alarmasReposicion();
+  var vencimiento=alarmasVencimiento();
+  var html='';
+  // Alarmas de vencimiento
+  html+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+    '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">⏳ Vencimientos</div>';
+  if(!vencimiento.length){
+    html+='<div style="font-size:12px;color:#6ee7b7">✓ Ningún lote próximo a vencer.</div>';
+  } else {
+    vencimiento.forEach(function(a){
+      var col=a.vencido?'#dc2626':'#d97706';
+      var txt=a.vencido?'VENCIDO':(a.meses<1?'vence en <1 mes':'vence en '+Math.round(a.meses)+' meses');
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;margin-bottom:5px;background:rgba(255,255,255,.03);border-left:3px solid '+col+';border-radius:6px">'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#fff">'+esc(a.desc)+'</div>'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.5)">'+a.bodNombre+' · '+a.unidades+' u. · vence '+a.venc+'</div></div>'+
+        '<span style="font-size:11px;font-weight:700;color:'+col+'">'+txt+'</span></div>';
+    });
+  }
+  html+='</div>';
+  // Alarmas de reposición
+  html+='<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">📉 Reposición</div>';
+  if(!reposicion.length){
+    html+='<div style="font-size:12px;color:#6ee7b7">✓ Todo sobre el punto de reposición.</div>';
+  } else {
+    html+='<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">'+reposicion.length+' insumo(s) · ordenados por criticidad y ABC</div>';
+    reposicion.forEach(function(a){
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:rgba(255,255,255,.03);border-left:3px solid '+a.estado.color+';border-radius:6px">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;color:#fff;font-weight:600">'+esc(a.desc)+' <span style="font-size:10px;background:'+(a.abc==='A'?'#dc2626':a.abc==='B'?'#d97706':'#6b7280')+';color:#fff;padding:1px 6px;border-radius:10px">'+a.abc+'</span></div>'+
+          '<div style="font-size:11px;color:rgba(255,255,255,.5)">'+a.bodNombre+' · cód '+a.cod+'</div>'+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-size:13px;font-weight:700;color:'+a.estado.color+'">'+a.estado.txt+'</div>'+
+          '<div style="font-size:11px;color:rgba(255,255,255,.6)">Stock: '+a.cantidad+(a.rop!=null?' / ROP '+a.rop:'')+(a.reponer?' · reponer '+a.reponer:'')+'</div>'+
+        '</div>'+
+      '</div>';
+    });
+  }
   html+='</div>';
   return html;
 }
@@ -5657,18 +5683,42 @@ function vistaStock(){
 window.renderStockBodega=function(bodId){
   var cont=document.getElementById('bodStockLista');
   if(!cont)return;
-  var stock=invStock[bodId]||{};
-  var codigos=Object.keys(stock);
-  if(!codigos.length){cont.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;font-size:13px">Sin stock registrado en esta bodega.</div>';return;}
+  var codsConLote={};
+  Object.keys((invLotes[bodId]||{})).forEach(function(c){if(stockUnidades(bodId,c)>0)codsConLote[c]=1;});
+  var codigos=Object.keys(codsConLote);
+  if(!codigos.length){cont.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;font-size:13px">Sin stock en esta bodega.</div>';return;}
+  var esCentral=(bodId==='central');
   var html='<div style="max-height:400px;overflow-y:auto">';
   codigos.sort(function(a,b){var da=invCatalogo[a]?invCatalogo[a].desc:'';var db=invCatalogo[b]?invCatalogo[b].desc:'';return da.localeCompare(db);}).forEach(function(cod){
     var item=invCatalogo[cod]||{desc:'(sin ficha)'};
-    var cant=Number(stock[cod])||0;
+    var unidades=stockUnidades(bodId,cod);
+    var upc=Number(item.unidadesPorCaja)||0;
+    var lotes=lotesDe(bodId,cod);
     var rop=calcularROP(item);
-    var est=estadoStock(cant,rop);
-    html+='<div style="display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)">'+
-      '<span style="font-size:12px;color:rgba(255,255,255,.8);flex:1">'+esc(item.desc)+'</span>'+
-      '<span style="font-size:12px;font-weight:700;color:'+est.color+'">'+cant+'</span></div>';
+    var est=estadoStock(unidades,rop);
+    // Mostrar equivalencia
+    var equiv=unidades+' u.';
+    if(upc>0){
+      var cajas=Math.floor(unidades/upc),sueltas=unidades%upc;
+      equiv=unidades+' u. ('+(cajas>0?cajas+' caja'+(cajas>1?'s':''):'')+(cajas>0&&sueltas>0?' + ':'')+(sueltas>0?sueltas+' sueltas':(cajas>0?'':''))+')';
+      if(esCentral&&sueltas===0)equiv=cajas+' caja'+(cajas>1?'s':'')+' = '+unidades+' u.';
+    }
+    html+='<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:12px;color:#fff;flex:1">'+esc(item.desc)+'</span>'+
+        '<span style="font-size:12px;font-weight:700;color:'+est.color+'">'+equiv+'</span>'+
+      '</div>';
+    // Lotes con vencimiento
+    if(lotes.length){
+      html+='<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">';
+      lotes.forEach(function(l){
+        var m=mesesHastaVenc(l.venc);
+        var lc=(m!=null&&m<0)?'#dc2626':(m!=null&&m<=3)?'#d97706':'rgba(255,255,255,.35)';
+        html+='<span style="font-size:9px;color:'+lc+';background:rgba(255,255,255,.05);padding:1px 6px;border-radius:8px">'+(l.venc||'sin venc')+': '+l.unidades+'u</span>';
+      });
+      html+='</div>';
+    }
+    html+='</div>';
   });
   html+='</div>';
   cont.innerHTML=html;
@@ -5736,6 +5786,7 @@ window.abrirFichaInsumo=function(cod){
     fichaCampo('Stock óptimo','stockOptimo',i.stockOptimo,'Hasta cuánto reponer')+
     fichaCampo('Presentación macro','presentacion',i.presentacion,'Ej: caja, paquete, bolsa (como llega de central)')+
     fichaCampo('Unidades por '+(i.presentacion||'caja'),'unidadesPorCaja',i.unidadesPorCaja,'Cuántas unidades trae cada '+(i.presentacion||'caja')+' (para convertir)')+
+    fichaCampo('Alarma vencimiento (meses)','umbralVenc',i.umbralVenc,'Avisar cuando falten estos meses (por defecto 3)')+
     fichaCampo('Costo unitario ($)','costo',i.costo,'Se puede llenar después')+
     '<div style="background:rgba(37,99,235,.1);border-radius:8px;padding:8px 10px;margin:10px 0;font-size:12px;color:#93c5fd">ROP calculado ahora: <b>'+(rop!=null?rop+' unidades':'faltan datos (lead time + demanda)')+'</b></div>'+
     '<button class="btn-add" onclick="guardarFichaInsumo(\''+cod+'\')" style="background:linear-gradient(135deg,#d97706,#fbbf24)">💾 Guardar ficha</button>'+
@@ -5771,7 +5822,7 @@ window.guardarFichaInsumo=function(cod){
     abc:g('abc'),criticidad:g('criticidad'),leadTime:g('leadTime'),
     demandaDiaria:g('demandaDiaria'),stockSeguridad:g('stockSeguridad'),
     ropManual:g('ropManual'),stockOptimo:g('stockOptimo'),costo:g('costo'),
-    presentacion:g('presentacion'),unidadesPorCaja:g('unidadesPorCaja')
+    presentacion:g('presentacion'),unidadesPorCaja:g('unidadesPorCaja'),umbralVenc:g('umbralVenc')
   };
   sedeRef('invCatalogo/'+cod).update(updates).then(function(){
     document.getElementById('fichaInsumoOv').remove();
@@ -5866,21 +5917,81 @@ function vistaMovimiento(){
   var n=Object.keys(invCatalogo).length;
   if(!n)return '<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.5)">Primero carga el catálogo de insumos.</div>';
   return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
-    '<div style="display:flex;gap:6px;margin-bottom:12px">'+
-      '<button id="movTabEntrega" class="mov-subtab active" onclick="movSubtab(\'entrega\')" style="flex:1">📥 Entrega a subbodega</button>'+
-      '<button id="movTabConsumo" class="mov-subtab" onclick="movSubtab(\'consumo\')" style="flex:1">📤 Registrar consumo</button>'+
+    '<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
+      '<button id="movTabIngreso" class="mov-subtab active" onclick="movSubtab(\'ingreso\')">📦 Ingreso a central</button>'+
+      '<button id="movTabEntrega" class="mov-subtab" onclick="movSubtab(\'entrega\')">📥 Entrega a subbodega</button>'+
+      '<button id="movTabConsumo" class="mov-subtab" onclick="movSubtab(\'consumo\')">📤 Consumo</button>'+
+      '<button id="movTabAjuste" class="mov-subtab" onclick="movSubtab(\'ajuste\')">✏️ Ajuste</button>'+
     '</div>'+
     '<div id="movSubcontenido"></div>'+
-    '<style>.mov-subtab{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:8px;font-family:inherit;font-size:12px;cursor:pointer}.mov-subtab.active{background:rgba(217,119,6,.25);color:#fbbf24;font-weight:700}</style>'+
+    '<style>.mov-subtab{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:8px 10px;font-family:inherit;font-size:11px;cursor:pointer}.mov-subtab.active{background:rgba(217,119,6,.25);color:#fbbf24;font-weight:700}</style>'+
     '</div>';
 }
 
 window.movSubtab=function(v){
-  document.getElementById('movTabEntrega').classList.toggle('active',v==='entrega');
-  document.getElementById('movTabConsumo').classList.toggle('active',v==='consumo');
+  ['ingreso','entrega','consumo','ajuste'].forEach(function(t){
+    var el=document.getElementById('movTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(el)el.classList.toggle('active',t===v);
+  });
   var c=document.getElementById('movSubcontenido');
-  if(v==='entrega')c.innerHTML=formEntrega();
-  else c.innerHTML=formConsumo();
+  if(v==='ingreso')c.innerHTML=formIngreso();
+  else if(v==='entrega')c.innerHTML=formEntrega();
+  else if(v==='consumo')c.innerHTML=formConsumo();
+  else if(v==='ajuste')c.innerHTML=formAjuste();
+};
+
+// INGRESO: central recibe un lote nuevo (en cajas), con vencimiento
+function formIngreso(){
+  return '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Bodega Central recibe un lote. Ingresa la cantidad en cajas y la fecha de vencimiento. El lote viajará automáticamente cuando entregues a una subbodega.</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
+    '<input list="movInsumosList" id="ingInsumo" onchange="actualizarInfoIngreso()" placeholder="Busca por nombre o código" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<datalist id="movInsumosList">'+opcionesInsumos()+'</datalist>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Cantidad (en cajas)</label>'+
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'+
+      '<input type="number" id="ingCajas" min="0" step="any" oninput="actualizarInfoIngreso()" placeholder="0" style="flex:1;font-size:13px;padding:7px">'+
+      '<span id="ingUnidLabel" style="font-size:12px;color:rgba(255,255,255,.5)">cajas</span>'+
+    '</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Fecha de vencimiento</label>'+
+    '<input type="date" id="ingVenc" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<div id="ingInfo" style="font-size:12px;color:#93c5fd;margin-bottom:10px"></div>'+
+    '<button class="btn-add" onclick="registrarIngreso()" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">Registrar ingreso a central</button>'+
+    '<div class="saved" id="ingSaved">✓ Lote ingresado</div>';
+}
+
+window.actualizarInfoIngreso=function(){
+  var cod=parseCodInsumo(document.getElementById('ingInsumo').value);
+  var item=invCatalogo[cod];
+  var info=document.getElementById('ingInfo');
+  if(!item){if(info)info.textContent='';return;}
+  var upc=Number(item.unidadesPorCaja)||0;
+  var cajas=Number(document.getElementById('ingCajas').value)||0;
+  if(info){
+    if(upc>0&&cajas>0)info.innerHTML='= <b>'+(cajas*upc)+' unidades</b> ('+cajas+' × '+upc+')';
+    else if(cajas>0)info.innerHTML='<span style="color:#fca5a5">Este insumo no tiene "unidades por caja" en su ficha. Se contará como '+cajas+' unidades. Defínelo en Catálogo para conversión correcta.</span>';
+    else info.innerHTML='';
+  }
+};
+
+window.registrarIngreso=function(){
+  var cod=parseCodInsumo(document.getElementById('ingInsumo').value);
+  var cajas=Number(document.getElementById('ingCajas').value)||0;
+  var venc=document.getElementById('ingVenc').value;
+  var item=invCatalogo[cod];
+  if(!item){alert('Selecciona un insumo válido.');return;}
+  if(cajas<=0){alert('Ingresa la cantidad en cajas.');return;}
+  if(!venc){if(!confirm('No pusiste fecha de vencimiento. ¿Ingresar sin vencimiento?'))return;}
+  var upc=Number(item.unidadesPorCaja)||1;
+  var unidades=cajas*upc;
+  var updates={};
+  agregarLote(updates,'central',cod,unidades,venc,hoyStr());
+  var mk=Date.now();
+  updates['invMovimientos/'+mk]={tipo:'ingreso',cod:cod,desc:item.desc,bodega:'central',
+    cajas:cajas,unidadesPorCaja:upc,unidades:unidades,venc:venc,fecha:hoyStr(),ts:mk,por:'bodega'};
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('ingSaved');
+    document.getElementById('ingCajas').value='';document.getElementById('ingInsumo').value='';document.getElementById('ingVenc').value='';
+    actualizarInfoIngreso();
+  });
 };
 
 function opcionesInsumos(){
@@ -5891,19 +6002,22 @@ function opcionesSubbodegas(){
   return Object.keys(BODEGAS).filter(function(b){return BODEGAS[b].tipo==='sub';})
     .map(function(b){return '<option value="'+b+'">'+BODEGAS[b].nombre+'</option>';}).join('');
 }
+function parseCodInsumo(v){
+  if(!v)return '';
+  var m=v.match(/\(([^)]+)\)\s*$/);
+  if(m)return m[1];
+  return invCatalogo[v]?v:'';
+}
 
 function formEntrega(){
-  return '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Bodega Central entrega a una subbodega. Ingresa la cantidad en la presentación macro (cajas); el sistema la convierte a unidades.</div>'+
+  return '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Central entrega a una subbodega. El sistema envía el lote que vence primero (FEFO) y su fecha viaja con la entrega.</div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
     '<input list="movInsumosList" id="entInsumo" onchange="actualizarInfoEntrega()" placeholder="Busca por nombre o código" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
     '<datalist id="movInsumosList">'+opcionesInsumos()+'</datalist>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Subbodega destino</label>'+
     '<select id="entDestino" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+opcionesSubbodegas()+'</select>'+
-    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Cantidad entregada</label>'+
-    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'+
-      '<input type="number" id="entCantidad" min="0" step="any" oninput="actualizarInfoEntrega()" placeholder="0" style="flex:1;font-size:13px;padding:7px">'+
-      '<span id="entUnidadLabel" style="font-size:12px;color:rgba(255,255,255,.5)">unidades</span>'+
-    '</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Cantidad a entregar (en unidades)</label>'+
+    '<input type="number" id="entCantidad" min="0" step="any" oninput="actualizarInfoEntrega()" placeholder="0" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
     '<div id="entInfo" style="font-size:12px;color:#93c5fd;margin-bottom:10px"></div>'+
     '<button class="btn-add" onclick="registrarEntrega()" style="background:linear-gradient(135deg,#059669,#6ee7b7)">Registrar entrega</button>'+
     '<div class="saved" id="entSaved">✓ Entrega registrada</div>';
@@ -5912,29 +6026,17 @@ function formEntrega(){
 window.actualizarInfoEntrega=function(){
   var cod=parseCodInsumo(document.getElementById('entInsumo').value);
   var item=invCatalogo[cod];
-  var lbl=document.getElementById('entUnidadLabel');
   var info=document.getElementById('entInfo');
   if(!item){if(info)info.textContent='';return;}
-  var upc=Number(item.unidadesPorCaja)||0;
-  var pres=item.presentacion||'caja';
-  if(lbl)lbl.textContent=upc>0?pres+'(s)':'unidades';
-  var cant=Number(document.getElementById('entCantidad').value)||0;
-  var stockCentral=(invStock.central&&invStock.central[cod])?Number(invStock.central[cod]):0;
+  var stockC=stockUnidades('central',cod);
+  var lotes=lotesDe('central',cod);
+  var proximoVenc=lotes.length?lotes[0].venc:'';
   if(info){
-    if(upc>0&&cant>0){
-      info.innerHTML='= <b>'+(cant*upc)+' unidades</b> · Stock central actual: '+stockCentral+' unidades';
-    } else if(cant>0){
-      info.innerHTML='Stock central actual: '+stockCentral+' unidades <span style="color:#fca5a5">(sin factor de caja: se cuenta como unidades)</span>';
-    } else info.innerHTML='Stock central: '+stockCentral+' unidades';
+    var txt='Stock en central: <b>'+stockC+' u.</b>';
+    if(proximoVenc)txt+=' · próximo a vencer: '+proximoVenc+' ('+lotes[0].unidades+' u.)';
+    info.innerHTML=txt;
   }
 };
-
-function parseCodInsumo(v){
-  if(!v)return '';
-  var m=v.match(/\(([^)]+)\)\s*$/);
-  if(m)return m[1];
-  return invCatalogo[v]?v:'';
-}
 
 window.registrarEntrega=function(){
   var cod=parseCodInsumo(document.getElementById('entInsumo').value);
@@ -5942,30 +6044,34 @@ window.registrarEntrega=function(){
   var cant=Number(document.getElementById('entCantidad').value)||0;
   var item=invCatalogo[cod];
   if(!item){alert('Selecciona un insumo válido.');return;}
-  if(cant<=0){alert('Ingresa una cantidad.');return;}
-  var upc=Number(item.unidadesPorCaja)||1;
-  var unidades=cant*upc;
-  var stockCentral=(invStock.central&&invStock.central[cod])?Number(invStock.central[cod]):0;
-  if(unidades>stockCentral){
-    if(!confirm('La entrega ('+unidades+' u.) supera el stock de central ('+stockCentral+' u.). ¿Registrar igual?'))return;
+  if(cant<=0){alert('Ingresa la cantidad.');return;}
+  var stockC=stockUnidades('central',cod);
+  var forzar=false;
+  if(cant>stockC){
+    if(!confirm('La entrega ('+cant+' u.) supera el stock de central ('+stockC+' u.). ¿Registrar igual? Se entregará lo disponible.'))return;
+    forzar=true;cant=Math.min(cant,stockC);
+    if(cant<=0){alert('No hay stock en central.');return;}
   }
-  var stockDest=(invStock[destino]&&invStock[destino][cod])?Number(invStock[destino][cod]):0;
-  var updates={};
-  updates['invStock/central/'+cod]=Math.max(0,stockCentral-unidades);
-  updates['invStock/'+destino+'/'+cod]=stockDest+unidades;
-  var movKey=Date.now();
-  updates['invMovimientos/'+movKey]={tipo:'entrega',cod:cod,desc:item.desc,origen:'central',destino:destino,
-    cantidadMacro:cant,unidadesPorCaja:upc,unidades:unidades,fecha:hoyStr(),ts:movKey,por:curNombre||'bodega'};
+  // FEFO: sacar de central los lotes que vencen primero
+  var res=descontarFEFO('central',cod,cant,forzar);
+  if(!res){alert('No hay stock suficiente en central.');return;}
+  var updates=res.updates;
+  // Los mismos lotes (con su venc) entran a la subbodega
+  res.afectados.forEach(function(af){
+    agregarLote(updates,destino,cod,af.quitado,af.venc,hoyStr());
+  });
+  var mk=Date.now();
+  updates['invMovimientos/'+mk]={tipo:'entrega',cod:cod,desc:item.desc,origen:'central',destino:destino,
+    unidades:cant,lotes:res.afectados,fecha:hoyStr(),ts:mk,por:'bodega'};
   db.ref('sedes/'+S).update(updates).then(function(){
     showSaved('entSaved');
-    document.getElementById('entCantidad').value='';
-    document.getElementById('entInsumo').value='';
+    document.getElementById('entCantidad').value='';document.getElementById('entInsumo').value='';
     actualizarInfoEntrega();
   });
 };
 
 function formConsumo(){
-  return '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Registra el consumo de una subbodega, en unidades. Baja el stock de esa bodega.</div>'+
+  return '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Consumo de una subbodega, en unidades. Descuenta del lote que vence primero (FEFO).</div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Subbodega</label>'+
     '<select id="conBodega" onchange="actualizarInfoConsumo()" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+opcionesSubbodegas()+'</select>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
@@ -5984,12 +6090,14 @@ window.actualizarInfoConsumo=function(){
   var info=document.getElementById('conInfo');
   if(!info)return;
   if(!cod){info.textContent='';return;}
-  var stock=(invStock[bod]&&invStock[bod][cod])?Number(invStock[bod][cod]):0;
+  var stock=stockUnidades(bod,cod);
   var cant=Number(document.getElementById('conCantidad').value)||0;
   var item=invCatalogo[cod];
   var rop=item?calcularROP(item):null;
+  var lotes=lotesDe(bod,cod);
   var restante=stock-cant;
-  var txt='Stock actual en '+(BODEGAS[bod]?BODEGAS[bod].nombre:bod)+': <b>'+stock+' u.</b>';
+  var txt='Stock en '+(BODEGAS[bod]?BODEGAS[bod].nombre:bod)+': <b>'+stock+' u.</b>';
+  if(lotes.length)txt+=' · sale primero lote '+lotes[0].venc+' ('+lotes[0].unidades+' u.)';
   if(cant>0)txt+=' → quedarían <b>'+Math.max(0,restante)+' u.</b>';
   if(rop!=null&&restante<=rop&&restante>=0)txt+=' <span style="color:#fbbf24">⚠ bajo ROP ('+rop+')</span>';
   info.innerHTML=txt;
@@ -6002,39 +6110,184 @@ window.registrarConsumo=function(){
   var item=invCatalogo[cod];
   if(!item){alert('Selecciona un insumo válido.');return;}
   if(cant<=0){alert('Ingresa las unidades consumidas.');return;}
-  var stock=(invStock[bod]&&invStock[bod][cod])?Number(invStock[bod][cod]):0;
+  var stock=stockUnidades(bod,cod);
+  var forzar=false;
   if(cant>stock){
     if(!confirm('El consumo ('+cant+' u.) supera el stock ('+stock+' u.). ¿Registrar igual? El stock quedará en 0.'))return;
+    forzar=true;cant=stock;
+    if(cant<=0){alert('No hay stock.');return;}
   }
-  var updates={};
-  updates['invStock/'+bod+'/'+cod]=Math.max(0,stock-cant);
-  var movKey=Date.now();
-  updates['invMovimientos/'+movKey]={tipo:'consumo',cod:cod,desc:item.desc,bodega:bod,
-    unidades:cant,fecha:hoyStr(),ts:movKey,por:curNombre||'bodega'};
+  var res=descontarFEFO(bod,cod,cant,forzar);
+  if(!res){alert('No hay stock suficiente.');return;}
+  var updates=res.updates;
+  var mk=Date.now();
+  updates['invMovimientos/'+mk]={tipo:'consumo',cod:cod,desc:item.desc,bodega:bod,
+    unidades:cant,lotes:res.afectados,fecha:hoyStr(),ts:mk,por:curNombre||'bodega'};
   db.ref('sedes/'+S).update(updates).then(function(){
     showSaved('conSaved');
-    document.getElementById('conCantidad').value='';
-    document.getElementById('conInsumo').value='';
+    document.getElementById('conCantidad').value='';document.getElementById('conInsumo').value='';
     actualizarInfoConsumo();
+  });
+};
+
+// AJUSTE: corrección trazada del stock de un insumo en una bodega
+function formAjuste(){
+  return '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Corrige el stock de un insumo por error de ingreso o diferencia de conteo. Queda registrado con motivo (trazabilidad).</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Bodega</label>'+
+    '<select id="ajBodega" onchange="actualizarInfoAjuste()" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+      Object.keys(BODEGAS).map(function(b){return '<option value="'+b+'">'+BODEGAS[b].nombre+'</option>';}).join('')+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
+    '<input list="movInsumosList3" id="ajInsumo" onchange="actualizarInfoAjuste()" placeholder="Busca por nombre o código" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<datalist id="movInsumosList3">'+opcionesInsumos()+'</datalist>'+
+    '<div id="ajInfo" style="font-size:12px;color:#93c5fd;margin-bottom:8px"></div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Stock correcto (unidades reales)</label>'+
+    '<input type="number" id="ajCantidad" min="0" step="any" placeholder="0" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Motivo del ajuste</label>'+
+    '<input type="text" id="ajMotivo" placeholder="Ej: error de digitación, diferencia de conteo..." style="width:100%;font-size:13px;padding:7px;margin-bottom:10px">'+
+    '<button class="btn-add" onclick="registrarAjuste()" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">Registrar ajuste</button>'+
+    '<div class="saved" id="ajSaved">✓ Ajuste registrado</div>';
+}
+
+window.actualizarInfoAjuste=function(){
+  var bod=document.getElementById('ajBodega').value;
+  var cod=parseCodInsumo(document.getElementById('ajInsumo').value);
+  var info=document.getElementById('ajInfo');
+  if(!info)return;
+  if(!cod){info.textContent='';return;}
+  var stock=stockUnidades(bod,cod);
+  var lotes=lotesDe(bod,cod);
+  var txt='Stock actual: <b>'+stock+' u.</b>';
+  if(lotes.length>1)txt+=' <span style="color:#fbbf24">('+lotes.length+' lotes — el ajuste afectará al que vence primero)</span>';
+  info.innerHTML=txt;
+};
+
+window.registrarAjuste=function(){
+  var bod=document.getElementById('ajBodega').value;
+  var cod=parseCodInsumo(document.getElementById('ajInsumo').value);
+  var nuevo=Number(document.getElementById('ajCantidad').value);
+  var motivo=document.getElementById('ajMotivo').value.trim();
+  var item=invCatalogo[cod];
+  if(!item){alert('Selecciona un insumo válido.');return;}
+  if(isNaN(nuevo)||nuevo<0){alert('Ingresa el stock correcto (número).');return;}
+  if(!motivo){alert('Indica el motivo del ajuste (queda registrado).');return;}
+  var actual=stockUnidades(bod,cod);
+  var diff=nuevo-actual;
+  var updates={};
+  var lotes=lotesDe(bod,cod);
+  if(diff<0){
+    // Quitar del lote que vence primero
+    var res=descontarFEFO(bod,cod,-diff,true);
+    updates=res.updates;
+  } else if(diff>0){
+    // Agregar: si hay lote, sumar al primero; si no, crear sin venc
+    if(lotes.length)updates['invLotes/'+bod+'/'+cod+'/'+lotes[0].id+'/unidades']=lotes[0].unidades+diff;
+    else agregarLote(updates,bod,cod,diff,'',hoyStr());
+  } else {alert('El stock ingresado es igual al actual. No hay ajuste.');return;}
+  var mk=Date.now();
+  updates['invMovimientos/'+mk]={tipo:'ajuste',cod:cod,desc:item.desc,bodega:bod,
+    stockAnterior:actual,stockNuevo:nuevo,diferencia:diff,motivo:motivo,fecha:hoyStr(),ts:mk,por:'bodega'};
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('ajSaved');
+    document.getElementById('ajCantidad').value='';document.getElementById('ajInsumo').value='';document.getElementById('ajMotivo').value='';
+    actualizarInfoAjuste();
   });
 };
 
 window.cargarCatalogoEjemplo=function(){
   if(!confirm('Cargar 272 insumos de ejemplo al catálogo y a Bodega Central. ¿Continuar?'))return;
-  var catalogo={},stockCentral={};
+  var catalogo={},lotesCentral={};
   INV_EJEMPLO.forEach(function(row){
     var cod=row[0],desc=row[1],grupo=row[2],cant=row[3];
-    catalogo[cod]={cod:cod,desc:desc,grupo:grupo,abc:'',leadTime:'',ropManual:'',stockOptimo:'',criticidad:'',costo:''};
-    stockCentral[cod]=cant;
+    catalogo[cod]={cod:cod,desc:desc,grupo:grupo,abc:'',leadTime:'',ropManual:'',stockOptimo:'',criticidad:'',costo:'',presentacion:'',unidadesPorCaja:'',umbralVenc:''};
+    // Stock inicial como lote sin vencimiento (el ejemplo no trae fechas; la base real sí)
+    if(cant>0)lotesCentral[cod]={L0:{venc:'',unidades:cant,ingreso:hoyStr()}};
   });
   Promise.all([
     sedeRef('invCatalogo').set(catalogo),
-    sedeRef('invStock/central').set(stockCentral)
+    sedeRef('invLotes/central').set(lotesCentral)
   ]).then(function(){
-    alert('✓ Catálogo cargado: 272 insumos en Bodega Central.');
+    alert('✓ Catálogo cargado: 272 insumos en Bodega Central.\n\nNota: el stock de ejemplo no tiene fecha de vencimiento. La base real de la próxima semana se cargará con lotes y vencimientos.');
     bodTab('catalogo');
   }).catch(function(){alert('Error al cargar. Revisa la conexión.');});
 };
+
+// ══════ SISTEMA DE LOTES (FEFO + vencimientos + trazabilidad) ══════
+// Estructura: invLotes[bodega][cod] = { loteId: {venc:'YYYY-MM-DD', unidades:N, ingreso:'YYYY-MM-DD'} }
+
+// Lotes de un insumo en una bodega, ordenados por vencimiento (FEFO: el que vence primero, primero)
+function lotesDe(bodega,cod){
+  var b=(invLotes[bodega]||{})[cod]||{};
+  return Object.keys(b).map(function(id){var l=b[id];return {id:id,venc:l.venc||'',unidades:Number(l.unidades)||0,ingreso:l.ingreso||''};})
+    .filter(function(l){return l.unidades>0;})
+    .sort(function(a,b){
+      if(!a.venc)return 1; if(!b.venc)return -1;
+      return a.venc.localeCompare(b.venc);
+    });
+}
+// Stock total en unidades = suma de lotes
+function stockUnidades(bodega,cod){
+  return lotesDe(bodega,cod).reduce(function(s,l){return s+l.unidades;},0);
+}
+// Genera un id de lote único
+function nuevoLoteId(){return 'L'+Date.now()+Math.floor(Math.random()*1000);}
+
+// Meses hasta el vencimiento (negativo si ya venció)
+function mesesHastaVenc(venc){
+  if(!venc)return null;
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  var v=new Date(venc+'T12:00:00');
+  return (v-hoy)/(1000*60*60*24*30.44);
+}
+
+// Descuenta N unidades siguiendo FEFO. Devuelve los lotes afectados (para trazabilidad) o null si no alcanza sin forzar.
+function descontarFEFO(bodega,cod,cantidad,forzar){
+  var lotes=lotesDe(bodega,cod);
+  var disponible=lotes.reduce(function(s,l){return s+l.unidades;},0);
+  if(cantidad>disponible&&!forzar)return null;
+  var restante=cantidad,afectados=[],updates={};
+  for(var i=0;i<lotes.length&&restante>0;i++){
+    var l=lotes[i];
+    var quita=Math.min(l.unidades,restante);
+    var queda=l.unidades-quita;
+    updates['invLotes/'+bodega+'/'+cod+'/'+l.id+'/unidades']=queda;
+    afectados.push({loteId:l.id,venc:l.venc,quitado:quita});
+    restante-=quita;
+  }
+  return {updates:updates,afectados:afectados,faltante:restante};
+}
+// Agrega unidades a un lote (por venc). Si ya existe lote con esa fecha, suma; si no, crea.
+function agregarLote(updates,bodega,cod,unidades,venc,ingreso){
+  var b=(invLotes[bodega]||{})[cod]||{};
+  var existente=null;
+  Object.keys(b).forEach(function(id){if((b[id].venc||'')===(venc||''))existente=id;});
+  if(existente){
+    updates['invLotes/'+bodega+'/'+cod+'/'+existente+'/unidades']=(Number(b[existente].unidades)||0)+unidades;
+  } else {
+    var id=nuevoLoteId();
+    updates['invLotes/'+bodega+'/'+cod+'/'+id]={venc:venc||'',unidades:unidades,ingreso:ingreso||hoyStr()};
+  }
+}
+
+// Alarmas de vencimiento: lotes a <= umbral meses o vencidos
+function alarmasVencimiento(){
+  var out=[];
+  Object.keys(invLotes||{}).forEach(function(bod){
+    Object.keys(invLotes[bod]||{}).forEach(function(cod){
+      lotesDe(bod,cod).forEach(function(l){
+        if(!l.venc)return;
+        var m=mesesHastaVenc(l.venc);
+        var item=invCatalogo[cod]||{};
+        var umbral=Number(item.umbralVenc)||3;
+        if(m!=null&&m<=umbral){
+          out.push({cod:cod,desc:item.desc||cod,bodega:bod,bodNombre:(BODEGAS[bod]?BODEGAS[bod].nombre:bod),
+            venc:l.venc,unidades:l.unidades,meses:m,vencido:m<0,loteId:l.id});
+        }
+      });
+    });
+  });
+  out.sort(function(a,b){return a.venc.localeCompare(b.venc);});
+  return out;
+}
 
 document.getElementById('marcarFeriadoBtn').addEventListener('click',function(){
   var dia=document.getElementById('feriadoDia').value;
