@@ -5617,7 +5617,7 @@ window.bodTab=function(v){
   var c=document.getElementById('bodContenido');
   if(v==='alarmas')c.innerHTML=vistaAlarmas();
   else if(v==='stock')c.innerHTML=vistaStock();
-  else if(v==='catalogo')c.innerHTML=vistaCatalogo();
+  else if(v==='catalogo'){c.innerHTML=vistaCatalogo();setTimeout(function(){if(document.getElementById('bodCatLista'))filtrarCatalogo('');},30);}
   else if(v==='movimiento')c.innerHTML=vistaMovimiento();
 };
 
@@ -5675,19 +5675,107 @@ window.renderStockBodega=function(bodId){
 
 function vistaCatalogo(){
   var n=Object.keys(invCatalogo).length;
+  if(n===0){
+    return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:10px">Catálogo maestro: <b style="color:#fbbf24">0</b> insumos</div>'+
+      '<button class="btn-add" onclick="cargarCatalogoEjemplo()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">⬆ Cargar catálogo de ejemplo (272 insumos)</button>'+
+      '<p style="font-size:11px;color:rgba(255,255,255,.4);margin-top:8px">Carga los insumos de los inventarios actuales para visualizar. La próxima semana se reemplaza por la base real.</p></div>';
+  }
   return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
-    '<div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:10px">Catálogo maestro: <b style="color:#fbbf24">'+n+'</b> insumos</div>'+
-    (n===0?'<button class="btn-add" onclick="cargarCatalogoEjemplo()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">⬆ Cargar catálogo de ejemplo (272 insumos)</button>'+
-      '<p style="font-size:11px;color:rgba(255,255,255,.4);margin-top:8px">Carga los insumos de los inventarios actuales para visualizar. La próxima semana se reemplaza por la base real.</p>'
-     :'<div style="max-height:380px;overflow-y:auto">'+
-      Object.keys(invCatalogo).slice(0,100).map(function(cod){var i=invCatalogo[cod];
-        return '<div style="display:flex;justify-content:space-between;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.05)">'+
-        '<span style="font-size:12px;color:rgba(255,255,255,.8)">'+esc(i.desc)+'</span>'+
-        '<span style="font-size:10px;color:rgba(255,255,255,.4)">'+cod+' · '+(i.abc||'—')+'</span></div>';}).join('')+
-      (n>100?'<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4);padding:8px">… y '+(n-100)+' más</div>':'')+
-      '</div>')+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.7)">Catálogo: <b style="color:#fbbf24">'+n+'</b> insumos</div>'+
+      '<button onclick="abrirCargaMasiva()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer">📤 Carga masiva Excel</button>'+
+    '</div>'+
+    '<input type="text" id="bodBuscar" onkeyup="filtrarCatalogo(this.value)" placeholder="🔎 Buscar por nombre o código..." style="width:100%;margin-bottom:8px;font-size:13px;padding:8px">'+
+    '<p style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px">Toca un insumo para editar su ficha (ABC, lead time, ROP, criticidad, stock óptimo).</p>'+
+    '<div id="bodCatLista" style="max-height:400px;overflow-y:auto"></div></div>';
+}
+
+window.filtrarCatalogo=function(q){
+  var cont=document.getElementById('bodCatLista');
+  if(!cont)return;
+  q=(q||'').trim().toLowerCase();
+  var codigos=Object.keys(invCatalogo).filter(function(cod){
+    if(!q)return true;
+    var i=invCatalogo[cod];
+    return cod.toLowerCase().indexOf(q)>=0||(i.desc||'').toLowerCase().indexOf(q)>=0;
+  }).sort(function(a,b){return (invCatalogo[a].desc||'').localeCompare(invCatalogo[b].desc||'');});
+  var muestra=codigos.slice(0,80);
+  var html=muestra.map(function(cod){
+    var i=invCatalogo[cod];
+    var abcColor=i.abc==='A'?'#dc2626':i.abc==='B'?'#d97706':i.abc==='C'?'#6b7280':'rgba(255,255,255,.15)';
+    var completo=(i.abc&&i.leadTime!==''&&(i.ropManual!==''||i.stockOptimo!==''));
+    return '<div onclick="abrirFichaInsumo(\''+cod+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer">'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#fff">'+esc(i.desc)+'</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+cod+' · '+esc(i.grupo||'')+'</div></div>'+
+      '<div style="display:flex;align-items:center;gap:6px">'+
+        (i.abc?'<span style="font-size:10px;background:'+abcColor+';color:#fff;padding:1px 7px;border-radius:10px;font-weight:700">'+i.abc+'</span>':'<span style="font-size:9px;color:rgba(255,255,255,.3)">sin ABC</span>')+
+        (completo?'<span style="color:#6ee7b7;font-size:12px">✓</span>':'<span style="color:rgba(255,255,255,.2);font-size:12px">›</span>')+
+      '</div></div>';
+  }).join('');
+  if(codigos.length>80)html+='<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4);padding:8px">Mostrando 80 de '+codigos.length+' · afina la búsqueda</div>';
+  cont.innerHTML=html||'<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;font-size:13px">Sin resultados.</div>';
+};
+
+window.abrirFichaInsumo=function(cod){
+  var i=invCatalogo[cod];if(!i)return;
+  var rop=calcularROP(i);
+  var ov=document.createElement('div');
+  ov.id='fichaInsumoOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+esc(i.desc)+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Código '+cod+' · '+esc(i.grupo||'')+'</div>'+
+    fichaCampo('Clasificación ABC','select_abc',i.abc)+
+    fichaCampo('Criticidad','select_crit',i.criticidad)+
+    fichaCampo('Lead time (días)','leadTime',i.leadTime,'Días que tarda en llegar del proveedor')+
+    fichaCampo('Demanda diaria promedio','demandaDiaria',i.demandaDiaria,'Consumo por día (para calcular ROP)')+
+    fichaCampo('Stock de seguridad','stockSeguridad',i.stockSeguridad,'Colchón mínimo')+
+    fichaCampo('ROP manual','ropManual',i.ropManual,'Deja vacío para usar el calculado')+
+    fichaCampo('Stock óptimo','stockOptimo',i.stockOptimo,'Hasta cuánto reponer')+
+    fichaCampo('Costo unitario ($)','costo',i.costo,'Se puede llenar después')+
+    '<div style="background:rgba(37,99,235,.1);border-radius:8px;padding:8px 10px;margin:10px 0;font-size:12px;color:#93c5fd">ROP calculado ahora: <b>'+(rop!=null?rop+' unidades':'faltan datos (lead time + demanda)')+'</b></div>'+
+    '<button class="btn-add" onclick="guardarFichaInsumo(\''+cod+'\')" style="background:linear-gradient(135deg,#d97706,#fbbf24)">💾 Guardar ficha</button>'+
+    '<button onclick="document.getElementById(\'fichaInsumoOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+function fichaCampo(label,key,valor,hint){
+  valor=(valor==null?'':valor);
+  var input;
+  if(key==='select_abc'){
+    input='<select id="fi_abc" style="width:100%;font-size:13px;padding:7px">'+
+      ['','A','B','C'].map(function(o){return '<option value="'+o+'"'+(valor===o?' selected':'')+'>'+(o||'— sin asignar —')+(o?' ('+(o==='A'?'alta':o==='B'?'media':'baja')+')':'')+'</option>';}).join('')+'</select>';
+  } else if(key==='select_crit'){
+    input='<select id="fi_criticidad" style="width:100%;font-size:13px;padding:7px">'+
+      ['','Alta','Media','Baja'].map(function(o){return '<option value="'+o+'"'+(valor===o?' selected':'')+'>'+(o||'— sin asignar —')+'</option>';}).join('')+'</select>';
+  } else {
+    input='<input type="number" id="fi_'+key+'" value="'+valor+'" min="0" step="any" style="width:100%;font-size:13px;padding:7px" placeholder="—">';
+  }
+  return '<div style="margin-bottom:10px">'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:3px">'+label+'</label>'+
+    input+
+    (hint?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">'+hint+'</div>':'')+
     '</div>';
 }
+
+window.guardarFichaInsumo=function(cod){
+  var g=function(k){var el=document.getElementById('fi_'+k);return el?el.value:'';};
+  var updates={
+    abc:g('abc'),criticidad:g('criticidad'),leadTime:g('leadTime'),
+    demandaDiaria:g('demandaDiaria'),stockSeguridad:g('stockSeguridad'),
+    ropManual:g('ropManual'),stockOptimo:g('stockOptimo'),costo:g('costo')
+  };
+  sedeRef('invCatalogo/'+cod).update(updates).then(function(){
+    document.getElementById('fichaInsumoOv').remove();
+    if(document.getElementById('bodBuscar'))filtrarCatalogo(document.getElementById('bodBuscar').value);
+  });
+};
+
+window.abrirCargaMasiva=function(){
+  alert('La carga masiva por Excel se activará en el siguiente paso. Por ahora edita las fichas tocando cada insumo.');
+};
 
 function vistaMovimiento(){
   return '<div style="background:#16233d;border-radius:12px;padding:14px;color:rgba(255,255,255,.6);font-size:13px">'+
