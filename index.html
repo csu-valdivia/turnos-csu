@@ -444,6 +444,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <p class="asec-title" style="color:#7ec8f7">📊 Informe de gestión para gerencia</p>
             <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Panel con métricas del programa: desempeño, participación y supervisión. Exportable a PDF.</p>
             <button class="btn-add" id="abrirDashboardBtn" style="background:linear-gradient(135deg,#2563eb,#10b981)">📊 Abrir dashboard de gestión</button>
+            <button class="btn-add" id="abrirDashInvBtn" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">📦 Dashboard de inventario</button>
           </div>
 
 
@@ -1877,6 +1878,14 @@ document.getElementById('nameSelect').addEventListener('change',function(e){curN
 function renderMisTurnos(nombre){
   var d=document.getElementById('results');if(!nombre){d.innerHTML='';return;}
   var html='',found=false;
+  // Botón de gestión de subbodega (si es encargado de alguna)
+  var misBodegas=Object.keys(invAsignaciones||{}).filter(function(b){return invAsignaciones[b]===nombre;});
+  if(misBodegas.length){
+    html+='<div style="background:linear-gradient(135deg,rgba(217,119,6,.15),rgba(251,191,36,.08));border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
+      '<p style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px">📦 '+(misBodegas.length>1?'Mis subbodegas':'Mi subbodega')+'</p>'+
+      misBodegas.map(function(b){return '<button onclick="abrirGestionClinico(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+BODEGAS[b].nombre+' ›</button>';}).join('')+
+      '</div>';
+  }
   // Badges
   Object.values(ausencias).filter(function(a){return a.nombre===nombre&&a.estado==='aprobado';}).forEach(function(a){
     var c=a.tipo==='licencia'?'rgba(124,58,237,.15)':a.tipo==='vacaciones'?'rgba(74,144,217,.15)':'rgba(16,185,129,.15)';
@@ -4838,7 +4847,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -5592,6 +5601,244 @@ document.getElementById('bodegaBtn').addEventListener('click',function(){
   document.getElementById('pinBodegaIn').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('pinBodegaOk').click();});
 });
 
+// Panel del clínico para SU subbodega (sin PIN, acceso desde Mis Turnos)
+window.abrirGestionClinico=function(bodega){
+  var ov=document.getElementById('gestionClinicoOv');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='gestionClinicoOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      '<span style="font-size:16px;font-weight:800;color:#fbbf24">📦 '+BODEGAS[bodega].nombre+'</span>'+
+      '<button onclick="document.getElementById(\'gestionClinicoOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'+
+      '<button class="cli-tab active" data-v="stock" onclick="cliTab(\''+bodega+'\',\'stock\')">📊 Mi stock</button>'+
+      '<button class="cli-tab" data-v="consumo" onclick="cliTab(\''+bodega+'\',\'consumo\')">📤 Consumo</button>'+
+      '<button class="cli-tab" data-v="ajuste" onclick="cliTab(\''+bodega+'\',\'ajuste\')">✏️ Ajuste</button>'+
+    '</div>'+
+    '<div id="cliContenido"></div></div>'+
+    '<style>.cli-tab{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;cursor:pointer}.cli-tab.active{background:linear-gradient(135deg,#d97706,#fbbf24);color:#1a1a1a;font-weight:700}</style>';
+  document.body.appendChild(ov);
+  cliTab(bodega,'stock');
+};
+
+window.cliTab=function(bodega,v){
+  document.querySelectorAll('.cli-tab').forEach(function(t){t.classList.toggle('active',t.dataset.v===v);});
+  var c=document.getElementById('cliContenido');
+  if(v==='stock')c.innerHTML=cliVistaStock(bodega);
+  else if(v==='consumo')c.innerHTML=cliVistaConsumo(bodega);
+  else if(v==='ajuste')c.innerHTML=cliVistaAjuste(bodega);
+};
+
+function cliVistaStock(bodega){
+  var cods=Object.keys((invLotes[bodega]||{})).filter(function(c){return stockUnidades(bodega,c)>0;});
+  var alarmasV=alarmasVencimiento().filter(function(a){return a.bodega===bodega;});
+  var alarmasR=alarmasReposicion().filter(function(a){return a.bodega===bodega;});
+  var html='<div style="background:#16233d;border-radius:12px;padding:14px">';
+  if(alarmasR.length||alarmasV.length){
+    html+='<div style="background:rgba(217,119,6,.1);border-radius:8px;padding:10px;margin-bottom:10px">';
+    if(alarmasR.length)html+='<div style="font-size:12px;color:#fbbf24;margin-bottom:4px">⚠ '+alarmasR.length+' insumo(s) por reponer</div>';
+    if(alarmasV.length)html+='<div style="font-size:12px;color:#fca5a5">⏳ '+alarmasV.length+' lote(s) por vencer</div>';
+    html+='</div>';
+  }
+  if(!cods.length){html+='<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;font-size:13px">Sin stock en tu subbodega aún. Cuando central te entregue insumos, aparecerán aquí.</div></div>';return html;}
+  html+='<div style="max-height:420px;overflow-y:auto">';
+  cods.sort(function(a,b){return (invCatalogo[a]?invCatalogo[a].desc:'').localeCompare(invCatalogo[b]?invCatalogo[b].desc:'');}).forEach(function(cod){
+    var item=invCatalogo[cod]||{desc:cod};
+    var u=stockUnidades(bodega,cod);
+    var rop=calcularROP(item);var est=estadoStock(u,rop);
+    var lotes=lotesDe(bodega,cod);
+    html+='<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#fff;flex:1">'+esc(item.desc)+'</span>'+
+      '<span style="font-size:12px;font-weight:700;color:'+est.color+'">'+u+' u.</span></div>';
+    if(lotes.length){html+='<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">';
+      lotes.forEach(function(l){var m=mesesHastaVenc(l.venc);var lc=(m!=null&&m<0)?'#dc2626':(m!=null&&m<=3)?'#d97706':'rgba(255,255,255,.35)';
+        html+='<span style="font-size:9px;color:'+lc+';background:rgba(255,255,255,.05);padding:1px 6px;border-radius:8px">'+(l.venc||'sin venc')+': '+l.unidades+'u</span>';});
+      html+='</div>';}
+    html+='</div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+function cliVistaConsumo(bodega){
+  return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Registra lo que usaste. Descuenta del lote que vence primero.</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
+    '<input list="cliInsList" id="cliConInsumo" onchange="cliActualizarConsumo(\''+bodega+'\')" placeholder="Busca..." style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<datalist id="cliInsList">'+opcionesInsumos()+'</datalist>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Unidades consumidas</label>'+
+    '<input type="number" id="cliConCant" min="0" step="any" oninput="cliActualizarConsumo(\''+bodega+'\')" placeholder="0" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<div id="cliConInfo" style="font-size:12px;color:#93c5fd;margin-bottom:10px"></div>'+
+    '<button class="btn-add" onclick="cliRegistrarConsumo(\''+bodega+'\')" style="background:linear-gradient(135deg,#dc2626,#f87171)">Registrar consumo</button>'+
+    '<div class="saved" id="cliConSaved">✓ Registrado</div></div>';
+}
+window.cliActualizarConsumo=function(bodega){
+  var cod=parseCodInsumo(document.getElementById('cliConInsumo').value);
+  var info=document.getElementById('cliConInfo');if(!info)return;
+  if(!cod){info.textContent='';return;}
+  var stock=stockUnidades(bodega,cod);var cant=Number(document.getElementById('cliConCant').value)||0;
+  var lotes=lotesDe(bodega,cod);
+  var txt='Stock: <b>'+stock+' u.</b>';
+  if(lotes.length)txt+=' · sale lote '+lotes[0].venc+' ('+lotes[0].unidades+'u)';
+  if(cant>0)txt+=' → quedarían <b>'+Math.max(0,stock-cant)+'</b>';
+  info.innerHTML=txt;
+};
+window.cliRegistrarConsumo=function(bodega){
+  var cod=parseCodInsumo(document.getElementById('cliConInsumo').value);
+  var cant=Number(document.getElementById('cliConCant').value)||0;
+  var item=invCatalogo[cod];
+  if(!item){alert('Selecciona un insumo válido.');return;}
+  if(cant<=0){alert('Ingresa las unidades.');return;}
+  var stock=stockUnidades(bodega,cod);var forzar=false;
+  if(cant>stock){if(!confirm('Supera el stock ('+stock+'). ¿Registrar igual?'))return;forzar=true;cant=stock;if(cant<=0)return;}
+  var res=descontarFEFO(bodega,cod,cant,forzar);if(!res)return;
+  var updates=res.updates;var mk=Date.now();
+  updates['invMovimientos/'+mk]={tipo:'consumo',cod:cod,desc:item.desc,bodega:bodega,unidades:cant,lotes:res.afectados,fecha:hoyStr(),ts:mk,por:curNombre};
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('cliConSaved');
+    document.getElementById('cliConCant').value='';document.getElementById('cliConInsumo').value='';cliActualizarConsumo(bodega);
+  });
+};
+
+function cliVistaAjuste(bodega){
+  return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Corrige el stock si hay una diferencia. Queda registrado con motivo.</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
+    '<input list="cliInsList2" id="cliAjInsumo" onchange="cliActualizarAjuste(\''+bodega+'\')" placeholder="Busca..." style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<datalist id="cliInsList2">'+opcionesInsumos()+'</datalist>'+
+    '<div id="cliAjInfo" style="font-size:12px;color:#93c5fd;margin-bottom:8px"></div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Stock correcto (unidades reales)</label>'+
+    '<input type="number" id="cliAjCant" min="0" step="any" placeholder="0" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Motivo</label>'+
+    '<input type="text" id="cliAjMotivo" placeholder="Ej: diferencia de conteo" style="width:100%;font-size:13px;padding:7px;margin-bottom:10px">'+
+    '<button class="btn-add" onclick="cliRegistrarAjuste(\''+bodega+'\')" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">Registrar ajuste</button>'+
+    '<div class="saved" id="cliAjSaved">✓ Ajuste registrado</div></div>';
+}
+window.cliActualizarAjuste=function(bodega){
+  var cod=parseCodInsumo(document.getElementById('cliAjInsumo').value);
+  var info=document.getElementById('cliAjInfo');if(!info)return;
+  if(!cod){info.textContent='';return;}
+  info.innerHTML='Stock actual: <b>'+stockUnidades(bodega,cod)+' u.</b>';
+};
+window.cliRegistrarAjuste=function(bodega){
+  var cod=parseCodInsumo(document.getElementById('cliAjInsumo').value);
+  var nuevo=Number(document.getElementById('cliAjCant').value);
+  var motivo=document.getElementById('cliAjMotivo').value.trim();
+  var item=invCatalogo[cod];
+  if(!item){alert('Selecciona un insumo válido.');return;}
+  if(isNaN(nuevo)||nuevo<0){alert('Ingresa el stock correcto.');return;}
+  if(!motivo){alert('Indica el motivo.');return;}
+  var actual=stockUnidades(bodega,cod);var diff=nuevo-actual;
+  if(diff===0){alert('Igual al actual, no hay ajuste.');return;}
+  var updates={};var lotes=lotesDe(bodega,cod);
+  if(diff<0){var res=descontarFEFO(bodega,cod,-diff,true);updates=res.updates;}
+  else{if(lotes.length)updates['invLotes/'+bodega+'/'+cod+'/'+lotes[0].id+'/unidades']=lotes[0].unidades+diff;else agregarLote(updates,bodega,cod,diff,'',hoyStr());}
+  var mk=Date.now();
+  updates['invMovimientos/'+mk]={tipo:'ajuste',cod:cod,desc:item.desc,bodega:bodega,stockAnterior:actual,stockNuevo:nuevo,diferencia:diff,motivo:motivo,fecha:hoyStr(),ts:mk,por:curNombre};
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('cliAjSaved');
+    document.getElementById('cliAjCant').value='';document.getElementById('cliAjInsumo').value='';document.getElementById('cliAjMotivo').value='';cliActualizarAjuste(bodega);
+  });
+};
+
+// ── DASHBOARD DE INVENTARIO (consolidado, para el Director) ──
+window.abrirDashboardInventario=function(){
+  var ov=document.getElementById('dashInvOv');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='dashInvOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  var m=calcularMetricasInventario();
+  ov.innerHTML='<div style="max-width:820px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+      '<span style="font-size:17px;font-weight:800;color:#fbbf24">📦 Dashboard de Inventario</span>'+
+      '<button onclick="document.getElementById(\'dashInvOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button>'+
+    '</div>'+
+    // KPIs
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">'+
+      dashInvKPI('Insumos en catálogo',m.totalInsumos,'#60a5fa')+
+      dashInvKPI('Por reponer',m.porReponer,m.porReponer>0?'#d97706':'#10b981')+
+      dashInvKPI('Lotes por vencer',m.porVencer,m.porVencer>0?'#d97706':'#10b981')+
+      dashInvKPI('Vencidos',m.vencidos,m.vencidos>0?'#dc2626':'#10b981')+
+      (m.valorTotal!=null?dashInvKPI('Valor inventario','$'+m.valorTotal.toLocaleString('es-CL'),'#10b981'):'')+
+    '</div>'+
+    // Stock por bodega
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px">Stock por bodega</div>'+
+      m.porBodega.map(function(b){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+          '<span style="font-size:13px;color:#fff">'+b.nombre+'</span>'+
+          '<span style="font-size:12px;color:rgba(255,255,255,.6)">'+b.insumos+' insumos · '+b.unidades.toLocaleString('es-CL')+' u.'+(b.alarmas>0?' <span style="color:#fbbf24">· '+b.alarmas+' alarma(s)</span>':'')+'</span>'+
+        '</div>';
+      }).join('')+
+    '</div>'+
+    // Distribución ABC
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px">Clasificación ABC del catálogo</div>'+
+      '<div style="display:flex;gap:8px">'+
+        dashInvABC('A',m.abc.A,'#dc2626')+dashInvABC('B',m.abc.B,'#d97706')+dashInvABC('C',m.abc.C,'#6b7280')+dashInvABC('Sin clasificar',m.abc.sin,'rgba(255,255,255,.2)')+
+      '</div>'+
+    '</div>'+
+    // Top vencimientos
+    (m.vencimientos.length?'<div style="background:#16233d;border-radius:12px;padding:14px">'+
+      '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px">Próximos vencimientos</div>'+
+      m.vencimientos.slice(0,10).map(function(v){
+        var col=v.vencido?'#dc2626':'#d97706';
+        return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+          '<span style="font-size:12px;color:#fff">'+esc(v.desc)+' <span style="color:rgba(255,255,255,.4)">('+v.bodNombre+')</span></span>'+
+          '<span style="font-size:11px;color:'+col+'">'+v.venc+' · '+v.unidades+'u</span></div>';
+      }).join('')+'</div>':'')+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+function dashInvKPI(label,valor,color){
+  return '<div style="background:#16233d;border-radius:10px;padding:12px">'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">'+label+'</div>'+
+    '<div style="font-size:22px;font-weight:800;color:'+color+'">'+valor+'</div></div>';
+}
+function dashInvABC(letra,n,color){
+  return '<div style="flex:1;background:rgba(255,255,255,.03);border-radius:8px;padding:10px;text-align:center">'+
+    '<div style="font-size:20px;font-weight:800;color:'+color+'">'+n+'</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.5)">'+letra+'</div></div>';
+}
+
+function calcularMetricasInventario(){
+  var totalInsumos=Object.keys(invCatalogo).length;
+  var repos=alarmasReposicion();
+  var venc=alarmasVencimiento();
+  var abc={A:0,B:0,C:0,sin:0};
+  var valorTotal=0,hayCosto=false;
+  Object.keys(invCatalogo).forEach(function(cod){
+    var i=invCatalogo[cod];
+    var l=(i.abc||'').toUpperCase();
+    if(l==='A')abc.A++;else if(l==='B')abc.B++;else if(l==='C')abc.C++;else abc.sin++;
+    // Valorización: sumar stock de todas las bodegas × costo
+    if(i.costo!==''&&i.costo!=null&&!isNaN(Number(i.costo))){
+      hayCosto=true;
+      var totalU=0;
+      Object.keys(BODEGAS).forEach(function(b){totalU+=stockUnidades(b,cod);});
+      valorTotal+=totalU*Number(i.costo);
+    }
+  });
+  var porBodega=Object.keys(BODEGAS).map(function(b){
+    var cods=Object.keys(invLotes[b]||{}).filter(function(c){return stockUnidades(b,c)>0;});
+    var u=cods.reduce(function(s,c){return s+stockUnidades(b,c);},0);
+    var al=repos.filter(function(a){return a.bodega===b;}).length+venc.filter(function(a){return a.bodega===b;}).length;
+    return {nombre:BODEGAS[b].nombre,insumos:cods.length,unidades:u,alarmas:al};
+  });
+  return {
+    totalInsumos:totalInsumos,porReponer:repos.length,
+    porVencer:venc.filter(function(v){return !v.vencido;}).length,
+    vencidos:venc.filter(function(v){return v.vencido;}).length,
+    abc:abc,porBodega:porBodega,vencimientos:venc,
+    valorTotal:hayCosto?Math.round(valorTotal):null
+  };
+}
+
 // ── PANEL DE BODEGA: vistas ──
 function abrirPanelBodega(){
   var ov=document.getElementById('panelBodegaOv');
@@ -5609,6 +5856,7 @@ function abrirPanelBodega(){
       '<button class="bod-tab" data-v="stock" onclick="bodTab(\'stock\')">📊 Stock por bodega</button>'+
       '<button class="bod-tab" data-v="catalogo" onclick="bodTab(\'catalogo\')">📋 Catálogo</button>'+
       '<button class="bod-tab" data-v="movimiento" onclick="bodTab(\'movimiento\')">↔️ Movimientos</button>'+
+      '<button class="bod-tab" data-v="asignaciones" onclick="bodTab(\'asignaciones\')">👥 Encargados</button>'+
     '</div>'+
     '<div id="bodContenido"></div></div>'+
     '<style>.bod-tab{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;cursor:pointer}.bod-tab.active{background:linear-gradient(135deg,#d97706,#fbbf24);color:#1a1a1a;font-weight:700}</style>';
@@ -5623,6 +5871,33 @@ window.bodTab=function(v){
   else if(v==='stock')c.innerHTML=vistaStock();
   else if(v==='catalogo'){c.innerHTML=vistaCatalogo();setTimeout(function(){if(document.getElementById('bodCatLista'))filtrarCatalogo('');},30);}
   else if(v==='movimiento'){c.innerHTML=vistaMovimiento();setTimeout(function(){if(document.getElementById('movSubcontenido'))movSubtab('ingreso');},30);}
+  else if(v==='asignaciones')c.innerHTML=vistaAsignaciones();
+};
+
+function vistaAsignaciones(){
+  var subs=Object.keys(BODEGAS).filter(function(b){return BODEGAS[b].tipo==='sub';});
+  var personas=nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';});
+  var html='<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    '<div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:4px">Encargado de cada subbodega</div>'+
+    '<p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">La persona asignada podrá gestionar esa subbodega desde su vista normal de la app, sin PIN.</p>';
+  subs.forEach(function(b){
+    var actual=invAsignaciones[b]||'';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<span style="font-size:13px;color:#fff;flex:1">'+BODEGAS[b].nombre+'</span>'+
+      '<select onchange="asignarEncargado(\''+b+'\',this.value)" style="font-size:12px;padding:6px;max-width:200px">'+
+        '<option value="">— sin asignar —</option>'+
+        personas.map(function(n){return '<option value="'+esc(n)+'"'+(actual===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')+
+      '</select>'+
+    '</div>';
+  });
+  html+='<div class="saved" id="asigSaved" style="margin-top:8px">✓ Asignación guardada</div></div>';
+  return html;
+}
+
+window.asignarEncargado=function(bodega,nombre){
+  sedeRef('invAsignaciones/'+bodega).set(nombre||null).then(function(){
+    showSaved('asigSaved');
+  });
 };
 
 function vistaAlarmas(){
