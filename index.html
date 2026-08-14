@@ -5619,7 +5619,7 @@ window.bodTab=function(v){
   if(v==='alarmas')c.innerHTML=vistaAlarmas();
   else if(v==='stock')c.innerHTML=vistaStock();
   else if(v==='catalogo'){c.innerHTML=vistaCatalogo();setTimeout(function(){if(document.getElementById('bodCatLista'))filtrarCatalogo('');},30);}
-  else if(v==='movimiento')c.innerHTML=vistaMovimiento();
+  else if(v==='movimiento'){c.innerHTML=vistaMovimiento();setTimeout(function(){if(document.getElementById('movSubcontenido'))movSubtab('entrega');},30);}
 };
 
 function vistaAlarmas(){
@@ -5734,6 +5734,8 @@ window.abrirFichaInsumo=function(cod){
     fichaCampo('Stock de seguridad','stockSeguridad',i.stockSeguridad,'Colchón mínimo')+
     fichaCampo('ROP manual','ropManual',i.ropManual,'Deja vacío para usar el calculado')+
     fichaCampo('Stock óptimo','stockOptimo',i.stockOptimo,'Hasta cuánto reponer')+
+    fichaCampo('Presentación macro','presentacion',i.presentacion,'Ej: caja, paquete, bolsa (como llega de central)')+
+    fichaCampo('Unidades por '+(i.presentacion||'caja'),'unidadesPorCaja',i.unidadesPorCaja,'Cuántas unidades trae cada '+(i.presentacion||'caja')+' (para convertir)')+
     fichaCampo('Costo unitario ($)','costo',i.costo,'Se puede llenar después')+
     '<div style="background:rgba(37,99,235,.1);border-radius:8px;padding:8px 10px;margin:10px 0;font-size:12px;color:#93c5fd">ROP calculado ahora: <b>'+(rop!=null?rop+' unidades':'faltan datos (lead time + demanda)')+'</b></div>'+
     '<button class="btn-add" onclick="guardarFichaInsumo(\''+cod+'\')" style="background:linear-gradient(135deg,#d97706,#fbbf24)">💾 Guardar ficha</button>'+
@@ -5751,6 +5753,8 @@ function fichaCampo(label,key,valor,hint){
   } else if(key==='select_crit'){
     input='<select id="fi_criticidad" style="width:100%;font-size:13px;padding:7px">'+
       ['','Alta','Media','Baja'].map(function(o){return '<option value="'+o+'"'+(valor===o?' selected':'')+'>'+(o||'— sin asignar —')+'</option>';}).join('')+'</select>';
+  } else if(key==='presentacion'){
+    input='<input type="text" id="fi_presentacion" value="'+String(valor).replace(/"/g,'&quot;')+'" style="width:100%;font-size:13px;padding:7px" placeholder="caja">';
   } else {
     input='<input type="number" id="fi_'+key+'" value="'+valor+'" min="0" step="any" style="width:100%;font-size:13px;padding:7px" placeholder="—">';
   }
@@ -5766,7 +5770,8 @@ window.guardarFichaInsumo=function(cod){
   var updates={
     abc:g('abc'),criticidad:g('criticidad'),leadTime:g('leadTime'),
     demandaDiaria:g('demandaDiaria'),stockSeguridad:g('stockSeguridad'),
-    ropManual:g('ropManual'),stockOptimo:g('stockOptimo'),costo:g('costo')
+    ropManual:g('ropManual'),stockOptimo:g('stockOptimo'),costo:g('costo'),
+    presentacion:g('presentacion'),unidadesPorCaja:g('unidadesPorCaja')
   };
   sedeRef('invCatalogo/'+cod).update(updates).then(function(){
     document.getElementById('fichaInsumoOv').remove();
@@ -5858,11 +5863,161 @@ function procesarExcelMasivo(){
 }
 
 function vistaMovimiento(){
-  return '<div style="background:#16233d;border-radius:12px;padding:14px;color:rgba(255,255,255,.6);font-size:13px">'+
-    '<p style="margin-bottom:8px">Aquí se registran las entregas de Bodega Central a las subbodegas y los consumos.</p>'+
-    '<p style="font-size:12px;color:rgba(255,255,255,.4)">Esta función se activa cuando el catálogo y el stock inicial estén cargados. Por ahora, carga primero el catálogo.</p>'+
+  var n=Object.keys(invCatalogo).length;
+  if(!n)return '<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.5)">Primero carga el catálogo de insumos.</div>';
+  return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    '<div style="display:flex;gap:6px;margin-bottom:12px">'+
+      '<button id="movTabEntrega" class="mov-subtab active" onclick="movSubtab(\'entrega\')" style="flex:1">📥 Entrega a subbodega</button>'+
+      '<button id="movTabConsumo" class="mov-subtab" onclick="movSubtab(\'consumo\')" style="flex:1">📤 Registrar consumo</button>'+
+    '</div>'+
+    '<div id="movSubcontenido"></div>'+
+    '<style>.mov-subtab{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:8px;font-family:inherit;font-size:12px;cursor:pointer}.mov-subtab.active{background:rgba(217,119,6,.25);color:#fbbf24;font-weight:700}</style>'+
     '</div>';
 }
+
+window.movSubtab=function(v){
+  document.getElementById('movTabEntrega').classList.toggle('active',v==='entrega');
+  document.getElementById('movTabConsumo').classList.toggle('active',v==='consumo');
+  var c=document.getElementById('movSubcontenido');
+  if(v==='entrega')c.innerHTML=formEntrega();
+  else c.innerHTML=formConsumo();
+};
+
+function opcionesInsumos(){
+  return Object.keys(invCatalogo).sort(function(a,b){return (invCatalogo[a].desc||'').localeCompare(invCatalogo[b].desc||'');})
+    .map(function(cod){return '<option value="'+cod+'">'+esc(invCatalogo[cod].desc)+' ('+cod+')</option>';}).join('');
+}
+function opcionesSubbodegas(){
+  return Object.keys(BODEGAS).filter(function(b){return BODEGAS[b].tipo==='sub';})
+    .map(function(b){return '<option value="'+b+'">'+BODEGAS[b].nombre+'</option>';}).join('');
+}
+
+function formEntrega(){
+  return '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Bodega Central entrega a una subbodega. Ingresa la cantidad en la presentación macro (cajas); el sistema la convierte a unidades.</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
+    '<input list="movInsumosList" id="entInsumo" onchange="actualizarInfoEntrega()" placeholder="Busca por nombre o código" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<datalist id="movInsumosList">'+opcionesInsumos()+'</datalist>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Subbodega destino</label>'+
+    '<select id="entDestino" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+opcionesSubbodegas()+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Cantidad entregada</label>'+
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'+
+      '<input type="number" id="entCantidad" min="0" step="any" oninput="actualizarInfoEntrega()" placeholder="0" style="flex:1;font-size:13px;padding:7px">'+
+      '<span id="entUnidadLabel" style="font-size:12px;color:rgba(255,255,255,.5)">unidades</span>'+
+    '</div>'+
+    '<div id="entInfo" style="font-size:12px;color:#93c5fd;margin-bottom:10px"></div>'+
+    '<button class="btn-add" onclick="registrarEntrega()" style="background:linear-gradient(135deg,#059669,#6ee7b7)">Registrar entrega</button>'+
+    '<div class="saved" id="entSaved">✓ Entrega registrada</div>';
+}
+
+window.actualizarInfoEntrega=function(){
+  var cod=parseCodInsumo(document.getElementById('entInsumo').value);
+  var item=invCatalogo[cod];
+  var lbl=document.getElementById('entUnidadLabel');
+  var info=document.getElementById('entInfo');
+  if(!item){if(info)info.textContent='';return;}
+  var upc=Number(item.unidadesPorCaja)||0;
+  var pres=item.presentacion||'caja';
+  if(lbl)lbl.textContent=upc>0?pres+'(s)':'unidades';
+  var cant=Number(document.getElementById('entCantidad').value)||0;
+  var stockCentral=(invStock.central&&invStock.central[cod])?Number(invStock.central[cod]):0;
+  if(info){
+    if(upc>0&&cant>0){
+      info.innerHTML='= <b>'+(cant*upc)+' unidades</b> · Stock central actual: '+stockCentral+' unidades';
+    } else if(cant>0){
+      info.innerHTML='Stock central actual: '+stockCentral+' unidades <span style="color:#fca5a5">(sin factor de caja: se cuenta como unidades)</span>';
+    } else info.innerHTML='Stock central: '+stockCentral+' unidades';
+  }
+};
+
+function parseCodInsumo(v){
+  if(!v)return '';
+  var m=v.match(/\(([^)]+)\)\s*$/);
+  if(m)return m[1];
+  return invCatalogo[v]?v:'';
+}
+
+window.registrarEntrega=function(){
+  var cod=parseCodInsumo(document.getElementById('entInsumo').value);
+  var destino=document.getElementById('entDestino').value;
+  var cant=Number(document.getElementById('entCantidad').value)||0;
+  var item=invCatalogo[cod];
+  if(!item){alert('Selecciona un insumo válido.');return;}
+  if(cant<=0){alert('Ingresa una cantidad.');return;}
+  var upc=Number(item.unidadesPorCaja)||1;
+  var unidades=cant*upc;
+  var stockCentral=(invStock.central&&invStock.central[cod])?Number(invStock.central[cod]):0;
+  if(unidades>stockCentral){
+    if(!confirm('La entrega ('+unidades+' u.) supera el stock de central ('+stockCentral+' u.). ¿Registrar igual?'))return;
+  }
+  var stockDest=(invStock[destino]&&invStock[destino][cod])?Number(invStock[destino][cod]):0;
+  var updates={};
+  updates['invStock/central/'+cod]=Math.max(0,stockCentral-unidades);
+  updates['invStock/'+destino+'/'+cod]=stockDest+unidades;
+  var movKey=Date.now();
+  updates['invMovimientos/'+movKey]={tipo:'entrega',cod:cod,desc:item.desc,origen:'central',destino:destino,
+    cantidadMacro:cant,unidadesPorCaja:upc,unidades:unidades,fecha:hoyStr(),ts:movKey,por:curNombre||'bodega'};
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('entSaved');
+    document.getElementById('entCantidad').value='';
+    document.getElementById('entInsumo').value='';
+    actualizarInfoEntrega();
+  });
+};
+
+function formConsumo(){
+  return '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Registra el consumo de una subbodega, en unidades. Baja el stock de esa bodega.</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Subbodega</label>'+
+    '<select id="conBodega" onchange="actualizarInfoConsumo()" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+opcionesSubbodegas()+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
+    '<input list="movInsumosList2" id="conInsumo" onchange="actualizarInfoConsumo()" placeholder="Busca por nombre o código" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<datalist id="movInsumosList2">'+opcionesInsumos()+'</datalist>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Unidades consumidas</label>'+
+    '<input type="number" id="conCantidad" min="0" step="any" oninput="actualizarInfoConsumo()" placeholder="0" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<div id="conInfo" style="font-size:12px;color:#93c5fd;margin-bottom:10px"></div>'+
+    '<button class="btn-add" onclick="registrarConsumo()" style="background:linear-gradient(135deg,#dc2626,#f87171)">Registrar consumo</button>'+
+    '<div class="saved" id="conSaved">✓ Consumo registrado</div>';
+}
+
+window.actualizarInfoConsumo=function(){
+  var bod=document.getElementById('conBodega').value;
+  var cod=parseCodInsumo(document.getElementById('conInsumo').value);
+  var info=document.getElementById('conInfo');
+  if(!info)return;
+  if(!cod){info.textContent='';return;}
+  var stock=(invStock[bod]&&invStock[bod][cod])?Number(invStock[bod][cod]):0;
+  var cant=Number(document.getElementById('conCantidad').value)||0;
+  var item=invCatalogo[cod];
+  var rop=item?calcularROP(item):null;
+  var restante=stock-cant;
+  var txt='Stock actual en '+(BODEGAS[bod]?BODEGAS[bod].nombre:bod)+': <b>'+stock+' u.</b>';
+  if(cant>0)txt+=' → quedarían <b>'+Math.max(0,restante)+' u.</b>';
+  if(rop!=null&&restante<=rop&&restante>=0)txt+=' <span style="color:#fbbf24">⚠ bajo ROP ('+rop+')</span>';
+  info.innerHTML=txt;
+};
+
+window.registrarConsumo=function(){
+  var bod=document.getElementById('conBodega').value;
+  var cod=parseCodInsumo(document.getElementById('conInsumo').value);
+  var cant=Number(document.getElementById('conCantidad').value)||0;
+  var item=invCatalogo[cod];
+  if(!item){alert('Selecciona un insumo válido.');return;}
+  if(cant<=0){alert('Ingresa las unidades consumidas.');return;}
+  var stock=(invStock[bod]&&invStock[bod][cod])?Number(invStock[bod][cod]):0;
+  if(cant>stock){
+    if(!confirm('El consumo ('+cant+' u.) supera el stock ('+stock+' u.). ¿Registrar igual? El stock quedará en 0.'))return;
+  }
+  var updates={};
+  updates['invStock/'+bod+'/'+cod]=Math.max(0,stock-cant);
+  var movKey=Date.now();
+  updates['invMovimientos/'+movKey]={tipo:'consumo',cod:cod,desc:item.desc,bodega:bod,
+    unidades:cant,fecha:hoyStr(),ts:movKey,por:curNombre||'bodega'};
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('conSaved');
+    document.getElementById('conCantidad').value='';
+    document.getElementById('conInsumo').value='';
+    actualizarInfoConsumo();
+  });
+};
 
 window.cargarCatalogoEjemplo=function(){
   if(!confirm('Cargar 272 insumos de ejemplo al catálogo y a Bodega Central. ¿Continuar?'))return;
