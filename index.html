@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#0d1b3e;--bg2:#112254;--surface:#1a2e6b;--surface2:#1e3580;
@@ -5774,8 +5775,87 @@ window.guardarFichaInsumo=function(cod){
 };
 
 window.abrirCargaMasiva=function(){
-  alert('La carga masiva por Excel se activará en el siguiente paso. Por ahora edita las fichas tocando cada insumo.');
+  var ov=document.createElement('div');
+  ov.id='cargaMasivaOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:22px;max-width:420px;width:100%">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px">📤 Carga masiva por Excel</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:14px;line-height:1.5">Sube la plantilla completada. El sistema actualiza ABC, lead time, ROP, criticidad, stock óptimo y costo de cada insumo, buscando por su código. No borra el stock ni el historial.</div>'+
+    '<input type="file" id="cargaMasivaFile" accept=".xlsx,.xls" style="width:100%;font-size:12px;color:#fff;margin-bottom:12px">'+
+    '<div id="cargaMasivaResultado" style="font-size:12px;margin-bottom:10px"></div>'+
+    '<button class="btn-add" id="cargaMasivaProcesar" style="background:linear-gradient(135deg,#059669,#6ee7b7)">Procesar archivo</button>'+
+    '<button onclick="document.getElementById(\'cargaMasivaOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('cargaMasivaProcesar').onclick=procesarExcelMasivo;
 };
+
+function procesarExcelMasivo(){
+  var file=document.getElementById('cargaMasivaFile').files[0];
+  var res=document.getElementById('cargaMasivaResultado');
+  if(!file){res.innerHTML='<span style="color:#fca5a5">Selecciona un archivo primero.</span>';return;}
+  if(typeof XLSX==='undefined'){res.innerHTML='<span style="color:#fca5a5">No se pudo cargar el lector de Excel. Revisa tu conexión.</span>';return;}
+  res.innerHTML='<span style="color:#93c5fd">Leyendo archivo…</span>';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      var hoja=wb.Sheets[wb.SheetNames[0]];
+      var filas=XLSX.utils.sheet_to_json(hoja,{header:1,defval:''});
+      // Buscar fila de encabezados (la que tiene CODIGO)
+      var hIdx=-1;
+      for(var r=0;r<Math.min(5,filas.length);r++){
+        if(filas[r].some(function(c){return String(c).trim().toUpperCase()==='CODIGO';})){hIdx=r;break;}
+      }
+      if(hIdx<0){res.innerHTML='<span style="color:#fca5a5">No encontré la columna CODIGO. Usa la plantilla descargada.</span>';return;}
+      var head=filas[hIdx].map(function(c){return String(c).trim().toUpperCase();});
+      function col(nombre){return head.indexOf(nombre);}
+      var cCod=col('CODIGO'),cAbc=col('ABC'),cCrit=col('CRITICIDAD'),cLead=col('LEAD_TIME_DIAS'),
+          cDem=col('DEMANDA_DIARIA'),cSeg=col('STOCK_SEGURIDAD'),cRop=col('ROP_MANUAL'),
+          cOpt=col('STOCK_OPTIMO'),cCosto=col('COSTO_UNITARIO');
+      var updates={},actualizados=0,noEncontrados=0,nuevos=0;
+      for(var r=hIdx+1;r<filas.length;r++){
+        var fila=filas[r];
+        var cod=String(fila[cCod]||'').trim();
+        if(!cod||cod.indexOf('←')>=0)continue; // saltar vacíos y la fila de leyenda
+        try{cod=String(parseInt(cod))===cod?cod:cod;}catch(x){}
+        var existe=invCatalogo[cod];
+        var ficha={
+          abc:cAbc>=0?String(fila[cAbc]||'').trim().toUpperCase():'',
+          criticidad:cCrit>=0?String(fila[cCrit]||'').trim():'',
+          leadTime:cLead>=0?String(fila[cLead]||'').trim():'',
+          demandaDiaria:cDem>=0?String(fila[cDem]||'').trim():'',
+          stockSeguridad:cSeg>=0?String(fila[cSeg]||'').trim():'',
+          ropManual:cRop>=0?String(fila[cRop]||'').trim():'',
+          stockOptimo:cOpt>=0?String(fila[cOpt]||'').trim():'',
+          costo:cCosto>=0?String(fila[cCosto]||'').trim():''
+        };
+        if(existe){
+          Object.keys(ficha).forEach(function(k){if(ficha[k]!=='')updates['invCatalogo/'+cod+'/'+k]=ficha[k];});
+          actualizados++;
+        } else {
+          // insumo nuevo (código que no estaba) — crear ficha básica
+          var desc=col('DESCRIPCION')>=0?String(fila[col('DESCRIPCION')]||'').trim():cod;
+          var grupo=col('GRUPO')>=0?String(fila[col('GRUPO')]||'').trim():'';
+          ficha.cod=cod;ficha.desc=desc;ficha.grupo=grupo;
+          updates['invCatalogo/'+cod]=ficha;
+          nuevos++;
+        }
+      }
+      if(actualizados+nuevos===0){res.innerHTML='<span style="color:#fca5a5">No se encontraron filas válidas para cargar.</span>';return;}
+      res.innerHTML='<span style="color:#93c5fd">Guardando '+(actualizados+nuevos)+' insumos…</span>';
+      // Firebase update con rutas anidadas desde la raíz de la sede
+      db.ref('sedes/'+S).update(updates).then(function(){
+        res.innerHTML='<div style="color:#6ee7b7">✓ Carga completa:<br>• '+actualizados+' insumos actualizados'+(nuevos?'<br>• '+nuevos+' insumos nuevos agregados':'')+'</div>';
+        setTimeout(function(){var o=document.getElementById('cargaMasivaOv');if(o)o.remove();bodTab('catalogo');},2200);
+      }).catch(function(err){res.innerHTML='<span style="color:#fca5a5">Error al guardar: '+err.message+'</span>';});
+    }catch(err){
+      res.innerHTML='<span style="color:#fca5a5">Error al leer el archivo: '+err.message+'</span>';
+    }
+  };
+  reader.onerror=function(){res.innerHTML='<span style="color:#fca5a5">No se pudo leer el archivo.</span>';};
+  reader.readAsArrayBuffer(file);
+}
 
 function vistaMovimiento(){
   return '<div style="background:#16233d;border-radius:12px;padding:14px;color:rgba(255,255,255,.6);font-size:13px">'+
