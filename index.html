@@ -959,15 +959,11 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec" style="border-color:rgba(139,92,246,.3)">
             <p class="asec-title" style="color:#a78bfa">🔑 Supervisores autorizados</p>
-            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Define quiénes pueden aplicar la pauta con el botón "Supervisar", y su PIN.</p>
-            <label style="font-size:11px;color:rgba(255,255,255,.6)">PIN de supervisor</label>
-            <div class="frow" style="margin-bottom:8px">
-              <input type="text" id="pinSuperIn" placeholder="Ej: 4040" style="flex:1">
-              <button class="btn-add" style="width:auto" id="guardarPinSuperBtn">Guardar PIN</button>
-            </div>
-            <label style="font-size:11px;color:rgba(255,255,255,.6)">Autorizar supervisor</label>
-            <div class="frow">
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Autoriza colaboradores para aplicar la pauta. A cada uno le das un PIN inicial (único). Luego cada supervisor puede cambiar su propio PIN.</p>
+            <label style="font-size:11px;color:rgba(255,255,255,.6)">Autorizar supervisor con su PIN</label>
+            <div class="frow" style="margin-bottom:4px">
               <select id="superAddSel" style="flex:1"><option value="">Selecciona colaborador</option></select>
+              <input type="text" id="superAddPin" placeholder="PIN" style="width:90px">
               <button class="btn-add" style="width:auto" id="superAddBtn">+ Autorizar</button>
             </div>
             <div id="superLista" style="margin-top:8px"></div>
@@ -5188,39 +5184,41 @@ function renderKpiFormulario(servicio){
 }
 
 function initConfigSupervisores(){
-  var pinIn=document.getElementById('pinSuperIn');
-  if(pinIn)pinIn.value=pinSupervisor||'';
   var sel=document.getElementById('superAddSel');
   if(sel){
     sel.innerHTML='<option value="">Selecciona colaborador</option>'+
-      nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza'&&!supervisores[n];})
+      nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza'&&!supervisores[claveNombre(n)];})
       .map(function(n){return '<option>'+esc(n)+'</option>';}).join('');
   }
   renderSuperLista();
-  var gp=document.getElementById('guardarPinSuperBtn');
-  if(gp)gp.onclick=function(){
-    var v=document.getElementById('pinSuperIn').value.trim();
-    if(!v){alert('Ingresa un PIN.');return;}
-    sedeRef('pinSupervisor').set(v).then(function(){showSaved('superConfSaved');});
-  };
   var ab=document.getElementById('superAddBtn');
   if(ab)ab.onclick=function(){
     var n=document.getElementById('superAddSel').value;
+    var pin=document.getElementById('superAddPin').value.trim();
     if(!n){alert('Selecciona un colaborador.');return;}
-    sedeRef('supervisores/'+n.replace(/[.#$/\[\]]/g,'_')).set(n).then(function(){
-      showSaved('superConfSaved');initConfigSupervisores();
+    if(!pin){alert('Asigna un PIN inicial.');return;}
+    // Validar que el PIN sea único
+    var pinRepetido=Object.values(supervisores||{}).some(function(s){return s&&s.pin===pin;});
+    if(pinRepetido){alert('Ese PIN ya está en uso por otro supervisor. Usa uno distinto.');return;}
+    sedeRef('supervisores/'+claveNombre(n)).set({nombre:n,pin:pin}).then(function(){
+      showSaved('superConfSaved');
+      document.getElementById('superAddPin').value='';
+      initConfigSupervisores();
     });
   };
 }
 
+function claveNombre(n){return n.replace(/[.#$/\[\]]/g,'_');}
+
 function renderSuperLista(){
   var cont=document.getElementById('superLista');
   if(!cont)return;
-  var lista=Object.keys(supervisores||{}).filter(function(k){return supervisores[k];});
+  var lista=Object.keys(supervisores||{}).filter(function(k){return supervisores[k]&&supervisores[k].nombre;});
   if(!lista.length){cont.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.35)">Sin supervisores autorizados aún.</p>';return;}
   cont.innerHTML=lista.map(function(k){
+    var s=supervisores[k];
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px">'+
-      '<span style="font-size:12px;color:#fff">'+esc(supervisores[k])+'</span>'+
+      '<span style="font-size:12px;color:#fff">'+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.35)">· PIN activo</span></span>'+
       '<button onclick="quitarSupervisor(\''+k.replace(/'/g,"\\'")+'\')" style="background:rgba(239,68,68,.2);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">Quitar</button>'+
     '</div>';
   }).join('');
@@ -6872,38 +6870,51 @@ function reasHistorial(){
   return html;
 }
 
-// ── ACCESO SUPERVISOR (PIN aparte, solo la pauta, con trazabilidad) ──
+// ── ACCESO SUPERVISOR (PIN personal por supervisor, con trazabilidad) ──
 var supervisorActivo='';
-function pinSuper(){return pinSupervisor||'0000';}
 
 document.getElementById('superBtn').addEventListener('click',function(){
   var m=document.createElement('div');
   m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.9);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
-  var listaSup=Object.keys(supervisores||{}).filter(function(n){return supervisores[n];});
-  var opciones=listaSup.length?listaSup.map(function(n){return '<option>'+esc(n)+'</option>';}).join(''):'';
+  var hay=Object.keys(supervisores||{}).some(function(k){return supervisores[k]&&supervisores[k].pin;});
   m.innerHTML='<div style="background:#16233d;border-radius:16px;padding:24px;max-width:340px;width:100%;text-align:center">'+
     '<div style="font-size:32px;margin-bottom:8px">📋</div>'+
     '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px">Acceso Supervisor</div>'+
-    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px">Aplicar pauta de supervisión</div>'+
-    (listaSup.length?
-      '<label style="font-size:11px;color:rgba(255,255,255,.6);display:block;text-align:left;margin-bottom:3px">¿Quién supervisa?</label>'+
-      '<select id="superQuien" style="width:100%;font-size:14px;padding:9px;margin-bottom:8px"><option value="">Selecciona tu nombre</option>'+opciones+'</select>'+
-      '<input type="password" id="superPinIn" placeholder="PIN de supervisor" style="width:100%;text-align:center;font-size:18px;letter-spacing:3px;padding:10px;margin-bottom:10px">'+
-      '<button id="superOk" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">Entrar</button>'
-      :'<div style="font-size:12px;color:#fbbf24;padding:10px">Aún no hay supervisores autorizados. Configúralos en Admin → Supervisores.</div>')+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px">Ingresa tu PIN personal</div>'+
+    (hay?
+      '<input type="password" id="superPinIn" placeholder="Tu PIN" style="width:100%;text-align:center;font-size:18px;letter-spacing:3px;padding:10px;margin-bottom:10px">'+
+      '<button id="superOk" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">Entrar</button>'+
+      '<button id="superCambiar" style="width:100%;margin-top:6px;background:rgba(255,255,255,.06);color:#c4b5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;font-size:12px;cursor:pointer">Cambiar mi PIN</button>'
+      :'<div style="font-size:12px;color:#fbbf24;padding:10px">Aún no hay supervisores autorizados. El administrador los configura en Admin → Supervisores.</div>')+
     '<button id="superCancel" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cancelar</button>'+
     '</div>';
   document.body.appendChild(m);
   document.getElementById('superCancel').onclick=function(){m.remove();};
   var okBtn=document.getElementById('superOk');
   if(okBtn)okBtn.onclick=function(){
-    var quien=document.getElementById('superQuien').value;
     var pin=document.getElementById('superPinIn').value;
-    if(!quien){alert('Selecciona tu nombre.');return;}
-    if(pin!==pinSuper()){alert('PIN incorrecto.');return;}
-    supervisorActivo=quien;
+    var encontrado=Object.keys(supervisores||{}).map(function(k){return supervisores[k];})
+      .filter(function(s){return s&&s.pin===pin;})[0];
+    if(!encontrado){alert('PIN no reconocido.');return;}
+    supervisorActivo=encontrado.nombre;
     m.remove();
     abrirPanelSupervisor();
+  };
+  var camBtn=document.getElementById('superCambiar');
+  if(camBtn)camBtn.onclick=function(){
+    var pinActual=document.getElementById('superPinIn').value;
+    var enc=Object.keys(supervisores||{}).map(function(k){return {k:k,s:supervisores[k]};})
+      .filter(function(o){return o.s&&o.s.pin===pinActual;})[0];
+    if(!enc){alert('Primero ingresa tu PIN actual, luego presiona "Cambiar mi PIN".');return;}
+    var nuevo=prompt('Nuevo PIN para '+enc.s.nombre+':');
+    if(!nuevo||!nuevo.trim())return;
+    nuevo=nuevo.trim();
+    var repetido=Object.keys(supervisores).some(function(k){return k!==enc.k&&supervisores[k]&&supervisores[k].pin===nuevo;});
+    if(repetido){alert('Ese PIN ya está en uso. Elige otro.');return;}
+    sedeRef('supervisores/'+enc.k+'/pin').set(nuevo).then(function(){
+      alert('PIN actualizado. Úsalo la próxima vez.');
+      m.remove();
+    });
   };
 });
 
