@@ -437,7 +437,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
         <div id="pendientesSection"></div>
 
-        <div class="atoggle"><button id="adminBtn">⚙ Admin</button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button></div>
+        <div class="atoggle"><button id="adminBtn">⚙ Admin</button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button> <button id="conductBtn" style="background:rgba(37,99,235,.15);border:1px solid rgba(96,165,250,.35);color:#93c5fd;display:none">💧 Conductividad</button></div>
         <div class="apanel" id="adminPanel">
 
           <div class="asec" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(16,185,129,.1));border:1px solid rgba(59,130,246,.3)">
@@ -776,7 +776,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
             <button class="btn-add" id="addTareaBtn">Agregar</button>
@@ -1058,7 +1058,7 @@ var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var AREAS=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
 var COLACION={'07:45':'13:00–14:00','08:00':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
 var SUBAREAS={T1:'Empaque · Autoclave · Almacenamiento · Entrega',T2:'Recepción · Lavado · Secado'};
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 
 var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
@@ -1243,7 +1243,7 @@ function attach(){
     primerCargaBloques=false;
     ultimosBloquesCount=totalAhora;
   });
-  on('tareas',function(v){tareas=v;renderTareasList();if(curNombre)renderMisTurnos(curNombre);});
+  on('tareas',function(v){tareas=v;renderTareasList();if(curNombre)renderMisTurnos(curNombre);if(typeof actualizarBotonConductividad==='function')actualizarBotonConductividad();});
   on('pendientes',function(v){pendientes=v;renderPendientes();renderPendList();checkAlerta();});
   on('asistencia',function(v){asistencia=v;renderAsist();renderPanorama();if(curNombre)renderMisTurnos(curNombre);});
   on('notas',function(v){
@@ -1906,16 +1906,7 @@ function renderMisTurnos(nombre){
       misBodegas.map(function(b){return '<button onclick="abrirGestionClinico(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+BODEGAS[b].nombre+' ›</button>';}).join('')+
       '</div>';
   }
-  // Botón de conductividad para el encargado de esterilización
-  if(invAsignaciones['sub_esterilizacion']===nombre){
-    var hoyCond=conductividad[hoyStr()];
-    var estadoHoy=hoyCond?'<span style="color:#6ee7b7">✓ Registrada hoy</span>':'<span style="color:#fbbf24">⚠ Pendiente hoy</span>';
-    html+='<div style="background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(96,165,250,.08));border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
-      '<p style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:2px">💧 Conductividad del agua</p>'+
-      '<p style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">Registro diario — '+estadoHoy+'</p>'+
-      '<button onclick="abrirConductividad()" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">Registrar conductividad de hoy ›</button>'+
-      '</div>';
-  }
+  // Botón de conductividad: ahora está en el panel principal (asignado desde Asignaciones)
   // Badges
   Object.values(ausencias).filter(function(a){return a.nombre===nombre&&a.estado==='aprobado';}).forEach(function(a){
     var c=a.tipo==='licencia'?'rgba(124,58,237,.15)':a.tipo==='vacaciones'?'rgba(74,144,217,.15)':'rgba(16,185,129,.15)';
@@ -6951,6 +6942,17 @@ function reasHistorial(){
 
 // ── ACCESO SUPERVISOR (PIN personal por supervisor, con trazabilidad) ──
 var supervisorActivo='';
+
+document.getElementById('conductBtn').addEventListener('click',function(){abrirConductividad();});
+
+// Muestra el botón de conductividad solo si hoy hay tarea de conductividad asignada
+function actualizarBotonConductividad(){
+  var btn=document.getElementById('conductBtn');
+  if(!btn)return;
+  var diaHoy=diaDeDate(hoyStr());
+  var hayHoy=Object.values(tareas||{}).some(function(t){return t.tipo==='conductividad'&&t.dia===diaHoy;});
+  btn.style.display=hayHoy?'':'none';
+}
 
 document.getElementById('superBtn').addEventListener('click',function(){
   var m=document.createElement('div');
