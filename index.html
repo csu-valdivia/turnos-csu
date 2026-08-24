@@ -437,7 +437,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
         <div id="pendientesSection"></div>
 
-        <div class="atoggle"><button id="adminBtn">⚙ Admin</button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button></div>
+        <div class="atoggle"><button id="adminBtn">⚙ Admin</button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button></div>
         <div class="apanel" id="adminPanel">
 
           <div class="asec" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(16,185,129,.1));border:1px solid rgba(59,130,246,.3)">
@@ -776,7 +776,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
             <button class="btn-add" id="addTareaBtn">Agregar</button>
@@ -1181,7 +1181,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas'];
 var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
@@ -1291,6 +1291,7 @@ window.setSede=function(sede){
   sedeRef('invMovimientos').on('value',function(s){invMovimientos=s.val()||{};});
   sedeRef('invAsignaciones').on('value',function(s){invAsignaciones=s.val()||{};});
   sedeRef('invLotes').on('value',function(s){invLotes=s.val()||{};});
+  sedeRef('invReas').on('value',function(s){invReas=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
     anunciosCapacitacion=s.val()||{};
     if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none'){
@@ -5639,6 +5640,7 @@ var BODEGAS={
 };
 var INV_EJEMPLO=[["530105","1 ESCOBILLA QUIRURGICA","INSUMOS CLINICOS",70],["513100","1 BAJADA SUERO UNIDAD","INSUMOS ODONTOLOGICOS",5],["514107","1 BATA CAMISA PACIENTE UNIDAD","INSUMOS CLINICOS",21],["501100","1 CUBRE CALZADO BOLSA","ELEMENTOS PROTECCION PERSONAL",6],["190100","1 KIT DE PABELLON UNIDAD","INSUMOS ODONTOLOGICOS",61],["743127","1 TUBO ASPIRACION 3 METROS","INSUMOS PABELLON",25],["118107","1 CLORHEXIDINA ORALGENE 2% CAJA","INSUMOS ODONTOLOGICOS",8],["500101","1 GORRO PLANO DESECHABLE BOLSA","DISPOSITIVOS MEDICOS",6],["104102","1 AGUJA DENTAL LARGA DESECHABLE CAJA","INSUMOS CLINICOS",3],["537102","1 CINTA REACTIVA GLUCOTEST UNIDAD","INSUMOS ODONTOLOGICOS",3],["512110","1 HOJA BISTURI N° 15 C CAJA","INSUMOS CLINICOS",2],["141104","1 JERINGA DESECHABLE 20 CC CAJA","INSUMOS CLINICOS",1],["147101","1 MASCARILLA CAJA","ELEMENTOS PROTECCION PERSONAL",118],["506100","1 MICROPORE CINTA ADHESIVA 2,5 CAJA","INSUMOS CLINICOS",44],["506102","1 MICROPORE CINTA ADHESIVA 5CM. UNIDAD","INSUMOS CLINICOS",6],["161104","1 SUERO FISIOLOGICO AMPOLLA 20 CC UNIDAD","INSUMOS CLINICOS",210],["165100","1 VASOS DESECHABLES PAQUETE","INSUMOS OFICINA",4],["107116","1 ALCOHOL PAD UNIDAD","INSUMOS ASEO",2],["131109","1 GUANTES ESTERILES 7 CAJA","ELEMENTOS PROTECCION PERSONAL",6],["131111","1 GUANTES ESTERILES 8 CAJA","ELEMENTOS PROTECCION PERSONAL",4],["131110","1 GUANTES ESTERILES 7 1/2 CAJA","ELEMENTOS PROTECCION PERSONAL",1],["510100","1 PARCHE CURITA CAJA","INSUMOS CLINICOS",6],["110120","1 ANESTESIA AL 4% CAJA","INSUMOS ODONTOLOGICOS",1],["824390","1 MARIPOSA 23 G VACUTAINER CAJA","INSUMOS CLINICOS",1],["131129","1 GUANTES DE LATEX S CAJA","ELEMENTOS PROTECCION PERSONAL",23],["104101","1 AGUJA DENTAL CORTA DESECHABLES CAJA","INSUMOS CLINICOS",4],["554104","1 CATETER INTRAVENOSO 22G UNIDAD","INSUMOS CLINICOS",50],["554103","1 CATETER INTRAVENOSO 20G UNIDAD","INSUMOS CLINICOS",50],["131104","1 GUANTES DE VINILO S CAJA","ELEMENTOS PROTECCION PERSONAL",29],["131108","1 GUANTES ESTERILES 6 1/2 CAJA","ELEMENTOS PROTECCION PERSONAL",3],["131115","1 GUANTES DE VINILO M CAJA","ELEMENTOS PROTECCION PERSONAL",66],["131116","1 GUANTES ESTERILES 6 CAJA","ELEMENTOS PROTECCION PERSONAL",3],["131117","1 GUANTES DE VINILO L CAJA","ELEMENTOS PROTECCION PERSONAL",9],["131122","1 GUANTES DE NITRILO XS CAJA","ELEMENTOS PROTECCION PERSONAL",17],["131125","1 GUANTES DE ALTO RIESGO S UNIDAD","ELEMENTOS PROTECCION PERSONAL",2],["131130","1 GUANTES DE LATEX M CAJA","ELEMENTOS PROTECCION PERSONAL",38],["131131","1 GUANTES DE LATEX XS CAJA","ELEMENTOS PROTECCION PERSONAL",27],["131132","1 GUANTES DE LATEX L CAJA","INSUMOS ODONTOLOGICOS",12],["523107","1 SUTURA ESTRIL 5-0 MONONYLON 45 CM CAJA","INSUMOS ODONTOLOGICOS",6],["523123","1 SUTURA NYLON 3/0 SOBRES","DISPOSITIVOS MEDICOS",4],["523110","1 SUTURA ESTERIL 3-0 CATGUT CAJA","INSUMOS ODONTOLOGICOS",4],["140101","1 JABÓN DE CLORHEXIDINA AL 2% BOTELLA","INSUMOS ASEO",3],["166100","1 YESO PIEDRA AMARILLO BOLSA","INSUMOS ODONTOLOGICOS",42],["107100","1 ALCOHOL DE QUEMAR CAJA","INSUMOS CLINICOS",10],["107105","1 ALCOHOL PURO 70° CAJA","INSUMOS CLINICOS",10],["166103","1 YESO ORTOPEDICO BOLSA","INSUMOS ODONTOLOGICOS",2],["148108","1 SILICONA PESADA POR CONDENSACIÓN CAJA","INSUMOS ODONTOLOGICOS",6],["523101","1 SUTURA ESTERIL 4-0 SEDA 45 CM CAJA","INSUMOS ODONTOLOGICOS",3],["523106","1 SUTURA ESTERIL 4-0 MONONYLON 45 CM BOLSA","INSUMOS ODONTOLOGICOS",5],["824392","1 SUTURA ACIDO POLIGLICOLICO 4/0 CAJA","INSUMOS ODONTOLOGICOS",3],["824393","1 SUTURA NYLON 6.0 CAJA","INSUMOS ODONTOLOGICOS",5],["143107","1 EDTA 17 % BOTELLA","INSUMOS ODONTOLOGICOS",1],["171103","1 TEFLON UNIDAD","INSUMOS ODONTOLOGICOS",3],["167111","1 LAMINA PLACA CRISTAL (BIOART) PAQUETE","INSUMOS ODONTOLOGICOS",1],["115100","1 CONOS GUTAPERCHA N° 30 0.2% CAJA","INSUMOS ODONTOLOGICOS",4],["115104","1 CONOS GUTAPERCHA N° 60 0.2% CAJA","INSUMOS ODONTOLOGICOS",4],["115113","1 CONOS GUTAPERCHA N° 15 0.2% CAJA","INSUMOS ODONTOLOGICOS",3],["115105","1 CONOS GUTAPERCHA N° 70 0.2% CAJA","INSUMOS ODONTOLOGICOS",5],["115110","1 CONOS GUTAPERCHA N° 20 0.2% CAJA","INSUMOS ODONTOLOGICOS",5],["115129","1 CONOS DE GUTAPERCHA 45-80 CAJA","INSUMOS ODONTOLOGICOS",1],["740116","1 PUNTA INTRORALES AMARILLAS BOLSA","INSUMOS ODONTOLOGICOS",18],["740112","1 PUNTAS MEZC. GARANT AMARILLAS 3 M 71462 BOLSA","INSUMOS ODONTOLOGICOS",31],["117104","1 CUÑAS DE MADERA SURTIDA CAJA","INSUMOS ODONTOLOGICOS",8],["4","1 DISCOS SOFLEX CAJA","INSUMOS ODONTOLOGICOS",2],["121100","1 DISCO CARBURUNDUM CAJA","INSUMOS ODONTOLOGICOS",3],["171100","1 PAPEL ARTICULAR RECTO CAJA","INSUMOS ODONTOLOGICOS",31],["171101","1 PAPEL ARTICULAR ARCADA CAJA","INSUMOS ODONTOLOGICOS",19],["115128","1 CONOS DE PAPEL N° 60 CAJA","INSUMOS ODONTOLOGICOS",14],["115127","1 CONOS DE PAPEL N° 55 CAJA","INSUMOS ODONTOLOGICOS",30],["115125","1 CONOS DE PAPEL N° 45 CAJA","INSUMOS ODONTOLOGICOS",7],["115133","1 CONOS DE PAPEL N° 30 CAJA","INSUMOS ODONTOLOGICOS",7],["115123","1 CONOS DE PAPEL N° 35 CAJA","INSUMOS ODONTOLOGICOS",19],["115122","1 CONOS DE PAPEL N° 25 CAJA","INSUMOS ODONTOLOGICOS",2],["115124","1 CONOS DE PAPEL N° 40 CAJA","INSUMOS ODONTOLOGICOS",4],["115126","1 CONOS DE PAPEL N° 50 CAJA","INSUMOS ODONTOLOGICOS",8],["115253","1 CONOS GUTTA DIADENT N°25 4MM CAJA","INSUMOS ODONTOLOGICOS",26],["115249","1 CONOS GUTAPERCHA N°35 0.4% CAJA","INSUMOS ODONTOLOGICOS",8],["115254","1 CONOS GUTAPERCHA N°30 0.4% CAJA","INSUMOS ODONTOLOGICOS",11],["115250","1 CONOS GUTAPERCHA N°40 0.4% CAJA","INSUMOS ODONTOLOGICOS",3],["132100","1 GUTAPERCHA CAJA","INSUMOS ODONTOLOGICOS",1],["101105","1 ACRILICO TERMOCURABLE TRANSPARENTE MARCHE FRASCO","INSUMOS ODONTOLOGICOS",7],["101106","1 ACRILICO AUTOCURABLE TRANSPARENTE MARCHE FRASCO","INSUMOS ODONTOLOGICOS",9],["101104","1 ACRILICO AUTOCURABLE ROSADO MARCHE FRASCO","INSUMOS ODONTOLOGICOS",16],["101116","1 ACRILICO AUTOCURABLE N° 46 MARCHE FRASCO","INSUMOS ODONTOLOGICOS",18],["112166","1 CEMENTO RELYX ULTIMATE CLICCKER REFILL CAJA","INSUMOS ODONTOLOGICOS",1],["136100","1 HUINCHA CELULOIDE PAQUETE","INSUMOS ODONTOLOGICOS",25],["172100","1 EUCALIPTOL FRASCO","INSUMOS ODONTOLOGICOS",1],["136101","1 HUINCHA DE LIJA METALICA UNIDAD","INSUMOS ODONTOLOGICOS",6],["134106","1 HILO DENTAL ORAL B S / CERA UNIDAD","INSUMOS ODONTOLOGICOS",1],["129100","1 GODIVA PAQUETE","INSUMOS ODONTOLOGICOS",1],["134102","1 HILO RETRACTOR Nº1 FRASCO","INSUMOS ODONTOLOGICOS",5],["134105","1 HILO RETRACTO Nº2 FRASCO","INSUMOS ODONTOLOGICOS",3],["134107","1 HILO RETRACTOR N º0 FRASCO","INSUMOS ODONTOLOGICOS",5],["110105","1 ANESTESIA AL 2 % C/VASO CAJA","INSUMOS ODONTOLOGICOS",2],["110106","1 ANESTESIA AL 3% S/VASO CAJA","INSUMOS ODONTOLOGICOS",3],["128101","1 GELITA CAJA","INSUMOS ODONTOLOGICOS",4],["740145","1 PUNTA DESECHABLE JERINGA TRIPLE PAQUETE","INSUMOS ODONTOLOGICOS",1],["136102","1 HUINCHA PARA RESINA GRUESA CAJA","INSUMOS ODONTOLOGICOS",3],["136103","1 HUINCHA PARA RESINA FINA CAJA","INSUMOS ODONTOLOGICOS",8],["137100","1 BANDA MATRIZ METALICA 5MM UNIDAD","INSUMOS ODONTOLOGICOS",29],["199102","1 MICRO-BRUSH UNIDAD","INSUMOS ODONTOLOGICOS",1],["154100","1 PASTA PROFILACTICA CON FLUOR CAJA","INSUMOS ODONTOLOGICOS",2],["112130","1 VIDRIO IONOMERO DE RESTAURACIÓN (KETAC MOLAR) BOLSA","INSUMOS ODONTOLOGICOS",2],["112150","1 CEMENTO PROVISORIO PROVICOL CAJA","INSUMOS ODONTOLOGICOS",1],["126100","1 FORMOCRESOL FRASCO","INSUMOS ODONTOLOGICOS",1],["128102","1 HEMOSTATICO CAJA","INSUMOS ODONTOLOGICOS",1],["112120","1 CEMENTO TOPSEAL O AH-PLUS ENDODONCIA CAJA","INSUMOS ODONTOLOGICOS",2],["102105","1 ADHESIVO SINGLE BOND 2 FRASCO","INSUMOS ODONTOLOGICOS",3],["114140","1 RESINA Z350 FLOW A3 JERINGA","INSUMOS ODONTOLOGICOS",2],["114149","1 RESINA Z350 A3 DENTINA JERINGA","INSUMOS ODONTOLOGICOS",2],["114171","1 RESINA Z350 A1 BODY JERINGA","INSUMOS ODONTOLOGICOS",1],["114166","1 RESINA Z350 A2 BODY JERINGA","INSUMOS ODONTOLOGICOS",3],["114143","1 RESINA Z350 FLOW A2 JERINGA","INSUMOS ODONTOLOGICOS",2],["159105","1 SELLANTE CLIMPRO CAJA","INSUMOS ODONTOLOGICOS",1],["102126","1 ADHESIVO SINGLE BOND UNIVERSAL UNIDAD","INSUMOS ODONTOLOGICOS",1],["128105","1 BARRERA GINGIVAL CAJA","INSUMOS ODONTOLOGICOS",1],["112111","1 DYCAL CAJA","INSUMOS ODONTOLOGICOS",1],["100103","1 ACIDO FLUORHIDRICO 10 % JERINGA","INSUMOS ESTETICA",1],["112104","1 FERMIN / COLTOSOL CAJA","INSUMOS ODONTOLOGICOS",3],["138104","1 BARNIZ DE FLUOR CAJA","INSUMOS ODONTOLOGICOS",10],["148114","1 ACTIVADOR CAJA","INSUMOS ODONTOLOGICOS",8],["101110","1 ACRILICO DURALAY ROJO POLVO-LIQUIDO FRASCO","INSUMOS ODONTOLOGICOS",5],["148115","1 ALGINATO NORMAL BOLSA","INSUMOS ODONTOLOGICOS",4],["141107","1 JERINGA DESECHABLE 3 CC CAJA","INSUMOS CLINICOS",1],["141101","1 JERINGA DESECHABLE 5 CC CAJA","INSUMOS CLINICOS",2],["137153","1 BANDA MATRIZ METALICA 7MM UNIDAD","INSUMOS ODONTOLOGICOS",22],["144123","1 LIMAS P/ HUESO UNIDAD","INSUMOS CLINICOS",11],["715107","1 CURETA GRACEY 15/16 HU-FRIEDY UNIDAD","INSUMOS CLINICOS",3],["111100","1 CANULA ASPIRACION SURGISTIP MICRO CAJA","INSUMOS CLINICOS",12],["113104","1 CERA ROSADA CAJA","INSUMOS ODONTOLOGICOS",4],["740141","1 PUNTAS MEZCLADORA PARACORE BOLSA","INSUMOS ODONTOLOGICOS",10],["509108","1 GASA APOSITO ESTERIL 5X5 CAJA","INSUMOS CLINICOS",39],["112108","1 VIDRIO IONOMERO DE CEMENTACIÓN (MERON) CAJA","INSUMOS ODONTOLOGICOS",4],["824388","1 MARIPOSA 21 G VACUTAINER CAJA","INSUMOS CLINICOS",3],["151100","1 MONOMERO AUTOCURABLE FRASCO","INSUMOS ODONTOLOGICOS",1],["101108","1 ACRILICO AUTOCURABLE N° 41 MARCHE FRASCO","INSUMOS ODONTOLOGICOS",3],["142101","1 LACA BASE SUPERIOR CAJA","INSUMOS ODONTOLOGICOS",1],["185101","1 CUBETAS DESECHABLES UNIDAD","INSUMOS ODONTOLOGICOS",2],["113106","1 CERA AMARILLA CAJA","INSUMOS ODONTOLOGICOS",3],["147106","1 MASCARILLA KN95 CAJA","ELEMENTOS PROTECCION PERSONAL",30],["503100","1 INDICADOR P/ ESTERILIZ. X VAPOR UNIDAD","INSUMOS ODONTOLOGICOS",1],["502116","1 PAPEL P/ ESTERILIZ. C / FUELLE 30X100 ROLLO","INSUMOS ESTERILIZACION",15],["502114","1 PAPEL P/ ESTERILIZ. C / FUELLE 20X100 CAJA","INSUMOS ESTERILIZACION",14],["824413","1 PAPEL P/ESTERILIZ. S/FUELLE 30CM ROLLO","INSUMOS ESTERILIZACION",22],["140100","1 JABÓN DETERGENTE ENZIMÁTICO BIDÓN","INSUMOS ASEO",11],["502106","1 PAPEL P/ ESTERILIZ. S/ FUELLE 20 CM CAJA","INSUMOS ESTERILIZACION",15],["502100","1 PAPEL P/ESTERILIZ. S/FUELLE 10CM ROLLO","INSUMOS ESTERILIZACION",11],["502117","1 PAPEL P/ ESTERILIZ. S / FUELLE 5X200 CAJA","INSUMOS ESTERILIZACION",13],["502108","1 PAPEL P/ ESTERILIZ. S/ FUELLE 7,5 CM ROLLO","INSUMOS ESTERILIZACION",12],["146101","1 ACEITE LUBRICANTE UNIDAD","INSUMOS ODONTOLOGICOS",1],["175102","1 PECHERA PLASTICA UNIDAD","ELEMENTOS PROTECCION PERSONAL",3040],["124100","1 EYECTOR BOLSA","INSUMOS ODONTOLOGICOS",4],["505100","1 BAJA-LENGUA MADERA UNIDAD","INSUMOS CLINICOS",5500],["512100","1 HOJA BISTURI N° 11 CAJA","INSUMOS CLINICOS",4],["178101","1 HOJA BISTURI N° 15 CAJA","INSUMOS ODONTOLOGICOS",5],["824385","1 HISOPO GASA NO TEJIDA CAJA","INSUMOS CLINICOS",2],["141112","1 JERINGA TUBERCULINA 1ML 27G X 1/2' CAJA","INSUMOS CLINICOS",1],["141103","1 JERINGA DESECHABLE 10 CC CAJA","INSUMOS CLINICOS",1],["777201","1 PLACA FOSFORO N°2 CAJA","INSUMOS RAYOS X",10],["777202","1 PLACA FOSFORO N°0 CAJA","INSUMOS RAYOS X",5],["824398","1 TUBO VACUETTE TAPA ROJA 10 ML PAQUETE","INSUMOS ODONTOLOGICOS",3],["554100","1 CATETER INTRAVENOSO UNIDAD","INSUMOS CLINICOS",4],["760100","1 LENTES PROTECTORES MARCO/ COLOR USA UNIDAD","DISPOSITIVOS MEDICOS",14],["101114","1 ACRILICO CORONA AUTOCURABLE COLOR 42 FRASCO","INSUMOS ODONTOLOGICOS",6],["824399","1 TUBO VACUETTE TAPA BLANCA 6ML PAQUETE","INSUMOS ODONTOLOGICOS",2],["502110","1 PAPEL ALUSA TRANSPARENTE UNIDAD","INSUMOS CLINICOS",17],["504104","1 CONTROL BIOLOGICO AUTOCLAVE","INSUMOS ESTERILIZACION",62],["503101","1 CEPILLO ERGONOMETRICO LAVADO ESTERILIZACION","INSUMOS ESTERILIZACION",29],["824386","1 INDICADOR LECTURA RAPIDA VAPOR ATTES 1292 CAJA","DISPOSITIVOS MEDICOS",1],["530103","1 ESCOBILLA LIMPIA FRESAS UNIDAD","DISPOSITIVOS MEDICOS",26],["514101","1 BATA QUIRURGICA L UNIDAD","ELEMENTOS PROTECCION PERSONAL",126],["504103","1 CONTROL BOWIE-DICK AUTOCLAVE PAQUETE","0",144],["130103","1 GOMA DIQUE CON LATEX AZUL CAJA","INSUMOS ODONTOLOGICOS",4],["135100","1 HIPOCLORITO BOTELLA","INSUMOS ODONTOLOGICOS",8],["161102","1 SUERO FISIOLOGICO 9% 250 ML BOTELLA","INSUMOS CLINICOS",10],["141108","1 JERINGA MONOJET PARA ENDODONCIA CAJA","INSUMOS ODONTOLOGICOS",2],["112102","1 VIDRIO IONOMERO (CHEMFIL) CAJA","INSUMOS ODONTOLOGICOS",2],["515112","1 PAÑO QUIRURGICO FENESTRADO 80X80 CM UNIDAD","INSUMOS ESTERILIZACION",100],["110113","1 ENDOICE (CLORURO DE ETILO) BOTELLE","INSUMOS ODONTOLOGICOS",1],["100101","1 ACIDO ORTOFOSFORICO 37% JERINGA","INSUMOS ESTETICA",2],["560102","1 FUNDA PROTECTORA PLUS ADULTO N°2 CAJA","INSUMOS CLINICOS",10],["560103","1 FUNDA PROTECTORA PLUS PEDIÁTRICA N°0 CAJA","INSUMOS CLINICOS",5],["101100","1 ACONDICIONADOR DE TEJIDO CAJA","INSUMOS ODONTOLOGICOS",3],["101103","1 ACRILICO AUTOCURABLE CUBETA NARANJO MARCHE FRASCO","INSUMOS ODONTOLOGICOS",9],["824424","1 ACRILICO DURALAY POLVO LIQUIDO 80 GRS. CLEAR CAJA","INSUMOS ODONTOLOGICOS",7],["104111","1 AGUJA DENTAL EXTRA CORTA CAJA","INSUMOS CLINICOS",2],["105100","1 AISLANTE ACRILICO ACRYFOIL UNIDAD","INSUMOS ODONTOLOGICOS",4],["106115","1 ALAMBRE ACERO FEDERHARD .070 ROLLO","INSUMOS ODONTOLOGICOS",7],["106103","1 ALAMBRE LATON BLANDO 0.5 UNIDAD","INSUMOS ODONTOLOGICOS",1],["108101","1 ALGODON PRENSADO HIDROFILO BOLSA","INSUMOS CLINICOS",1],["112165","1 BIODENTINE (SUSTITUTO BIOACTIVO DE DENTINA) CAJA","INSUMOS ODONTOLOGICOS",2],["112112","1 CEMENTO DE RESINA TEMPORAL (RELYX TEMP O SIMILAR) CAJA","INSUMOS ODONTOLOGICOS",8],["112106","1 CEMENTO GROSSMAN FRASCO","INSUMOS ODONTOLOGICOS",10],["112158","1 CEMENTO PARACORE RESINA C/ PARABOND CAJA","INSUMOS ODONTOLOGICOS",6],["112149","1 CEMENTO PROVISORIO FERMIT CAJA","INSUMOS ODONTOLOGICOS",2],["113108","1 CERA TREFILADA UNIDAD","INSUMOS ODONTOLOGICOS",6],["118102","1 CLORHEXIDINA ORALGENE 0,12% BIDÓN","INSUMOS ODONTOLOGICOS",5],["115136","1 CONOS DE PAPEL N° 15 CAJA","INSUMOS ODONTOLOGICOS",4],["115137","1 CONOS DE PAPEL N° 20 CAJA","INSUMOS ODONTOLOGICOS",3],["115134","1 CONOS DE PAPEL N° 70 CAJA","INSUMOS ODONTOLOGICOS",8],["115135","1 CONOS DE PAPEL N° 80 CAJA","INSUMOS ODONTOLOGICOS",9],["115107","1 CONOS GUTAPERCHA N° 25 0.2% CAJA","INSUMOS ODONTOLOGICOS",3],["115109","1 CONOS GUTAPERCHA N° 40 0.2% CAJA","INSUMOS ODONTOLOGICOS",3],["115101","1 CONOS GUTAPERCHA N° 45 0.2% CAJA","INSUMOS ODONTOLOGICOS",4],["115102","1 CONOS GUTAPERCHA N° 50 0.2% CAJA","INSUMOS ODONTOLOGICOS",3],["115106","1 CONOS GUTAPERCHA N° 80 0.2% CAJA","INSUMOS ODONTOLOGICOS",9],["115108","1 CONOS GUTAPERCHA Nº 35 0.2% CAJA","INSUMOS ODONTOLOGICOS",4],["115112","1 CONOS PAPEL 15-40 CAJA","INSUMOS ODONTOLOGICOS",7],["115111","1 CONOS PAPEL 45-80 CAJA","INSUMOS ODONTOLOGICOS",6],["116103","1 CORONA MET. MOL. N° 2-3-4-5 SUP. UNIDAD","INSUMOS ODONTOLOGICOS",177],["116102","1 CORONAS DE CELULOIDE ANTERIOR NIÑO UNIDAD","INSUMOS ODONTOLOGICOS",2],["121107","1 DISCO ABRASIVO 22 MM UNIDAD","INSUMOS ODONTOLOGICOS",4],["121127","1 DISCOS SOF-LEX 1/2\" 4931 FINO BOLSA","INSUMOS ODONTOLOGICOS",1],["121129","1 DISCOS SOF-LEX XT 1/2\" 4931 MEDIANO BOLSA","INSUMOS ODONTOLOGICOS",15],["121128","1 DISCOS SOF-LEX XT 1/2\" 4931 SUPER FINO BOLSA","INSUMOS ODONTOLOGICOS",0],["123101","1 EUGENOL FRASCO","INSUMOS ODONTOLOGICOS",2],["112109","1 FERMIT/PROVICOL CAJA","INSUMOS ODONTOLOGICOS",0],["112143","1 GLYDE FILE PREP CAJA","INSUMOS ODONTOLOGICOS",2],["130105","1 GOMA DIQUE SIN LATEX CAJA","INSUMOS ODONTOLOGICOS",1],["131123","1 GUANTES DE NITRILO L CAJA","ELEMENTOS PROTECCION PERSONAL",10],["131121","1 GUANTES DE NITRILO M CAJA","ELEMENTOS PROTECCION PERSONAL",74],["131120","1 GUANTES DE NITRILO S CAJA","ELEMENTOS PROTECCION PERSONAL",220],["824384","1 GUANTES DE VINILO XS CAJA","INSUMOS ODONTOLOGICOS",5],["133101","1 HIDRÓXIDO DE CALCIO FRASCO","INSUMOS ODONTOLOGICOS",7],["512108","1 HOJA BISTURI N° 12 CAJA","INSUMOS CLINICOS",3],["159110","1 INFILTRANTE DE CARIES CAJA","INSUMOS ODONTOLOGICOS",1],["168113","1 IONOMERO DE VIDRIO RIVA SELF CURE RESTAURACION SDI CAJA","INSUMOS ODONTOLOGICOS",2],["141102","1 JERINGA DESECHABLE 1 CC CAJA","INSUMOS CLINICOS",4],["101121","1 KIT ALIKE CAJA","INSUMOS ODONTOLOGICOS",3],["167102","1 LAMINA FOTOCURADO SUPERIOR BOLSA","INSUMOS ODONTOLOGICOS",7],["151101","1 MONOMERO DURALAY FRASCO","INSUMOS ODONTOLOGICOS",25],["151108","1 MONOMERO TERMOCURABLE/NORMAL MARCHE FRASCO","INSUMOS ODONTOLOGICOS",48],["152101","1 OXIDO DE ALUMINIO FRASCO","INSUMOS ODONTOLOGICOS",2],["515109","1 PAÑO CLINICO FENESTRADO 50X50 CMS. UNIDAD","INSUMOS ESTERILIZACION",256],["825123","1 PAPEL INDICADOR PH (TIRAS X 100UND) CAJA","INSUMOS ESTERILIZACION",1],["153100","1 PARAMONOCLOROFENOL CAJA","INSUMOS ODONTOLOGICOS",5],["148101","1 PASTA ZINQUENOLICA (CAVEX) CAJA","INSUMOS ODONTOLOGICOS",3],["176103","1 PERNOS F/ VIDRIO REFORPOST N° 1 CAJA","INSUMOS ODONTOLOGICOS",6],["176134","1 PERNOS F/ VIDRIO REFORPOST N° 2 CAJA","INSUMOS ODONTOLOGICOS",3],["176135","1 PERNOS F/ VIDRIO REFORPOST N° 3 CAJA","INSUMOS ODONTOLOGICOS",3],["176100","1 PERNOS METALICO PARA PROVISORIO BOLSA","INSUMOS ODONTOLOGICOS",4],["176101","1 PERNOS MOOSER 135-08 MAILLEFER CAJA","INSUMOS ODONTOLOGICOS",4],["176139","1 PERNOS WHITEPOST 0.5 CON FRESA CAJA","INSUMOS ODONTOLOGICOS",3],["772107","1 PISTOLA RIVA APLICADOR UNIDAD","INSUMOS ODONTOLOGICOS",4],["102115","1 PROSIL SILANO JERINGA","INSUMOS ODONTOLOGICOS",6],["740139","1 PUNTA ACCUDOSE FLEXIBLE REPOSICION X 12 UNIDADES BOLSA","INSUMOS ODONTOLOGICOS",9],["740125","1 PUNTA APLICADORA VITREMER BOLSA","INSUMOS ODONTOLOGICOS",6],["740143","1 PUNTAS PROTEM 4 BOLSA","INSUMOS ODONTOLOGICOS",9],["148155","1 RELINE REBASADO DURO DE AUTOCURADO FRASCO","INSUMOS ODONTOLOGICOS",1],["114165","1 RESINA FILTEX SUPREME A-3 ESMALTE UNIDAD","INSUMOS ODONTOLOGICOS",8],["114173","1 RESINA FILTEX SUPREME B-1 BODY UNIDAD","INSUMOS ODONTOLOGICOS",7],["114174","1 RESINA FILTEX SUPREME B-2 BODY UNIDAD","INSUMOS ODONTOLOGICOS",5],["114254","1 RESINA REFORZADA EVERX FLOW JERINGA","INSUMOS ODONTOLOGICOS",1],["114144","1 RESINA Z350 A1 DENTINA JERINGA","INSUMOS ODONTOLOGICOS",5],["114147","1 RESINA Z350 A2 ESMALTE JERINGA","INSUMOS ODONTOLOGICOS",1],["114167","1 RESINA Z350 A3 BODY JERINGA","INSUMOS ODONTOLOGICOS",3],["163105","1 REVELADOR DE PLACA (CARISTOP O SIMILAR) CAJA","INSUMOS ODONTOLOGICOS",14],["824500","1 SILI SPRAY (ADHESIVO CUBETA SPRAY) FRASCO","INSUMOS ODONTOLOGICOS",10],["148139","1 SILICONA LIVIANA POR ADICIÓN CAJA","INSUMOS ODONTOLOGICOS",2],["148113","1 SILICONA LIVIANA POR CONDENSACIÓN CAJA","INSUMOS ODONTOLOGICOS",25],["148119","1 SILICONA MEDIANA POR CONDENSACIÓN (INACTIVA) UNIDAD","INSUMOS ODONTOLOGICOS",37],["148140","1 SILICONA PESADA POR ADICIÓN CAJA","INSUMOS ODONTOLOGICOS",4],["824367","1 SUERO FISIOLOGICO 100ML UNIDAD","INSUMOS CLINICOS",60],["523100","1 SUTURA ESTERIL 3-0 SEDA 45 CM CAJA","INSUMOS ODONTOLOGICOS",5],["148154","1 UFI GEL HARD CAJA","INSUMOS ODONTOLOGICOS",2],["164100","1 VASELINA LIQUIDA BOTELLA","INSUMOS CLINICOS",3],["164101","1 VASELINA SOLIDA BOTELLA","INSUMOS CLINICOS",1],["112107","1 VIDRIO IONOMERO DE BASE (VITREBOND) CAJA","INSUMOS ODONTOLOGICOS",4],["112136","1 VIDRIO IONOMERO DE CEMENTACIÓN (KETAC CEM) CAJA","INSUMOS ODONTOLOGICOS",7],["166101","1 YESO TALLER BOLSA","INSUMOS ODONTOLOGICOS",65],["166102","1 YESO VELMIX BOLSA","INSUMOS ODONTOLOGICOS",30],["169100","1 YODOFORMO FRASCO","INSUMOS ODONTOLOGICOS",2]];
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={};
+var invReas={};
 
 // Cálculo de ROP: (demanda diaria × lead time) + stock seguridad. Si no hay datos, usa el manual.
 function calcularROP(item){
@@ -6668,6 +6670,125 @@ function alarmasVencimiento(){
   });
   out.sort(function(a,b){return a.venc.localeCompare(b.venc);});
   return out;
+}
+
+// ══════════════ MÓDULO REAS (Residuos de Atención de Salud) ══════════════
+var REAS_CATEGORIAS=['Cortopunzantes','Especiales','Radiactivos','Comunes'];
+var REAS_TIPOS=['Placas de plomo','Residuos farmacéuticos desechados (anestesias)','Líquido fijador','Líquido revelador','Hipoclorito','Pilas y baterías'];
+var REAS_PRESENTACIONES=['Bolsa','Bidón','Caja','Botella'];
+var REAS_UNIDADES=['Esterilización','Pabellón','Clínica Privada','Rayos','Dispensario 1','Dispensario 2','General'];
+
+document.getElementById('reasBtn').addEventListener('click',function(){abrirPanelReas();});
+
+function abrirPanelReas(){
+  var ov=document.getElementById('panelReasOv');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='panelReasOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  ov.innerHTML='<div style="max-width:720px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      '<span style="font-size:17px;font-weight:800;color:#6ee7b7">♻️ Registro REAS</span>'+
+      '<button onclick="document.getElementById(\'panelReasOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:14px">'+
+      '<button class="reas-tab active" data-v="registrar" onclick="reasTab(\'registrar\')" style="flex:1">➕ Registrar retiro</button>'+
+      '<button class="reas-tab" data-v="historial" onclick="reasTab(\'historial\')" style="flex:1">📋 Historial</button>'+
+    '</div>'+
+    '<div id="reasContenido"></div></div>'+
+    '<style>.reas-tab{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;cursor:pointer}.reas-tab.active{background:linear-gradient(135deg,#059669,#6ee7b7);color:#04231a;font-weight:700}</style>';
+  document.body.appendChild(ov);
+  reasTab('registrar');
+}
+
+window.reasTab=function(v){
+  document.querySelectorAll('.reas-tab').forEach(function(t){t.classList.toggle('active',t.dataset.v===v);});
+  var c=document.getElementById('reasContenido');
+  if(v==='registrar')c.innerHTML=reasFormRegistro();
+  else c.innerHTML=reasHistorial();
+};
+
+function reasFormRegistro(){
+  // Responsables asignados (tareas tipo reas)
+  var responsables=Object.values(tareas||{}).filter(function(t){return t.tipo==='reas';}).map(function(t){return t.nombre;});
+  responsables=responsables.filter(function(v,i){return responsables.indexOf(v)===i;});
+  var infoResp=responsables.length?'<div style="font-size:11px;color:#6ee7b7;margin-bottom:10px">Responsable(s) REAS asignado(s): '+responsables.join(', ')+'</div>':'<div style="font-size:11px;color:#fbbf24;margin-bottom:10px">Aún no asignas responsable de REAS (se hace en Admin → Asignaciones, tipo ♻️ REAS).</div>';
+  return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    infoResp+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Unidad que registra</label>'+
+    '<select id="reasUnidad" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
+      REAS_UNIDADES.map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('')+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Categoría REAS</label>'+
+    '<select id="reasCategoria" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
+      REAS_CATEGORIAS.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('')+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Tipo de residuo</label>'+
+    '<select id="reasTipo" onchange="document.getElementById(\'reasTipoOtro\').style.display=(this.value===\'Otro\'?\'block\':\'none\')" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
+      REAS_TIPOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join('')+
+      '<option value="Otro">Otro (especificar)</option></select>'+
+    '<input type="text" id="reasTipoOtro" placeholder="Especifica el residuo" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px;display:none">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Presentación</label>'+
+    '<select id="reasPresentacion" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
+      REAS_PRESENTACIONES.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select>'+
+    '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Cantidad (envases)</label>'+
+        '<input type="number" id="reasCantidad" min="1" step="1" value="1" style="width:100%;font-size:13px;padding:7px"></div>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Peso total (kg)</label>'+
+        '<input type="number" id="reasPeso" min="0" step="any" placeholder="0.0" style="width:100%;font-size:13px;padding:7px"></div>'+
+    '</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Quién registra</label>'+
+    '<select id="reasQuien" style="width:100%;font-size:13px;padding:8px;margin-bottom:10px">'+
+      '<option value="">Selecciona</option>'+
+      nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';}).map(function(n){return '<option>'+esc(n)+'</option>';}).join('')+'</select>'+
+    '<button class="btn-add" onclick="registrarReas()" style="background:linear-gradient(135deg,#059669,#6ee7b7)">Registrar retiro REAS</button>'+
+    '<div class="saved" id="reasSaved">✓ Registrado</div></div>';
+}
+
+window.registrarReas=function(){
+  var tipo=document.getElementById('reasTipo').value;
+  if(tipo==='Otro')tipo=document.getElementById('reasTipoOtro').value.trim();
+  var reg={
+    unidad:document.getElementById('reasUnidad').value,
+    categoria:document.getElementById('reasCategoria').value,
+    tipo:tipo,
+    presentacion:document.getElementById('reasPresentacion').value,
+    cantidad:Number(document.getElementById('reasCantidad').value)||1,
+    peso:Number(document.getElementById('reasPeso').value)||0,
+    quien:document.getElementById('reasQuien').value,
+    fecha:hoyStr(),ts:Date.now()
+  };
+  if(!tipo){alert('Indica el tipo de residuo.');return;}
+  if(!reg.quien){alert('Indica quién registra.');return;}
+  if(reg.peso<=0){alert('Ingresa el peso.');return;}
+  sedeRef('invReas/'+reg.ts).set(reg).then(function(){
+    showSaved('reasSaved');
+    document.getElementById('reasPeso').value='';document.getElementById('reasCantidad').value='1';
+  });
+};
+
+function reasHistorial(){
+  var regs=Object.values(invReas||{}).sort(function(a,b){return b.ts-a.ts;});
+  if(!regs.length)return '<div style="background:#16233d;border-radius:12px;padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros REAS aún.</div>';
+  // Resumen por mes (peso total)
+  var pesoTotal=regs.reduce(function(s,r){return s+(Number(r.peso)||0);},0);
+  var html='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px">'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.6)">Total registrado: <b style="color:#6ee7b7">'+pesoTotal.toFixed(1)+' kg</b> en '+regs.length+' retiro(s)</div></div>'+
+    '<div style="background:#16233d;border-radius:12px;padding:14px"><div style="max-height:440px;overflow-y:auto">';
+  regs.forEach(function(r){
+    var catColor=r.categoria==='Cortopunzantes'?'#dc2626':r.categoria==='Radiactivos'?'#d97706':r.categoria==='Especiales'?'#a78bfa':'#6b7280';
+    html+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
+        '<span style="font-size:13px;color:#fff;font-weight:600">'+esc(r.tipo)+'</span>'+
+        '<span style="font-size:13px;color:#6ee7b7;font-weight:700">'+(Number(r.peso)||0)+' kg</span>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;margin-top:2px">'+
+        '<span style="font-size:11px;color:rgba(255,255,255,.5)"><span style="color:'+catColor+'">●</span> '+esc(r.categoria)+' · '+esc(r.unidad)+' · '+r.cantidad+' '+esc(r.presentacion)+'(s)</span>'+
+        '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span>'+
+      '</div>'+
+      (r.quien?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:1px">Registró: '+esc(r.quien)+'</div>':'')+
+    '</div>';
+  });
+  html+='</div></div>';
+  return html;
 }
 
 document.getElementById('marcarFeriadoBtn').addEventListener('click',function(){
