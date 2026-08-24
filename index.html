@@ -5055,16 +5055,19 @@ function engancharTogglesEstacion(cont){
   });
 }
 
-// Ítem condicional: pedido de bodega (solo si el colaborador tiene tarea tipo 'pedido')
+// Ítem condicional: pedido de bodega (solo si el colaborador tiene tarea 'pedido' asignada HOY)
 function renderItemPedidoCondicional(){
   var cont=document.getElementById('supItemPedido');
   if(!cont)return;
   var nombre=document.getElementById('supNombre')?document.getElementById('supNombre').value:'';
-  var tienePedido=nombre&&Object.values(tareas||{}).some(function(t){return t.nombre===nombre&&t.tipo==='pedido';});
-  if(!tienePedido){cont.innerHTML='';return;}
+  var diaHoy=diaDeDate(hoyStr());
+  var tienePedidoHoy=nombre&&Object.values(tareas||{}).some(function(t){
+    return t.nombre===nombre&&t.tipo==='pedido'&&t.dia===diaHoy;
+  });
+  if(!tienePedidoHoy){cont.innerHTML='';return;}
   cont.innerHTML='<div class="sup-item" data-key="pedido_bodega" style="flex-direction:column;align-items:stretch;gap:0">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
-    '<span style="flex:1;font-size:13px">🟠 Realiza pedido de bodega en día, horario y forma correcta</span>'+
+    '<span style="flex:1;font-size:13px">🟠 Realiza pedido de bodega en día, horario y forma correcta <span style="font-size:10px;color:#fbbf24">(pedido de hoy '+diaHoy+')</span></span>'+
     '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
     '</div></div>';
   engancharTogglesEstacion(cont);
