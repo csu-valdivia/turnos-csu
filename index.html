@@ -1194,7 +1194,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad'];
 var supervisionData={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
@@ -1307,6 +1307,7 @@ window.setSede=function(sede){
   sedeRef('invReas').on('value',function(s){invReas=s.val()||{};});
   sedeRef('supervisores').on('value',function(s){supervisores=s.val()||{};});
   sedeRef('pinSupervisor').on('value',function(s){pinSupervisor=s.val()||'';});
+  sedeRef('conductividad').on('value',function(s){conductividad=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
     anunciosCapacitacion=s.val()||{};
     if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none'){
@@ -1901,6 +1902,16 @@ function renderMisTurnos(nombre){
     html+='<div style="background:linear-gradient(135deg,rgba(217,119,6,.15),rgba(251,191,36,.08));border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
       '<p style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px">📦 '+(misBodegas.length>1?'Mis subbodegas':'Mi subbodega')+'</p>'+
       misBodegas.map(function(b){return '<button onclick="abrirGestionClinico(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+BODEGAS[b].nombre+' ›</button>';}).join('')+
+      '</div>';
+  }
+  // Botón de conductividad para el encargado de esterilización
+  if(invAsignaciones['sub_esterilizacion']===nombre){
+    var hoyCond=conductividad[hoyStr()];
+    var estadoHoy=hoyCond?'<span style="color:#6ee7b7">✓ Registrada hoy</span>':'<span style="color:#fbbf24">⚠ Pendiente hoy</span>';
+    html+='<div style="background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(96,165,250,.08));border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
+      '<p style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:2px">💧 Conductividad del agua</p>'+
+      '<p style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">Registro diario — '+estadoHoy+'</p>'+
+      '<button onclick="abrirConductividad()" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">Registrar conductividad de hoy ›</button>'+
       '</div>';
   }
   // Badges
@@ -4088,7 +4099,10 @@ var SUP_ESTACIONES={
       {key:'est_r_limpieza',label:'🔍 Verificación de limpieza del instrumental (sin residuos visibles)'},
       {key:'est_r_secado',label:'💨 Secado completo antes de pasar a área limpia'},
       {key:'est_r_flujo',label:'➡️ Flujo unidireccional respetado (no devolver material sucio a limpio)'},
-      {key:'est_r_superficies',label:'🧴 Superficies y lavamanos descontaminados'}
+      {key:'est_r_superficies',label:'🧴 Superficies y lavamanos descontaminados'},
+      {key:'est_r_reg_opa',label:'📋 Registro OPA al día'},
+      {key:'est_r_reg_pabellon',label:'📋 Registro de material de Pabellón al día'},
+      {key:'est_r_reg_conductividad',label:'💧 Registro de conductividad del agua al día'}
     ]},
     verde:{nombre:'🟢 Área Verde (limpia / estéril)',items:[
       {key:'est_v_inspeccion',label:'🔍 Inspección del instrumental antes de empaquetar (integridad, funcionamiento)'},
@@ -4100,7 +4114,11 @@ var SUP_ESTACIONES={
       {key:'est_v_registro',label:'📋 Registro del ciclo de esterilización'},
       {key:'est_v_almacenamiento',label:'🗄️ Almacenamiento en zona limpia (protegido, ordenado por vencimiento)'},
       {key:'est_v_limpiezaalmac',label:'🧹 Registro de limpieza del área de almacenamiento'},
-      {key:'est_v_entrega',label:'✅ Entrega al estudiante con verificación de esterilidad y vigencia'}
+      {key:'est_v_entrega',label:'✅ Entrega al estudiante con verificación de esterilidad y vigencia'},
+      {key:'est_v_reg_autoclave',label:'📋 Registro de autoclave (ciclos) al día'},
+      {key:'est_v_reg_temp',label:'🌡️ Registro de temperatura del área de almacenamiento al día'},
+      {key:'est_v_reg_aseo',label:'🧹 Registro de aseo del área de almacenamiento al día'},
+      {key:'est_v_reg_conductividad',label:'💧 Registro de conductividad del agua al día'}
     ]}
   }},
   dispensario:{nombre:'📦 Dispensario',items:[
@@ -5034,14 +5052,12 @@ window.renderItemsArea=function(){
   if(area==='roja')items=est.areas.roja.items.slice();
   else if(area==='verde')items=est.areas.verde.items.slice();
   else if(area==='ambas')items=est.areas.roja.items.concat(est.areas.verde.items);
-  items=items.concat([SUP_ITEM_REGISTROS]);
   var html='';
   if(area==='ambas'){
     html+='<p style="font-size:10px;color:#f87171;margin:4px 0">🔴 Área Roja</p>';
     est.areas.roja.items.forEach(function(it){html+=supItemHTML(it);});
     html+='<p style="font-size:10px;color:#6ee7b7;margin:8px 0 4px">🟢 Área Verde</p>';
     est.areas.verde.items.forEach(function(it){html+=supItemHTML(it);});
-    html+=supItemHTML(SUP_ITEM_REGISTROS);
   } else {
     items.forEach(function(it){html+=supItemHTML(it);});
   }
@@ -5720,6 +5736,7 @@ var INV_EJEMPLO=[["530105","1 ESCOBILLA QUIRURGICA","INSUMOS CLINICOS",70],["513
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={};
 var invReas={};
 var supervisores={},pinSupervisor='';
+var conductividad={};
 
 // Cálculo de ROP: (demanda diaria × lead time) + stock seguridad. Si no hay datos, usa el manual.
 function calcularROP(item){
@@ -5789,6 +5806,70 @@ document.getElementById('bodegaBtn').addEventListener('click',function(){
 });
 
 // Panel del clínico para SU subbodega (sin PIN, acceso desde Mis Turnos)
+// ── REGISTRO DE CONDUCTIVIDAD DEL AGUA (operador de esterilización) ──
+window.abrirConductividad=function(){
+  var ov=document.getElementById('conductividadOv');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='conductividadOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var hoyReg=conductividad[hoyStr()];
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">💧 Conductividad del agua</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Registro diario · '+hoyStr()+'</div>'+
+    (hoyReg?'<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:8px 10px;margin-bottom:12px;font-size:11px;color:#6ee7b7">Ya registrada hoy por '+esc(hoyReg.quien||'—')+' a las '+(hoyReg.hora||'—')+'. Puedes actualizarla.</div>':'')+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Agua de osmosis (µS/cm)</label>'+
+    '<input type="number" id="condOsmosis" step="0.01" min="0" oninput="evalCond()" value="'+(hoyReg?hoyReg.osmosis:'')+'" placeholder="Ej: 3.2" style="width:100%;font-size:14px;padding:8px;margin-bottom:4px">'+
+    '<div id="condOsmosisEval" style="font-size:12px;margin-bottom:12px"></div>'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Agua ultrapura (µS/cm)</label>'+
+    '<input type="number" id="condUltra" step="0.01" min="0" oninput="evalCond()" value="'+(hoyReg?hoyReg.ultra:'')+'" placeholder="Ej: 0" style="width:100%;font-size:14px;padding:8px;margin-bottom:4px">'+
+    '<div id="condUltraEval" style="font-size:12px;margin-bottom:14px"></div>'+
+    '<button class="btn-add" onclick="guardarConductividad()" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
+    '<button onclick="document.getElementById(\'conductividadOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="condSaved">✓ Registrado</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  evalCond();
+};
+
+function condEsOptima(tipo,valor){
+  if(valor===''||valor==null||isNaN(valor))return null;
+  valor=Number(valor);
+  if(tipo==='osmosis')return valor<5;
+  if(tipo==='ultra')return valor===0;
+  return null;
+}
+
+window.evalCond=function(){
+  [['osmosis','condOsmosis','condOsmosisEval','< 5 µS/cm'],['ultra','condUltra','condUltraEval','0 µS/cm exacto']].forEach(function(x){
+    var inp=document.getElementById(x[1]);var out=document.getElementById(x[2]);
+    if(!inp||!out)return;
+    var v=inp.value;
+    var opt=condEsOptima(x[0],v);
+    if(opt===null){out.innerHTML='<span style="color:rgba(255,255,255,.35)">Límite óptimo: '+x[3]+'</span>';}
+    else if(opt){out.innerHTML='<span style="color:#6ee7b7">✓ Óptima para lavado</span>';}
+    else{out.innerHTML='<span style="color:#f87171">✗ NO óptima — no apta para lavado (límite: '+x[3]+')</span>';}
+  });
+};
+
+window.guardarConductividad=function(){
+  var osm=document.getElementById('condOsmosis').value;
+  var ult=document.getElementById('condUltra').value;
+  if(osm===''||ult===''){alert('Ingresa ambos valores.');return;}
+  var ahora=new Date();
+  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
+  var reg={
+    osmosis:Number(osm),ultra:Number(ult),
+    osmosisOptima:condEsOptima('osmosis',osm),
+    ultraOptima:condEsOptima('ultra',ult),
+    quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()
+  };
+  sedeRef('conductividad/'+hoyStr()).set(reg).then(function(){
+    showSaved('condSaved');
+    setTimeout(function(){var o=document.getElementById('conductividadOv');if(o)o.remove();if(curNombre)renderMisTurnos(curNombre);},1200);
+  });
+};
+
 window.abrirGestionClinico=function(bodega){
   var ov=document.getElementById('gestionClinicoOv');
   if(ov)ov.remove();
