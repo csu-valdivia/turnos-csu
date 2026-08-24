@@ -4089,10 +4089,8 @@ var SUP_ESTACIONES={
     ]}
   }},
   dispensario:{nombre:'📦 Dispensario',items:[
-    {key:'disp_vigencia',label:'📅 Insumos vigentes (sin productos caducados)'},
-    {key:'disp_reas',label:'🗑️ REAS con peso y rotulación correcta'},
     {key:'disp_entrega',label:'✅ Entregas sin error, según solicitud'},
-    {key:'disp_stock',label:'📊 Sin quiebres de stock evitables'}
+    {key:'disp_rotulado_apertura',label:'🏷️ Insumos abiertos rotulados con fecha de apertura y vigencia (sueros, frascos multidosis)'}
   ]},
   pabellon:{nombre:'🦷 Pabellón / Clínica',items:[
     {key:'pab_preparacion',label:'✅ Box e instrumental preparados a tiempo'},
@@ -5057,22 +5055,35 @@ function engancharTogglesEstacion(cont){
   });
 }
 
-// Ítem condicional: pedido de bodega (solo si el colaborador tiene tarea 'pedido' asignada HOY)
+// Ítems condicionales (pedido y REAS): aparecen solo si el colaborador tiene la tarea asignada HOY
 function renderItemPedidoCondicional(){
   var cont=document.getElementById('supItemPedido');
   if(!cont)return;
   var nombre=document.getElementById('supNombre')?document.getElementById('supNombre').value:'';
   var diaHoy=diaDeDate(hoyStr());
+  var html='';
   var tienePedidoHoy=nombre&&Object.values(tareas||{}).some(function(t){
     return t.nombre===nombre&&t.tipo==='pedido'&&t.dia===diaHoy;
   });
-  if(!tienePedidoHoy){cont.innerHTML='';return;}
-  cont.innerHTML='<div class="sup-item" data-key="pedido_bodega" style="flex-direction:column;align-items:stretch;gap:0">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
-    '<span style="flex:1;font-size:13px">🟠 Realiza pedido de bodega en día, horario y forma correcta <span style="font-size:10px;color:#fbbf24">(pedido de hoy '+diaHoy+')</span></span>'+
-    '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
-    '</div></div>';
-  engancharTogglesEstacion(cont);
+  if(tienePedidoHoy){
+    html+='<div class="sup-item" data-key="pedido_bodega" style="flex-direction:column;align-items:stretch;gap:0">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
+      '<span style="flex:1;font-size:13px">🟠 Realiza pedido de bodega en día, horario y forma correcta <span style="font-size:10px;color:#fbbf24">(pedido de hoy '+diaHoy+')</span></span>'+
+      '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
+      '</div></div>';
+  }
+  var tieneReasHoy=nombre&&Object.values(tareas||{}).some(function(t){
+    return t.nombre===nombre&&t.tipo==='reas'&&t.dia===diaHoy;
+  });
+  if(tieneReasHoy){
+    html+='<div class="sup-item" data-key="reas_cumple" style="flex-direction:column;align-items:stretch;gap:0">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
+      '<span style="flex:1;font-size:13px">♻️ Cumple registro y manejo de REAS correctamente <span style="font-size:10px;color:#6ee7b7">(REAS de hoy '+diaHoy+')</span></span>'+
+      '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
+      '</div></div>';
+  }
+  cont.innerHTML=html;
+  if(html)engancharTogglesEstacion(cont);
 }
 
 // ── REGISTRO SEMANAL DE INDICADORES (Fase 1) ──
@@ -5236,13 +5247,15 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
     else todosRespondidos=false;
   });
   if(!todosRespondidos){alert('Evalúa todos los ítems base antes de guardar.');return;}
-  // Ítem condicional de pedido (si aplica)
-  var itemPedido=document.querySelector('#supItemPedido .sup-item');
-  if(itemPedido){
-    if(itemPedido.querySelector('.active-yes'))items['pedido_bodega']=1;
-    else if(itemPedido.querySelector('.active-no'))items['pedido_bodega']=0;
-    else{alert('Evalúa el ítem de pedido de bodega antes de guardar.');return;}
-  }
+  // Ítems condicionales (pedido y/o REAS, si aplican)
+  var condFalta=false;
+  document.querySelectorAll('#supItemPedido .sup-item').forEach(function(it){
+    var key=it.dataset.key;
+    if(it.querySelector('.active-yes'))items[key]=1;
+    else if(it.querySelector('.active-no'))items[key]=0;
+    else condFalta=true;
+  });
+  if(condFalta){alert('Evalúa los ítems de pedido/REAS antes de guardar.');return;}
   // Ítems de estación (si se seleccionó una)
   var itemsEstacion={};var estacionCompleta=true;
   document.querySelectorAll('#supItemsEstacion .sup-item-est').forEach(function(item){
