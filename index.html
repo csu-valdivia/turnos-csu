@@ -4044,7 +4044,8 @@ var KPI_SERVICIOS={
   rayos:{nombre:'📸 Rayos odontológicos',indicadores:[
     {key:'rayos_estudios_total',label:'Estudios realizados',tipo:'conteo'},
     {key:'rayos_repeticiones',label:'Disparos repetidos',tipo:'conteo'},
-    {key:'rayos_tasa_repeticion',label:'% de repetición radiográfica',tipo:'tasa',num:'rayos_repeticiones',den:'rayos_estudios_total'}
+    {key:'rayos_tasa_repeticion',label:'% de repetición radiográfica',tipo:'tasa',num:'rayos_repeticiones',den:'rayos_estudios_total'},
+    {key:'rayos_dosimetria_registro',label:'Registro dosimétrico al día (lectura del período registrada)',tipo:'conteo'}
   ]},
   pabellon:{nombre:'🦷 Pabellón',indicadores:[
     {key:'pab_horas_perdidas',label:'Horas de pabellón perdidas (causa evitable)',tipo:'conteo',decimal:true},
@@ -4058,9 +4059,9 @@ var KPI_SERVICIOS={
 
 var SUP_ESTACIONES={
   rayos:{nombre:'📸 Rayos dentales',items:[
-    {key:'rayos_repeticion',label:'📸 Estudios sin repetición de disparo (sin sobreexposición al paciente)'},
-    {key:'rayos_proteccion',label:'🛡️ Uso correcto de protección radiológica'},
-    {key:'rayos_registro',label:'📋 Registro dosimétrico y de estudios al día'}
+    {key:'rayos_tecnica',label:'📸 Técnica radiográfica correcta (sin repetir disparos por error, sin sobreexposición al paciente)'},
+    {key:'rayos_proteccion',label:'🛡️ Uso correcto de protección radiológica (delantal plomado, protección tiroidea al paciente)'},
+    {key:'rayos_dosimetro',label:'📿 Uso correcto del dosímetro personal (lo porta durante la jornada)'}
   ]},
   esterilizacion:{nombre:'♻️ Esterilización',tieneAreas:true,areas:{
     roja:{nombre:'🔴 Área Roja (sucia / descontaminación)',items:[
