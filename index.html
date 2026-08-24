@@ -948,6 +948,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
                 </div>
                 <div class="sup-retro" style="display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.5"></div>
               </div>
+              <div id="supItemPedido"></div>
 
             </div>
             <div id="supItemsEstacion" style="margin-top:4px"></div>
@@ -4061,12 +4062,30 @@ var SUP_ESTACIONES={
     {key:'rayos_proteccion',label:'🛡️ Uso correcto de protección radiológica'},
     {key:'rayos_registro',label:'📋 Registro dosimétrico y de estudios al día'}
   ]},
-  esterilizacion:{nombre:'♻️ Esterilización',items:[
-    {key:'est_pasos',label:'✅ Pasos del proceso completos y en orden'},
-    {key:'est_trazabilidad',label:'🔖 Trazabilidad correcta del material'},
-    {key:'est_marcaje',label:'🕒 Marcaje de entrada/salida del material registrado'},
-    {key:'est_reproceso',label:'♻️ Ciclo sin reproceso'}
-  ]},
+  esterilizacion:{nombre:'♻️ Esterilización',tieneAreas:true,areas:{
+    roja:{nombre:'🔴 Área Roja (sucia / descontaminación)',items:[
+      {key:'est_r_dospersonas',label:'👥 Recepción de material contaminado realizada por dos personas'},
+      {key:'est_r_epp',label:'🦺 Recepción con EPP completo (guantes, pechera, antiparras, mascarilla)'},
+      {key:'est_r_clasifica',label:'🗂️ Clasificación del material según tipo antes de lavar'},
+      {key:'est_r_lavado',label:'🧼 Lavado siguiendo técnica correcta (manual)'},
+      {key:'est_r_limpieza',label:'🔍 Verificación de limpieza del instrumental (sin residuos visibles)'},
+      {key:'est_r_secado',label:'💨 Secado completo antes de pasar a área limpia'},
+      {key:'est_r_flujo',label:'➡️ Flujo unidireccional respetado (no devolver material sucio a limpio)'},
+      {key:'est_r_superficies',label:'🧴 Superficies y lavamanos descontaminados'}
+    ]},
+    verde:{nombre:'🟢 Área Verde (limpia / estéril)',items:[
+      {key:'est_v_inspeccion',label:'🔍 Inspección del instrumental antes de empaquetar (integridad, funcionamiento)'},
+      {key:'est_v_empaque',label:'📦 Empaque correcto según método (papel grado médico, sellado)'},
+      {key:'est_v_rotulacion',label:'🏷️ Rotulación del paquete (contenido, fecha, lote, responsable)'},
+      {key:'est_v_condiciones',label:'🌡️ Verificación previa de condiciones del autoclave (temperatura, presión, nivel de agua, tiempo)'},
+      {key:'est_v_carga',label:'⚖️ Carga correcta del autoclave (sin sobrecargar)'},
+      {key:'est_v_indicadores',label:'🧪 Verificación de indicadores químicos y biológicos del ciclo'},
+      {key:'est_v_registro',label:'📋 Registro del ciclo de esterilización'},
+      {key:'est_v_almacenamiento',label:'🗄️ Almacenamiento en zona limpia (protegido, ordenado por vencimiento)'},
+      {key:'est_v_limpiezaalmac',label:'🧹 Registro de limpieza del área de almacenamiento'},
+      {key:'est_v_entrega',label:'✅ Entrega al estudiante con verificación de esterilidad y vigencia'}
+    ]}
+  }},
   dispensario:{nombre:'📦 Dispensario',items:[
     {key:'disp_vigencia',label:'📅 Insumos vigentes (sin productos caducados)'},
     {key:'disp_reas',label:'🗑️ REAS con peso y rotulación correcta'},
@@ -4957,21 +4976,74 @@ document.getElementById('saveCumpBtn').addEventListener('click',function(){
 function renderItemsEstacion(estacion){
   var cont=document.getElementById('supItemsEstacion');
   if(!cont)return;
-  if(!estacion||!SUP_ESTACIONES[estacion]){cont.innerHTML='';calcPreviewPuntaje();return;}
+  if(!estacion||!SUP_ESTACIONES[estacion]){cont.innerHTML='';renderItemPedidoCondicional();calcPreviewPuntaje();return;}
   var est=SUP_ESTACIONES[estacion];
+  var html='';
+  // Esterilización: sub-selector de área (roja/verde/ambas)
+  if(est.tieneAreas){
+    html+='<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(167,139,250,.3)">'+
+      '<p style="font-size:10px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">'+est.nombre+' — ¿qué área supervisas?</p>'+
+      '<select id="supAreaEster" onchange="renderItemsArea()" style="width:100%;margin-bottom:8px">'+
+        '<option value="">Selecciona área</option>'+
+        '<option value="roja">🔴 Área Roja (sucia)</option>'+
+        '<option value="verde">🟢 Área Verde (limpia)</option>'+
+        '<option value="ambas">🔴🟢 Ambas (todo el flujo)</option>'+
+      '</select>'+
+      '<div id="supItemsArea"></div>'+
+    '</div>';
+    cont.innerHTML=html;
+    calcPreviewPuntaje();
+    return;
+  }
+  // Estaciones normales
   var items=est.items.concat([SUP_ITEM_REGISTROS]);
-  var html='<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(167,139,250,.3)">'+
+  html+='<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(167,139,250,.3)">'+
     '<p style="font-size:10px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ítems de '+est.nombre+'</p>';
   items.forEach(function(it){
-    html+='<div class="sup-item sup-item-est" data-key="'+it.key+'" style="flex-direction:column;align-items:stretch;gap:0">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
-      '<span style="flex:1;font-size:13px">'+it.label+'</span>'+
-      '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
-      '</div></div>';
+    html+=supItemHTML(it);
   });
   html+='</div>';
   cont.innerHTML=html;
-  // Enganchar toggles de los ítems nuevos
+  engancharTogglesEstacion(cont);
+  calcPreviewPuntaje();
+}
+
+// Renderiza los ítems del área de esterilización elegida (roja/verde/ambas)
+window.renderItemsArea=function(){
+  var area=document.getElementById('supAreaEster').value;
+  var cont=document.getElementById('supItemsArea');
+  if(!cont)return;
+  if(!area){cont.innerHTML='';calcPreviewPuntaje();return;}
+  var est=SUP_ESTACIONES.esterilizacion;
+  var items=[];
+  if(area==='roja')items=est.areas.roja.items.slice();
+  else if(area==='verde')items=est.areas.verde.items.slice();
+  else if(area==='ambas')items=est.areas.roja.items.concat(est.areas.verde.items);
+  items=items.concat([SUP_ITEM_REGISTROS]);
+  var html='';
+  if(area==='ambas'){
+    html+='<p style="font-size:10px;color:#f87171;margin:4px 0">🔴 Área Roja</p>';
+    est.areas.roja.items.forEach(function(it){html+=supItemHTML(it);});
+    html+='<p style="font-size:10px;color:#6ee7b7;margin:8px 0 4px">🟢 Área Verde</p>';
+    est.areas.verde.items.forEach(function(it){html+=supItemHTML(it);});
+    html+=supItemHTML(SUP_ITEM_REGISTROS);
+  } else {
+    items.forEach(function(it){html+=supItemHTML(it);});
+  }
+  cont.innerHTML=html;
+  engancharTogglesEstacion(cont);
+  calcPreviewPuntaje();
+};
+
+function supItemHTML(it){
+  return '<div class="sup-item sup-item-est" data-key="'+it.key+'" style="flex-direction:column;align-items:stretch;gap:0">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
+    '<span style="flex:1;font-size:13px">'+it.label+'</span>'+
+    '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
+    '</div></div>';
+}
+
+function engancharTogglesEstacion(cont){
   cont.querySelectorAll('.sup-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
       var toggle=this.closest('.sup-toggle');
@@ -4981,7 +5053,21 @@ function renderItemsEstacion(estacion){
       calcPreviewPuntaje();
     });
   });
-  calcPreviewPuntaje();
+}
+
+// Ítem condicional: pedido de bodega (solo si el colaborador tiene tarea tipo 'pedido')
+function renderItemPedidoCondicional(){
+  var cont=document.getElementById('supItemPedido');
+  if(!cont)return;
+  var nombre=document.getElementById('supNombre')?document.getElementById('supNombre').value:'';
+  var tienePedido=nombre&&Object.values(tareas||{}).some(function(t){return t.nombre===nombre&&t.tipo==='pedido';});
+  if(!tienePedido){cont.innerHTML='';return;}
+  cont.innerHTML='<div class="sup-item" data-key="pedido_bodega" style="flex-direction:column;align-items:stretch;gap:0">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
+    '<span style="flex:1;font-size:13px">🟠 Realiza pedido de bodega en día, horario y forma correcta</span>'+
+    '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
+    '</div></div>';
+  engancharTogglesEstacion(cont);
 }
 
 // ── REGISTRO SEMANAL DE INDICADORES (Fase 1) ──
@@ -5072,6 +5158,8 @@ function initSupervisionAdmin(){
   supNom.innerHTML='<option value="">Selecciona colaborador</option>'+
     nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';})
     .map(function(n){return '<option>'+n+'</option>';}).join('');
+  supNom.onchange=function(){renderItemPedidoCondicional();};
+  renderItemPedidoCondicional();
 
   // Selector de estación: inyecta ítems específicos
   var supEst=document.getElementById('supEstacion');
@@ -5143,6 +5231,13 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
     else todosRespondidos=false;
   });
   if(!todosRespondidos){alert('Evalúa todos los ítems base antes de guardar.');return;}
+  // Ítem condicional de pedido (si aplica)
+  var itemPedido=document.querySelector('#supItemPedido .sup-item');
+  if(itemPedido){
+    if(itemPedido.querySelector('.active-yes'))items['pedido_bodega']=1;
+    else if(itemPedido.querySelector('.active-no'))items['pedido_bodega']=0;
+    else{alert('Evalúa el ítem de pedido de bodega antes de guardar.');return;}
+  }
   // Ítems de estación (si se seleccionó una)
   var itemsEstacion={};var estacionCompleta=true;
   document.querySelectorAll('#supItemsEstacion .sup-item-est').forEach(function(item){
@@ -5152,6 +5247,12 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
     else estacionCompleta=false;
   });
   if(estacion&&!estacionCompleta){alert('Evalúa todos los ítems de la estación antes de guardar.');return;}
+  // Si es esterilización, exigir que se haya elegido un área
+  var areaEster=document.getElementById('supAreaEster')?document.getElementById('supAreaEster').value:'';
+  if(estacion==='esterilizacion'){
+    if(!areaEster){alert('Selecciona el área de esterilización (roja, verde o ambas).');return;}
+    if(Object.keys(itemsEstacion).length===0){alert('Evalúa los ítems del área seleccionada.');return;}
+  }
   var hoy=hoyStr();
   var yaExiste=Object.values(supervisionData||{}).some(function(r){
     return r&&r.nombre===nombre&&r.fecha===hoy&&r.ronda===ronda;
@@ -5166,6 +5267,7 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
   if(estacion){
     registro.estacion=estacion;
     registro.itemsEstacion=itemsEstacion;
+    if(estacion==='esterilizacion'&&areaEster)registro.areaEster=areaEster;
     // Cumplimiento de estación: % de ítems en cumplimiento
     var keysEst=Object.keys(itemsEstacion);
     var okEst=keysEst.filter(function(k){return itemsEstacion[k]===1;}).length;
