@@ -5995,22 +5995,35 @@ window.guardarRegAseo=function(){
 
 window.abrirRegTemp=function(tipo){
   var cfg={
-    temp_ester:{titulo:'🌡️ Temp. Esterilización',sub:'Zona de almacenamiento · diario',rango:null,puntos:['Zona de almacenamiento']},
-    temp_pabellon:{titulo:'🌡️ Temp. Pabellón',sub:'Pabellones · diario',rango:null,puntos:['Pabellón']},
-    temp_refri:{titulo:'🧊 Temp. Refrigeradores',sub:'Cadena de frío 2–8°C · diario',rango:[2,8],puntos:null}
+    temp_ester:{titulo:'🌡️ Temp. Esterilización',sub:'Zona de almacenamiento · 1 vez al día (AM)',rango:null,puntos:['Zona de almacenamiento'],doble:false},
+    temp_pabellon:{titulo:'🌡️ Temp. Pabellón',sub:'Pabellones · 1 vez al día (AM)',rango:null,puntos:['Pabellón'],doble:false},
+    temp_refri:{titulo:'🧊 Temp. Refrigeradores',sub:'Cadena de frío 2–8°C · AM y PM',rango:[2,8],puntos:null,doble:true}
   }[tipo];
   if(!cfg)return;
   var ov=document.getElementById('regTempOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regTempOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  // Selector de toma: refrigeradores AM/PM, los demás solo AM
+  var selectorToma='';
+  if(cfg.doble){
+    // Ver qué tomas ya se registraron hoy para este tipo
+    var hoyRegs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha===hoyStr();});
+    var tieneAM=hoyRegs.some(function(r){return r.toma==='am';});
+    var tienePM=hoyRegs.some(function(r){return r.toma==='pm';});
+    var estadoTomas='<div style="font-size:11px;margin-bottom:10px">'+
+      'Hoy: '+(tieneAM?'<span style="color:#6ee7b7">✓ AM</span>':'<span style="color:#fbbf24">⚠ AM pendiente</span>')+' · '+
+      (tienePM?'<span style="color:#6ee7b7">✓ PM</span>':'<span style="color:#fbbf24">⚠ PM pendiente</span>')+'</div>';
+    selectorToma='<label style="font-size:12px;color:rgba(255,255,255,.7)">Toma</label>'+
+      '<select id="tempToma" style="width:100%;font-size:14px;padding:8px;margin-bottom:6px">'+
+        '<option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>'+estadoTomas;
+  }
   var inputs='';
   if(tipo==='temp_refri'){
-    // Lista de refrigeradores configurada
     var refris=Object.keys(refrigeradores||{}).map(function(k){return refrigeradores[k];}).filter(Boolean);
     if(!refris.length){
       inputs='<div style="font-size:12px;color:#fbbf24;padding:10px 0">No hay refrigeradores configurados. El administrador los agrega en Admin → Refrigeradores.</div>';
     } else {
-      inputs=refris.map(function(nombre,i){
+      inputs=refris.map(function(nombre){
         return '<div style="margin-bottom:8px"><label style="font-size:12px;color:rgba(255,255,255,.7)">'+esc(nombre)+' (°C)</label>'+
           '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(nombre)+'" oninput="evalTemp(this,2,8)" style="width:100%;font-size:14px;padding:8px">'+
           '<div class="temp-eval" style="font-size:11px;margin-top:2px"></div></div>';
@@ -6025,10 +6038,12 @@ window.abrirRegTemp=function(tipo){
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:440px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+cfg.titulo+'</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+cfg.sub+' · '+hoyStr()+'</div>'+
+    selectorToma+
     inputs+
     '<label style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;display:block">Observación (opcional)</label>'+
     '<textarea id="tempObs" rows="2" placeholder="Anota si hubo alguna novedad" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
-    '<button class="btn-add" onclick="guardarRegTemp(\''+tipo+'\')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
+    '<button class="btn-add" onclick="guardarRegTemp(\''+tipo+'\','+cfg.doble+')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
+    '<button onclick="verGraficoTemp(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver gráfico del mes</button>'+
     '<button onclick="document.getElementById(\'regTempOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '<div class="saved" id="regTempSaved">✓ Registrado</div>'+
     '</div>';
@@ -6045,22 +6060,122 @@ window.evalTemp=function(inp,min,max){
   else out.innerHTML='<span style="color:#f87171">✗ Fuera de rango ('+min+'–'+max+'°C)</span>';
 };
 
-window.guardarRegTemp=function(tipo){
+window.guardarRegTemp=function(tipo,doble){
   var inputs=document.querySelectorAll('#regTempOv .temp-input');
   var lecturas={};var algunValor=false;
   inputs.forEach(function(inp){
     if(inp.value!==''){lecturas[inp.dataset.punto]=Number(inp.value);algunValor=true;}
   });
   if(!algunValor){alert('Ingresa al menos una temperatura.');return;}
+  var toma=doble?(document.getElementById('tempToma').value):'am';
   var ahora=new Date();
   var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
-  var reg={tipo:tipo,lecturas:lecturas,obs:document.getElementById('tempObs').value.trim(),
+  var reg={tipo:tipo,toma:toma,lecturas:lecturas,obs:document.getElementById('tempObs').value.trim(),
     quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
   sedeRef('regTemperatura/'+reg.ts).set(reg).then(function(){
     showSaved('regTempSaved');
+    // Aviso de toma faltante en refrigeradores
+    if(doble){
+      var hoyRegs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha===hoyStr();});
+      hoyRegs.push(reg);
+      var tieneAM=hoyRegs.some(function(r){return r.toma==='am';});
+      var tienePM=hoyRegs.some(function(r){return r.toma==='pm';});
+      if(!tieneAM||!tienePM){
+        var falta=!tieneAM?'AM':'PM';
+        setTimeout(function(){alert('Registrada la toma '+toma.toUpperCase()+'. Recuerda: falta la toma '+falta+' de hoy.');},300);
+      }
+    }
     setTimeout(function(){var o=document.getElementById('regTempOv');if(o)o.remove();},1000);
   });
 };
+
+// Gráfico mensual de temperatura con banda 2-8°C
+window.verGraficoTemp=function(tipo){
+  var ov=document.getElementById('graftempOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='graftempOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var mes=hoyStr().slice(0,7); // YYYY-MM
+  var regs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha&&r.fecha.slice(0,7)===mes;});
+  // Puntos a graficar: todos los "punto" distintos
+  var puntos={};
+  regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
+  var puntosArr=Object.keys(puntos);
+  var titulo={temp_ester:'🌡️ Temp. Esterilización',temp_pabellon:'🌡️ Temp. Pabellón',temp_refri:'🧊 Temp. Refrigeradores'}[tipo]||'Temperatura';
+  var esRefri=(tipo==='temp_refri');
+  var svg=graficoTempSVG(regs,puntosArr,esRefri);
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:640px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+titulo+' — comportamiento mensual</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+' · '+(esRefri?'banda óptima 2–8°C':'sin banda definida')+'</div>'+
+    (regs.length?svg:'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros este mes.</div>')+
+    '<button onclick="document.getElementById(\'graftempOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+function graficoTempSVG(regs,puntosArr,esRefri){
+  // Preparar datos: por día, promedio de lecturas de cada punto (o toma AM/PM)
+  var W=580,H=280,padL=36,padR=12,padT=16,padB=28;
+  var diasMes=31;
+  // Recolectar todos los valores para escala Y
+  var todos=[];
+  regs.forEach(function(r){Object.values(r.lecturas||{}).forEach(function(v){todos.push(v);});});
+  if(esRefri){todos.push(2);todos.push(8);}
+  var minY=Math.min.apply(null,todos),maxY=Math.max.apply(null,todos);
+  minY=Math.floor(minY-1);maxY=Math.ceil(maxY+1);
+  if(minY===maxY){maxY=minY+1;}
+  function x(dia){return padL+(dia-1)/(diasMes-1)*(W-padL-padR);}
+  function y(val){return padT+(maxY-val)/(maxY-minY)*(H-padT-padB);}
+  var colores=['#60a5fa','#f472b6','#6ee7b7','#fbbf24','#a78bfa','#fca5a5','#34d399','#fb923c'];
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
+  // Banda óptima 2-8
+  if(esRefri){
+    var yb8=y(8),yb2=y(2);
+    svg+='<rect x="'+padL+'" y="'+yb8+'" width="'+(W-padL-padR)+'" height="'+(yb2-yb8)+'" fill="rgba(16,185,129,.12)"/>';
+    svg+='<line x1="'+padL+'" y1="'+yb8+'" x2="'+(W-padR)+'" y2="'+yb8+'" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3"/>';
+    svg+='<line x1="'+padL+'" y1="'+yb2+'" x2="'+(W-padR)+'" y2="'+yb2+'" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3"/>';
+  }
+  // Ejes Y (marcas)
+  for(var g=minY;g<=maxY;g+=Math.max(1,Math.round((maxY-minY)/5))){
+    svg+='<line x1="'+padL+'" y1="'+y(g)+'" x2="'+(W-padR)+'" y2="'+y(g)+'" stroke="rgba(255,255,255,.05)"/>';
+    svg+='<text x="'+(padL-4)+'" y="'+(y(g)+3)+'" fill="rgba(255,255,255,.4)" font-size="9" text-anchor="end">'+g+'°</text>';
+  }
+  // Marcas de día (cada 5)
+  for(var d=1;d<=diasMes;d+=5){
+    svg+='<text x="'+x(d)+'" y="'+(H-padB+14)+'" fill="rgba(255,255,255,.4)" font-size="9" text-anchor="middle">'+d+'</text>';
+  }
+  // Una línea por cada punto
+  puntosArr.forEach(function(punto,idx){
+    var color=colores[idx%colores.length];
+    // valor por día (promedio si hay varias tomas)
+    var porDia={};
+    regs.forEach(function(r){
+      if(r.lecturas&&r.lecturas[punto]!=null){
+        var dia=Number(r.fecha.slice(8,10));
+        if(!porDia[dia])porDia[dia]=[];
+        porDia[dia].push(r.lecturas[punto]);
+      }
+    });
+    var pts=Object.keys(porDia).map(function(dia){
+      var arr=porDia[dia];var prom=arr.reduce(function(a,b){return a+b;},0)/arr.length;
+      return {d:Number(dia),v:prom};
+    }).sort(function(a,b){return a.d-b.d;});
+    if(!pts.length)return;
+    var path=pts.map(function(p,i){return (i===0?'M':'L')+x(p.d)+' '+y(p.v);}).join(' ');
+    svg+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="1.5"/>';
+    pts.forEach(function(p){
+      var fuera=esRefri&&(p.v<2||p.v>8);
+      svg+='<circle cx="'+x(p.d)+'" cy="'+y(p.v)+'" r="'+(fuera?3:2)+'" fill="'+(fuera?'#f87171':color)+'"/>';
+    });
+  });
+  svg+='</svg>';
+  // Leyenda
+  if(puntosArr.length>1){
+    svg+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'+puntosArr.map(function(p,idx){
+      return '<span style="font-size:10px;color:rgba(255,255,255,.6)"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+colores[idx%colores.length]+';margin-right:3px"></span>'+esc(p)+'</span>';
+    }).join('')+'</div>';
+  }
+  return svg;
+}
 
 window.abrirConductividad=function(){
   var ov=document.getElementById('conductividadOv');
