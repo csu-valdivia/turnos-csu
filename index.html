@@ -1307,7 +1307,7 @@ window.setSede=function(sede){
   sedeRef('invAsignaciones').on('value',function(s){invAsignaciones=s.val()||{};});
   sedeRef('invLotes').on('value',function(s){invLotes=s.val()||{};});
   sedeRef('invReas').on('value',function(s){invReas=s.val()||{};});
-  sedeRef('supervisores').on('value',function(s){supervisores=s.val()||{};});
+  sedeRef('supervisores').on('value',function(s){supervisores=s.val()||{};if(document.getElementById('superLista'))initConfigSupervisores();});
   sedeRef('pinSupervisor').on('value',function(s){pinSupervisor=s.val()||'';});
   sedeRef('conductividad').on('value',function(s){conductividad=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
