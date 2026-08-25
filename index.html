@@ -777,6 +777,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </div>
             <div class="frow">
               <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🌡️ Temp. Pabellón</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
             <button class="btn-add" id="addTareaBtn">Agregar</button>
@@ -1069,6 +1070,11 @@ var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var AREAS=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
 var COLACION={'07:45':'13:00–14:00','08:00':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
 var SUBAREAS={T1:'Empaque · Autoclave · Almacenamiento · Entrega',T2:'Recepción · Lavado · Secado'};
+function jornadaLabel(j){
+  if(j==='am')return '<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,.12);padding:1px 6px;border-radius:4px">🌅 AM</span>';
+  if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
+  return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
+}
 var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🌡️',l:'Temp. Pabellón'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Catálogo de roles técnicos: cada uno abre una funcionalidad de registro en Mis Turnos.
 // tipo = valor de la tarea; fn = función que abre el registro. Ampliable por el admin vía rolesTecnicos.
@@ -1946,7 +1952,7 @@ function renderMisTurnos(nombre){
       '<p style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">🔧 Mis registros de hoy</p>'+
       misRoles.map(function(t){
         var r=ROLES_TECNICOS_BASE[t.tipo];
-        return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+r.emoji+' '+r.label+' ›</button>';
+        return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+' ›</button>';
       }).join('')+
       '</div>';
   }
@@ -4802,7 +4808,7 @@ window.borrarBloquesDia=function(dia){
 };
 window.marcarBSA=function(k){var b=bloques[k];if(!b)return;sRef('bloques/'+k+'/sinAtencion').set(true).then(function(){sRef('bloques/'+k+'/nomOrig').set(b.nombre);setTimeout(function(){genPendientes(function(){});},300);});};
 window.restaurar=function(k){sRef('bloques/'+k+'/sinAtencion').remove().then(function(){sRef('bloques/'+k+'/nomOrig').remove();setTimeout(function(){genPendientes(function(){});},300);});};
-function renderTareasList(){var d=document.getElementById('tareasList');if(!d)return;var en=Object.entries(tareas);if(!en.length){d.innerHTML='<p class="empty">Sin tareas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],t=e[1];var cfg=TIPOS[t.tipo]||TIPOS['tarea'];return '<div class="iitem"><div class="iitem-info">'+cfg.e+' <strong>'+t.nombre+'</strong> — '+t.dia+' ('+cfg.l+')<div class="iitem-sub">'+t.texto+'</div></div><button class="del-btn" onclick="sRef(\'tareas/'+k+'\').remove()">🗑</button></div>';}).join('');}
+function renderTareasList(){var d=document.getElementById('tareasList');if(!d)return;var en=Object.entries(tareas);if(!en.length){d.innerHTML='<p class="empty">Sin tareas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],t=e[1];var cfg=TIPOS[t.tipo]||TIPOS['tarea'];return '<div class="iitem"><div class="iitem-info">'+cfg.e+' <strong>'+t.nombre+'</strong> — '+t.dia+' '+jornadaLabel(t.jornada)+' ('+cfg.l+')<div class="iitem-sub">'+t.texto+'</div></div><button class="del-btn" onclick="sRef(\'tareas/'+k+'\').remove()">🗑</button></div>';}).join('');}
 
 // ── BULK ──
 function buildNombresCheckboxes(rowId){
@@ -5129,23 +5135,23 @@ function renderItemPedidoCondicional(){
   var nombre=document.getElementById('supNombre')?document.getElementById('supNombre').value:'';
   var diaHoy=diaDeDate(hoyStr());
   var html='';
-  var tienePedidoHoy=nombre&&Object.values(tareas||{}).some(function(t){
+  var tareaPedido=nombre&&Object.values(tareas||{}).filter(function(t){
     return t.nombre===nombre&&t.tipo==='pedido'&&t.dia===diaHoy;
-  });
-  if(tienePedidoHoy){
+  })[0];
+  if(tareaPedido){
     html+='<div class="sup-item" data-key="pedido_bodega" style="flex-direction:column;align-items:stretch;gap:0">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
-      '<span style="flex:1;font-size:13px">🟠 Realiza pedido de bodega en día, horario y forma correcta <span style="font-size:10px;color:#fbbf24">(pedido de hoy '+diaHoy+')</span></span>'+
+      '<span style="flex:1;font-size:13px">🟠 Realiza pedido de bodega en día, horario y forma correcta '+jornadaLabel(tareaPedido.jornada)+'</span>'+
       '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
       '</div></div>';
   }
-  var tieneReasHoy=nombre&&Object.values(tareas||{}).some(function(t){
+  var tareaReas=nombre&&Object.values(tareas||{}).filter(function(t){
     return t.nombre===nombre&&t.tipo==='reas'&&t.dia===diaHoy;
-  });
-  if(tieneReasHoy){
+  })[0];
+  if(tareaReas){
     html+='<div class="sup-item" data-key="reas_cumple" style="flex-direction:column;align-items:stretch;gap:0">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
-      '<span style="flex:1;font-size:13px">♻️ Cumple registro y manejo de REAS correctamente <span style="font-size:10px;color:#6ee7b7">(REAS de hoy '+diaHoy+')</span></span>'+
+      '<span style="flex:1;font-size:13px">♻️ Cumple registro y manejo de REAS correctamente '+jornadaLabel(tareaReas.jornada)+'</span>'+
       '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button></div>'+
       '</div></div>';
   }
@@ -7364,13 +7370,15 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
   var dias=Array.from(document.querySelectorAll('#tareaDias input:checked')).map(function(cb){return cb.value;});
   var t=document.getElementById('tTip').value;
   var x=document.getElementById('tTxt').value.trim();
+  var jornada=document.getElementById('tJornada').value||'dia';
   if(!n||!dias.length||!t||!x){alert('Selecciona persona, al menos un día, tipo y descripción.');return;}
   Promise.all(dias.map(function(dia){
-    return sRef('tareas').push({dia:dia,nombre:n,tipo:t,texto:x});
+    return sRef('tareas').push({dia:dia,nombre:n,tipo:t,texto:x,jornada:jornada});
   })).then(function(){
     document.getElementById('tN').value='';
     document.getElementById('tTip').value='';
     document.getElementById('tTxt').value='';
+    document.getElementById('tJornada').value='dia';
     document.querySelectorAll('#tareaDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
     showSaved('tareaSaved');
   });
