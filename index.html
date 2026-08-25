@@ -445,6 +445,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Panel con métricas del programa: desempeño, participación y supervisión. Exportable a PDF.</p>
             <button class="btn-add" id="abrirDashboardBtn" style="background:linear-gradient(135deg,#2563eb,#10b981)">📊 Abrir dashboard de gestión</button>
             <button class="btn-add" id="abrirDashInvBtn" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">📦 Dashboard de inventario</button>
+            <button class="btn-add" id="abrirDashTecBtn" style="background:linear-gradient(135deg,#7c3aed,#2563eb);margin-top:6px">🔬 Dashboard técnico (esterilización)</button>
           </div>
 
 
@@ -960,15 +961,35 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec" style="border-color:rgba(139,92,246,.3)">
             <p class="asec-title" style="color:#a78bfa">🔑 Supervisores autorizados</p>
-            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Autoriza colaboradores para aplicar la pauta. A cada uno le das un PIN inicial (único). Luego cada supervisor puede cambiar su propio PIN.</p>
-            <label style="font-size:11px;color:rgba(255,255,255,.6)">Autorizar supervisor con su PIN</label>
-            <div class="frow" style="margin-bottom:4px">
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Autoriza colaboradores para aplicar la pauta. Define su PIN (único), qué áreas puede supervisar y qué días. Cada supervisor puede cambiar su propio PIN.</p>
+            <label style="font-size:11px;color:rgba(255,255,255,.6)">Colaborador y PIN</label>
+            <div class="frow" style="margin-bottom:6px">
               <select id="superAddSel" style="flex:1"><option value="">Selecciona colaborador</option></select>
               <input type="text" id="superAddPin" placeholder="PIN" style="width:90px">
-              <button class="btn-add" style="width:auto" id="superAddBtn">+ Autorizar</button>
             </div>
+            <label style="font-size:11px;color:rgba(255,255,255,.6)">Áreas que puede supervisar</label>
+            <div id="superAreas" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
+            <label style="font-size:11px;color:rgba(255,255,255,.6)">Días que puede supervisar</label>
+            <div id="superDias" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
+            <button class="btn-add" id="superAddBtn">+ Autorizar</button>
             <div id="superLista" style="margin-top:8px"></div>
             <div class="saved" id="superConfSaved">✓ Guardado</div>
+          </div>
+
+          <div class="asec" style="border-color:rgba(96,165,250,.3)">
+            <p class="asec-title" style="color:#93c5fd">🔧 Roles técnicos personalizados</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Crea tus propios roles de registro (además de los predefinidos). Elige nombre, ícono y tipo: "valor" (registra un número + observación) o "checklist" (marca varios puntos cumple/no cumple).</p>
+            <div class="frow" style="margin-bottom:4px">
+              <input type="text" id="rolAddEmoji" placeholder="🔧" maxlength="2" style="width:50px;text-align:center">
+              <input type="text" id="rolAddNombre" placeholder="Nombre del rol" style="flex:1">
+            </div>
+            <div class="frow" style="margin-bottom:4px">
+              <select id="rolAddTipo" style="flex:1"><option value="valor">📊 Registro de valor + observación</option><option value="checklist">☑️ Checklist de puntos</option></select>
+            </div>
+            <input type="text" id="rolAddDetalle" placeholder="Si es valor: unidad (ej: °C, %). Si es checklist: puntos separados por coma" style="width:100%;margin-bottom:4px">
+            <button class="btn-add" id="rolAddBtn">+ Crear rol</button>
+            <div id="rolLista" style="margin-top:8px"></div>
+            <div class="saved" id="rolSaved">✓ Guardado</div>
           </div>
 
           <div class="asec" style="border-color:rgba(96,165,250,.3)">
@@ -1070,6 +1091,22 @@ var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var AREAS=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
 var COLACION={'07:45':'13:00–14:00','08:00':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
 var SUBAREAS={T1:'Empaque · Autoclave · Almacenamiento · Entrega',T2:'Recepción · Lavado · Secado'};
+// Inyecta los roles personalizados como opciones en el selector de tipo de tarea
+function actualizarTiposTarea(){
+  var sel=document.getElementById('tTip');
+  if(!sel)return;
+  // Quitar opciones custom previas
+  Array.from(sel.querySelectorAll('option[data-custom]')).forEach(function(o){o.remove();});
+  var keys=Object.keys(rolesTecnicos||{}).filter(function(k){return rolesTecnicos[k]&&rolesTecnicos[k].nombre;});
+  keys.forEach(function(k){
+    var r=rolesTecnicos[k];
+    var opt=document.createElement('option');
+    opt.value=k;opt.setAttribute('data-custom','1');
+    opt.textContent=r.emoji+' '+r.nombre;
+    sel.appendChild(opt);
+  });
+}
+
 function jornadaLabel(j){
   if(j==='am')return '<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,.12);padding:1px 6px;border-radius:4px">🌅 AM</span>';
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
@@ -1220,10 +1257,10 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom'];
 var supervisionData={};
 var supervisores={},pinSupervisor='',conductividad={};
-var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={};
+var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={};
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
@@ -1341,7 +1378,8 @@ window.setSede=function(sede){
   sedeRef('regTemperatura').on('value',function(s){regTemperatura=s.val()||{};});
   sedeRef('regAseo').on('value',function(s){regAseo=s.val()||{};});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
-  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};});
+  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
+  sedeRef('regCustom').on('value',function(s){regCustom=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
     anunciosCapacitacion=s.val()||{};
     if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none'){
@@ -1938,11 +1976,10 @@ function renderMisTurnos(nombre){
       misBodegas.map(function(b){return '<button onclick="abrirGestionClinico(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+BODEGAS[b].nombre+' ›</button>';}).join('')+
       '</div>';
   }
-  // Botón de conductividad: ahora está en el panel principal (asignado desde Asignaciones)
   // Roles técnicos asignados a esta persona HOY → botón de su registro en Mis Turnos
   var diaHoyRol=diaDeDate(hoyStr());
   var misRoles=Object.values(tareas||{}).filter(function(t){
-    return t.nombre===nombre&&t.dia===diaHoyRol&&ROLES_TECNICOS_BASE[t.tipo];
+    return t.nombre===nombre&&t.dia===diaHoyRol&&(ROLES_TECNICOS_BASE[t.tipo]||rolesTecnicos[t.tipo]);
   });
   // Quitar duplicados por tipo
   var rolesVistos={};
@@ -1951,8 +1988,13 @@ function renderMisTurnos(nombre){
     html+='<div style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(96,165,250,.06));border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
       '<p style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">🔧 Mis registros de hoy</p>'+
       misRoles.map(function(t){
-        var r=ROLES_TECNICOS_BASE[t.tipo];
-        return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+' ›</button>';
+        if(ROLES_TECNICOS_BASE[t.tipo]){
+          var r=ROLES_TECNICOS_BASE[t.tipo];
+          return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+' ›</button>';
+        } else {
+          var rc=rolesTecnicos[t.tipo];
+          return '<button onclick="abrirRegCustom(\''+t.tipo+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+' ›</button>';
+        }
       }).join('')+
       '</div>';
   }
@@ -4941,7 +4983,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -5248,6 +5290,20 @@ function initConfigSupervisores(){
       nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza'&&!supervisores[claveNombre(n)];})
       .map(function(n){return '<option>'+esc(n)+'</option>';}).join('');
   }
+  // Poblar checkboxes de áreas (estaciones)
+  var areasDiv=document.getElementById('superAreas');
+  if(areasDiv){
+    areasDiv.innerHTML=Object.keys(SUP_ESTACIONES).map(function(est){
+      return '<label style="font-size:11px;color:#fff;background:rgba(255,255,255,.06);padding:3px 8px;border-radius:5px;cursor:pointer"><input type="checkbox" class="super-area" value="'+est+'" style="vertical-align:middle"> '+SUP_ESTACIONES[est].nombre+'</label>';
+    }).join('');
+  }
+  // Poblar checkboxes de días
+  var diasDiv=document.getElementById('superDias');
+  if(diasDiv){
+    diasDiv.innerHTML=DIAS.map(function(d){
+      return '<label style="font-size:11px;color:#fff;background:rgba(255,255,255,.06);padding:3px 8px;border-radius:5px;cursor:pointer"><input type="checkbox" class="super-dia" value="'+d+'" style="vertical-align:middle"> '+d+'</label>';
+    }).join('');
+  }
   renderSuperLista();
   var ab=document.getElementById('superAddBtn');
   if(ab)ab.onclick=function(){
@@ -5255,10 +5311,13 @@ function initConfigSupervisores(){
     var pin=document.getElementById('superAddPin').value.trim();
     if(!n){alert('Selecciona un colaborador.');return;}
     if(!pin){alert('Asigna un PIN inicial.');return;}
-    // Validar que el PIN sea único
     var pinRepetido=Object.values(supervisores||{}).some(function(s){return s&&s.pin===pin;});
     if(pinRepetido){alert('Ese PIN ya está en uso por otro supervisor. Usa uno distinto.');return;}
-    sedeRef('supervisores/'+claveNombre(n)).set({nombre:n,pin:pin}).then(function(){
+    var areas=Array.from(document.querySelectorAll('.super-area:checked')).map(function(c){return c.value;});
+    var dias=Array.from(document.querySelectorAll('.super-dia:checked')).map(function(c){return c.value;});
+    if(!areas.length){alert('Marca al menos un área que pueda supervisar.');return;}
+    if(!dias.length){alert('Marca al menos un día.');return;}
+    sedeRef('supervisores/'+claveNombre(n)).set({nombre:n,pin:pin,areas:areas,dias:dias}).then(function(){
       showSaved('superConfSaved');
       document.getElementById('superAddPin').value='';
       initConfigSupervisores();
@@ -5275,9 +5334,15 @@ function renderSuperLista(){
   if(!lista.length){cont.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.35)">Sin supervisores autorizados aún.</p>';return;}
   cont.innerHTML=lista.map(function(k){
     var s=supervisores[k];
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px">'+
-      '<span style="font-size:12px;color:#fff">'+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.35)">· PIN activo</span></span>'+
-      '<button onclick="quitarSupervisor(\''+k.replace(/'/g,"\\'")+'\')" style="background:rgba(239,68,68,.2);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">Quitar</button>'+
+    var areasTxt=(s.areas||[]).map(function(a){return (SUP_ESTACIONES[a]?SUP_ESTACIONES[a].nombre:a);}).join(', ')||'todas';
+    var diasTxt=(s.dias||[]).join(', ')||'todos';
+    return '<div style="padding:8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:12px;color:#fff">'+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.35)">· PIN activo</span></span>'+
+        '<button onclick="quitarSupervisor(\''+k.replace(/'/g,"\\'")+'\')" style="background:rgba(239,68,68,.2);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">Quitar</button>'+
+      '</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">Áreas: '+esc(areasTxt)+'</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4)">Días: '+esc(diasTxt)+'</div>'+
     '</div>';
   }).join('');
 }
@@ -5313,6 +5378,44 @@ function renderRefriLista(){
 }
 window.quitarRefri=function(k){sedeRef('refrigeradores/'+k).remove().then(function(){renderRefriLista();});};
 
+// ── Config de roles técnicos personalizados ──
+function initConfigRoles(){
+  renderRolLista();
+  var ab=document.getElementById('rolAddBtn');
+  if(ab)ab.onclick=function(){
+    var emoji=document.getElementById('rolAddEmoji').value.trim()||'🔧';
+    var nombre=document.getElementById('rolAddNombre').value.trim();
+    var tipo=document.getElementById('rolAddTipo').value;
+    var detalle=document.getElementById('rolAddDetalle').value.trim();
+    if(!nombre){alert('Escribe el nombre del rol.');return;}
+    var id='rol_'+Date.now();
+    var rol={emoji:emoji,nombre:nombre,tipoRegistro:tipo};
+    if(tipo==='valor')rol.unidad=detalle||'';
+    else rol.puntos=detalle?detalle.split(',').map(function(p){return p.trim();}).filter(Boolean):[];
+    sedeRef('rolesTecnicos/'+id).set(rol).then(function(){
+      document.getElementById('rolAddNombre').value='';
+      document.getElementById('rolAddEmoji').value='';
+      document.getElementById('rolAddDetalle').value='';
+      showSaved('rolSaved');
+    });
+  };
+}
+function renderRolLista(){
+  var cont=document.getElementById('rolLista');
+  if(!cont)return;
+  var keys=Object.keys(rolesTecnicos||{}).filter(function(k){return rolesTecnicos[k]&&rolesTecnicos[k].nombre;});
+  if(!keys.length){cont.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.35)">Sin roles personalizados. Los predefinidos (autoclave, temperaturas, aseo) siguen disponibles.</p>';return;}
+  cont.innerHTML=keys.map(function(k){
+    var r=rolesTecnicos[k];
+    var det=r.tipoRegistro==='valor'?('valor'+(r.unidad?' en '+esc(r.unidad):'')):('checklist: '+(r.puntos||[]).length+' puntos');
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px">'+
+      '<span style="font-size:12px;color:#fff">'+esc(r.emoji)+' '+esc(r.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.35)">· '+det+'</span></span>'+
+      '<button onclick="quitarRol(\''+k+'\')" style="background:rgba(239,68,68,.2);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">Quitar</button>'+
+    '</div>';
+  }).join('');
+}
+window.quitarRol=function(k){sedeRef('rolesTecnicos/'+k).remove().then(function(){renderRolLista();});};
+
 function initSupervisionAdmin(excluir){
   var supNom=document.getElementById('supNombre');
   if(!supNom)return;
@@ -5324,10 +5427,20 @@ function initSupervisionAdmin(excluir){
   renderItemPedidoCondicional();
   initConfigSupervisores();
   initConfigRefrigeradores();
+  initConfigRoles();
 
   // Selector de estación: inyecta ítems específicos
   var supEst=document.getElementById('supEstacion');
   if(supEst){
+    // Si hay un supervisor con áreas restringidas, filtrar las opciones
+    Array.from(supEst.querySelectorAll('option')).forEach(function(opt){
+      if(!opt.value){opt.style.display='';return;}
+      if(supervisorActivo&&supervisorAreas.length&&supervisorAreas.indexOf(opt.value)===-1){
+        opt.style.display='none';
+      } else {
+        opt.style.display='';
+      }
+    });
     supEst.onchange=function(){renderItemsEstacion(this.value);};
     renderItemsEstacion(supEst.value);
   }
@@ -5875,6 +5988,73 @@ document.getElementById('bodegaBtn').addEventListener('click',function(){
 // ── REGISTRO DE CONDUCTIVIDAD DEL AGUA (operador de esterilización) ──
 // ── REGISTRO DE TEMPERATURA (esterilización, pabellón, refrigeradores) ──
 // ── REGISTRO DE AUTOCLAVE (por ciclo/carga) ──
+// ── REGISTRO DE ROL PERSONALIZADO (valor o checklist) ──
+window.abrirRegCustom=function(rolId){
+  var rol=rolesTecnicos[rolId];
+  if(!rol)return;
+  var ov=document.getElementById('regCustomOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regCustomOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var cuerpo='';
+  if(rol.tipoRegistro==='valor'){
+    cuerpo='<label style="font-size:12px;color:rgba(255,255,255,.7)">Valor'+(rol.unidad?' ('+esc(rol.unidad)+')':'')+'</label>'+
+      '<input type="number" step="any" id="customValor" style="width:100%;font-size:14px;padding:8px;margin-bottom:10px">';
+  } else {
+    var puntos=rol.puntos||[];
+    cuerpo=puntos.map(function(p,i){
+      return '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'+
+        '<span style="font-size:13px;color:#fff;flex:1">'+esc(p)+'</span>'+
+        '<div class="custom-toggle" data-punto="'+esc(p)+'">'+
+          '<button type="button" onclick="setCustomChk(this,1)" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;margin-right:4px">✓</button>'+
+          '<button type="button" onclick="setCustomChk(this,0)" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#fca5a5;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer">✗</button>'+
+        '</div></div>';
+    }).join('');
+  }
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:440px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+esc(rol.emoji)+' '+esc(rol.nombre)+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+hoyStr()+'</div>'+
+    cuerpo+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;display:block">Observación (opcional)</label>'+
+    '<textarea id="customObs" rows="2" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
+    '<button class="btn-add" onclick="guardarRegCustom(\''+rolId+'\')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar</button>'+
+    '<button onclick="document.getElementById(\'regCustomOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="regCustomSaved">✓ Registrado</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+window.setCustomChk=function(btn,val){
+  var cont=btn.closest('.custom-toggle');
+  cont.querySelectorAll('button').forEach(function(b){b.style.outline='';});
+  btn.style.outline='2px solid #fff';
+  cont.dataset.val=val;
+};
+window.guardarRegCustom=function(rolId){
+  var rol=rolesTecnicos[rolId];
+  var ahora=new Date();
+  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
+  var reg={rolId:rolId,rolNombre:rol.nombre,tipoRegistro:rol.tipoRegistro,
+    obs:document.getElementById('customObs').value.trim(),
+    quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  if(rol.tipoRegistro==='valor'){
+    var v=document.getElementById('customValor').value;
+    if(v===''){alert('Ingresa el valor.');return;}
+    reg.valor=Number(v);reg.unidad=rol.unidad||'';
+  } else {
+    var checks={};var falta=false;
+    document.querySelectorAll('#regCustomOv .custom-toggle').forEach(function(c){
+      if(c.dataset.val===undefined)falta=true;
+      else checks[c.dataset.punto]=Number(c.dataset.val);
+    });
+    if(falta){alert('Marca todos los puntos del checklist.');return;}
+    reg.checks=checks;
+  }
+  sedeRef('regCustom/'+reg.ts).set(reg).then(function(){
+    showSaved('regCustomSaved');
+    setTimeout(function(){var o=document.getElementById('regCustomOv');if(o)o.remove();},1000);
+  });
+};
+
+// ── REGISTRO DE ROL PERSONALIZADO fin ──
 window.abrirRegAutoclave=function(){
   var ov=document.getElementById('regAutoOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regAutoOv';
@@ -6383,6 +6563,142 @@ window.cliRegistrarAjuste=function(bodega){
 };
 
 // ── DASHBOARD DE INVENTARIO (consolidado, para el Director) ──
+// ══════════════ DASHBOARD TÉCNICO (esterilización) ══════════════
+window.abrirDashboardTecnico=function(){
+  var ov=document.getElementById('dashTecOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='dashTecOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  ov.innerHTML='<div style="max-width:820px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      '<span style="font-size:17px;font-weight:800;color:#c4b5fd">🔬 Dashboard técnico</span>'+
+      '<button onclick="document.getElementById(\'dashTecOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
+      '<button class="btn-add" style="width:auto;flex:0" onclick="exportarDashboardExcel()" style="background:linear-gradient(135deg,#059669,#6ee7b7)">📥 Exportar a Excel</button>'+
+    '</div>'+
+    '<div id="dashTecContenido"></div></div>';
+  document.body.appendChild(ov);
+  renderDashboardTecnico();
+};
+
+function renderDashboardTecnico(){
+  var c=document.getElementById('dashTecContenido');
+  if(!c)return;
+  var mesActual=hoyStr().slice(0,7);
+  var html='';
+  // KPIs rápidos
+  var nAuto=Object.keys(regAutoclave||{}).length;
+  var nTemp=Object.keys(regTemperatura||{}).length;
+  var nReas=Object.keys(invReas||{}).length;
+  var nCond=Object.keys(conductividad||{}).length;
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px">'+
+    kpiCardTec("🔥 Ciclos autoclave",nAuto,'#dc2626')+
+    kpiCardTec("🌡️ Registros temp.",nTemp,'#2563eb')+
+    kpiCardTec("♻️ Retiros REAS",nReas,'#059669')+
+    kpiCardTec("💧 Días conductividad",nCond,'#0891b2')+
+  '</div>';
+
+  // Alertas: tests rechazados, temperaturas fuera de rango, conductividad no óptima
+  var alertas=[];
+  Object.values(regAutoclave||{}).forEach(function(r){
+    Object.keys(r.tests||{}).forEach(function(tk){
+      if(r.tests[tk].resultado==='rechazado')alertas.push('🔥 Test '+tk+' RECHAZADO en ciclo '+r.carga+' ('+r.fecha+')');
+    });
+  });
+  Object.values(regTemperatura||{}).forEach(function(r){
+    if(r.tipo==='temp_refri'){
+      Object.keys(r.lecturas||{}).forEach(function(p){
+        var v=r.lecturas[p];
+        if(v<2||v>8)alertas.push('🧊 '+p+' fuera de rango: '+v+'°C ('+r.fecha+' '+(r.toma||'').toUpperCase()+')');
+      });
+    }
+  });
+  Object.values(conductividad||{}).forEach(function(r){
+    if(r.osmosisOptima===false)alertas.push('💧 Osmosis no óptima: '+r.osmosis+' µS/cm ('+r.fecha+')');
+    if(r.ultraOptima===false)alertas.push('💧 Ultrapura no óptima: '+r.ultra+' µS/cm ('+r.fecha+')');
+  });
+  if(alertas.length){
+    html+='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px 14px;margin-bottom:14px">'+
+      '<p style="font-size:13px;font-weight:700;color:#fca5a5;margin-bottom:6px">⚠️ Alertas ('+alertas.length+')</p>'+
+      alertas.slice(0,15).map(function(a){return '<div style="font-size:11px;color:rgba(255,255,255,.7);padding:2px 0">'+esc(a)+'</div>';}).join('')+
+      (alertas.length>15?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px">y '+(alertas.length-15)+' más…</div>':'')+
+    '</div>';
+  } else {
+    html+='<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#6ee7b7">✓ Sin alertas técnicas — todos los parámetros dentro de rango.</div>';
+  }
+
+  // Gráficos de temperatura del mes
+  html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">📈 Comportamiento térmico del mes ('+mesActual+')</p>';
+  ['temp_refri','temp_ester','temp_pabellon'].forEach(function(tipo){
+    var regs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha&&r.fecha.slice(0,7)===mesActual;});
+    if(!regs.length)return;
+    var puntos={};regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
+    var titulo={temp_refri:'🧊 Refrigeradores',temp_ester:'🌡️ Esterilización',temp_pabellon:'🌡️ Pabellón'}[tipo];
+    html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+
+      '<p style="font-size:12px;color:#fff;margin-bottom:6px">'+titulo+'</p>'+
+      graficoTempSVG(regs,Object.keys(puntos),tipo==='temp_refri')+'</div>';
+  });
+
+  c.innerHTML=html;
+}
+
+function kpiCardTec(label,valor,color){
+  return '<div style="background:#16233d;border-radius:10px;padding:12px;text-align:center">'+
+    '<div style="font-size:22px;font-weight:800;color:'+color+'">'+valor+'</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">'+label+'</div></div>';
+}
+
+// Exportar todos los registros técnicos a un Excel consolidado
+window.exportarDashboardExcel=function(){
+  if(typeof XLSX==='undefined'){alert('Librería de Excel no disponible.');return;}
+  var wb=XLSX.utils.book_new();
+  // Hoja consolidada: todos los registros en filas uniformes
+  var filas=[['Fecha','Hora','Tipo de registro','Detalle','Valor/Resultado','Observación','Quién']];
+  // Conductividad
+  Object.values(conductividad||{}).forEach(function(r){
+    filas.push([r.fecha,r.hora||'','Conductividad','Osmosis',r.osmosis+' µS/cm'+(r.osmosisOptima?' (óptima)':' (NO óptima)'),r.obs||'',r.quien||'']);
+    filas.push([r.fecha,r.hora||'','Conductividad','Ultrapura',r.ultra+' µS/cm'+(r.ultraOptima?' (óptima)':' (NO óptima)'),'',r.quien||'']);
+  });
+  // Autoclave
+  Object.values(regAutoclave||{}).forEach(function(r){
+    filas.push([r.fecha,r.hora||'','Autoclave','Ciclo '+r.carga,'Presión '+r.presion+' bar / Temp '+r.temperatura+'°C',r.obs||'',r.quien||'']);
+    Object.keys(r.tests||{}).forEach(function(tk){
+      var t=r.tests[tk];
+      filas.push([r.fecha,r.hora||'','Autoclave - Test '+tk,'Ciclo '+r.carga,(t.resultado||'').toUpperCase(),t.obs||'',r.quien||'']);
+    });
+  });
+  // Temperaturas
+  Object.values(regTemperatura||{}).forEach(function(r){
+    var tipoNombre={temp_refri:'Temp. Refrigerador',temp_ester:'Temp. Esterilización',temp_pabellon:'Temp. Pabellón'}[r.tipo]||r.tipo;
+    Object.keys(r.lecturas||{}).forEach(function(p){
+      filas.push([r.fecha,r.hora||'',tipoNombre+(r.toma?' ('+r.toma.toUpperCase()+')':''),p,r.lecturas[p]+'°C',r.obs||'',r.quien||'']);
+    });
+  });
+  // Aseo
+  Object.values(regAseo||{}).forEach(function(r){
+    var det=[];if(r.esterilizacion)det.push('Esterilización');if(r.pabellon)det.push('Pabellón');
+    filas.push([r.fecha,r.hora||'','Aseo semanal',det.join(' + '),'Realizado',r.obs||'',r.quien||'']);
+  });
+  // REAS
+  Object.values(invReas||{}).forEach(function(r){
+    filas.push([r.fecha,'','REAS',r.categoria+' - '+r.tipo,r.peso+' kg / '+r.cantidad+' '+r.presentacion,r.unidad||'',r.quien||'']);
+  });
+  // Registros personalizados
+  Object.values(regCustom||{}).forEach(function(r){
+    var val=r.tipoRegistro==='valor'?(r.valor+' '+(r.unidad||'')):Object.keys(r.checks||{}).map(function(k){return k+':'+(r.checks[k]?'✓':'✗');}).join(', ');
+    filas.push([r.fecha,r.hora||'',r.rolNombre||'Rol personalizado','',val,r.obs||'',r.quien||'']);
+  });
+  // Supervisión
+  Object.values(supervisionData||{}).forEach(function(r){
+    if(r&&r.fecha)filas.push([r.fecha,r.hora||'','Supervisión',(r.nombre||'')+(r.estacion?' / '+r.estacion:''),(r.puntaje!=null?r.puntaje+'%':''),'Supervisó: '+(r.supervisadoPor||''),r.supervisadoPor||'']);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(filas);
+  ws['!cols']=[{wch:11},{wch:7},{wch:24},{wch:22},{wch:26},{wch:24},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'Registros técnicos');
+  var fecha=hoyStr();
+  XLSX.writeFile(wb,'Dashboard_Tecnico_CSU_'+fecha+'.xlsx');
+};
+
 window.abrirDashboardInventario=function(){
   var ov=document.getElementById('dashInvOv');
   if(ov)ov.remove();
@@ -7322,7 +7638,7 @@ function reasHistorial(){
 }
 
 // ── ACCESO SUPERVISOR (PIN personal por supervisor, con trazabilidad) ──
-var supervisorActivo='';
+var supervisorActivo='',supervisorAreas=[];
 
 document.getElementById('conductBtn').addEventListener('click',function(){abrirConductividad();});
 
@@ -7356,7 +7672,14 @@ document.getElementById('superBtn').addEventListener('click',function(){
     var encontrado=Object.keys(supervisores||{}).map(function(k){return supervisores[k];})
       .filter(function(s){return s&&s.pin===pin;})[0];
     if(!encontrado){alert('PIN no reconocido.');return;}
+    // Validar que hoy sea uno de sus días asignados
+    var diaHoy=diaDeDate(hoyStr());
+    if(encontrado.dias&&encontrado.dias.length&&encontrado.dias.indexOf(diaHoy)===-1){
+      alert('Hoy ('+diaHoy+') no está entre tus días asignados para supervisar. Tus días: '+encontrado.dias.join(', ')+'.');
+      return;
+    }
     supervisorActivo=encontrado.nombre;
+    supervisorAreas=encontrado.areas||[];
     m.remove();
     abrirPanelSupervisor();
   };
@@ -7411,7 +7734,7 @@ window.cerrarPanelSupervisor=function(){
     ov._placeholder.parentNode.insertBefore(ov._orig,ov._placeholder);
     ov._placeholder.remove();
   }
-  supervisorActivo='';
+  supervisorActivo='';supervisorAreas=[];
   if(ov)ov.remove();
   // Restaurar el selector completo
   initSupervisionAdmin('');
