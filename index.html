@@ -2034,10 +2034,16 @@ function renderMisTurnos(nombre){
       misBodegas.map(function(b){return '<button onclick="abrirGestionClinico(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+BODEGAS[b].nombre+' ›</button>';}).join('')+
       '</div>';
   }
-  // Roles técnicos asignados a esta persona HOY → botón de su registro en Mis Turnos
+  // Roles técnicos asignados a esta persona → botón de su registro en Mis Turnos
+  // Los roles DIARIOS aparecen cualquier día que tenga el rol; el aseo (semanal) solo su día.
   var diaHoyRol=diaDeDate(hoyStr());
+  var ROLES_SEMANALES={aseo:true};
   var misRoles=Object.values(tareas||{}).filter(function(t){
-    return t.nombre===nombre&&t.dia===diaHoyRol&&(ROLES_TECNICOS_BASE[t.tipo]||rolesTecnicos[t.tipo]);
+    var esRol=ROLES_TECNICOS_BASE[t.tipo]||rolesTecnicos[t.tipo];
+    if(!esRol||t.nombre!==nombre)return false;
+    // Rol semanal (aseo): solo el día asignado. Rol diario: cualquier día.
+    if(ROLES_SEMANALES[t.tipo])return t.dia===diaHoyRol;
+    return true;
   });
   // Quitar duplicados por tipo
   var rolesVistos={};
@@ -6113,6 +6119,12 @@ window.guardarRegCustom=function(rolId){
 };
 
 // ── REGISTRO DE ROL PERSONALIZADO fin ──
+// Parámetros por tipo de carga: [temperatura °C, presión bar, tolerancia presión mín]
+var AUTOCLAVE_PARAMS={
+  instrumental:{temp:134,presion:2.2,presionMin:2.1,label:'🔧 Instrumental'},
+  ropa:{temp:121,presion:1.2,presionMin:1.1,label:'👕 Ropa'},
+  gasas:{temp:121,presion:1.2,presionMin:1.1,label:'🩹 Gasas'}
+};
 window.abrirRegAutoclave=function(){
   var ov=document.getElementById('regAutoOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regAutoOv';
@@ -6131,28 +6143,94 @@ window.abrirRegAutoclave=function(){
         '<input type="text" id="test_'+key+'_obs" placeholder="Observación (lote, incidencia…)" style="width:100%;font-size:12px;padding:6px">'+
       '</div></div>';
   }
-  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
+  function horaField(id,label){
+    return '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">'+label+'</label>'+
+      '<input type="time" id="'+id+'" style="width:100%;font-size:13px;padding:7px"></div>';
+  }
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:480px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🔥 Registro de autoclave</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Un registro por ciclo/carga · '+hoyStr()+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Un registro por carga · '+hoyStr()+'</div>'+
+    // Tipo de carga
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Tipo de carga</label>'+
+    '<select id="autoTipo" onchange="mostrarParamsAuto()" style="width:100%;font-size:14px;padding:8px;margin-bottom:8px">'+
+      '<option value="">Selecciona tipo</option>'+
+      '<option value="instrumental">🔧 Instrumental (134°C · 2.2 bar)</option>'+
+      '<option value="ropa">👕 Ropa (121°C · 1.2 bar)</option>'+
+      '<option value="gasas">🩹 Gasas (121°C · 1.2 bar)</option>'+
+    '</select>'+
+    '<div id="autoParamsInfo" style="font-size:11px;color:#93c5fd;margin-bottom:8px;display:none"></div>'+
+    // Fecha (auto), N° carga, cantidad
     '<div style="display:flex;gap:8px;margin-bottom:8px">'+
-      '<div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.7)">N° carga/ciclo</label>'+
-        '<input type="number" id="autoCarga" min="1" step="1" style="width:100%;font-size:14px;padding:8px"></div>'+
-      '<div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.7)">Presión (bar)</label>'+
-        '<input type="number" id="autoPresion" step="0.01" style="width:100%;font-size:14px;padding:8px"></div>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">N° de carga</label>'+
+        '<input type="number" id="autoCarga" min="1" step="1" style="width:100%;font-size:13px;padding:7px"></div>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Cantidad instrumental</label>'+
+        '<input type="number" id="autoCantidad" min="0" step="1" placeholder="N° piezas/paquetes" style="width:100%;font-size:13px;padding:7px"></div>'+
     '</div>'+
-    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Temperatura (°C)</label>'+
-    '<input type="number" id="autoTemp" step="0.1" style="width:100%;font-size:14px;padding:8px;margin-bottom:12px">'+
+    // Horas del proceso
+    '<p style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">Tiempos del proceso</p>'+
+    '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+      horaField('autoHoraInicio','Hora inicio')+
+      horaField('autoHoraTemp','Hora alcanza temp.')+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+      horaField('autoHoraPresion','Hora alcanza presión')+
+      horaField('autoHoraTermino','Hora término')+
+    '</div>'+
+    // Valores alcanzados
+    '<p style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">Valores alcanzados</p>'+
+    '<div style="display:flex;gap:8px;margin-bottom:4px">'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Temperatura (°C)</label>'+
+        '<input type="number" id="autoTemp" step="0.1" oninput="evalParamsAuto()" style="width:100%;font-size:13px;padding:7px"></div>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Presión (bar)</label>'+
+        '<input type="number" id="autoPresion" step="0.01" oninput="evalParamsAuto()" style="width:100%;font-size:13px;padding:7px"></div>'+
+    '</div>'+
+    '<div id="autoEval" style="font-size:12px;margin-bottom:10px;min-height:16px"></div>'+
+    // Tests
     '<p style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tests del ciclo (activa solo los que apliquen)</p>'+
     testHTML('biologico','Test Biológico')+
     testHTML('bowiedick','Test Bowie-Dick')+
     testHTML('helix','Test Helix')+
     '<label style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;display:block">Observación general (opcional)</label>'+
     '<textarea id="autoObs" rows="2" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
-    '<button class="btn-add" onclick="guardarRegAutoclave()" style="background:linear-gradient(135deg,#dc2626,#f87171)">💾 Guardar ciclo</button>'+
+    '<button class="btn-add" onclick="guardarRegAutoclave()" style="background:linear-gradient(135deg,#dc2626,#f87171)">💾 Guardar carga</button>'+
+    '<button onclick="verGraficoAutoclave()" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver rendimiento del mes</button>'+
     '<button onclick="document.getElementById(\'regAutoOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
-    '<div class="saved" id="regAutoSaved">✓ Ciclo registrado</div>'+
+    '<div class="saved" id="regAutoSaved">✓ Carga registrada</div>'+
     '</div>';
   document.body.appendChild(ov);
+};
+
+window.mostrarParamsAuto=function(){
+  var tipo=document.getElementById('autoTipo').value;
+  var info=document.getElementById('autoParamsInfo');
+  if(!tipo){info.style.display='none';return;}
+  var p=AUTOCLAVE_PARAMS[tipo];
+  info.style.display='block';
+  info.innerHTML='Parámetros esperados: <b>'+p.temp+'°C</b> · <b>'+p.presion+' bar</b>'+(p.presionMin<p.presion?' (tolerancia desde '+p.presionMin+' bar)':'');
+  evalParamsAuto();
+};
+
+window.evalParamsAuto=function(){
+  var tipo=document.getElementById('autoTipo').value;
+  var out=document.getElementById('autoEval');
+  if(!tipo){out.innerHTML='';return;}
+  var p=AUTOCLAVE_PARAMS[tipo];
+  var t=document.getElementById('autoTemp').value;
+  var pr=document.getElementById('autoPresion').value;
+  if(t===''&&pr===''){out.innerHTML='';return;}
+  var msgs=[];
+  if(t!==''){
+    var okT=Number(t)>=p.temp;
+    msgs.push('<span style="color:'+(okT?'#6ee7b7':'#f87171')+'">'+(okT?'✓':'✗')+' Temp '+t+'°C (req. '+p.temp+'°C)</span>');
+  }
+  if(pr!==''){
+    var okP=Number(pr)>=p.presionMin;
+    var exacta=Number(pr)>=p.presion;
+    var color=exacta?'#6ee7b7':(okP?'#fbbf24':'#f87171');
+    var simbolo=exacta?'✓':(okP?'⚠':'✗');
+    msgs.push('<span style="color:'+color+'">'+simbolo+' Presión '+pr+' bar (req. '+p.presion+', tol. '+p.presionMin+')</span>');
+  }
+  out.innerHTML=msgs.join(' · ');
 };
 
 window.toggleTest=function(key){
@@ -6166,35 +6244,97 @@ window.setTestRes=function(key,val,btn){
 };
 
 window.guardarRegAutoclave=function(){
+  var tipo=document.getElementById('autoTipo').value;
   var carga=document.getElementById('autoCarga').value;
-  var presion=document.getElementById('autoPresion').value;
+  var cantidad=document.getElementById('autoCantidad').value;
   var temp=document.getElementById('autoTemp').value;
-  if(carga===''||presion===''||temp===''){alert('Completa N° carga, presión y temperatura.');return;}
+  var presion=document.getElementById('autoPresion').value;
+  if(!tipo){alert('Selecciona el tipo de carga.');return;}
+  if(carga===''){alert('Ingresa el N° de carga.');return;}
+  if(temp===''||presion===''){alert('Ingresa temperatura y presión alcanzadas.');return;}
   var tests={};
   ['biologico','bowiedick','helix'].forEach(function(key){
     if(document.getElementById('test_'+key+'_on').checked){
       var cont=document.getElementById('test_'+key+'_res');
       var resDiv=cont.querySelector('[data-resultado]');
-      tests[key]={
-        aplicado:true,
-        resultado:resDiv?resDiv.dataset.resultado:'',
-        obs:document.getElementById('test_'+key+'_obs').value.trim()
-      };
+      tests[key]={aplicado:true,resultado:resDiv?resDiv.dataset.resultado:'',obs:document.getElementById('test_'+key+'_obs').value.trim()};
     }
   });
-  // Validar que los tests activados tengan resultado
   var falta=Object.keys(tests).filter(function(k){return !tests[k].resultado;});
   if(falta.length){alert('Marca Aprobado/Rechazado en los tests que activaste.');return;}
+  var p=AUTOCLAVE_PARAMS[tipo];
+  var cumpleTemp=Number(temp)>=p.temp;
+  var cumplePresion=Number(presion)>=p.presionMin;
   var ahora=new Date();
   var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
-  var reg={carga:Number(carga),presion:Number(presion),temperatura:Number(temp),
+  var reg={tipoCarga:tipo,carga:Number(carga),cantidad:cantidad!==''?Number(cantidad):null,
+    temperatura:Number(temp),presion:Number(presion),
+    tempEsperada:p.temp,presionEsperada:p.presion,
+    cumpleTemp:cumpleTemp,cumplePresion:cumplePresion,cumple:(cumpleTemp&&cumplePresion),
+    horaInicio:document.getElementById('autoHoraInicio').value,
+    horaTemp:document.getElementById('autoHoraTemp').value,
+    horaPresion:document.getElementById('autoHoraPresion').value,
+    horaTermino:document.getElementById('autoHoraTermino').value,
     tests:tests,obs:document.getElementById('autoObs').value.trim(),
     quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
   sedeRef('regAutoclave/'+reg.ts).set(reg).then(function(){
     showSaved('regAutoSaved');
+    if(!reg.cumple){setTimeout(function(){alert('⚠ Atención: esta carga NO alcanzó los parámetros esperados ('+p.temp+'°C / '+p.presion+' bar). Quedó registrada la variación.');},300);}
     setTimeout(function(){var o=document.getElementById('regAutoOv');if(o)o.remove();},1000);
   });
 };
+
+// Gráfico de rendimiento del autoclave (temperatura y presión del mes)
+window.verGraficoAutoclave=function(){
+  var ov=document.getElementById('grafAutoOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='grafAutoOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var mes=hoyStr().slice(0,7);
+  var regs=Object.values(regAutoclave||{}).filter(function(r){return r.fecha&&r.fecha.slice(0,7)===mes;}).sort(function(a,b){return a.ts-b.ts;});
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:640px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🔥 Rendimiento del autoclave</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+' · '+regs.length+' cargas</div>'+
+    (regs.length?graficoAutoclaveSVG(regs):'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin cargas este mes.</div>')+
+    '<button onclick="document.getElementById(\'grafAutoOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+function graficoAutoclaveSVG(regs){
+  var W=580,H=260,padL=40,padR=12,padT=16,padB=40;
+  var n=regs.length;
+  var temps=regs.map(function(r){return r.temperatura;});
+  var pres=regs.map(function(r){return r.presion;});
+  // Dos ejes: temp (izq) y presión (der). Normalizamos cada uno.
+  var minT=Math.min.apply(null,temps.concat([115])),maxT=Math.max.apply(null,temps.concat([140]));
+  var minP=Math.min.apply(null,pres.concat([1])),maxP=Math.max.apply(null,pres.concat([2.5]));
+  function x(i){return n<=1?padL+(W-padL-padR)/2:padL+i/(n-1)*(W-padL-padR);}
+  function yT(v){return padT+(maxT-v)/(maxT-minT)*(H-padT-padB);}
+  function yP(v){return padT+(maxP-v)/(maxP-minP)*(H-padT-padB);}
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
+  // Grid horizontal
+  for(var g=0;g<=4;g++){
+    var yy=padT+g/4*(H-padT-padB);
+    svg+='<line x1="'+padL+'" y1="'+yy+'" x2="'+(W-padR)+'" y2="'+yy+'" stroke="rgba(255,255,255,.05)"/>';
+  }
+  // Línea de temperatura (roja)
+  var pathT=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+yT(r.temperatura);}).join(' ');
+  svg+='<path d="'+pathT+'" fill="none" stroke="#f87171" stroke-width="1.8"/>';
+  regs.forEach(function(r,i){svg+='<circle cx="'+x(i)+'" cy="'+yT(r.temperatura)+'" r="'+(r.cumpleTemp?2:3.5)+'" fill="'+(r.cumpleTemp?'#f87171':'#fbbf24')+'"/>';});
+  // Línea de presión (azul)
+  var pathP=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+yP(r.presion);}).join(' ');
+  svg+='<path d="'+pathP+'" fill="none" stroke="#60a5fa" stroke-width="1.8"/>';
+  regs.forEach(function(r,i){svg+='<circle cx="'+x(i)+'" cy="'+yP(r.presion)+'" r="'+(r.cumplePresion?2:3.5)+'" fill="'+(r.cumplePresion?'#60a5fa':'#fbbf24')+'"/>';});
+  // Etiquetas eje
+  svg+='<text x="'+padL+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="9">carga 1</text>';
+  svg+='<text x="'+(W-padR)+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="9" text-anchor="end">carga '+n+'</text>';
+  svg+='</svg>';
+  svg+='<div style="display:flex;gap:12px;margin-top:8px;font-size:10px;color:rgba(255,255,255,.6)">'+
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f87171;margin-right:3px"></span>Temperatura (°C)</span>'+
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#60a5fa;margin-right:3px"></span>Presión (bar)</span>'+
+    '<span style="color:#fbbf24">● fuera de parámetro</span></div>';
+  return svg;
+}
 
 // ── REGISTRO DE ASEO SEMANAL (esterilización + pabellón) ──
 window.abrirRegAseo=function(){
@@ -7619,6 +7759,9 @@ function reasFormRegistro(){
   var infoResp=responsables.length?'<div style="font-size:11px;color:#6ee7b7;margin-bottom:10px">Responsable(s) REAS asignado(s): '+responsables.join(', ')+'</div>':'<div style="font-size:11px;color:#fbbf24;margin-bottom:10px">Aún no asignas responsable de REAS (se hace en Admin → Asignaciones, tipo ♻️ REAS).</div>';
   return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
     infoResp+
+    // Botón "sin residuos hoy"
+    '<button onclick="reasSinResiduos()" style="width:100%;background:rgba(147,197,253,.12);color:#93c5fd;border:1px solid rgba(147,197,253,.3);border-radius:8px;padding:9px;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:12px">✓ Informar que hoy NO hay residuos para eliminar</button>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.35);text-align:center;margin-bottom:12px">— o registra un retiro —</div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Unidad que registra</label>'+
     '<select id="reasUnidad" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
       REAS_UNIDADES.map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('')+'</select>'+
@@ -7636,8 +7779,10 @@ function reasFormRegistro(){
     '<div style="display:flex;gap:8px;margin-bottom:8px">'+
       '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Cantidad (envases)</label>'+
         '<input type="number" id="reasCantidad" min="1" step="1" value="1" style="width:100%;font-size:13px;padding:7px"></div>'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Peso total (kg)</label>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Peso (kg)</label>'+
         '<input type="number" id="reasPeso" min="0" step="any" placeholder="0.0" style="width:100%;font-size:13px;padding:7px"></div>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Volumen (L)</label>'+
+        '<input type="number" id="reasVolumen" min="0" step="any" placeholder="0.0" style="width:100%;font-size:13px;padding:7px"></div>'+
     '</div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Quién registra</label>'+
     '<select id="reasQuien" style="width:100%;font-size:13px;padding:8px;margin-bottom:10px">'+
@@ -7646,6 +7791,16 @@ function reasFormRegistro(){
     '<button class="btn-add" onclick="registrarReas()" style="background:linear-gradient(135deg,#059669,#6ee7b7)">Registrar retiro REAS</button>'+
     '<div class="saved" id="reasSaved">✓ Registrado</div></div>';
 }
+
+// Informar que hoy no hay residuos
+window.reasSinResiduos=function(){
+  var quien=curNombre||'—';
+  var reg={sinResiduos:true,unidad:'General',fecha:hoyStr(),quien:quien,ts:Date.now()};
+  sedeRef('invReas/'+reg.ts).set(reg).then(function(){
+    showSaved('reasSaved');
+    if(typeof reasTab==='function')reasTab('registrar');
+  });
+};
 
 window.registrarReas=function(){
   var tipo=document.getElementById('reasTipo').value;
@@ -7657,32 +7812,47 @@ window.registrarReas=function(){
     presentacion:document.getElementById('reasPresentacion').value,
     cantidad:Number(document.getElementById('reasCantidad').value)||1,
     peso:Number(document.getElementById('reasPeso').value)||0,
+    volumen:Number(document.getElementById('reasVolumen').value)||0,
     quien:document.getElementById('reasQuien').value,
     fecha:hoyStr(),ts:Date.now()
   };
   if(!tipo){alert('Indica el tipo de residuo.');return;}
   if(!reg.quien){alert('Indica quién registra.');return;}
-  if(reg.peso<=0){alert('Ingresa el peso.');return;}
+  if(reg.peso<=0&&reg.volumen<=0){alert('Ingresa el peso o el volumen.');return;}
   sedeRef('invReas/'+reg.ts).set(reg).then(function(){
     showSaved('reasSaved');
-    document.getElementById('reasPeso').value='';document.getElementById('reasCantidad').value='1';
+    document.getElementById('reasPeso').value='';document.getElementById('reasVolumen').value='';document.getElementById('reasCantidad').value='1';
   });
 };
 
 function reasHistorial(){
   var regs=Object.values(invReas||{}).sort(function(a,b){return b.ts-a.ts;});
   if(!regs.length)return '<div style="background:#16233d;border-radius:12px;padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros REAS aún.</div>';
-  // Resumen por mes (peso total)
-  var pesoTotal=regs.reduce(function(s,r){return s+(Number(r.peso)||0);},0);
+  var conResiduos=regs.filter(function(r){return !r.sinResiduos;});
+  var pesoTotal=conResiduos.reduce(function(s,r){return s+(Number(r.peso)||0);},0);
+  var volumenTotal=conResiduos.reduce(function(s,r){return s+(Number(r.volumen)||0);},0);
   var html='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px">'+
-    '<div style="font-size:12px;color:rgba(255,255,255,.6)">Total registrado: <b style="color:#6ee7b7">'+pesoTotal.toFixed(1)+' kg</b> en '+regs.length+' retiro(s)</div></div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.6)">Total: <b style="color:#6ee7b7">'+pesoTotal.toFixed(1)+' kg</b> · <b style="color:#93c5fd">'+volumenTotal.toFixed(1)+' L</b> en '+conResiduos.length+' retiro(s)</div></div>'+
     '<div style="background:#16233d;border-radius:12px;padding:14px"><div style="max-height:440px;overflow-y:auto">';
   regs.forEach(function(r){
+    if(r.sinResiduos){
+      html+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
+          '<span style="font-size:13px;color:#93c5fd">✓ Sin residuos para eliminar</span>'+
+          '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span>'+
+        '</div>'+
+        (r.quien?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:1px">Informó: '+esc(r.quien)+'</div>':'')+
+      '</div>';
+      return;
+    }
     var catColor=r.categoria==='Cortopunzantes'?'#dc2626':r.categoria==='Radiactivos'?'#d97706':r.categoria==='Especiales'?'#a78bfa':'#6b7280';
+    var medida=[];
+    if(Number(r.peso)>0)medida.push('<span style="color:#6ee7b7;font-weight:700">'+r.peso+' kg</span>');
+    if(Number(r.volumen)>0)medida.push('<span style="color:#93c5fd;font-weight:700">'+r.volumen+' L</span>');
     html+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
       '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
         '<span style="font-size:13px;color:#fff;font-weight:600">'+esc(r.tipo)+'</span>'+
-        '<span style="font-size:13px;color:#6ee7b7;font-weight:700">'+(Number(r.peso)||0)+' kg</span>'+
+        '<span style="font-size:13px">'+(medida.join(' · ')||'—')+'</span>'+
       '</div>'+
       '<div style="display:flex;justify-content:space-between;margin-top:2px">'+
         '<span style="font-size:11px;color:rgba(255,255,255,.5)"><span style="color:'+catColor+'">●</span> '+esc(r.categoria)+' · '+esc(r.unidad)+' · '+r.cantidad+' '+esc(r.presentacion)+'(s)</span>'+
