@@ -332,11 +332,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
       <div class="card" style="text-align:center">
         <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">Ingresa a tu establecimiento</p>
         <div class="sede-grid">
-          <button class="sede-btn" onclick="setSede('Valdivia')">Valdivia</button>
+          <button class="sede-btn" style="grid-column:1/-1" onclick="setSede('Valdivia')">Valdivia</button>
+          <!-- Establecimientos adicionales para escalar (activar cuando tengan datos):
           <button class="sede-btn" onclick="setSede('Patagonia')">Patagonia</button>
           <button class="sede-btn" onclick="setSede('Bellavista')">Bellavista</button>
           <button class="sede-btn" onclick="setSede('Los Leones')">Los Leones</button>
-          <button class="sede-btn" style="grid-column:1/-1" onclick="setSede('Concepción')">Concepción</button>
+          <button class="sede-btn" onclick="setSede('Concepción')">Concepción</button>
+          -->
         </div>
       </div>
     </div>
