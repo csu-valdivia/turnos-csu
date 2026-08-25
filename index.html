@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>TurnosCSU — USS Red de Salud</title>
+<title>GESTHOR — Gestión Operacional en Salud</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -27,13 +27,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 
 /* HERO */
 .hero{background:linear-gradient(180deg,var(--bg2),var(--bg));padding:1.75rem 1.25rem 1.25rem;text-align:center}
-.logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px}
+.logo-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px}
+.gesthor-logo{flex-shrink:0;filter:drop-shadow(0 4px 16px rgba(45,212,191,.25))}
+.gesthor-gear{transform-origin:50px 54px;animation:gesthorGiraH 10s linear infinite}
+.gesthor-gear2{transform-origin:96px 26px;animation:gesthorGiraAH 6s linear infinite}
+@keyframes gesthorGiraH{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes gesthorGiraAH{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
 .uss-icon{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#1a3a6b,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.4);position:relative;flex-shrink:0}
 .uss-icon::before{content:'';position:absolute;width:34px;height:12px;background:rgba(255,255,255,.9);border-radius:2px}
 .uss-icon::after{content:'';position:absolute;width:12px;height:34px;background:rgba(255,255,255,.9);border-radius:2px}
 .uss-label{position:absolute;font-size:10px;font-weight:900;color:#1a3a6b;z-index:1;letter-spacing:-.3px}
-.app-name{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px}
-.app-sub{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase}
+.app-name{font-size:30px;font-weight:800;color:#fff;letter-spacing:1px;line-height:1;display:block}
+.app-sub{font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.3px;margin-top:3px}
+@media(prefers-reduced-motion:reduce){.gesthor-gear,.gesthor-gear2{animation:none}}
 .semana-badge{display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 16px;font-size:12px;color:rgba(255,255,255,.6);margin-top:8px}
 
 .content{padding:1rem}
@@ -262,10 +268,61 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 <div class="wrap">
   <div class="hero">
     <div class="logo-row">
-      <div class="uss-icon"><span class="uss-label">USS</span></div>
-      <span class="app-name">TurnosCSU</span>
+      <div class="gesthor-logo">
+        <svg viewBox="0 0 120 120" width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gCruz" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#5eead4"/>
+              <stop offset="0.5" stop-color="#2dd4bf"/>
+              <stop offset="1" stop-color="#1e3a8a"/>
+            </linearGradient>
+            <linearGradient id="gGear" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7dd3fc"/>
+              <stop offset="1" stop-color="#2563eb"/>
+            </linearGradient>
+            <linearGradient id="gGear2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#5eead4"/>
+              <stop offset="1" stop-color="#0891b2"/>
+            </linearGradient>
+          </defs>
+          <!-- Engranaje pequeño (gira antihorario) -->
+          <g class="gesthor-gear2">
+            <circle cx="96" cy="26" r="20" fill="none" stroke="url(#gGear2)" stroke-width="6"/>
+            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(0 96 26)"/>
+            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(45 96 26)"/>
+            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(90 96 26)"/>
+            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(135 96 26)"/>
+            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(180 96 26)"/>
+            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(225 96 26)"/>
+            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(270 96 26)"/>
+            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(315 96 26)"/>
+          </g>
+          <!-- Engranaje grande (gira horario) -->
+          <g class="gesthor-gear">
+            <circle cx="50" cy="54" r="40" fill="none" stroke="url(#gGear)" stroke-width="6"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(0 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(36 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(72 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(108 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(144 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(180 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(216 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(252 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(288 50 54)"/>
+            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(324 50 54)"/>
+          </g>
+          <!-- Cruz médica fija en el centro del engranaje grande -->
+          <g>
+            <rect x="37" y="27" width="26" height="54" rx="7" fill="url(#gCruz)"/>
+            <rect x="23" y="41" width="54" height="26" rx="7" fill="url(#gCruz)"/>
+          </g>
+        </svg>
+      </div>
+      <div style="text-align:left">
+        <span class="app-name">GESTHOR</span>
+        <div class="app-sub">Plataforma de Gestión Operacional en Salud</div>
+      </div>
     </div>
-    <div class="app-sub">USS — Red de Salud</div>
     <div><span class="semana-badge" id="semanaLabel">Cargando...</span></div>
   </div>
 
@@ -1043,7 +1100,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
         </div>
 
         <div class="footer">
-          <p><strong>TurnosCSU</strong> — Sistema de gestión de turnos clínicos</p>
+          <p><strong>GESTHOR</strong> — Plataforma de Gestión Operacional en Salud</p>
           <p>Desarrollado por <strong>Patricio Baeza Aguilar</strong></p>
           <p>Enfermero Jefe · CSU Valdivia · USS</p>
           <p>Proveedor tecnológico: <strong>Patricio Baeza Aguilar</strong> · Ing. Civil Industrial · UGM Valdivia</p>
