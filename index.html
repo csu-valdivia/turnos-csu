@@ -6573,12 +6573,55 @@ window.abrirConductividad=function(){
     '<input type="number" id="condUltra" step="0.01" min="0" oninput="evalCond()" value="'+(hoyReg?hoyReg.ultra:'')+'" placeholder="Ej: 0" style="width:100%;font-size:14px;padding:8px;margin-bottom:4px">'+
     '<div id="condUltraEval" style="font-size:12px;margin-bottom:14px"></div>'+
     '<button class="btn-add" onclick="guardarConductividad()" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
+    '<button onclick="verGraficoConductividad()" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver rendimiento del mes</button>'+
     '<button onclick="document.getElementById(\'conductividadOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '<div class="saved" id="condSaved">✓ Registrado</div>'+
     '</div>';
   document.body.appendChild(ov);
   evalCond();
 };
+
+// Gráfico de conductividad del mes (osmosis y ultrapura)
+window.verGraficoConductividad=function(){
+  var ov=document.getElementById('grafCondOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='grafCondOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var mes=hoyStr().slice(0,7);
+  var regs=Object.keys(conductividad||{}).filter(function(k){return k.slice(0,7)===mes;}).map(function(k){return conductividad[k];}).sort(function(a,b){return (a.fecha<b.fecha?-1:1);});
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:620px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">💧 Rendimiento de conductividad</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+' · '+regs.length+' días</div>'+
+    (regs.length?graficoCondSVG(regs):'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros este mes.</div>')+
+    '<button onclick="document.getElementById(\'grafCondOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+function graficoCondSVG(regs){
+  var W=560,H=240,padL=36,padR=12,padT=16,padB=34;
+  var vals=regs.map(function(r){return r.osmosis;}).concat(regs.map(function(r){return r.ultra;})).concat([0,5]);
+  var minY=0,maxY=Math.max.apply(null,vals)+1;
+  var n=regs.length;
+  function x(i){return n<=1?padL+(W-padL-padR)/2:padL+i/(n-1)*(W-padL-padR);}
+  function y(v){return padT+(maxY-v)/(maxY-minY)*(H-padT-padB);}
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
+  // Línea límite osmosis (5)
+  svg+='<line x1="'+padL+'" y1="'+y(5)+'" x2="'+(W-padR)+'" y2="'+y(5)+'" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>';
+  svg+='<text x="'+(W-padR)+'" y="'+(y(5)-3)+'" fill="#6ee7b7" font-size="8" text-anchor="end">límite osmosis 5</text>';
+  // Osmosis
+  var pO=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+y(r.osmosis);}).join(' ');
+  svg+='<path d="'+pO+'" fill="none" stroke="#60a5fa" stroke-width="1.8"/>';
+  regs.forEach(function(r,i){svg+='<circle cx="'+x(i)+'" cy="'+y(r.osmosis)+'" r="'+(r.osmosisOptima?2:3.5)+'" fill="'+(r.osmosisOptima?'#60a5fa':'#fbbf24')+'"/>';});
+  // Ultrapura
+  var pU=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+y(r.ultra);}).join(' ');
+  svg+='<path d="'+pU+'" fill="none" stroke="#5eead4" stroke-width="1.8"/>';
+  regs.forEach(function(r,i){svg+='<circle cx="'+x(i)+'" cy="'+y(r.ultra)+'" r="'+(r.ultraOptima?2:3.5)+'" fill="'+(r.ultraOptima?'#5eead4':'#fbbf24')+'"/>';});
+  svg+='</svg>';
+  svg+='<div style="display:flex;gap:12px;margin-top:8px;font-size:10px;color:rgba(255,255,255,.6)">'+
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#60a5fa;margin-right:3px"></span>Osmosis (µS/cm)</span>'+
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#5eead4;margin-right:3px"></span>Ultrapura (µS/cm)</span>'+
+    '<span style="color:#fbbf24">● no óptima</span></div>';
+  return svg;
+}
 
 function condEsOptima(tipo,valor){
   if(valor===''||valor==null||isNaN(valor))return null;
@@ -6790,10 +6833,10 @@ function renderDashboardTecnico(){
   var nReas=Object.keys(invReas||{}).length;
   var nCond=Object.keys(conductividad||{}).length;
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px">'+
-    kpiCardTec("🔥 Ciclos autoclave",nAuto,'#dc2626')+
-    kpiCardTec("🌡️ Registros temp.",nTemp,'#2563eb')+
-    kpiCardTec("♻️ Retiros REAS",nReas,'#059669')+
-    kpiCardTec("💧 Días conductividad",nCond,'#0891b2')+
+    kpiCardTec("🔥 Ciclos autoclave",nAuto,'#dc2626','autoclave')+
+    kpiCardTec("🌡️ Registros temp.",nTemp,'#2563eb','temperatura')+
+    kpiCardTec("♻️ Retiros REAS",nReas,'#059669','reas')+
+    kpiCardTec("💧 Días conductividad",nCond,'#0891b2','conductividad')+
   '</div>';
 
   // Alertas: tests rechazados, temperaturas fuera de rango, conductividad no óptima
@@ -6836,15 +6879,90 @@ function renderDashboardTecnico(){
       '<p style="font-size:12px;color:#fff;margin-bottom:6px">'+titulo+'</p>'+
       graficoTempSVG(regs,Object.keys(puntos),tipo==='temp_refri')+'</div>';
   });
+  // Gráfico de autoclave
+  var regsAuto=Object.values(regAutoclave||{}).filter(function(r){return r.fecha&&r.fecha.slice(0,7)===mesActual;}).sort(function(a,b){return a.ts-b.ts;});
+  if(regsAuto.length){
+    html+='<p style="font-size:13px;font-weight:700;color:#fca5a5;margin:14px 0 8px">🔥 Rendimiento del autoclave</p>'+
+      '<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+graficoAutoclaveSVG(regsAuto)+'</div>';
+  }
+  // Gráfico de conductividad
+  var regsCond=Object.keys(conductividad||{}).filter(function(k){return k.slice(0,7)===mesActual;}).map(function(k){return conductividad[k];}).sort(function(a,b){return (a.fecha<b.fecha?-1:1);});
+  if(regsCond.length){
+    html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">💧 Rendimiento de conductividad</p>'+
+      '<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+graficoCondSVG(regsCond)+'</div>';
+  }
 
   c.innerHTML=html;
 }
 
-function kpiCardTec(label,valor,color){
-  return '<div style="background:#16233d;border-radius:10px;padding:12px;text-align:center">'+
+function kpiCardTec(label,valor,color,detalle){
+  var click=detalle?' onclick="verDetalleTecnico(\''+detalle+'\')" style="cursor:pointer;background:#16233d;border-radius:10px;padding:12px;text-align:center;transition:background .15s" onmouseover="this.style.background=\'#1c2f52\'" onmouseout="this.style.background=\'#16233d\'"':' style="background:#16233d;border-radius:10px;padding:12px;text-align:center"';
+  return '<div'+click+'>'+
     '<div style="font-size:22px;font-weight:800;color:'+color+'">'+valor+'</div>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">'+label+'</div></div>';
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">'+label+'</div>'+
+    (detalle?'<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:3px">toca para ver ›</div>':'')+'</div>';
 }
+
+// Detalle accionable de cada KPI del dashboard
+window.verDetalleTecnico=function(tipo){
+  var ov=document.getElementById('detTecOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='detTecOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var titulo='',filas='';
+  if(tipo==='autoclave'){
+    titulo='🔥 Cargas de autoclave';
+    var regs=Object.values(regAutoclave||{}).sort(function(a,b){return b.ts-a.ts;});
+    filas=regs.length?regs.map(function(r){
+      var cumple=r.cumple?'<span style="color:#6ee7b7">✓ Parámetros OK</span>':'<span style="color:#f87171">✗ Fuera de parámetro</span>';
+      var tipoC={instrumental:'🔧 Instrumental',ropa:'👕 Ropa',gasas:'🩹 Gasas'}[r.tipoCarga]||r.tipoCarga||'';
+      return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
+        '<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#fff;font-weight:600">Carga '+r.carga+' · '+tipoC+'</span><span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span></div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">'+r.temperatura+'°C · '+r.presion+' bar · '+cumple+'</div>'+
+        (r.horaInicio?'<div style="font-size:10px;color:rgba(255,255,255,.35)">Inicio '+r.horaInicio+(r.horaTermino?' → término '+r.horaTermino:'')+' · '+esc(r.quien||'')+'</div>':'')+
+      '</div>';
+    }).join(''):'<p style="color:rgba(255,255,255,.4);font-size:12px">Sin cargas.</p>';
+  } else if(tipo==='temperatura'){
+    titulo='🌡️ Registros de temperatura';
+    var regsT=Object.values(regTemperatura||{}).sort(function(a,b){return b.ts-a.ts;});
+    filas=regsT.length?regsT.map(function(r){
+      var tn={temp_refri:'🧊 Refrigeradores',temp_ester:'🌡️ Esterilización',temp_pabellon:'🌡️ Pabellón'}[r.tipo]||r.tipo;
+      var lecturas=Object.keys(r.lecturas||{}).map(function(p){return esc(p)+': '+r.lecturas[p]+'°C';}).join(' · ');
+      return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
+        '<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#fff;font-weight:600">'+tn+(r.toma?' ('+r.toma.toUpperCase()+')':'')+'</span><span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span></div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">'+lecturas+'</div>'+
+        (r.obs?'<div style="font-size:10px;color:rgba(255,255,255,.35)">'+esc(r.obs)+'</div>':'')+
+      '</div>';
+    }).join(''):'<p style="color:rgba(255,255,255,.4);font-size:12px">Sin registros.</p>';
+  } else if(tipo==='reas'){
+    titulo='♻️ Retiros REAS';
+    var regsR=Object.values(invReas||{}).sort(function(a,b){return b.ts-a.ts;});
+    filas=regsR.length?regsR.map(function(r){
+      if(r.sinResiduos)return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:#93c5fd">✓ Sin residuos</span> <span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span></div>';
+      var med=[];if(r.peso>0)med.push(r.peso+' kg');if(r.volumen>0)med.push(r.volumen+' L');
+      return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
+        '<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#fff;font-weight:600">'+esc(r.tipo)+'</span><span style="font-size:11px;color:#6ee7b7">'+med.join(' · ')+'</span></div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5)">'+esc(r.categoria)+' · '+esc(r.unidad)+' · '+r.fecha+'</div>'+
+      '</div>';
+    }).join(''):'<p style="color:rgba(255,255,255,.4);font-size:12px">Sin retiros.</p>';
+  } else if(tipo==='conductividad'){
+    titulo='💧 Registros de conductividad';
+    var regsC=Object.keys(conductividad||{}).map(function(k){return conductividad[k];}).sort(function(a,b){return (a.fecha<b.fecha?1:-1);});
+    filas=regsC.length?regsC.map(function(r){
+      return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
+        '<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#fff;font-weight:600">'+r.fecha+'</span></div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">Osmosis: '+r.osmosis+' µS/cm '+(r.osmosisOptima?'<span style="color:#6ee7b7">✓</span>':'<span style="color:#f87171">✗</span>')+' · Ultrapura: '+r.ultra+' '+(r.ultraOptima?'<span style="color:#6ee7b7">✓</span>':'<span style="color:#f87171">✗</span>')+'</div>'+
+      '</div>';
+    }).join(''):'<p style="color:rgba(255,255,255,.4);font-size:12px">Sin registros.</p>';
+  }
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:520px;width:100%;margin-top:20px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      '<span style="font-size:15px;font-weight:700;color:#fff">'+titulo+'</span>'+
+      '<button onclick="document.getElementById(\'detTecOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="max-height:460px;overflow-y:auto">'+filas+'</div>'+
+  '</div>';
+  document.body.appendChild(ov);
+};
 
 // Exportar todos los registros técnicos a un Excel consolidado
 window.exportarDashboardExcel=function(){
