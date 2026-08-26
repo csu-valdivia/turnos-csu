@@ -1320,6 +1320,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom'];
 var supervisionData={};
 var supervisores={},pinSupervisor='',conductividad={};
+var supervisorActivo='',supervisorAreas=[];
 var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={};
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
@@ -5049,7 +5050,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -6324,6 +6325,9 @@ window.verGraficoAutoclave=function(){
 function graficoAutoclaveSVG(regs){
   var W=580,H=260,padL=40,padR=12,padT=16,padB=40;
   var n=regs.length;
+  // Recalcular cumplimiento según tipo de carga (no confiar en el campo guardado, que puede faltar en datos viejos)
+  function evalT(r){var p=AUTOCLAVE_PARAMS[r.tipoCarga];if(!p)return true;return Number(r.temperatura)>=p.temp;}
+  function evalP(r){var p=AUTOCLAVE_PARAMS[r.tipoCarga];if(!p)return true;return Number(r.presion)>=p.presionMin;}
   var temps=regs.map(function(r){return r.temperatura;});
   var pres=regs.map(function(r){return r.presion;});
   // Dos ejes: temp (izq) y presión (der). Normalizamos cada uno.
@@ -6341,11 +6345,11 @@ function graficoAutoclaveSVG(regs){
   // Línea de temperatura (roja)
   var pathT=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+yT(r.temperatura);}).join(' ');
   svg+='<path d="'+pathT+'" fill="none" stroke="#f87171" stroke-width="1.8"/>';
-  regs.forEach(function(r,i){svg+='<circle cx="'+x(i)+'" cy="'+yT(r.temperatura)+'" r="'+(r.cumpleTemp?2:3.5)+'" fill="'+(r.cumpleTemp?'#f87171':'#fbbf24')+'"/>';});
+  regs.forEach(function(r,i){var ok=evalT(r);svg+='<circle cx="'+x(i)+'" cy="'+yT(r.temperatura)+'" r="'+(ok?2:3.5)+'" fill="'+(ok?'#f87171':'#fbbf24')+'"/>';});
   // Línea de presión (azul)
   var pathP=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+yP(r.presion);}).join(' ');
   svg+='<path d="'+pathP+'" fill="none" stroke="#60a5fa" stroke-width="1.8"/>';
-  regs.forEach(function(r,i){svg+='<circle cx="'+x(i)+'" cy="'+yP(r.presion)+'" r="'+(r.cumplePresion?2:3.5)+'" fill="'+(r.cumplePresion?'#60a5fa':'#fbbf24')+'"/>';});
+  regs.forEach(function(r,i){var ok=evalP(r);svg+='<circle cx="'+x(i)+'" cy="'+yP(r.presion)+'" r="'+(ok?2:3.5)+'" fill="'+(ok?'#60a5fa':'#fbbf24')+'"/>';});
   // Etiquetas eje
   svg+='<text x="'+padL+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="9">carga 1</text>';
   svg+='<text x="'+(W-padR)+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="9" text-anchor="end">carga '+n+'</text>';
@@ -6423,15 +6427,29 @@ window.abrirRegTemp=function(tipo){
       inputs='<div style="font-size:12px;color:#fbbf24;padding:10px 0">No hay refrigeradores configurados. El administrador los agrega en Admin → Refrigeradores.</div>';
     } else {
       inputs=refris.map(function(nombre){
-        return '<div style="margin-bottom:8px"><label style="font-size:12px;color:rgba(255,255,255,.7)">'+esc(nombre)+' (°C)</label>'+
-          '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(nombre)+'" oninput="evalTemp(this,2,8)" style="width:100%;font-size:14px;padding:8px">'+
-          '<div class="temp-eval" style="font-size:11px;margin-top:2px"></div></div>';
+        return '<div style="margin-bottom:12px;background:rgba(255,255,255,.02);border-radius:8px;padding:10px"><label style="font-size:12px;color:#fff;font-weight:600">'+esc(nombre)+'</label>'+
+          '<div style="display:flex;gap:6px;margin-top:6px">'+
+            '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.6)">Actual (°C)</label>'+
+              '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(nombre)+'" data-campo="actual" oninput="evalTemp(this,2,8)" style="width:100%;font-size:14px;padding:7px"></div>'+
+            '<div style="flex:1"><label style="font-size:10px;color:#93c5fd">Mínima (°C)</label>'+
+              '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(nombre)+'" data-campo="min" style="width:100%;font-size:14px;padding:7px"></div>'+
+            '<div style="flex:1"><label style="font-size:10px;color:#fca5a5">Máxima (°C)</label>'+
+              '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(nombre)+'" data-campo="max" style="width:100%;font-size:14px;padding:7px"></div>'+
+          '</div>'+
+          '<div class="temp-eval" style="font-size:11px;margin-top:4px"></div></div>';
       }).join('');
     }
   } else {
     inputs=cfg.puntos.map(function(punto){
-      return '<div style="margin-bottom:8px"><label style="font-size:12px;color:rgba(255,255,255,.7)">'+esc(punto)+' (°C)</label>'+
-        '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(punto)+'" style="width:100%;font-size:14px;padding:8px"></div>';
+      return '<div style="margin-bottom:12px;background:rgba(255,255,255,.02);border-radius:8px;padding:10px"><label style="font-size:12px;color:#fff;font-weight:600">'+esc(punto)+'</label>'+
+        '<div style="display:flex;gap:6px;margin-top:6px">'+
+          '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.6)">Actual (°C)</label>'+
+            '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(punto)+'" data-campo="actual" style="width:100%;font-size:14px;padding:7px"></div>'+
+          '<div style="flex:1"><label style="font-size:10px;color:#93c5fd">Mínima (°C)</label>'+
+            '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(punto)+'" data-campo="min" style="width:100%;font-size:14px;padding:7px"></div>'+
+          '<div style="flex:1"><label style="font-size:10px;color:#fca5a5">Máxima (°C)</label>'+
+            '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(punto)+'" data-campo="max" style="width:100%;font-size:14px;padding:7px"></div>'+
+        '</div></div>';
     }).join('');
   }
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:440px;width:100%;margin-top:20px">'+
@@ -6461,19 +6479,33 @@ window.evalTemp=function(inp,min,max){
 
 window.guardarRegTemp=function(tipo,doble){
   var inputs=document.querySelectorAll('#regTempOv .temp-input');
-  var lecturas={};var algunValor=false;
+  var lecturas={};var detalle={};var algunValor=false;
   inputs.forEach(function(inp){
-    if(inp.value!==''){lecturas[inp.dataset.punto]=Number(inp.value);algunValor=true;}
+    if(inp.value==='')return;
+    var punto=inp.dataset.punto,campo=inp.dataset.campo||'actual';
+    if(!detalle[punto])detalle[punto]={};
+    detalle[punto][campo]=Number(inp.value);
+    if(campo==='actual'){lecturas[punto]=Number(inp.value);}
+    algunValor=true;
+  });
+  // Si no hay "actual" pero sí min/max, usar el promedio como lectura para el gráfico
+  Object.keys(detalle).forEach(function(punto){
+    if(lecturas[punto]===undefined){
+      var d=detalle[punto];
+      if(d.actual!==undefined)lecturas[punto]=d.actual;
+      else if(d.min!==undefined&&d.max!==undefined)lecturas[punto]=(d.min+d.max)/2;
+      else if(d.max!==undefined)lecturas[punto]=d.max;
+      else if(d.min!==undefined)lecturas[punto]=d.min;
+    }
   });
   if(!algunValor){alert('Ingresa al menos una temperatura.');return;}
   var toma=doble?(document.getElementById('tempToma').value):'am';
   var ahora=new Date();
   var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
-  var reg={tipo:tipo,toma:toma,lecturas:lecturas,obs:document.getElementById('tempObs').value.trim(),
+  var reg={tipo:tipo,toma:toma,lecturas:lecturas,lecturasDetalle:detalle,obs:document.getElementById('tempObs').value.trim(),
     quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
   sedeRef('regTemperatura/'+reg.ts).set(reg).then(function(){
     showSaved('regTempSaved');
-    // Aviso de toma faltante en refrigeradores
     if(doble){
       var hoyRegs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha===hoyStr();});
       hoyRegs.push(reg);
@@ -6958,7 +6990,7 @@ window.verDetalleTecnico=function(tipo){
     titulo='♻️ Retiros REAS';
     var regsR=Object.values(invReas||{}).sort(function(a,b){return b.ts-a.ts;});
     filas=regsR.length?regsR.map(function(r){
-      if(r.sinResiduos)return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:#93c5fd">✓ Sin residuos</span> <span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span></div>';
+      if(r.sinResiduos)return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:#93c5fd">✓ Sin residuos · '+esc(r.unidad||'General')+'</span> <span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span></div>';
       var med=[];if(r.peso>0)med.push(r.peso+' kg');if(r.volumen>0)med.push(r.volumen+' L');
       return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
         '<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#fff;font-weight:600">'+esc(r.tipo)+'</span><span style="font-size:11px;color:#6ee7b7">'+med.join(' · ')+'</span></div>'+
@@ -7898,8 +7930,15 @@ function reasFormRegistro(){
   var infoResp=responsables.length?'<div style="font-size:11px;color:#6ee7b7;margin-bottom:10px">Responsable(s) REAS asignado(s): '+responsables.join(', ')+'</div>':'<div style="font-size:11px;color:#fbbf24;margin-bottom:10px">Aún no asignas responsable de REAS (se hace en Admin → Asignaciones, tipo ♻️ REAS).</div>';
   return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
     infoResp+
-    // Botón "sin residuos hoy"
-    '<button onclick="reasSinResiduos()" style="width:100%;background:rgba(147,197,253,.12);color:#93c5fd;border:1px solid rgba(147,197,253,.3);border-radius:8px;padding:9px;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:12px">✓ Informar que hoy NO hay residuos para eliminar</button>'+
+    // Bloque "sin residuos hoy" con selección de espacio
+    '<div style="background:rgba(147,197,253,.08);border:1px solid rgba(147,197,253,.25);border-radius:8px;padding:10px;margin-bottom:12px">'+
+      '<label style="font-size:11px;color:#93c5fd;font-weight:600">Informar espacio SIN residuos hoy</label>'+
+      '<div style="display:flex;gap:6px;margin-top:6px">'+
+        '<select id="reasSinResUnidad" style="flex:1;font-size:13px;padding:7px">'+
+          REAS_UNIDADES.filter(function(u){return u!=='General';}).map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('')+'</select>'+
+        '<button onclick="reasSinResiduos()" style="background:rgba(147,197,253,.2);color:#93c5fd;border:1px solid rgba(147,197,253,.35);border-radius:6px;padding:0 14px;font-family:inherit;font-size:12px;cursor:pointer;white-space:nowrap">✓ Sin residuos</button>'+
+      '</div>'+
+    '</div>'+
     '<div style="font-size:10px;color:rgba(255,255,255,.35);text-align:center;margin-bottom:12px">— o registra un retiro —</div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Unidad que registra</label>'+
     '<select id="reasUnidad" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
@@ -7931,10 +7970,14 @@ function reasFormRegistro(){
     '<div class="saved" id="reasSaved">✓ Registrado</div></div>';
 }
 
-// Informar que hoy no hay residuos
+// Informar que hoy no hay residuos en un espacio específico
 window.reasSinResiduos=function(){
   var quien=curNombre||'—';
-  var reg={sinResiduos:true,unidad:'General',fecha:hoyStr(),quien:quien,ts:Date.now()};
+  var unidad=document.getElementById('reasSinResUnidad')?document.getElementById('reasSinResUnidad').value:'General';
+  // Evitar duplicar el mismo espacio el mismo día
+  var yaHoy=Object.values(invReas||{}).some(function(r){return r.sinResiduos&&r.unidad===unidad&&r.fecha===hoyStr();});
+  if(yaHoy){alert('Ya se informó "sin residuos" para '+unidad+' hoy.');return;}
+  var reg={sinResiduos:true,unidad:unidad,fecha:hoyStr(),quien:quien,ts:Date.now()};
   sedeRef('invReas/'+reg.ts).set(reg).then(function(){
     showSaved('reasSaved');
     if(typeof reasTab==='function')reasTab('registrar');
@@ -7977,7 +8020,7 @@ function reasHistorial(){
     if(r.sinResiduos){
       html+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
         '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
-          '<span style="font-size:13px;color:#93c5fd">✓ Sin residuos para eliminar</span>'+
+          '<span style="font-size:13px;color:#93c5fd">✓ Sin residuos · '+esc(r.unidad||'General')+'</span>'+
           '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span>'+
         '</div>'+
         (r.quien?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:1px">Informó: '+esc(r.quien)+'</div>':'')+
@@ -8005,7 +8048,7 @@ function reasHistorial(){
 }
 
 // ── ACCESO SUPERVISOR (PIN personal por supervisor, con trazabilidad) ──
-var supervisorActivo='',supervisorAreas=[];
+// supervisorActivo y supervisorAreas se declaran arriba con las globales
 
 document.getElementById('conductBtn').addEventListener('click',function(){abrirConductividad();});
 
