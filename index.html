@@ -1016,6 +1016,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
             </div>
             <div id="supItemsEstacion" style="margin-top:4px"></div>
+            <div id="supItemCumplimiento" style="margin-top:8px"></div>
             <div id="supPuntaje" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:right"></div>
             <button class="btn-add" id="guardarSupBtn" style="margin-top:8px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">💾 Guardar ronda de supervisión</button>
             <div class="saved" id="supSaved">✓ Ronda guardada</div>
@@ -4316,8 +4317,21 @@ function calcPuntajeSupDia(nombre,fecha){
   return promedioRondas.reduce(function(a,b){return a+b;},0)/promedioRondas.length;
 }
 
+// Cumplimiento de tareas asignadas a una persona en una fecha (0-1).
+// tareas cumplidas / tareas asignadas (cada una vale igual). null si no tiene tareas medibles.
+function calcCumplimientoTareas(nombre,fecha){
+  var diaSem=diaDeDate(fecha);
+  var asignadas=Object.values(tareas||{}).filter(function(t){
+    return t.nombre===nombre&&t.dia===diaSem&&(TIPOS_MEDIBLES[t.tipo]||(rolesTecnicos&&rolesTecnicos[t.tipo]));
+  });
+  if(!asignadas.length)return null; // no tiene tareas medibles ese día
+  var cumplidas=asignadas.filter(function(t){return verificarCumplimiento(t.tipo,fecha).cumplido;}).length;
+  return {pct:cumplidas/asignadas.length,cumplidas:cumplidas,total:asignadas.length};
+}
+
 function calcPuntajeFinalDia(nombre,fecha){
-  // 50% preguntas + 50% supervisión
+  // Ponderación: 40% preguntas + 60% terreno.
+  // Terreno = 60% cumplimiento de tareas + 40% ronda de supervisión.
   var hoyObj=new Date(fecha+'T12:00:00');hoyObj.setHours(0,0,0,0);
   var finDia=hoyObj.getTime()+86400000;
   var key=nombre.replace(/\s/g,'_');
@@ -4328,15 +4342,33 @@ function calcPuntajeFinalDia(nombre,fecha){
       return e&&e.fecha&&e.fecha>=hoyObj.getTime()&&e.fecha<finDia;
     });
     if(entradasDia.length){
-      entradasDia.sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}); // asegurar orden cronológico
+      entradasDia.sort(function(a,b){return (a.fecha||0)-(b.fecha||0);});
       var pts=entradasDia[entradasDia.length-1].puntos||0;
-      puntPreg=pts/10; // normalizar a 0-1
+      puntPreg=pts/10;
     }
   }
-  var puntSup=calcPuntajeSupDia(nombre,fecha);
-  if(puntSup===null)return{total:null,preguntas:puntPreg,supervision:null};
-  var total=(puntPreg*0.5)+(puntSup*0.5);
-  return{total:total,preguntas:puntPreg,supervision:puntSup};
+  // Nota de terreno = combinación de supervisión (ronda) y cumplimiento de tareas
+  var puntSup=calcPuntajeSupDia(nombre,fecha); // 0-1 o null
+  var cumpl=calcCumplimientoTareas(nombre,fecha); // {pct,...} o null (automático)
+  // Si el admin ajustó/guardó el cumplimiento en una ronda de este día, usar ese valor
+  var cumplGuardado=null;
+  Object.values(supervisionData||{}).forEach(function(r){
+    if(r&&r.nombre===nombre&&r.fecha===fecha&&typeof r.cumplimientoTareas==='number'){
+      cumplGuardado=r.cumplimientoTareas/100;
+    }
+  });
+  var cumplPct=(cumplGuardado!==null)?cumplGuardado:(cumpl!==null?cumpl.pct:null);
+  var terreno=null;
+  if(puntSup!==null&&cumplPct!==null){
+    terreno=(cumplPct*0.6)+(puntSup*0.4);
+  } else if(puntSup!==null){
+    terreno=puntSup;
+  } else if(cumplPct!==null){
+    terreno=cumplPct;
+  }
+  if(terreno===null)return{total:null,preguntas:puntPreg,supervision:null,cumplimiento:cumpl};
+  var total=(puntPreg*0.4)+(terreno*0.6);
+  return{total:total,preguntas:puntPreg,supervision:terreno,cumplimiento:cumpl,ronda:puntSup};
 }
 
 function renderSupervisionColaborador(nombre){
@@ -5269,7 +5301,58 @@ function renderItemPedidoCondicional(){
   }
   cont.innerHTML=html;
   if(html)engancharTogglesEstacion(cont);
+  renderItemCumplimiento(nombre);
 }
+
+// Ítem de cumplimiento de tareas: precargado automático, editable SOLO por admin.
+function renderItemCumplimiento(nombre){
+  var cont=document.getElementById('supItemCumplimiento');
+  if(!cont)return;
+  if(!nombre){cont.innerHTML='';return;}
+  var hoy=hoyStr();
+  var cumpl=calcCumplimientoTareas(nombre,hoy);
+  if(cumpl===null){cont.innerHTML='';return;} // no tiene tareas medibles hoy
+  var pctAuto=Math.round(cumpl.pct*100);
+  // ¿Es admin (sin supervisorActivo) o un supervisor?
+  var esAdmin=!supervisorActivo;
+  var color=pctAuto>=80?'#6ee7b7':pctAuto>=50?'#fcd34d':'#fca5a5';
+  var html='<div style="background:linear-gradient(135deg,rgba(8,145,178,.12),rgba(34,211,238,.06));border:1px solid rgba(34,211,238,.3);border-radius:10px;padding:12px 14px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+      '<span style="font-size:13px;font-weight:700;color:#22d3ee">⭐ Cumplimiento de tareas asignadas</span>'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.4)">pesa 60% del terreno</span>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">Automático: '+cumpl.cumplidas+' de '+cumpl.total+' tareas registradas hoy ('+pctAuto+'%)</div>';
+  if(esAdmin){
+    // Editable: slider/input para ajustar
+    html+='<div style="display:flex;align-items:center;gap:10px">'+
+      '<input type="range" id="cumplSlider" min="0" max="100" value="'+pctAuto+'" oninput="document.getElementById(\'cumplValor\').textContent=this.value+\'%\';actualizarCumplManual(this.value)" style="flex:1">'+
+      '<span id="cumplValor" style="font-size:16px;font-weight:800;color:'+color+';min-width:44px;text-align:right">'+pctAuto+'%</span>'+
+    '</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">Ajusta si es necesario. Se guarda con la ronda.</div>';
+  } else {
+    // Bloqueado para supervisores
+    html+='<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.03);border-radius:8px;padding:8px 10px">'+
+      '<span style="font-size:18px">🔒</span>'+
+      '<div><div style="font-size:14px;font-weight:800;color:'+color+'">'+pctAuto+'%</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4)">Lo completa el administrador al cierre del día</div></div>'+
+    '</div>';
+  }
+  html+='</div>';
+  cont.innerHTML=html;
+  // Guardar el valor inicial en un atributo para recolectarlo
+  cont.dataset.cumplPct=pctAuto;
+  cont.dataset.cumplAuto=pctAuto;
+  cont.dataset.cumplCumplidas=cumpl.cumplidas;
+  cont.dataset.cumplTotal=cumpl.total;
+}
+
+window.actualizarCumplManual=function(val){
+  var cont=document.getElementById('supItemCumplimiento');
+  if(cont)cont.dataset.cumplPct=val;
+  var color=val>=80?'#6ee7b7':val>=50?'#fcd34d':'#fca5a5';
+  var el=document.getElementById('cumplValor');if(el)el.style.color=color;
+  if(typeof calcPreviewPuntaje==='function')calcPreviewPuntaje();
+};
 
 // ── REGISTRO SEMANAL DE INDICADORES (Fase 1) ──
 function initKpiAdmin(){
@@ -5643,11 +5726,23 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
     registro.puntajeEstacion=evalEst.length?Math.round(okEst/evalEst.length*100):null;
     registro.neEstacion=neEst;
   }
+  // Ítem de cumplimiento de tareas (solo lo guarda/ajusta el admin; el supervisor no lo toca)
+  var cumplCont=document.getElementById('supItemCumplimiento');
+  if(cumplCont&&cumplCont.dataset.cumplPct!==undefined){
+    if(!supervisorActivo){
+      // Admin: guarda el valor (auto o ajustado)
+      registro.cumplimientoTareas=Number(cumplCont.dataset.cumplPct);
+      registro.cumplimientoAuto=Number(cumplCont.dataset.cumplAuto);
+      registro.cumplimientoManual=(cumplCont.dataset.cumplPct!==cumplCont.dataset.cumplAuto);
+    }
+    // Si es supervisor, NO se guarda cumplimiento (queda libre para el admin)
+  }
   sRef('supervision').push(registro).then(function(){
     showSaved('supSaved');
     document.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no','active-ne');});
     document.getElementById('supPuntaje').textContent='';
     var se=document.getElementById('supEstacion');if(se){se.value='';renderItemsEstacion('');}
+    var cc=document.getElementById('supItemCumplimiento');if(cc)cc.innerHTML='';
   });
 });
 
