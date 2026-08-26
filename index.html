@@ -3714,14 +3714,14 @@ function registrarFalloCombinado(pend){
     sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
   });
   if(bloqueoActivado){
-    mostrarRetroalimentacion(true);
+    mostrarRevisionFallo(true);
   } else {
-    mostrarRetroalimentacion(false);
+    mostrarRevisionFallo(false);
   }
 }
 
 // Muestra qué preguntas se fallaron, la respuesta correcta y la retroalimentación
-function mostrarRetroalimentacion(bloqueado){
+function mostrarRevisionFallo(bloqueado){
   var v=document.getElementById('fichaObligView');
   if(!v){
     // fallback al comportamiento anterior
