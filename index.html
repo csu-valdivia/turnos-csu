@@ -7305,9 +7305,9 @@ function renderSinAsignar(){
 
   // KPIs
   var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
-    kpiCardTec('🔴 Sin nada asignado',sinNada.length,'#dc2626')+
-    kpiCardTec('🟡 Les falta algo',faltanAlgo.length,'#d97706')+
-    kpiCardTec('🟢 Completos',completos.length,'#059669')+
+    kpiCardScroll('🔴 Sin nada asignado',sinNada.length,'#dc2626',sinNada.length?'secSinNada':'')+
+    kpiCardScroll('🟡 Les falta algo',faltanAlgo.length,'#d97706',faltanAlgo.length?'secFaltaAlgo':'')+
+    kpiCardScroll('🟢 Completos',completos.length,'#059669',completos.length?'secCompletos':'')+
   '</div>';
 
   function chip(ok,label){
@@ -7316,9 +7316,9 @@ function renderSinAsignar(){
       (ok?'✓ ':'✗ ')+label+'</span>';
   }
 
-  function bloqueFilas(titulo,color,arr,mostrarBodega){
+  function bloqueFilas(titulo,color,arr,secId){
     if(!arr.length)return '';
-    var h='<p style="font-size:13px;font-weight:700;color:'+color+';margin:14px 0 8px">'+titulo+'</p>'+
+    var h='<p style="font-size:13px;font-weight:700;color:'+color+';margin:14px 0 8px"'+(secId?' id="'+secId+'"':'')+'>'+titulo+'</p>'+
       '<div style="background:#16233d;border-radius:10px;overflow:hidden">';
     arr.forEach(function(f,i){
       h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;'+(i>0?'border-top:1px solid rgba(255,255,255,.05)':'')+'">'+
@@ -7333,9 +7333,9 @@ function renderSinAsignar(){
     return h;
   }
 
-  html+=bloqueFilas('🔴 Sin ninguna asignación',' #fca5a5',sinNada);
-  html+=bloqueFilas('🟡 Les falta alguna asignación','#fcd34d',faltanAlgo);
-  html+=bloqueFilas('🟢 Con asignaciones completas','#6ee7b7',completos);
+  html+=bloqueFilas('🔴 Sin ninguna asignación','#fca5a5',sinNada,'secSinNada');
+  html+=bloqueFilas('🟡 Les falta alguna asignación','#fcd34d',faltanAlgo,'secFaltaAlgo');
+  html+=bloqueFilas('🟢 Con asignaciones completas','#6ee7b7',completos,'secCompletos');
 
   html+='<p style="font-size:10px;color:rgba(255,255,255,.35);margin-top:12px">Turno = tiene bloques en el horario · Tarea = tiene rol/tarea asignada · 📦 = subbodega a cargo (opcional).</p>';
   c.innerHTML=html;
@@ -7377,13 +7377,13 @@ function renderControlCumplimiento(){
   var totalHoy=asignadosHoy.length;
   var pctHoy=totalHoy?Math.round(cumplidos.length/totalHoy*100):null;
   html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
-    kpiCardTec('✅ Cumplidos hoy',cumplidos.length,'#059669')+
-    kpiCardTec('⏳ Pendientes hoy',pendientes.length,'#dc2626')+
-    kpiCardTec('📊 Cumplimiento hoy',(pctHoy!==null?pctHoy+'%':'—'),'#22d3ee')+
+    kpiCardScroll('✅ Cumplidos hoy',cumplidos.length,'#059669',cumplidos.length?'secCumplidos':'')+
+    kpiCardScroll('⏳ Pendientes hoy',pendientes.length,'#dc2626',pendientes.length?'secPendientes':'')+
+    kpiCardScroll('📊 Cumplimiento hoy',(pctHoy!==null?pctHoy+'%':'—'),'#22d3ee','secPorResponsable')+
   '</div>';
 
   // Pendientes de hoy con responsable
-  html+='<p style="font-size:13px;font-weight:700;color:#fca5a5;margin:14px 0 8px">⏳ Pendientes de hoy</p>';
+  html+='<p style="font-size:13px;font-weight:700;color:#fca5a5;margin:14px 0 8px" id="secPendientes">⏳ Pendientes de hoy</p>';
   if(!pendientes.length){
     html+='<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:14px;font-size:12px;color:#6ee7b7">✓ Todo lo asignado para hoy está registrado. Excelente.</div>';
   } else {
@@ -7400,7 +7400,7 @@ function renderControlCumplimiento(){
 
   // Cumplidos de hoy (colapsable simple)
   if(cumplidos.length){
-    html+='<p style="font-size:13px;font-weight:700;color:#6ee7b7;margin:14px 0 8px">✅ Cumplidos de hoy</p>';
+    html+='<p style="font-size:13px;font-weight:700;color:#6ee7b7;margin:14px 0 8px" id="secCumplidos">✅ Cumplidos de hoy</p>';
     html+='<div style="background:#16233d;border-radius:10px;overflow:hidden">';
     cumplidos.forEach(function(p,i){
       html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;'+(i>0?'border-top:1px solid rgba(255,255,255,.05)':'')+'">'+
@@ -7412,7 +7412,7 @@ function renderControlCumplimiento(){
   }
 
   // 2. % CUMPLIMIENTO POR RESPONSABLE (histórico del mes)
-  html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:18px 0 8px">📈 Cumplimiento por responsable (este mes)</p>';
+  html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:18px 0 8px" id="secPorResponsable">📈 Cumplimiento por responsable (este mes)</p>';
   var mes=hoy.slice(0,7);
   // Para cada día del mes transcurrido, ver qué se asignó y si se cumplió, agrupado por persona
   var statPersona={}; // nombre -> {asignados, cumplidos}
@@ -7543,6 +7543,30 @@ function renderDashboardTecnico(){
   }
 
   c.innerHTML=html;
+}
+
+// Scroll suave a una sección de detalle, con resaltado breve
+window.scrollASeccion=function(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+  // Resaltado breve
+  el.style.transition='box-shadow .3s, background .3s';
+  var bgPrev=el.style.background;
+  el.style.boxShadow='0 0 0 2px rgba(96,165,250,.6)';
+  el.style.borderRadius='10px';
+  setTimeout(function(){
+    el.style.boxShadow='none';
+  },1400);
+};
+
+// KPI clickeable que hace scroll a una sección (destino = id de la sección)
+function kpiCardScroll(label,valor,color,destino){
+  var click=destino?' onclick="scrollASeccion(\''+destino+'\')" style="cursor:pointer;background:#16233d;border-radius:10px;padding:12px;text-align:center;transition:background .15s" onmouseover="this.style.background=\'#1c2f52\'" onmouseout="this.style.background=\'#16233d\'"':' style="background:#16233d;border-radius:10px;padding:12px;text-align:center"';
+  return '<div'+click+'>'+
+    '<div style="font-size:22px;font-weight:800;color:'+color+'">'+valor+'</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">'+label+'</div>'+
+    (destino?'<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:3px">toca para ver ›</div>':'')+'</div>';
 }
 
 function kpiCardTec(label,valor,color,detalle){
@@ -7679,14 +7703,14 @@ window.abrirDashboardInventario=function(){
     '</div>'+
     // KPIs
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">'+
-      dashInvKPI('Insumos en catálogo',m.totalInsumos,'#60a5fa')+
-      dashInvKPI('Por reponer',m.porReponer,m.porReponer>0?'#d97706':'#10b981')+
-      dashInvKPI('Lotes por vencer',m.porVencer,m.porVencer>0?'#d97706':'#10b981')+
-      dashInvKPI('Vencidos',m.vencidos,m.vencidos>0?'#dc2626':'#10b981')+
-      (m.valorTotal!=null?dashInvKPI('Valor inventario','$'+m.valorTotal.toLocaleString('es-CL'),'#10b981'):'')+
+      dashInvKPI('Insumos en catálogo',m.totalInsumos,'#60a5fa','secStockBodega')+
+      dashInvKPI('Por reponer',m.porReponer,m.porReponer>0?'#d97706':'#10b981','secStockBodega')+
+      dashInvKPI('Lotes por vencer',m.porVencer,m.porVencer>0?'#d97706':'#10b981',m.vencimientos.length?'secVencimientos':'')+
+      dashInvKPI('Vencidos',m.vencidos,m.vencidos>0?'#dc2626':'#10b981',m.vencimientos.length?'secVencimientos':'')+
+      (m.valorTotal!=null?dashInvKPI('Valor inventario','$'+m.valorTotal.toLocaleString('es-CL'),'#10b981','secAbc'):'')+
     '</div>'+
     // Stock por bodega
-    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px" id="secStockBodega">'+
       '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px">Stock por bodega</div>'+
       m.porBodega.map(function(b){
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
@@ -7696,14 +7720,14 @@ window.abrirDashboardInventario=function(){
       }).join('')+
     '</div>'+
     // Distribución ABC
-    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px" id="secAbc">'+
       '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px">Clasificación ABC del catálogo</div>'+
       '<div style="display:flex;gap:8px">'+
         dashInvABC('A',m.abc.A,'#dc2626')+dashInvABC('B',m.abc.B,'#d97706')+dashInvABC('C',m.abc.C,'#6b7280')+dashInvABC('Sin clasificar',m.abc.sin,'rgba(255,255,255,.2)')+
       '</div>'+
     '</div>'+
     // Top vencimientos
-    (m.vencimientos.length?'<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    (m.vencimientos.length?'<div style="background:#16233d;border-radius:12px;padding:14px" id="secVencimientos">'+
       '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px">Próximos vencimientos</div>'+
       m.vencimientos.slice(0,10).map(function(v){
         var col=v.vencido?'#dc2626':'#d97706';
@@ -7715,9 +7739,10 @@ window.abrirDashboardInventario=function(){
   document.body.appendChild(ov);
 };
 
-function dashInvKPI(label,valor,color){
-  return '<div style="background:#16233d;border-radius:10px;padding:12px">'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">'+label+'</div>'+
+function dashInvKPI(label,valor,color,destino){
+  var click=destino?' onclick="scrollASeccion(\''+destino+'\')" style="cursor:pointer;background:#16233d;border-radius:10px;padding:12px;transition:background .15s" onmouseover="this.style.background=\'#1c2f52\'" onmouseout="this.style.background=\'#16233d\'"':' style="background:#16233d;border-radius:10px;padding:12px"';
+  return '<div'+click+'>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">'+label+(destino?' ›':'')+'</div>'+
     '<div style="font-size:22px;font-weight:800;color:'+color+'">'+valor+'</div></div>';
 }
 function dashInvABC(letra,n,color){
