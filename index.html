@@ -80,18 +80,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 /* HERO */
 .hero{background:linear-gradient(180deg,var(--bg2),var(--bg));padding:1.75rem 1.25rem 1.25rem;text-align:center}
 .logo-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px}
-.gesthor-logo{flex-shrink:0;filter:drop-shadow(0 4px 16px rgba(45,212,191,.25))}
-.gesthor-gear{transform-origin:50px 54px;animation:gesthorGiraH 10s linear infinite}
-.gesthor-gear2{transform-origin:96px 26px;animation:gesthorGiraAH 6s linear infinite}
+.gesthor-logo{flex-shrink:0;filter:drop-shadow(0 2px 12px rgba(56,189,248,.4))}
+.gesthor-gear{transform-origin:60px 60px;animation:gesthorGiraH 14s linear infinite}
 @keyframes gesthorGiraH{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes gesthorGiraAH{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
 .uss-icon{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#1a3a6b,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.4);position:relative;flex-shrink:0}
 .uss-icon::before{content:'';position:absolute;width:34px;height:12px;background:rgba(255,255,255,.9);border-radius:2px}
 .uss-icon::after{content:'';position:absolute;width:12px;height:34px;background:rgba(255,255,255,.9);border-radius:2px}
 .uss-label{position:absolute;font-size:10px;font-weight:900;color:#1a3a6b;z-index:1;letter-spacing:-.3px}
 .app-name{font-size:30px;font-weight:800;color:#fff;letter-spacing:1px;line-height:1;display:block}
 .app-sub{font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.3px;margin-top:3px}
-@media(prefers-reduced-motion:reduce){.gesthor-gear,.gesthor-gear2{animation:none}}
+@media(prefers-reduced-motion:reduce){.gesthor-gear{animation:none}}
 .semana-badge{display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 16px;font-size:12px;color:rgba(255,255,255,.6);margin-top:8px}
 
 .content{padding:1rem}
@@ -102,6 +100,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 
 /* SEDE */
 .sede-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rol-grid{display:flex;flex-direction:column;gap:10px}
+.rol-btn{display:flex;flex-direction:row;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;border:1px solid rgba(96,165,250,.25);background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(96,165,250,.05));color:#fff;cursor:pointer;font-family:inherit;transition:all .2s;text-align:left}
+.rol-btn:hover{background:linear-gradient(135deg,rgba(37,99,235,.2),rgba(96,165,250,.1));transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,99,235,.2);border-color:rgba(96,165,250,.5)}
+.rol-icon{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:52px;height:52px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+.rol-icon svg{display:block}
+.rol-txt{display:flex;flex-direction:column;gap:2px}
+.rol-label{font-size:16px;font-weight:700;letter-spacing:.3px;display:block}
+.rol-sub{font-size:11px;color:rgba(147,197,253,.6);display:block}
 .sede-btn{padding:14px 8px;font-size:14px;font-weight:600;border-radius:var(--rs);border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.95);color:#1a2332;cursor:pointer;text-align:center;font-family:inherit;transition:all .2s}
 .sede-btn:hover{background:#fff;transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,0,0,.2)}
 .sede-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
@@ -382,52 +388,35 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
   <div class="hero">
     <div class="logo-row">
       <div class="gesthor-logo">
-        <svg viewBox="0 0 120 120" width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 120 120" width="60" height="60" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <linearGradient id="gCruz" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#5eead4"/>
-              <stop offset="0.5" stop-color="#2dd4bf"/>
-              <stop offset="1" stop-color="#1e3a8a"/>
+            <linearGradient id="hdrGear" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#2563eb"/>
             </linearGradient>
-            <linearGradient id="gGear" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#7dd3fc"/>
-              <stop offset="1" stop-color="#2563eb"/>
-            </linearGradient>
-            <linearGradient id="gGear2" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#5eead4"/>
-              <stop offset="1" stop-color="#0891b2"/>
+            <radialGradient id="hdrTeeth" cx="0.5" cy="0.3" r="0.8">
+              <stop offset="0" stop-color="#93d8fc"/><stop offset="1" stop-color="#1e40af"/>
+            </radialGradient>
+            <linearGradient id="hdrGlow" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#bae6fd"/><stop offset="0.5" stop-color="#38bdf8"/><stop offset="1" stop-color="#2563eb"/>
             </linearGradient>
           </defs>
-          <!-- Engranaje pequeño (gira antihorario) -->
-          <g class="gesthor-gear2">
-            <circle cx="96" cy="26" r="20" fill="none" stroke="url(#gGear2)" stroke-width="6"/>
-            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(0 96 26)"/>
-            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(45 96 26)"/>
-            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(90 96 26)"/>
-            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(135 96 26)"/>
-            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(180 96 26)"/>
-            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(225 96 26)"/>
-            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(270 96 26)"/>
-            <polygon points="92,6 94,1 98,1 100,6" fill="url(#gGear2)" transform="rotate(315 96 26)"/>
-          </g>
-          <!-- Engranaje grande (gira horario) -->
           <g class="gesthor-gear">
-            <circle cx="50" cy="54" r="40" fill="none" stroke="url(#gGear)" stroke-width="6"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(0 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(36 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(72 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(108 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(144 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(180 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(216 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(252 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(288 50 54)"/>
-            <polygon points="45,14 47,7 53,7 55,14" fill="url(#gGear)" transform="rotate(324 50 54)"/>
-          </g>
-          <!-- Cruz médica fija en el centro del engranaje grande -->
-          <g>
-            <rect x="37" y="27" width="26" height="54" rx="7" fill="url(#gCruz)"/>
-            <rect x="23" y="41" width="54" height="26" rx="7" fill="url(#gCruz)"/>
+            <g fill="url(#hdrTeeth)">
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(0 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(30 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(60 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(90 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(120 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(150 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(180 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(210 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(240 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(270 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(300 60 60)"/>
+              <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(330 60 60)"/>
+            </g>
+            <circle cx="60" cy="60" r="44" fill="none" stroke="url(#hdrGear)" stroke-width="6"/>
+            <path d="M 74 44 A 20 20 0 1 0 74 76 L 74 61 L 61 61" fill="none" stroke="url(#hdrGlow)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
           </g>
         </svg>
       </div>
@@ -440,21 +429,63 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
   </div>
 
   <div class="content">
-    <!-- SEDE -->
+    <!-- SELECCIÓN DE ROL -->
     <div id="sedeView">
       <div class="card" style="text-align:center">
-        <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">Ingresa a tu establecimiento</p>
-        <div class="sede-grid">
-          <button class="sede-btn" style="grid-column:1/-1" onclick="setSede('Valdivia')">Valdivia</button>
-          <!-- Establecimientos adicionales para escalar (activar cuando tengan datos):
-          <button class="sede-btn" onclick="setSede('Patagonia')">Patagonia</button>
-          <button class="sede-btn" onclick="setSede('Bellavista')">Bellavista</button>
-          <button class="sede-btn" onclick="setSede('Los Leones')">Los Leones</button>
-          <button class="sede-btn" onclick="setSede('Concepción')">Concepción</button>
-          -->
+        <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">¿Cómo deseas ingresar?</p>
+        <div class="rol-grid">
+          <button class="rol-btn" onclick="ingresarRol('colaborador')">
+            <span class="rol-icon">
+              <svg viewBox="0 0 64 84" width="52" height="68"><defs><linearGradient id="rb1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>
+                <g transform="translate(32,10)">
+                  <path d="M -32 74 Q -32 42 0 42 Q 32 42 32 74 Z" fill="url(#rb1)"/>
+                  <circle cx="0" cy="16" r="23" fill="#a5c9f5"/>
+                  <path d="M -25 4 Q 0 -20 25 4 L 20 9 Q 0 -9 -20 9 Z" fill="#fff"/>
+                  <rect x="-2.5" y="-7" width="5" height="12" rx="1" fill="#ef4444"/>
+                  <rect x="-6" y="-3.5" width="12" height="5" rx="1" fill="#ef4444"/>
+                </g></svg>
+            </span>
+            <span class="rol-txt"><span class="rol-label">Colaborador</span><span class="rol-sub">Acceso libre</span></span>
+          </button>
+          <button class="rol-btn" onclick="ingresarRol('jefe')">
+            <span class="rol-icon">
+              <svg viewBox="0 0 64 84" width="52" height="68"><defs><linearGradient id="rb2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>
+                <g transform="translate(32,10)">
+                  <path d="M -32 74 Q -32 42 0 42 Q 32 42 32 74 Z" fill="url(#rb2)"/>
+                  <circle cx="0" cy="16" r="23" fill="#a5c9f5"/>
+                  <path d="M -23 16 Q -23 42 0 42 Q 23 42 23 16 Q 23 34 0 34 Q -23 34 -23 16 Z" fill="#1f2937"/>
+                  <circle cx="0" cy="14" r="20" fill="#a5c9f5"/>
+                  <path d="M -22 10 Q -24 -12 0 -12 Q 24 -12 22 10 Q 14 0 0 0 Q -14 0 -22 10 Z" fill="#1f2937"/>
+                  <path d="M -14 28 Q 0 40 14 28 Q 14 36 0 36 Q -14 36 -14 28 Z" fill="#1f2937"/>
+                </g></svg>
+            </span>
+            <span class="rol-txt"><span class="rol-label">Enfermero Jefe</span><span class="rol-sub">Requiere PIN</span></span>
+          </button>
+          <button class="rol-btn" onclick="ingresarRol('operaciones')">
+            <span class="rol-icon">
+              <svg viewBox="0 0 64 84" width="52" height="68"><defs><linearGradient id="rb3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>
+                <g transform="translate(32,10)">
+                  <path d="M -32 74 Q -32 42 0 42 Q 32 42 32 74 Z" fill="url(#rb3)"/>
+                  <circle cx="0" cy="18" r="23" fill="#a5c9f5"/>
+                  <path d="M -27 6 Q -27 -18 0 -18 Q 27 -18 27 6 Z" fill="#f59e0b"/>
+                  <rect x="-29" y="4" width="58" height="7" rx="3.5" fill="#d97706"/>
+                  <rect x="-2.5" y="-18" width="5" height="24" rx="2" fill="#d97706"/>
+                </g></svg>
+            </span>
+            <span class="rol-txt"><span class="rol-label">Operaciones</span><span class="rol-sub">Requiere PIN</span></span>
+          </button>
         </div>
       </div>
     </div>
+    <!-- Establecimientos (código preservado para escalar a otras sedes):
+    <div class="sede-grid">
+      <button class="sede-btn" onclick="setSede('Valdivia')">Valdivia</button>
+      <button class="sede-btn" onclick="setSede('Patagonia')">Patagonia</button>
+      <button class="sede-btn" onclick="setSede('Bellavista')">Bellavista</button>
+      <button class="sede-btn" onclick="setSede('Los Leones')">Los Leones</button>
+      <button class="sede-btn" onclick="setSede('Concepción')">Concepción</button>
+    </div>
+    -->
 
     <!-- MAIN -->
     <div id="mainView" style="display:none">
@@ -1526,6 +1557,55 @@ function detectarSemanaActual(){
   return match?match[0]:null;
 }
 
+// Ingreso por rol: Colaborador (libre), Enfermero Jefe (PIN admin), Operaciones (PIN bodega → solo Bodega)
+window.ingresarRol=function(rol){
+  if(rol==='colaborador'){
+    setSede('Valdivia');
+    // Flujo normal del colaborador (elige su nombre en la app)
+    return;
+  }
+  if(rol==='jefe'){
+    var pin=prompt('PIN de Enfermero Jefe:');
+    if(pin===null)return;
+    if(pin!==PIN){alert('PIN incorrecto.');return;}
+    setSede('Valdivia');
+    // Desbloquear el panel de administración automáticamente
+    setTimeout(function(){
+      adminUnlocked=true;
+      var p=document.getElementById('adminPanel');
+      if(p)p.classList.add('open');
+      supervisorActivo='';supervisorAreas=[];
+      if(typeof renderPendientes==='function')renderPendientes();
+      if(typeof renderPendList==='function')renderPendList();
+      if(typeof renderCambiosAdmin==='function')renderCambiosAdmin();
+      if(typeof renderAusenciasAdmin==='function')renderAusenciasAdmin();
+      if(typeof initSupervisionAdmin==='function')initSupervisionAdmin();
+      if(typeof renderCumpAdmin==='function')renderCumpAdmin();
+      if(typeof initKpiAdmin==='function')initKpiAdmin();
+      var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;
+      var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;
+      var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;
+      var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
+      // Llevar la vista al panel admin
+      if(p)p.scrollIntoView({behavior:'smooth'});
+    },600);
+    return;
+  }
+  if(rol==='operaciones'){
+    var pinB=prompt('PIN de Operaciones (Bodega):');
+    if(pinB===null)return;
+    if(pinB!==(PIN+'B')){alert('PIN incorrecto.');return;}
+    setSede('Valdivia');
+    // Entrar directo a Bodega en modo exclusivo (no puede salir a otras partes)
+    modoOperaciones=true;
+    setTimeout(function(){
+      abrirBodega(true); // true = ya autenticado
+    },700);
+    return;
+  }
+};
+var modoOperaciones=false;
+
 window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
   bloques={};tareas={};pendientes={};nombres=[];supervisionData={};asistencia={};notas={};visto={};cambios={};ausencias={};llamados={};correos={};encargados={};coberturas={};equipoClave={};sinServicios={};biblioteca={};fichaProgreso={};ranking={};curNombre='';semanas={};
@@ -2150,6 +2230,8 @@ function renderMisTurnos(nombre){
       misBodegas.map(function(b){return '<button onclick="abrirGestionClinico(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+BODEGAS[b].nombre+' ›</button>';}).join('')+
       '</div>';
   }
+  // Botón "Ver bodega central" (todos los colaboradores; solo lectura de cantidades, fichas editables)
+  html+='<button onclick="abrirBodegaCentralLectura()" style="display:block;width:100%;text-align:center;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:11px;margin-bottom:10px;color:#93c5fd;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">🏢 Ver bodega central</button>';
   // Roles técnicos asignados a esta persona → botón de su registro en Mis Turnos
   // Los roles DIARIOS aparecen cualquier día que tenga el rol; el aseo (semanal) solo su día.
   var diaHoyRol=diaDeDate(hoyStr());
@@ -6258,7 +6340,8 @@ function alarmasReposicion(){
 // ── PANEL DE BODEGA (PIN propio, solo inventarios) ──
 function pinBodega(){return String((SEDES[S]||'0000'))+'B';} // PIN admin + B, configurable
 
-document.getElementById('bodegaBtn').addEventListener('click',function(){
+function abrirBodega(yaAuth){
+  if(yaAuth){abrirPanelBodega();return;}
   var m=document.createElement('div');
   m.className='overlay';m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.9);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
   m.innerHTML='<div style="background:#16233d;border-radius:16px;padding:24px;max-width:320px;width:100%;text-align:center">'+
@@ -6276,7 +6359,8 @@ document.getElementById('bodegaBtn').addEventListener('click',function(){
     else alert('PIN incorrecto.');
   };
   document.getElementById('pinBodegaIn').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('pinBodegaOk').click();});
-});
+}
+document.getElementById('bodegaBtn').addEventListener('click',function(){abrirBodega(false);});
 
 // Panel del clínico para SU subbodega (sin PIN, acceso desde Mis Turnos)
 // ── REGISTRO DE CONDUCTIVIDAD DEL AGUA (operador de esterilización) ──
@@ -7617,6 +7701,15 @@ function calcularMetricasInventario(){
 }
 
 // ── PANEL DE BODEGA: vistas ──
+function salirBodega(){
+  var ov=document.getElementById('panelBodegaOv');if(ov)ov.remove();
+  if(modoOperaciones){
+    // Operaciones no puede ir a otras partes: vuelve a la selección de rol
+    modoOperaciones=false;
+    document.getElementById('mainView').style.display='none';
+    document.getElementById('sedeView').style.display='block';
+  }
+}
 function abrirPanelBodega(){
   var ov=document.getElementById('panelBodegaOv');
   if(ov)ov.remove();
@@ -7626,7 +7719,7 @@ function abrirPanelBodega(){
   ov.innerHTML='<div style="max-width:900px;margin:0 auto">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
       '<span style="font-size:17px;font-weight:800;color:#fbbf24">📦 Gestión de Inventario</span>'+
-      '<button onclick="document.getElementById(\'panelBodegaOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+      '<button onclick="salirBodega()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'+
       '<button class="bod-tab active" data-v="alarmas" onclick="bodTab(\'alarmas\')">🔔 Alarmas</button>'+
@@ -7820,6 +7913,63 @@ window.filtrarCatalogo=function(q){
   cont.innerHTML=html||'<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;font-size:13px">Sin resultados.</div>';
 };
 
+// Vista de BODEGA CENTRAL en modo lectura (para colaboradores):
+// ve stock y datos de central sin poder tocar cantidades; las FICHAS sí son editables (compartidas).
+window.abrirBodegaCentralLectura=function(){
+  var ov=document.getElementById('bodCentralLecOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='bodCentralLecOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  ov.innerHTML='<div style="max-width:760px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:17px;font-weight:800;color:#93c5fd">🏢 Bodega Central</span>'+
+      '<button onclick="document.getElementById(\'bodCentralLecOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px">Consulta de stock central · <b style="color:#fbbf24">las cantidades son solo lectura</b>, pero puedes editar la ficha de cada producto.</div>'+
+    '<input type="text" id="bcLecBuscar" placeholder="Buscar producto..." oninput="renderBodCentralLectura()" style="width:100%;font-size:13px;padding:9px;margin-bottom:12px;border-radius:8px">'+
+    '<div id="bcLecLista"></div>'+
+  '</div>';
+  document.body.appendChild(ov);
+  renderBodCentralLectura();
+};
+
+function renderBodCentralLectura(){
+  var cont=document.getElementById('bcLecLista');if(!cont)return;
+  var q=(document.getElementById('bcLecBuscar')?document.getElementById('bcLecBuscar').value:'').toLowerCase().trim();
+  var cods=Object.keys(invCatalogo||{}).filter(function(cod){
+    if(!q)return true;
+    var i=invCatalogo[cod];
+    return (i.desc||'').toLowerCase().indexOf(q)>-1||cod.toLowerCase().indexOf(q)>-1||(i.grupo||'').toLowerCase().indexOf(q)>-1;
+  });
+  if(!cods.length){cont.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;font-size:13px">No hay productos que coincidan.</div>';return;}
+  // Ordenar por descripción
+  cods.sort(function(a,b){return (invCatalogo[a].desc||'').localeCompare(invCatalogo[b].desc||'');});
+  var html='<div style="background:#16233d;border-radius:10px;overflow:hidden">';
+  cods.forEach(function(cod,idx){
+    var i=invCatalogo[cod];
+    var stock=stockUnidades('central',cod);
+    var rop=calcularROP(i);
+    var nivel,nivColor;
+    if(rop!=null&&stock<=rop){nivel='Bajo';nivColor='#fca5a5';}
+    else if(rop!=null&&stock<=rop*1.5){nivel='Medio';nivColor='#fcd34d';}
+    else{nivel='OK';nivColor='#6ee7b7';}
+    var abcBadge=i.abc?'<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(96,165,250,.2);color:#93c5fd;margin-left:4px">ABC '+i.abc+'</span>':'';
+    var critBadge=i.criticidad?'<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(251,146,60,.2);color:#fdba74;margin-left:4px">'+i.criticidad+'</span>':'';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;'+(idx>0?'border-top:1px solid rgba(255,255,255,.05)':'')+'">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(i.desc)+abcBadge+critBadge+'</div>'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.4)">Cód '+cod+(i.grupo?' · '+esc(i.grupo):'')+'</div>'+
+      '</div>'+
+      '<div style="text-align:right;margin:0 12px">'+
+        '<div style="font-size:15px;font-weight:800;color:'+nivColor+'">'+stock+'</div>'+
+        '<div style="font-size:9px;color:'+nivColor+'">'+nivel+'</div>'+
+      '</div>'+
+      '<button onclick="abrirFichaInsumo(\''+cod+'\')" style="background:rgba(217,119,6,.15);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:7px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer;white-space:nowrap">📝 Ficha</button>'+
+    '</div>';
+  });
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
 window.abrirFichaInsumo=function(cod){
   var i=invCatalogo[cod];if(!i)return;
   var rop=calcularROP(i);
@@ -7879,6 +8029,7 @@ window.guardarFichaInsumo=function(cod){
   sedeRef('invCatalogo/'+cod).update(updates).then(function(){
     document.getElementById('fichaInsumoOv').remove();
     if(document.getElementById('bodBuscar'))filtrarCatalogo(document.getElementById('bodBuscar').value);
+    if(document.getElementById('bcLecLista'))renderBodCentralLectura();
   });
 };
 
