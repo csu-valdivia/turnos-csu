@@ -955,7 +955,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🌡️ Temp. Pabellón</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
@@ -1172,10 +1172,16 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           </div>
 
           <div class="asec" style="border-color:rgba(96,165,250,.3)">
-            <p class="asec-title" style="color:#93c5fd">🧊 Refrigeradores a registrar</p>
-            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Define los refrigeradores (por nombre o número) que se controlan diariamente. Aparecerán en el registro de temperatura de refrigeradores (rango 2–8°C).</p>
+            <p class="asec-title" style="color:#93c5fd">🌡️ Espacios de temperatura a registrar</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Define cada espacio y su tipo. Los <b>refrigeradores</b> se registran AM y PM (rango 2–8°C); los box, pabellones y otros espacios solo AM.</p>
             <div class="frow">
-              <input type="text" id="refriAddIn" placeholder="Ej: Refrigerador 1 / Vacunas" style="flex:1">
+              <input type="text" id="refriAddIn" placeholder="Ej: Refrigerador 1 / Box 7 / Pabellón 2" style="flex:1">
+              <select id="refriAddTipo" style="width:auto;min-width:120px">
+                <option value="refri">🧊 Refrigerador</option>
+                <option value="box">🚪 Box</option>
+                <option value="pabellon">🔵 Pabellón</option>
+                <option value="otro">📦 Otro</option>
+              </select>
               <button class="btn-add" style="width:auto" id="refriAddBtn">+ Agregar</button>
             </div>
             <div id="refriLista" style="margin-top:8px"></div>
@@ -1290,14 +1296,15 @@ function jornadaLabel(j){
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🌡️',l:'Temp. Pabellón'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Catálogo de roles técnicos: cada uno abre una funcionalidad de registro en Mis Turnos.
 // tipo = valor de la tarea; fn = función que abre el registro. Ampliable por el admin vía rolesTecnicos.
 var ROLES_TECNICOS_BASE={
   autoclave:{emoji:'🔥',label:'Autoclave',desc:'Registro por ciclo: presión, temperatura, N° carga, tests',fn:'abrirRegAutoclave'},
   temp_ester:{emoji:'🌡️',label:'Temp. Esterilización',desc:'Temperatura zona almacenamiento (diario)',fn:'abrirRegTemp'},
-  temp_pabellon:{emoji:'🌡️',label:'Temp. Pabellón',desc:'Temperatura pabellones (diario)',fn:'abrirRegTemp'},
-  temp_refri:{emoji:'🧊',label:'Temp. Refrigeradores',desc:'Temperatura de refrigeradores 2–8°C (diario)',fn:'abrirRegTemp'},
+  temp_pabellon:{emoji:'🔵',label:'Temp. Pabellón',desc:'Temperatura pabellones (diario AM)',fn:'abrirRegTemp'},
+  temp_box:{emoji:'🚪',label:'Temp. Box',desc:'Temperatura de boxes (diario AM)',fn:'abrirRegTemp'},
+  temp_refri:{emoji:'🧊',label:'Temp. Refrigeradores',desc:'Temperatura de refrigeradores 2–8°C (AM y PM)',fn:'abrirRegTemp'},
   aseo:{emoji:'🧹',label:'Aseo semanal',desc:'Aseo esterilización y pabellón (semanal)',fn:'abrirRegAseo'}
 };
 
@@ -5674,14 +5681,27 @@ window.quitarSupervisor=function(key){
   sedeRef('supervisores/'+key).remove().then(function(){initConfigSupervisores();});
 };
 
-// ── Config de refrigeradores ──
+// ── Config de espacios de temperatura (refrigeradores, box, pabellones, otros) ──
+// Normaliza: los registros antiguos eran strings (todos refrigeradores); los nuevos son {nombre,tipo}
+function espacioTemp(v){
+  if(typeof v==='string')return {nombre:v,tipo:'refri'};
+  if(v&&typeof v==='object')return {nombre:v.nombre||'',tipo:v.tipo||'refri'};
+  return null;
+}
+var TIPO_ESPACIO={
+  refri:{emoji:'🧊',label:'Refrigerador',doble:true},
+  box:{emoji:'🚪',label:'Box',doble:false},
+  pabellon:{emoji:'🔵',label:'Pabellón',doble:false},
+  otro:{emoji:'📦',label:'Otro',doble:false}
+};
 function initConfigRefrigeradores(){
   renderRefriLista();
   var ab=document.getElementById('refriAddBtn');
   if(ab)ab.onclick=function(){
     var v=document.getElementById('refriAddIn').value.trim();
-    if(!v){alert('Escribe el nombre del refrigerador.');return;}
-    sedeRef('refrigeradores/'+Date.now()).set(v).then(function(){
+    var tipo=document.getElementById('refriAddTipo')?document.getElementById('refriAddTipo').value:'refri';
+    if(!v){alert('Escribe el nombre del espacio.');return;}
+    sedeRef('refrigeradores/'+Date.now()).set({nombre:v,tipo:tipo}).then(function(){
       document.getElementById('refriAddIn').value='';
       showSaved('refriSaved');
     });
@@ -5691,14 +5711,36 @@ function renderRefriLista(){
   var cont=document.getElementById('refriLista');
   if(!cont)return;
   var keys=Object.keys(refrigeradores||{}).filter(function(k){return refrigeradores[k];});
-  if(!keys.length){cont.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.35)">Sin refrigeradores configurados.</p>';return;}
-  cont.innerHTML=keys.map(function(k){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px">'+
-      '<span style="font-size:12px;color:#fff">🧊 '+esc(refrigeradores[k])+'</span>'+
-      '<button onclick="quitarRefri(\''+k+'\')" style="background:rgba(239,68,68,.2);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">Quitar</button>'+
-    '</div>';
-  }).join('');
+  if(!keys.length){cont.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.35)">Sin espacios configurados.</p>';return;}
+  // Agrupar por tipo
+  var porTipo={refri:[],box:[],pabellon:[],otro:[]};
+  keys.forEach(function(k){
+    var e=espacioTemp(refrigeradores[k]);if(!e)return;
+    (porTipo[e.tipo]||porTipo.otro).push({k:k,nombre:e.nombre,tipo:e.tipo});
+  });
+  var html='';
+  ['refri','box','pabellon','otro'].forEach(function(tipo){
+    var arr=porTipo[tipo];if(!arr.length)return;
+    var t=TIPO_ESPACIO[tipo];
+    html+='<div style="font-size:10px;color:rgba(255,255,255,.4);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px">'+t.emoji+' '+t.label+' · '+(t.doble?'AM y PM':'solo AM')+'</div>';
+    arr.forEach(function(it){
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px">'+
+        '<span style="font-size:12px;color:#fff">'+t.emoji+' '+esc(it.nombre)+'</span>'+
+        '<div style="display:flex;gap:4px">'+
+          '<select onchange="cambiarTipoEspacio(\''+it.k+'\',this.value)" style="font-size:10px;padding:2px 4px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:5px">'+
+            ['refri','box','pabellon','otro'].map(function(tp){return '<option value="'+tp+'"'+(tp===it.tipo?' selected':'')+'>'+TIPO_ESPACIO[tp].emoji+' '+TIPO_ESPACIO[tp].label+'</option>';}).join('')+
+          '</select>'+
+          '<button onclick="quitarRefri(\''+it.k+'\')" style="background:rgba(239,68,68,.2);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">Quitar</button>'+
+        '</div>'+
+      '</div>';
+    });
+  });
+  cont.innerHTML=html;
 }
+window.cambiarTipoEspacio=function(k,tipo){
+  var e=espacioTemp(refrigeradores[k]);if(!e)return;
+  sedeRef('refrigeradores/'+k).set({nombre:e.nombre,tipo:tipo}).then(function(){renderRefriLista();});
+};
 window.quitarRefri=function(k){sedeRef('refrigeradores/'+k).remove().then(function(){renderRefriLista();});};
 
 // ── Config de roles técnicos personalizados ──
@@ -6693,9 +6735,10 @@ window.guardarRegAseo=function(){
 
 window.abrirRegTemp=function(tipo){
   var cfg={
-    temp_ester:{titulo:'🌡️ Temp. Esterilización',sub:'Zona de almacenamiento · 1 vez al día (AM)',rango:null,puntos:['Zona de almacenamiento'],doble:false},
-    temp_pabellon:{titulo:'🌡️ Temp. Pabellón',sub:'Pabellones · 1 vez al día (AM)',rango:null,puntos:['Pabellón'],doble:false},
-    temp_refri:{titulo:'🧊 Temp. Refrigeradores',sub:'Cadena de frío 2–8°C · AM y PM',rango:[2,8],puntos:null,doble:true}
+    temp_ester:{titulo:'🌡️ Temp. Esterilización',sub:'Zona de almacenamiento · 1 vez al día (AM)',rango:null,puntos:['Zona de almacenamiento'],doble:false,filtroTipo:null},
+    temp_pabellon:{titulo:'🔵 Temp. Pabellón',sub:'Pabellones · 1 vez al día (AM)',rango:null,puntos:null,doble:false,filtroTipo:'pabellon'},
+    temp_box:{titulo:'🚪 Temp. Box',sub:'Boxes · 1 vez al día (AM)',rango:null,puntos:null,doble:false,filtroTipo:'box'},
+    temp_refri:{titulo:'🧊 Temp. Refrigeradores',sub:'Cadena de frío 2–8°C · AM y PM',rango:[2,8],puntos:null,doble:true,filtroTipo:'refri'}
   }[tipo];
   if(!cfg)return;
   var ov=document.getElementById('regTempOv');if(ov)ov.remove();
@@ -6716,16 +6759,22 @@ window.abrirRegTemp=function(tipo){
         '<option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>'+estadoTomas;
   }
   var inputs='';
-  if(tipo==='temp_refri'){
-    var refris=Object.keys(refrigeradores||{}).map(function(k){return refrigeradores[k];}).filter(Boolean);
-    if(!refris.length){
-      inputs='<div style="font-size:12px;color:#fbbf24;padding:10px 0">No hay refrigeradores configurados. El administrador los agrega en Admin → Refrigeradores.</div>';
+  var rango=cfg.rango;
+  var evalAttr=rango?' oninput="evalTemp(this,'+rango[0]+','+rango[1]+')"':'';
+  if(cfg.filtroTipo){
+    // Espacios configurables filtrados por tipo (refri/box/pabellon)
+    var espacios=Object.keys(refrigeradores||{}).map(function(k){return espacioTemp(refrigeradores[k]);})
+      .filter(function(e){return e&&e.tipo===cfg.filtroTipo;})
+      .map(function(e){return e.nombre;});
+    if(!espacios.length){
+      var lbl=TIPO_ESPACIO[cfg.filtroTipo]?TIPO_ESPACIO[cfg.filtroTipo].label.toLowerCase():'espacios';
+      inputs='<div style="font-size:12px;color:#fbbf24;padding:10px 0">No hay '+lbl+'s configurados. El administrador los agrega en Admin → Espacios de temperatura.</div>';
     } else {
-      inputs=refris.map(function(nombre){
+      inputs=espacios.map(function(nombre){
         return '<div style="margin-bottom:12px;background:rgba(255,255,255,.02);border-radius:8px;padding:10px"><label style="font-size:12px;color:#fff;font-weight:600">'+esc(nombre)+'</label>'+
           '<div style="display:flex;gap:6px;margin-top:6px">'+
             '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.6)">Actual (°C)</label>'+
-              '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(nombre)+'" data-campo="actual" oninput="evalTemp(this,2,8)" style="width:100%;font-size:14px;padding:7px"></div>'+
+              '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(nombre)+'" data-campo="actual"'+evalAttr+' style="width:100%;font-size:14px;padding:7px"></div>'+
             '<div style="flex:1"><label style="font-size:10px;color:#93c5fd">Mínima (°C)</label>'+
               '<input type="number" step="0.1" class="temp-input" data-punto="'+esc(nombre)+'" data-campo="min" style="width:100%;font-size:14px;padding:7px"></div>'+
             '<div style="flex:1"><label style="font-size:10px;color:#fca5a5">Máxima (°C)</label>'+
@@ -6858,7 +6907,7 @@ window.verGraficoTemp=function(tipo){
   var puntos={};
   regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
   var puntosArr=Object.keys(puntos);
-  var titulo={temp_ester:'🌡️ Temp. Esterilización',temp_pabellon:'🌡️ Temp. Pabellón',temp_refri:'🧊 Temp. Refrigeradores'}[tipo]||'Temperatura';
+  var titulo={temp_ester:'🌡️ Temp. Esterilización',temp_pabellon:'🔵 Temp. Pabellón',temp_box:'🚪 Temp. Box',temp_refri:'🧊 Temp. Refrigeradores'}[tipo]||'Temperatura';
   var esRefri=(tipo==='temp_refri');
   var svg=graficoTempSVG(regs,puntosArr,esRefri);
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:640px;width:100%;margin-top:20px">'+
@@ -7030,7 +7079,7 @@ window.verTodasMisGraficas=function(){
     if(!regs.length)return;
     algo=true;
     var puntos={};regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
-    var titulo={temp_refri:'🧊 Temperatura Refrigeradores',temp_ester:'🌡️ Temperatura Esterilización',temp_pabellon:'🌡️ Temperatura Pabellón'}[tipo];
+    var titulo={temp_refri:'🧊 Temperatura Refrigeradores',temp_ester:'🌡️ Temperatura Esterilización',temp_pabellon:'🔵 Temperatura Pabellón',temp_box:'🚪 Temperatura Box'}[tipo];
     html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
       '<p style="font-size:13px;color:#fff;font-weight:600;margin-bottom:8px">'+titulo+'</p>'+
       graficoTempSVG(regs,Object.keys(puntos),tipo==='temp_refri')+'</div>';
@@ -7249,7 +7298,7 @@ function verificarCumplimiento(tipo,fecha){
     var hay=Object.values(regAutoclave||{}).some(function(r){return r.fecha===fecha;});
     return {cumplido:hay,detalle:hay?'Registrado':'Sin registro de carga'};
   }
-  if(tipo==='temp_ester'||tipo==='temp_pabellon'){
+  if(tipo==='temp_ester'||tipo==='temp_pabellon'||tipo==='temp_box'){
     var regsE=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha===fecha;});
     var hay2=regsE.length>0;
     var neE=hay2&&regsE.every(function(r){return r.ne;});
@@ -7298,7 +7347,7 @@ function nombreRol(tipo){
 }
 
 // Tipos que son "medibles" (tienen registro verificable)
-var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_refri:1,conductividad:1,reas:1,aseo:1};
+var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1};
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
 // Cruza el equipo (nombres) con turnos, tareas/roles y subbodegas.
@@ -7565,7 +7614,7 @@ function renderDashboardTecnico(){
     var regs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha&&r.fecha.slice(0,7)===mesActual;});
     if(!regs.length)return;
     var puntos={};regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
-    var titulo={temp_refri:'🧊 Refrigeradores',temp_ester:'🌡️ Esterilización',temp_pabellon:'🌡️ Pabellón'}[tipo];
+    var titulo={temp_refri:'🧊 Refrigeradores',temp_ester:'🌡️ Esterilización',temp_pabellon:'🔵 Pabellón',temp_box:'🚪 Box'}[tipo];
     html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+
       '<p style="font-size:12px;color:#fff;margin-bottom:6px">'+titulo+'</p>'+
       graficoTempSVG(regs,Object.keys(puntos),tipo==='temp_refri')+'</div>';
@@ -7640,7 +7689,7 @@ window.verDetalleTecnico=function(tipo){
     titulo='🌡️ Registros de temperatura';
     var regsT=Object.values(regTemperatura||{}).sort(function(a,b){return b.ts-a.ts;});
     filas=regsT.length?regsT.map(function(r){
-      var tn={temp_refri:'🧊 Refrigeradores',temp_ester:'🌡️ Esterilización',temp_pabellon:'🌡️ Pabellón'}[r.tipo]||r.tipo;
+      var tn={temp_refri:'🧊 Refrigeradores',temp_ester:'🌡️ Esterilización',temp_pabellon:'🔵 Pabellón',temp_box:'🚪 Box'}[r.tipo]||r.tipo;
       var lecturas=Object.keys(r.lecturas||{}).map(function(p){return esc(p)+': '+r.lecturas[p]+'°C';}).join(' · ');
       var cuerpo=r.ne
         ? '<div style="font-size:11px;color:#cbd5e1;margin-top:2px">🚫 No evaluado</div>'+
