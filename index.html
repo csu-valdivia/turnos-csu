@@ -7505,6 +7505,7 @@ function nombreRol(tipo){
 
 // Tipos que son "medibles" (tienen registro verificable)
 var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1};
+var TIPOS_SEMANALES={aseo:1}; // tareas que se controlan 1 vez por semana, no diariamente
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
 // Cruza el equipo (nombres) con turnos, tareas/roles y subbodegas.
@@ -7527,16 +7528,24 @@ function renderSinAsignar(){
   var equipo=(nombres||[]).slice().filter(Boolean);
   if(!equipo.length){c.innerHTML='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5)">No hay personal cargado en el equipo.</div>';return;}
   // Para cada persona, ver qué tiene
+  var ORDEN_DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
   var filas=equipo.map(function(n){
-    var tieneTurno=Object.values(bloques||{}).some(function(b){return b.nombre===n;});
-    var tieneTarea=Object.values(tareas||{}).some(function(t){return t.nombre===n;});
+    var turnosPersona=Object.values(bloques||{}).filter(function(b){return b.nombre===n;});
+    var tieneTurno=turnosPersona.length>0;
+    var tareasPersona=Object.values(tareas||{}).filter(function(t){return t.nombre===n;});
+    var tieneTarea=tareasPersona.length>0;
     var misBod=Object.keys(invAsignaciones||{}).filter(function(b){return invAsignaciones[b]===n;});
     var tieneBodega=misBod.length>0;
     var faltantes=[];
     if(!tieneTurno)faltantes.push('turno');
     if(!tieneTarea)faltantes.push('tarea/rol');
-    // subbodega es opcional, no cuenta como "falta" pero se muestra
+    // Días con turno (ordenados)
+    var diasTurno=turnosPersona.map(function(b){return b.dia;}).filter(function(v,i,a){return a.indexOf(v)===i;})
+      .sort(function(a,b){return ORDEN_DIAS.indexOf(a)-ORDEN_DIAS.indexOf(b);});
+    // Tareas agrupadas (rol → días)
+    var tareasDetalle=tareasPersona.map(function(t){return {rol:nombreRol(t.tipo),dia:t.dia,tipo:t.tipo};});
     return {nombre:n,turno:tieneTurno,tarea:tieneTarea,bodega:tieneBodega,bodegas:misBod,faltantes:faltantes,
+      diasTurno:diasTurno,tareasDetalle:tareasDetalle,
       sinNada:(!tieneTurno&&!tieneTarea&&!tieneBodega)};
   });
   // Ordenar: primero los que no tienen nada, luego los que faltan algo, luego completos
@@ -7568,12 +7577,22 @@ function renderSinAsignar(){
     var h='<p style="font-size:13px;font-weight:700;color:'+color+';margin:14px 0 8px"'+(secId?' id="'+secId+'"':'')+'>'+titulo+'</p>'+
       '<div style="background:#16233d;border-radius:10px;overflow:hidden">';
     arr.forEach(function(f,i){
-      h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;'+(i>0?'border-top:1px solid rgba(255,255,255,.05)':'')+'">'+
-        '<span style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+'</span>'+
-        '<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-end">'+
-          chip(f.turno,'Turno')+chip(f.tarea,'Tarea')+
-          (f.bodega?'<span style="font-size:10px;padding:2px 7px;border-radius:5px;margin-left:4px;background:rgba(217,119,6,.18);color:#fbbf24">📦 '+f.bodegas.length+'</span>':'')+
+      // Detalle de días de turno
+      var diasStr=f.diasTurno.length?f.diasTurno.map(function(d){return d.slice(0,3);}).join(' · '):'';
+      // Detalle de tareas (rol · día)
+      var tareasStr=f.tareasDetalle.length?f.tareasDetalle.map(function(t){
+        return t.rol+(t.dia?' <span style="color:rgba(255,255,255,.35)">('+t.dia.slice(0,3)+')</span>':'');
+      }).join(', '):'';
+      h+='<div style="padding:11px 14px;'+(i>0?'border-top:1px solid rgba(255,255,255,.05)':'')+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:'+((diasStr||tareasStr)?'6px':'0')+'">'+
+          '<span style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+'</span>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-end">'+
+            chip(f.turno,'Turno')+chip(f.tarea,'Tarea')+
+            (f.bodega?'<span style="font-size:10px;padding:2px 7px;border-radius:5px;margin-left:4px;background:rgba(217,119,6,.18);color:#fbbf24">📦 '+f.bodegas.length+'</span>':'')+
+          '</div>'+
         '</div>'+
+        (diasStr?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:2px">📅 Días: <span style="color:#93c5fd">'+diasStr+'</span></div>':'')+
+        (tareasStr?'<div style="font-size:11px;color:rgba(255,255,255,.5)">🔧 Tareas: <span style="color:#c4b5fd">'+tareasStr+'</span></div>':'')+
       '</div>';
     });
     h+='</div>';
@@ -7607,15 +7626,33 @@ function renderControlCumplimiento(){
   if(!c)return;
   var hoy=hoyStr();
   var diaHoy=diaDeFecha(hoy);
-  // 1. PENDIENTES DE HOY: roles medibles asignados hoy, cruzados con registros
+  // 1. PENDIENTES DE HOY: solo tareas DIARIAS asignadas hoy
   var asignadosHoy=Object.values(tareas||{}).filter(function(t){
-    return t.dia===diaHoy&&(TIPOS_MEDIBLES[t.tipo]||(rolesTecnicos&&rolesTecnicos[t.tipo]));
+    return t.dia===diaHoy&&!TIPOS_SEMANALES[t.tipo]&&(TIPOS_MEDIBLES[t.tipo]||(rolesTecnicos&&rolesTecnicos[t.tipo]));
   });
   var pendientes=[],cumplidos=[];
   asignadosHoy.forEach(function(t){
     var v=verificarCumplimiento(t.tipo,hoy);
     var fila={nombre:t.nombre,tipo:t.tipo,rol:nombreRol(t.tipo),jornada:t.jornada,detalle:v.detalle};
     if(v.cumplido)cumplidos.push(fila);else pendientes.push(fila);
+  });
+
+  // TAREAS SEMANALES de esta semana (aseo): pendientes/cumplidas
+  var semanales=Object.values(tareas||{}).filter(function(t){return TIPOS_SEMANALES[t.tipo];});
+  var semPend=[],semCumpl=[];
+  // ¿Cumplida esta semana? Buscar registro entre el lunes y hoy
+  var hoyD2=new Date(hoy+'T12:00:00');
+  var lunesSem=new Date(hoyD2);while(lunesSem.getDay()!==1)lunesSem.setDate(lunesSem.getDate()-1);
+  semanales.forEach(function(t){
+    var cumplida=false;
+    var cur=new Date(lunesSem);
+    while(cur<=hoyD2){
+      var fStr=cur.getFullYear()+'-'+('0'+(cur.getMonth()+1)).slice(-2)+'-'+('0'+cur.getDate()).slice(-2);
+      if(verificarCumplimiento(t.tipo,fStr).cumplido){cumplida=true;break;}
+      cur.setDate(cur.getDate()+1);
+    }
+    var fila={nombre:t.nombre,rol:nombreRol(t.tipo),dia:t.dia};
+    if(cumplida)semCumpl.push(fila);else semPend.push(fila);
   });
 
   var html='<p style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:12px">'+diaHoy+' · '+hoy+'</p>';
@@ -7629,10 +7666,10 @@ function renderControlCumplimiento(){
     kpiCardScroll('📊 Cumplimiento hoy',(pctHoy!==null?pctHoy+'%':'—'),'#22d3ee','secPorResponsable')+
   '</div>';
 
-  // Pendientes de hoy con responsable
-  html+='<p style="font-size:13px;font-weight:700;color:#fca5a5;margin:14px 0 8px" id="secPendientes">⏳ Pendientes de hoy</p>';
+  // Pendientes DIARIOS de hoy con responsable
+  html+='<p style="font-size:13px;font-weight:700;color:#fca5a5;margin:14px 0 8px" id="secPendientes">⏳ Pendientes de hoy (diarias)</p>';
   if(!pendientes.length){
-    html+='<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:14px;font-size:12px;color:#6ee7b7">✓ Todo lo asignado para hoy está registrado. Excelente.</div>';
+    html+='<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:14px;font-size:12px;color:#6ee7b7">✓ Todas las tareas diarias de hoy están registradas.</div>';
   } else {
     html+='<div style="background:#16233d;border-radius:10px;overflow:hidden">';
     pendientes.forEach(function(p,i){
@@ -7643,6 +7680,24 @@ function renderControlCumplimiento(){
       '</div>';
     });
     html+='</div>';
+  }
+
+  // Pendientes SEMANALES de la semana
+  if(semanales.length){
+    html+='<p style="font-size:13px;font-weight:700;color:#c4b5fd;margin:16px 0 8px">🗓️ Tareas semanales (esta semana)</p>';
+    if(!semPend.length){
+      html+='<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:14px;font-size:12px;color:#6ee7b7">✓ Todas las tareas semanales están hechas.</div>';
+    } else {
+      html+='<div style="background:#16233d;border-radius:10px;overflow:hidden">';
+      semPend.forEach(function(p,i){
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;'+(i>0?'border-top:1px solid rgba(255,255,255,.05)':'')+'">'+
+          '<div><div style="font-size:13px;color:#fff;font-weight:600">'+p.rol+'</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.5)">Responsable: <b style="color:#fcd34d">'+esc(p.nombre)+'</b> · '+esc(p.dia)+'</div></div>'+
+          '<div style="font-size:11px;color:#c4b5fd;text-align:right">Pendiente esta semana</div>'+
+        '</div>';
+      });
+      html+='</div>';
+    }
   }
 
   // Cumplidos de hoy (colapsable simple)
@@ -7661,23 +7716,57 @@ function renderControlCumplimiento(){
   // 2. % CUMPLIMIENTO POR RESPONSABLE (histórico del mes)
   html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:18px 0 8px" id="secPorResponsable">📈 Cumplimiento por responsable (este mes)</p>';
   var mes=hoy.slice(0,7);
-  // Para cada día del mes transcurrido, ver qué se asignó y si se cumplió, agrupado por persona
-  var statPersona={}; // nombre -> {asignados, cumplidos}
+  // Diarias: se cuentan por día. Semanales (aseo): se cuentan 1 vez por semana.
+  var statPersona={}; // nombre -> {diaAsig,diaCumpl,semAsig,semCumpl}
   var hoyDate=new Date(hoy+'T12:00:00');
   var diaMesActual=hoyDate.getDate();
+  function num(n){return statPersona[n]||(statPersona[n]={diaAsig:0,diaCumpl:0,semAsig:0,semCumpl:0});}
+  // --- Tareas DIARIAS: recorrer día por día ---
   for(var d=1;d<=diaMesActual;d++){
     var fechaD=mes+'-'+('0'+d).slice(-2);
     var diaSemD=diaDeFecha(fechaD);
     Object.values(tareas||{}).forEach(function(t){
       if(t.dia!==diaSemD)return;
+      if(TIPOS_SEMANALES[t.tipo])return; // semanales aparte
       if(!TIPOS_MEDIBLES[t.tipo]&&!(rolesTecnicos&&rolesTecnicos[t.tipo]))return;
-      if(!statPersona[t.nombre])statPersona[t.nombre]={asig:0,cumpl:0};
-      statPersona[t.nombre].asig++;
-      if(verificarCumplimiento(t.tipo,fechaD).cumplido)statPersona[t.nombre].cumpl++;
+      var s=num(t.nombre);s.diaAsig++;
+      if(verificarCumplimiento(t.tipo,fechaD).cumplido)s.diaCumpl++;
     });
   }
+  // --- Tareas SEMANALES: contar por semana transcurrida del mes ---
+  // Semanas del mes (lunes como inicio). Para cada semana, si la persona tiene la tarea, cuenta 1.
+  var semanasDelMes=[];
+  var primerDia=new Date(mes+'-01T12:00:00');
+  var cursor=new Date(primerDia);
+  // retroceder al lunes de esa semana
+  while(cursor.getDay()!==1)cursor.setDate(cursor.getDate()-1);
+  while(cursor<=hoyDate){
+    semanasDelMes.push(new Date(cursor));
+    cursor.setDate(cursor.getDate()+7);
+  }
+  Object.values(tareas||{}).forEach(function(t){
+    if(!TIPOS_SEMANALES[t.tipo])return;
+    var s=num(t.nombre);
+    semanasDelMes.forEach(function(lunes){
+      // ¿el día asignado de esta tarea cae dentro de esta semana y ya pasó/es hoy?
+      var diaObjetivo=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'].indexOf(t.dia);
+      if(diaObjetivo<0)diaObjetivo=1;
+      var fechaTarea=new Date(lunes);
+      var offset=(diaObjetivo===0?6:diaObjetivo-1); // lunes=0 offset
+      fechaTarea.setDate(lunes.getDate()+offset);
+      if(fechaTarea>hoyDate)return; // aún no llega
+      if(fechaTarea.getMonth()!==hoyDate.getMonth())return; // fuera del mes
+      s.semAsig++;
+      var fStr=fechaTarea.getFullYear()+'-'+('0'+(fechaTarea.getMonth()+1)).slice(-2)+'-'+('0'+fechaTarea.getDate()).slice(-2);
+      // cumplido si hay registro de aseo esa semana
+      if(verificarCumplimiento(t.tipo,fStr).cumplido)s.semCumpl++;
+    });
+  });
   var personas=Object.keys(statPersona).sort(function(a,b){
-    return (statPersona[b].cumpl/statPersona[b].asig)-(statPersona[a].cumpl/statPersona[a].asig);
+    var pa=statPersona[a],pb=statPersona[b];
+    var ta=pa.diaAsig+pa.semAsig,tb=pb.diaAsig+pb.semAsig;
+    var ca=ta?(pa.diaCumpl+pa.semCumpl)/ta:0,cb=tb?(pb.diaCumpl+pb.semCumpl)/tb:0;
+    return cb-ca;
   });
   if(!personas.length){
     html+='<div style="background:#16233d;border-radius:10px;padding:14px;font-size:12px;color:rgba(255,255,255,.5)">Aún no hay roles medibles asignados este mes.</div>';
@@ -7685,18 +7774,24 @@ function renderControlCumplimiento(){
     html+='<div style="background:#16233d;border-radius:10px;padding:6px 0">';
     personas.forEach(function(nombre){
       var s=statPersona[nombre];
-      var pct=s.asig?Math.round(s.cumpl/s.asig*100):0;
+      var totAsig=s.diaAsig+s.semAsig,totCumpl=s.diaCumpl+s.semCumpl;
+      var pct=totAsig?Math.round(totCumpl/totAsig*100):0;
       var color=pct>=90?'#6ee7b7':pct>=70?'#fcd34d':'#fca5a5';
+      // Desglose diario/semanal
+      var partes=[];
+      if(s.diaAsig)partes.push('diario '+s.diaCumpl+'/'+s.diaAsig);
+      if(s.semAsig)partes.push('semanal '+s.semCumpl+'/'+s.semAsig);
       html+='<div style="padding:9px 14px">'+
         '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
           '<span style="font-size:12px;color:#fff">'+esc(nombre)+'</span>'+
-          '<span style="font-size:12px;color:'+color+';font-weight:700">'+pct+'% <span style="color:rgba(255,255,255,.4);font-weight:400">('+s.cumpl+'/'+s.asig+')</span></span>'+
+          '<span style="font-size:12px;color:'+color+';font-weight:700">'+pct+'% <span style="color:rgba(255,255,255,.4);font-weight:400">('+totCumpl+'/'+totAsig+')</span></span>'+
         '</div>'+
+        (partes.length?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px">'+partes.join(' · ')+'</div>':'')+
         '<div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+'"></div></div>'+
       '</div>';
     });
     html+='</div>';
-    html+='<p style="font-size:10px;color:rgba(255,255,255,.35);margin-top:8px">El % refleja cuántas de sus mediciones asignadas fueron efectivamente registradas.</p>';
+    html+='<p style="font-size:10px;color:rgba(255,255,255,.35);margin-top:8px">Las tareas diarias se cuentan por día; las semanales (aseo) 1 vez por semana.</p>';
   }
 
   c.innerHTML=html;
