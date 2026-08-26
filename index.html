@@ -623,6 +623,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirDashInvBtn" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">📦 Dashboard de inventario</button>
             <button class="btn-add" id="abrirDashTecBtn" style="background:linear-gradient(135deg,#7c3aed,#2563eb);margin-top:6px">🔬 Dashboard técnico (esterilización)</button>
             <button class="btn-add" id="abrirCumplimientoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">✅ Control de cumplimiento diario</button>
+            <button class="btn-add" id="abrirSinAsignarBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">👥 Quién no tiene asignaciones</button>
           </div>
 
 
@@ -1560,6 +1561,7 @@ window.ingresarRol=function(rol){
       var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;
       var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
+      var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;
       // Llevar la vista al panel admin
       if(p)p.scrollIntoView({behavior:'smooth'});
     },600);
@@ -5252,7 +5254,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -7256,6 +7258,88 @@ function nombreRol(tipo){
 
 // Tipos que son "medibles" (tienen registro verificable)
 var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_refri:1,conductividad:1,reas:1,aseo:1};
+
+// ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
+// Cruza el equipo (nombres) con turnos, tareas/roles y subbodegas.
+window.abrirSinAsignar=function(){
+  var ov=document.getElementById('sinAsignarOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='sinAsignarOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  ov.innerHTML='<div style="max-width:760px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      '<span style="font-size:17px;font-weight:800;color:#c4b5fd">👥 Asignaciones del equipo</span>'+
+      '<button onclick="document.getElementById(\'sinAsignarOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div id="sinAsignarContenido"></div></div>';
+  document.body.appendChild(ov);
+  renderSinAsignar();
+};
+
+function renderSinAsignar(){
+  var c=document.getElementById('sinAsignarContenido');if(!c)return;
+  var equipo=(nombres||[]).slice().filter(Boolean);
+  if(!equipo.length){c.innerHTML='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5)">No hay personal cargado en el equipo.</div>';return;}
+  // Para cada persona, ver qué tiene
+  var filas=equipo.map(function(n){
+    var tieneTurno=Object.values(bloques||{}).some(function(b){return b.nombre===n;});
+    var tieneTarea=Object.values(tareas||{}).some(function(t){return t.nombre===n;});
+    var misBod=Object.keys(invAsignaciones||{}).filter(function(b){return invAsignaciones[b]===n;});
+    var tieneBodega=misBod.length>0;
+    var faltantes=[];
+    if(!tieneTurno)faltantes.push('turno');
+    if(!tieneTarea)faltantes.push('tarea/rol');
+    // subbodega es opcional, no cuenta como "falta" pero se muestra
+    return {nombre:n,turno:tieneTurno,tarea:tieneTarea,bodega:tieneBodega,bodegas:misBod,faltantes:faltantes,
+      sinNada:(!tieneTurno&&!tieneTarea&&!tieneBodega)};
+  });
+  // Ordenar: primero los que no tienen nada, luego los que faltan algo, luego completos
+  filas.sort(function(a,b){
+    var sa=(a.sinNada?0:a.faltantes.length?1:2);
+    var sb=(b.sinNada?0:b.faltantes.length?1:2);
+    return sa-sb||a.nombre.localeCompare(b.nombre);
+  });
+
+  var sinNada=filas.filter(function(f){return f.sinNada;});
+  var faltanAlgo=filas.filter(function(f){return !f.sinNada&&f.faltantes.length;});
+  var completos=filas.filter(function(f){return !f.faltantes.length;});
+
+  // KPIs
+  var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
+    kpiCardTec('🔴 Sin nada asignado',sinNada.length,'#dc2626')+
+    kpiCardTec('🟡 Les falta algo',faltanAlgo.length,'#d97706')+
+    kpiCardTec('🟢 Completos',completos.length,'#059669')+
+  '</div>';
+
+  function chip(ok,label){
+    return '<span style="font-size:10px;padding:2px 7px;border-radius:5px;margin-left:4px;'+
+      (ok?'background:rgba(16,185,129,.18);color:#6ee7b7':'background:rgba(239,68,68,.15);color:#fca5a5')+'">'+
+      (ok?'✓ ':'✗ ')+label+'</span>';
+  }
+
+  function bloqueFilas(titulo,color,arr,mostrarBodega){
+    if(!arr.length)return '';
+    var h='<p style="font-size:13px;font-weight:700;color:'+color+';margin:14px 0 8px">'+titulo+'</p>'+
+      '<div style="background:#16233d;border-radius:10px;overflow:hidden">';
+    arr.forEach(function(f,i){
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;'+(i>0?'border-top:1px solid rgba(255,255,255,.05)':'')+'">'+
+        '<span style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+'</span>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-end">'+
+          chip(f.turno,'Turno')+chip(f.tarea,'Tarea')+
+          (f.bodega?'<span style="font-size:10px;padding:2px 7px;border-radius:5px;margin-left:4px;background:rgba(217,119,6,.18);color:#fbbf24">📦 '+f.bodegas.length+'</span>':'')+
+        '</div>'+
+      '</div>';
+    });
+    h+='</div>';
+    return h;
+  }
+
+  html+=bloqueFilas('🔴 Sin ninguna asignación',' #fca5a5',sinNada);
+  html+=bloqueFilas('🟡 Les falta alguna asignación','#fcd34d',faltanAlgo);
+  html+=bloqueFilas('🟢 Con asignaciones completas','#6ee7b7',completos);
+
+  html+='<p style="font-size:10px;color:rgba(255,255,255,.35);margin-top:12px">Turno = tiene bloques en el horario · Tarea = tiene rol/tarea asignada · 📦 = subbodega a cargo (opcional).</p>';
+  c.innerHTML=html;
+}
 
 window.abrirControlCumplimiento=function(){
   var ov=document.getElementById('cumplOv');if(ov)ov.remove();
