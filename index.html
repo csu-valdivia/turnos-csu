@@ -6720,68 +6720,132 @@ window.verGraficoAutoclave=function(){
 };
 
 function graficoAutoclaveSVG(regs){
-  var W=580,H=260,padL=40,padR=12,padT=16,padB=40;
-  var n=regs.length;
-  // Recalcular cumplimiento según tipo de carga (no confiar en el campo guardado, que puede faltar en datos viejos)
   function evalT(r){var p=AUTOCLAVE_PARAMS[r.tipoCarga];if(!p)return true;return Number(r.temperatura)>=p.temp;}
   function evalP(r){var p=AUTOCLAVE_PARAMS[r.tipoCarga];if(!p)return true;return Number(r.presion)>=p.presionMin;}
-  var temps=regs.map(function(r){return r.temperatura;});
-  var pres=regs.map(function(r){return r.presion;});
-  // Dos ejes: temp (izq) y presión (der). Normalizamos cada uno.
-  var minT=Math.min.apply(null,temps.concat([115])),maxT=Math.max.apply(null,temps.concat([140]));
-  var minP=Math.min.apply(null,pres.concat([1])),maxP=Math.max.apply(null,pres.concat([2.5]));
-  function x(i){return n<=1?padL+(W-padL-padR)/2:padL+i/(n-1)*(W-padL-padR);}
-  function yT(v){return padT+(maxT-v)/(maxT-minT)*(H-padT-padB);}
-  function yP(v){return padT+(maxP-v)/(maxP-minP)*(H-padT-padB);}
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
-  // Grid horizontal
-  for(var g=0;g<=4;g++){
-    var yy=padT+g/4*(H-padT-padB);
-    svg+='<line x1="'+padL+'" y1="'+yy+'" x2="'+(W-padR)+'" y2="'+yy+'" stroke="rgba(255,255,255,.05)"/>';
-  }
-  // Marcas del eje Y izquierdo (temperatura, rojo) y derecho (presión, azul)
-  for(var mt=0;mt<=4;mt++){
-    var vT=minT+(maxT-minT)*mt/4;
-    svg+='<text x="'+(padL-4)+'" y="'+(yT(vT)+3)+'" fill="rgba(248,113,113,.6)" font-size="8" text-anchor="end">'+vT.toFixed(0)+'°</text>';
-    var vP=minP+(maxP-minP)*mt/4;
-    svg+='<text x="'+(W-padR+2)+'" y="'+(yP(vP)+3)+'" fill="rgba(96,165,250,.6)" font-size="8">'+vP.toFixed(1)+'</text>';
-  }
-  // Líneas de PARÁMETRO OBJETIVO (referencia para ver la tendencia)
-  // Temperatura objetivo: usar el más común (instrumental 134, ropa 121). Dibujar ambas si hay mezcla.
-  var tiposPresentes={};regs.forEach(function(r){if(r.tipoCarga)tiposPresentes[r.tipoCarga]=1;});
-  var paramsDibujados={};
-  Object.keys(tiposPresentes).forEach(function(tc){
-    var p=AUTOCLAVE_PARAMS[tc];if(!p)return;
-    // Temperatura objetivo (rojo punteado)
-    if(!paramsDibujados['T'+p.temp]){
-      paramsDibujados['T'+p.temp]=1;
-      svg+='<line x1="'+padL+'" y1="'+yT(p.temp)+'" x2="'+(W-padR)+'" y2="'+yT(p.temp)+'" stroke="#f87171" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>';
-      svg+='<text x="'+(padL+4)+'" y="'+(yT(p.temp)-3)+'" fill="#f87171" font-size="8" opacity="0.8">objetivo '+p.temp+'°C</text>';
-    }
-    // Presión objetivo (azul punteado)
-    if(!paramsDibujados['P'+p.presion]){
-      paramsDibujados['P'+p.presion]=1;
-      svg+='<line x1="'+padL+'" y1="'+yP(p.presion)+'" x2="'+(W-padR)+'" y2="'+yP(p.presion)+'" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>';
-      svg+='<text x="'+(W-padR-4)+'" y="'+(yP(p.presion)-3)+'" fill="#60a5fa" font-size="8" opacity="0.8" text-anchor="end">objetivo '+p.presion+' bar</text>';
+  function evalCarga(r){return evalT(r)&&evalP(r);}
+  function diaDe(r){return Number((r.fecha||'').slice(8,10))||1;}
+
+  // ── Resumen del mes ──
+  var totalCargas=regs.length;
+  var cargasOK=regs.filter(evalCarga).length;
+  var pctMes=totalCargas?Math.round(cargasOK/totalCargas*100):0;
+  // Tests biológicos
+  var bioAprob=0,bioRech=0;
+  regs.forEach(function(r){
+    if(r.testBiologico||r.biologico){
+      var res=(r.testBiologicoRes||r.biologicoRes||'').toLowerCase();
+      if(res.indexOf('rech')>-1)bioRech++;else if(res.indexOf('aprob')>-1)bioAprob++;
     }
   });
-  // Línea de temperatura (roja)
-  var pathT=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+yT(r.temperatura);}).join(' ');
-  svg+='<path d="'+pathT+'" fill="none" stroke="#f87171" stroke-width="1.8"/>';
-  regs.forEach(function(r,i){var ok=evalT(r);svg+='<circle cx="'+x(i)+'" cy="'+yT(r.temperatura)+'" r="'+(ok?2:3.5)+'" fill="'+(ok?'#f87171':'#fbbf24')+'"/>';});
-  // Línea de presión (azul)
-  var pathP=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+yP(r.presion);}).join(' ');
-  svg+='<path d="'+pathP+'" fill="none" stroke="#60a5fa" stroke-width="1.8"/>';
-  regs.forEach(function(r,i){var ok=evalP(r);svg+='<circle cx="'+x(i)+'" cy="'+yP(r.presion)+'" r="'+(ok?2:3.5)+'" fill="'+(ok?'#60a5fa':'#fbbf24')+'"/>';});
-  // Etiquetas eje
-  svg+='<text x="'+padL+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="9">carga 1</text>';
-  svg+='<text x="'+(W-padR)+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="9" text-anchor="end">carga '+n+'</text>';
+  var colorPct=pctMes>=95?'#6ee7b7':pctMes>=80?'#fcd34d':'#fca5a5';
+  var resumen='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'+
+    '<div style="background:#16233d;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:#93c5fd">'+totalCargas+'</div><div style="font-size:9px;color:rgba(255,255,255,.5)">Cargas del mes</div></div>'+
+    '<div style="background:#16233d;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:'+colorPct+'">'+pctMes+'%</div><div style="font-size:9px;color:rgba(255,255,255,.5)">Cumplimiento</div></div>'+
+    '<div style="background:#16233d;border-radius:8px;padding:10px;text-align:center"><div style="font-size:14px;font-weight:800;color:#fff">'+bioAprob+'✓ / '+bioRech+'✗</div><div style="font-size:9px;color:rgba(255,255,255,.5)">Tests biológicos</div></div>'+
+  '</div>';
+
+  // ── Agrupar por día ──
+  var porDia={};
+  regs.forEach(function(r){
+    var d=diaDe(r);
+    if(!porDia[d])porDia[d]={cargas:0,ok:0,temps:[],pres:[]};
+    porDia[d].cargas++;
+    if(evalCarga(r))porDia[d].ok++;
+    if(r.temperatura!=null)porDia[d].temps.push(Number(r.temperatura));
+    if(r.presion!=null)porDia[d].pres.push(Number(r.presion));
+  });
+  var diasConDatos=Object.keys(porDia).map(Number).sort(function(a,b){return a-b;});
+  var maxCargasDia=Math.max.apply(null,diasConDatos.map(function(d){return porDia[d].cargas;}).concat([1]));
+
+  var W=580,H=320,padL=40,padR=40,padT=24,padB=34,diasMes=31;
+  var hBarras=64; // zona de barras arriba
+  var yLineasTop=padT+hBarras+14;
+  function x(dia){return padL+(dia-1)/(diasMes-1)*(W-padL-padR);}
+  // Escala temperatura y presión (zona de líneas)
+  var temps=regs.map(function(r){return Number(r.temperatura);});
+  var pres=regs.map(function(r){return Number(r.presion);});
+  var minT=Math.min.apply(null,temps.concat([115])),maxT=Math.max.apply(null,temps.concat([140]));
+  var minP=Math.min.apply(null,pres.concat([1])),maxP=Math.max.apply(null,pres.concat([2.5]));
+  function yT(v){return yLineasTop+(maxT-v)/(maxT-minT)*(H-yLineasTop-padB);}
+  function yP(v){return yLineasTop+(maxP-v)/(maxP-minP)*(H-yLineasTop-padB);}
+  function yBar(cargas){return padT+hBarras-(cargas/maxCargasDia)*hBarras;}
+
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
+  // Título zona barras
+  svg+='<text x="'+padL+'" y="10" fill="rgba(255,255,255,.4)" font-size="8">N° cargas/día · verde=OK · ámbar=alguna falló</text>';
+  // Marcas de día en eje X
+  for(var d=1;d<=diasMes;d+=5){
+    svg+='<text x="'+x(d)+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="middle">'+d+'</text>';
+  }
+  // Línea separadora entre barras y líneas
+  svg+='<line x1="'+padL+'" y1="'+(padT+hBarras+4)+'" x2="'+(W-padR)+'" y2="'+(padT+hBarras+4)+'" stroke="rgba(255,255,255,.1)"/>';
+
+  // ── BARRAS: N° de cargas por día ──
+  var anchoBarra=Math.max(3,Math.min(10,(W-padL-padR)/diasMes*0.6));
+  diasConDatos.forEach(function(dia){
+    var info=porDia[dia];
+    var todasOK=info.ok===info.cargas;
+    var color=todasOK?'#10b981':'#fbbf24';
+    var xb=x(dia)-anchoBarra/2;
+    var yb=yBar(info.cargas);
+    svg+='<rect x="'+xb+'" y="'+yb+'" width="'+anchoBarra+'" height="'+(padT+hBarras-yb)+'" rx="2" fill="'+color+'" opacity="0.85"/>';
+    // N° de cargas encima de la barra
+    svg+='<text x="'+x(dia)+'" y="'+(yb-2)+'" fill="'+color+'" font-size="8" text-anchor="middle" font-weight="700">'+info.cargas+'</text>';
+  });
+
+  // ── LÍNEAS: temp y presión promedio por día ──
+  // Marcas eje Y (temp izq, presión der) en zona de líneas
+  for(var mt=0;mt<=3;mt++){
+    var vT=minT+(maxT-minT)*mt/3;
+    svg+='<text x="'+(padL-4)+'" y="'+(yT(vT)+3)+'" fill="rgba(248,113,113,.6)" font-size="8" text-anchor="end">'+vT.toFixed(0)+'°</text>';
+    var vP=minP+(maxP-minP)*mt/3;
+    svg+='<text x="'+(W-padR+3)+'" y="'+(yP(vP)+3)+'" fill="rgba(96,165,250,.6)" font-size="8">'+vP.toFixed(1)+'</text>';
+  }
+  // Líneas de objetivo
+  var tiposPresentes={};regs.forEach(function(r){if(r.tipoCarga)tiposPresentes[r.tipoCarga]=1;});
+  var dib={};
+  Object.keys(tiposPresentes).forEach(function(tc){
+    var p=AUTOCLAVE_PARAMS[tc];if(!p)return;
+    if(!dib['T'+p.temp]){dib['T'+p.temp]=1;
+      svg+='<line x1="'+padL+'" y1="'+yT(p.temp)+'" x2="'+(W-padR)+'" y2="'+yT(p.temp)+'" stroke="#f87171" stroke-width="1" stroke-dasharray="4,3" opacity="0.45"/>';
+      svg+='<text x="'+(padL+4)+'" y="'+(yT(p.temp)-3)+'" fill="#f87171" font-size="8" opacity="0.8">obj '+p.temp+'°C</text>';
+    }
+    if(!dib['P'+p.presion]){dib['P'+p.presion]=1;
+      svg+='<line x1="'+padL+'" y1="'+yP(p.presion)+'" x2="'+(W-padR)+'" y2="'+yP(p.presion)+'" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4,3" opacity="0.45"/>';
+      svg+='<text x="'+(W-padR-4)+'" y="'+(yP(p.presion)-3)+'" fill="#60a5fa" font-size="8" opacity="0.8" text-anchor="end">obj '+p.presion+' bar</text>';
+    }
+  });
+  // Promedio diario de temp y presión
+  var prom=diasConDatos.map(function(dia){
+    var info=porDia[dia];
+    return {
+      d:dia,
+      t:info.temps.length?info.temps.reduce(function(a,b){return a+b;},0)/info.temps.length:null,
+      p:info.pres.length?info.pres.reduce(function(a,b){return a+b;},0)/info.pres.length:null,
+      ok:info.ok===info.cargas
+    };
+  });
+  // Línea temperatura
+  var ptsT=prom.filter(function(p){return p.t!=null;});
+  if(ptsT.length){
+    var pathT=ptsT.map(function(p,i){return (i===0?'M':'L')+x(p.d)+' '+yT(p.t);}).join(' ');
+    svg+='<path d="'+pathT+'" fill="none" stroke="#f87171" stroke-width="1.8"/>';
+    ptsT.forEach(function(p){svg+='<circle cx="'+x(p.d)+'" cy="'+yT(p.t)+'" r="'+(p.ok?2:3.5)+'" fill="'+(p.ok?'#f87171':'#fbbf24')+'"/>';});
+  }
+  // Línea presión
+  var ptsP=prom.filter(function(p){return p.p!=null;});
+  if(ptsP.length){
+    var pathP=ptsP.map(function(p,i){return (i===0?'M':'L')+x(p.d)+' '+yP(p.p);}).join(' ');
+    svg+='<path d="'+pathP+'" fill="none" stroke="#60a5fa" stroke-width="1.8"/>';
+    ptsP.forEach(function(p){svg+='<circle cx="'+x(p.d)+'" cy="'+yP(p.p)+'" r="'+(p.ok?2:3.5)+'" fill="'+(p.ok?'#60a5fa':'#fbbf24')+'"/>';});
+  }
   svg+='</svg>';
-  svg+='<div style="display:flex;gap:12px;margin-top:8px;font-size:10px;color:rgba(255,255,255,.6)">'+
-    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f87171;margin-right:3px"></span>Temperatura (°C)</span>'+
-    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#60a5fa;margin-right:3px"></span>Presión (bar)</span>'+
-    '<span style="color:#fbbf24">● fuera de parámetro</span></div>';
-  return svg;
+  svg+='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:10px;color:rgba(255,255,255,.6)">'+
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f87171;margin-right:3px"></span>Temp. promedio/día (°C)</span>'+
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#60a5fa;margin-right:3px"></span>Presión promedio/día (bar)</span>'+
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#10b981;margin-right:3px"></span>día OK</span>'+
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#fbbf24;margin-right:3px"></span>día con falla</span></div>';
+  return resumen+svg;
 }
 
 // ── REGISTRO DE ASEO SEMANAL (esterilización + pabellón) ──
