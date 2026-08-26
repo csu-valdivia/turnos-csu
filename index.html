@@ -12,6 +12,58 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
+/* ══════════ SPLASH DE ARRANQUE GESTHOR (cinematográfico ~8s) ══════════ */
+#gesthorSplash{position:fixed;inset:0;background:radial-gradient(ellipse 80% 80% at center,#0e1e3d 0%,#081127 45%,#040814 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;animation:splashOut .7s 7.6s ease forwards;overflow:hidden}
+/* Halo de fondo que respira */
+#gesthorSplash::before{content:'';position:absolute;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.16) 0%,rgba(37,99,235,.05) 40%,transparent 70%);opacity:0;animation:splashHalo 6s .8s ease-in-out forwards}
+@keyframes splashHalo{0%{opacity:0;transform:scale(.6)}30%{opacity:1}100%{opacity:1;transform:scale(1)}}
+.splash-svg{width:190px;height:190px;position:relative;z-index:2;filter:drop-shadow(0 0 22px rgba(56,189,248,.55)) drop-shadow(0 0 40px rgba(37,99,235,.3))}
+
+/* Punto de luz inicial que pulsa */
+.splash-dot{fill:#e0f2fe;opacity:0;filter:drop-shadow(0 0 8px #7dd3fc);animation:splashDotIn .6s ease forwards,splashDotPulse 1.4s .6s ease-in-out}
+@keyframes splashDotIn{from{opacity:0;r:2}to{opacity:1;r:5}}
+@keyframes splashDotPulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Punto viajero que recorre el borde dejando estela (dibuja el círculo) */
+.splash-travel{fill:#e0f2fe;filter:drop-shadow(0 0 10px #7dd3fc) drop-shadow(0 0 18px #38bdf8);opacity:0;animation:splashTravelShow .1s .55s forwards,splashTravel 1.5s .6s cubic-bezier(.5,0,.5,1) forwards}
+@keyframes splashTravelShow{to{opacity:1}}
+@keyframes splashTravel{0%{opacity:1}90%{opacity:1}100%{opacity:0}}
+.splash-ring{fill:none;stroke:url(#splashGlow);stroke-width:3.5;stroke-linecap:round;stroke-dasharray:277;stroke-dashoffset:277;animation:splashDrawRing 1.5s .6s cubic-bezier(.5,0,.5,1) forwards}
+@keyframes splashDrawRing{to{stroke-dashoffset:0}}
+
+/* Dientes del engranaje: aparecen con rebote */
+.splash-teeth{opacity:0;transform-origin:60px 60px;transform:scale(.75);animation:splashTeethIn .9s 2.1s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes splashTeethIn{0%{opacity:0;transform:scale(.75) rotate(-15deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+
+/* La G interior se dibuja */
+.splash-g{fill:none;stroke:url(#splashGlow);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:150;stroke-dashoffset:150;filter:drop-shadow(0 0 6px rgba(125,211,252,.8));animation:splashDrawG 1.3s 3.3s cubic-bezier(.5,0,.5,1) forwards}
+@keyframes splashDrawG{to{stroke-dashoffset:0}}
+
+/* Rotación del engranaje una vez formado */
+.splash-gear-group{transform-origin:60px 60px}
+.splash-gear-spin{animation:splashGearSpin 22s 3.2s linear infinite}
+@keyframes splashGearSpin{to{transform:rotate(360deg)}}
+
+/* Texto GESTHOR letra por letra con glow */
+.splash-brand{margin-top:26px;font-size:42px;font-weight:800;letter-spacing:3px;display:flex;gap:0;position:relative;z-index:2}
+.splash-brand span{opacity:0;transform:translateY(12px) scale(.9);display:inline-block;animation:splashLetterIn .5s cubic-bezier(.34,1.56,.64,1) forwards}
+.splash-brand .st{color:#fff;text-shadow:0 0 16px rgba(255,255,255,.4)}
+.splash-brand .sh{color:#38bdf8;text-shadow:0 0 18px rgba(56,189,248,.7)}
+@keyframes splashLetterIn{to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* Subtítulo */
+.splash-subtitle{margin-top:14px;font-size:12px;color:rgba(147,197,253,.8);letter-spacing:.5px;opacity:0;animation:splashSubIn .8s 5.8s ease forwards;text-align:center;max-width:360px;padding:0 24px;line-height:1.5;position:relative;z-index:2}
+@keyframes splashSubIn{to{opacity:1}}
+
+/* Cargando */
+.splash-loading{position:absolute;bottom:64px;display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;animation:splashSubIn .5s .4s ease forwards;z-index:2}
+.splash-loading-txt{font-size:10px;letter-spacing:5px;color:rgba(147,197,253,.55)}
+.splash-loading-bar{width:190px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.splash-loading-fill{height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#2563eb);border-radius:2px;box-shadow:0 0 8px rgba(56,189,248,.6);animation:splashLoadFill 7.4s ease forwards}
+@keyframes splashLoadFill{to{width:100%}}
+@keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
+#gesthorSplash.skip{display:none}
+@media(prefers-reduced-motion:reduce){#gesthorSplash{animation:splashOut .3s .5s ease forwards}#gesthorSplash::before,.splash-dot,.splash-travel,.splash-ring,.splash-teeth,.splash-g,.splash-brand span,.splash-subtitle,.splash-loading{animation-duration:.01s;animation-delay:0s;opacity:1}.splash-teeth{transform:scale(1)}.splash-ring,.splash-g{stroke-dashoffset:0}.splash-gear-spin{animation:none}}
 :root{
   --bg:#0d1b3e;--bg2:#112254;--surface:#1a2e6b;--surface2:#1e3580;
   --card:#fff;--card2:#f0f4f8;
@@ -267,6 +319,65 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 </style>
 </head>
 <body>
+<div id="gesthorSplash">
+  <svg class="splash-svg" viewBox="0 0 120 120">
+    <defs>
+      <linearGradient id="splashGear" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#2563eb"/>
+      </linearGradient>
+      <linearGradient id="splashGlow" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#bae6fd"/><stop offset="0.5" stop-color="#38bdf8"/><stop offset="1" stop-color="#2563eb"/>
+      </linearGradient>
+      <radialGradient id="splashTeethGrad" cx="0.5" cy="0.3" r="0.8">
+        <stop offset="0" stop-color="#93d8fc"/><stop offset="1" stop-color="#1e40af"/>
+      </radialGradient>
+      <filter id="splashBlur"><feGaussianBlur stdDeviation="1.2"/></filter>
+    </defs>
+    <!-- Punto de luz inicial -->
+    <circle class="splash-dot" cx="60" cy="16" r="5"/>
+    <!-- Círculo que se dibuja -->
+    <circle class="splash-ring" cx="60" cy="60" r="44"/>
+    <!-- Punto viajero con estela que recorre el borde -->
+    <circle class="splash-travel" r="4">
+      <animateMotion dur="1.5s" begin="0.6s" fill="freeze" path="M 60 16 A 44 44 0 1 1 59.9 16"/>
+    </circle>
+    <!-- Engranaje: dientes + G, giran juntos -->
+    <g class="splash-gear-group splash-gear-spin">
+      <g class="splash-teeth">
+        <g fill="url(#splashTeethGrad)">
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(0 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(30 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(60 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(90 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(120 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(150 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(180 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(210 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(240 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(270 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(300 60 60)"/>
+          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(330 60 60)"/>
+        </g>
+        <circle cx="60" cy="60" r="44" fill="none" stroke="url(#splashGear)" stroke-width="6"/>
+      </g>
+      <path class="splash-g" d="M 74 44 A 20 20 0 1 0 74 76 L 74 61 L 61 61"/>
+    </g>
+  </svg>
+  <div class="splash-brand">
+    <span class="st" style="animation-delay:4.6s">G</span>
+    <span class="st" style="animation-delay:4.75s">E</span>
+    <span class="st" style="animation-delay:4.9s">S</span>
+    <span class="st" style="animation-delay:5.05s">T</span>
+    <span class="sh" style="animation-delay:5.2s">H</span>
+    <span class="sh" style="animation-delay:5.35s">O</span>
+    <span class="sh" style="animation-delay:5.5s">R</span>
+  </div>
+  <div class="splash-subtitle">Sistema de Gestión Operacional para Instituciones de Salud</div>
+  <div class="splash-loading">
+    <div class="splash-loading-txt">C A R G A N D O</div>
+    <div class="splash-loading-bar"><div class="splash-loading-fill"></div></div>
+  </div>
+</div>
 <div class="wrap">
   <div class="hero">
     <div class="logo-row">
@@ -8734,6 +8845,17 @@ document.getElementById('migrarBtn').addEventListener('click',function(){
 });
 
 document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Borrar todos los datos de esta semana en '+S+'? (el personal y otras semanas no se ven afectados)'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave','sinServicios'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
+
+// ── Splash de arranque: permitir saltarlo al tocar, y quitarlo del DOM al terminar ──
+(function(){
+  var splash=document.getElementById('gesthorSplash');
+  if(!splash)return;
+  function cerrarSplash(){splash.classList.add('skip');}
+  // Al tocar/click, saltar la animación
+  splash.addEventListener('click',cerrarSplash);
+  // Quitar del DOM tras la animación completa (~8.4s) para liberar interacción
+  setTimeout(function(){if(splash&&splash.parentNode)splash.style.display='none';},8400);
+})();
 </script>
 </body>
 </html>
