@@ -1053,6 +1053,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec" style="border-color:rgba(139,92,246,.3)">
             <p class="asec-title" style="color:#a78bfa">👁 Ronda de supervisión</p>
+            <div id="ponderaIndicador" style="margin-bottom:12px"></div>
             <div id="supEstadoHoy" style="margin-bottom:12px"></div>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Registra la supervisión en terreno. Máximo 2 rondas por día por colaborador (mañana y tarde).</p>
             <div class="frow">
@@ -1444,6 +1445,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // ── STATE ──
 var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom'];
 var supervisionData={};
+var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
 var supervisorActivo='',supervisorAreas=[];
 var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={};
@@ -1526,6 +1528,7 @@ function attach(){
   on('ranking',function(v){ranking=v||{};renderRanking();if(document.getElementById('tc-estado')&&document.getElementById('tc-estado').style.display!=='none')renderEstado();});
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
+  on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
 
@@ -2943,6 +2946,7 @@ function editarBancoPreguntas(docId){
       html+='</div>';
     });
     html+='<input type="text" class="pregTema" value="'+((p.tema||'').replace(/"/g,'&quot;'))+'" placeholder="Tema (ej: Higiene de manos, EPP...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04)">';
+    html+='<textarea class="pregRetro" rows="2" placeholder="💡 Retroalimentación: por qué la correcta es la correcta (se muestra al fallar)" style="font-size:11px;margin-top:2px;margin-bottom:4px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);min-height:44px;resize:vertical;width:100%;color:#dbeafe">'+((p.retro||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</textarea>';
     html+='<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove()">✕ Quitar pregunta</button>';
     html+='</div>';
   });
@@ -3005,7 +3009,7 @@ function editarBancoPreguntas(docId){
       var ops=Array.from(f.querySelectorAll('.pregOp')).map(function(o){return o.value.trim();});
       var correctaEl=f.querySelector('.pregCorrecta:checked');
       if(!pregTxt||ops.some(function(o){return !o;})||!correctaEl){error=true;return;}
-      var temaEl2=f.querySelector('.pregTema');var tema2=temaEl2?temaEl2.value.trim():'General';var tipoEl2=f.querySelector('.pregTipo:checked');var tipo2=tipoEl2?tipoEl2.value:'simple';preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema2||'General',tipo:tipo2});
+      var temaEl2=f.querySelector('.pregTema');var tema2=temaEl2?temaEl2.value.trim():'General';var tipoEl2=f.querySelector('.pregTipo:checked');var tipo2=tipoEl2?tipoEl2.value:'simple';var retroEl2=f.querySelector('.pregRetro');var retro2=retroEl2?retroEl2.value.trim():'';preguntas['p'+(idx++)]=({pregunta:pregTxt,opciones:ops,correcta:parseInt(correctaEl.value),tema:tema2||'General',tipo:tipo2,retro:retro2});
     });
     if(error){alert('Completa todas las preguntas (texto, 4 opciones y marca la correcta).');return;}
     if(Object.keys(preguntas).length<5){alert('Mínimo 5 preguntas requeridas. Tienes '+Object.keys(preguntas).length+'.');return;}
@@ -3114,6 +3118,7 @@ function addPreguntaRow(){
     '<textarea class="pregTxt" rows="4" placeholder="Pregunta '+(idx+1)+'" style="margin-bottom:6px;font-size:13px;line-height:1.5;min-height:80px;resize:vertical;width:100%"></textarea>'+
     [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="correcta'+idx+'" class="pregCorrecta" value="'+i+'" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--green);margin:0"><input type="text" class="pregOp" placeholder="Opción '+(i+1)+'" style="font-size:12px;flex:1"></div>';}).join('')+
     '<input type="text" class="pregTema" placeholder="Tema (ej: Higiene de manos, EPP, Antisépticos...)" style="font-size:11px;margin-top:4px;margin-bottom:4px;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)">'+
+    '<textarea class="pregRetro" rows="2" placeholder="💡 Retroalimentación: explica por qué la respuesta correcta es la correcta (el colaborador la verá si se equivoca)" style="font-size:11px;margin-top:2px;margin-bottom:4px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);min-height:44px;resize:vertical;width:100%;color:#dbeafe"></textarea>'+
     '<button type="button" class="del-btn" style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px" onclick="this.closest(\'div\').remove();saveBorradorPreguntas()">✕ Quitar pregunta</button>';
   wrap.appendChild(div);
   // Selector de tipo: al elegir "compleja", cargar plantilla guía y agrandar
@@ -3311,6 +3316,7 @@ function iniciarPreguntasCombinadas(pend){
   var maxP=bancoConfig.maxPreg||3;
   fichaActualPreguntas=shuffled.slice(0,maxP);
   fichaActualRespuestas={};
+  fichaActualElegidas={};
   fichaActualPend=pend; // guardar referencia global para aprobar todos los docs involucrados
 
   var v=document.getElementById('fichaObligView');
@@ -3320,7 +3326,7 @@ function iniciarPreguntasCombinadas(pend){
   fichaActualPreguntas.forEach(function(p,i){
     html+='<div style="margin-bottom:18px"><p style="font-size:13px;font-weight:600;margin-bottom:8px;line-height:1.5">'+(i+1)+'. '+escNL(p.pregunta)+'</p><div class="opciones-preg" data-idx="'+i+'">';
     (p.opciones||[]).forEach(function(op,j){
-      html+='<button class="opcion-btn" data-correcta="'+(j===p.correcta?'1':'0')+'" data-idx="'+i+'" style="display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+op+'</button>';
+      html+='<button class="opcion-btn" data-correcta="'+(j===p.correcta?'1':'0')+'" data-idx="'+i+'" data-opcion="'+j+'" style="display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+op+'</button>';
     });
     html+='</div></div>';
   });
@@ -3338,6 +3344,7 @@ function hookPreguntasCombinadasEvents(){
       });
       this.style.background='rgba(74,144,217,.25)';this.style.borderColor='rgba(74,144,217,.5)';
       fichaActualRespuestas[idx]=this.dataset.correcta==='1';
+      fichaActualElegidas[idx]=parseInt(this.dataset.opcion);
       var totalResp=Object.keys(fichaActualRespuestas).length;
       var btnEnviar=document.getElementById('enviarRespBtn');
       if(totalResp>=fichaActualPreguntas.length){btnEnviar.disabled=false;btnEnviar.style.opacity='1';}
@@ -3354,6 +3361,7 @@ var fichaActualPend=[];
 
 var fichaActualPreguntas=[];
 var fichaActualRespuestas={};
+var fichaActualElegidas={};
 var fichaInicioMs=0;
 
 function mostrarFichaObligatoria(docId,doc){
@@ -3706,14 +3714,54 @@ function registrarFalloCombinado(pend){
     sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
   });
   if(bloqueoActivado){
-    alert('Has fallado 3 veces hoy. Debes acudir donde el enfermero jefe.');
-    verificarFichasPendientes();
+    mostrarRetroalimentacion(true);
   } else {
-    alert('Una o más respuestas fueron incorrectas. Vuelve a leer e inténtalo de nuevo.');
-    var pendActual=fichasObligatoriasPendientes(curNombre);
-    mostrarEvaluacionCombinada(pendActual);
+    mostrarRetroalimentacion(false);
   }
 }
+
+// Muestra qué preguntas se fallaron, la respuesta correcta y la retroalimentación
+function mostrarRetroalimentacion(bloqueado){
+  var v=document.getElementById('fichaObligView');
+  if(!v){
+    // fallback al comportamiento anterior
+    if(bloqueado){alert('Has fallado 3 veces hoy. Debes acudir donde el enfermero jefe.');verificarFichasPendientes();}
+    else{var pa=fichasObligatoriasPendientes(curNombre);mostrarEvaluacionCombinada(pa);}
+    return;
+  }
+  var html='<div class="card">'+
+    '<p style="font-size:11px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📖 Revisión de respuestas</p>'+
+    '<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:16px">Revisa las que fallaste, con la respuesta correcta y su explicación.</p>';
+  fichaActualPreguntas.forEach(function(p,i){
+    var acerto=fichaActualRespuestas[i]===true;
+    var elegida=fichaActualElegidas[i];
+    if(acerto){
+      html+='<div style="margin-bottom:12px;padding:10px 12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px">'+
+        '<p style="font-size:12px;color:#6ee7b7">✓ Pregunta '+(i+1)+': correcta</p></div>';
+    } else {
+      html+='<div style="margin-bottom:12px;padding:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px">'+
+        '<p style="font-size:13px;font-weight:600;margin-bottom:8px;line-height:1.5">'+(i+1)+'. '+escNL(p.pregunta)+'</p>'+
+        (elegida!==undefined&&p.opciones[elegida]!==undefined?'<p style="font-size:12px;color:#fca5a5;margin-bottom:4px">✗ Tu respuesta: '+esc(p.opciones[elegida])+'</p>':'')+
+        '<p style="font-size:12px;color:#6ee7b7;margin-bottom:6px">✓ Correcta: '+esc(p.opciones[p.correcta])+'</p>'+
+        (p.retro?'<div style="font-size:12px;color:#dbeafe;background:rgba(96,165,250,.1);border-left:3px solid #60a5fa;padding:8px 10px;margin-top:6px;line-height:1.5;border-radius:0 6px 6px 0">💡 '+escNL(p.retro)+'</div>':'')+
+      '</div>';
+    }
+  });
+  if(bloqueado){
+    html+='<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:8px;padding:12px;margin-top:8px;font-size:13px;color:#fca5a5">Has fallado 3 veces hoy. Debes acudir donde el enfermero jefe.</div>'+
+      '<button class="btn-add" onclick="verificarFichasPendientes()" style="margin-top:10px">Entendido</button>';
+  } else {
+    html+='<button class="btn-add" onclick="reintentarEvaluacion()" style="margin-top:8px;background:linear-gradient(135deg,#2563eb,#60a5fa)">Volver a intentar</button>';
+  }
+  html+='</div>';
+  v.innerHTML=html;
+}
+
+window.reintentarEvaluacion=function(){
+  fichaActualRespuestas={};fichaActualElegidas={};
+  var pendActual=fichasObligatoriasPendientes(curNombre);
+  mostrarEvaluacionCombinada(pendActual);
+};
 
 function aprobarFicha(docId){
   var key=curNombre.replace(/\s/g,'_');
@@ -4480,7 +4528,9 @@ var SUP_RETROALIMENTACION={
 function calcPuntajeSupDia(nombre,fecha){
   var key=nombre.replace(/\s/g,'_');
   var rondasDia=Object.values(supervisionData||{}).filter(function(r){
-    return r&&r.nombre===nombre&&r.fecha===fecha;
+    // Solo cuentan las evaluaciones marcadas como ponderadas (pondera===true).
+    // Las viejas (sin el campo) o de prueba no cuentan para la nota oficial.
+    return r&&r.nombre===nombre&&r.fecha===fecha&&r.pondera===true;
   });
   if(!rondasDia.length)return null;
   // Promedio de las rondas del día
@@ -4559,6 +4609,40 @@ function renderSupervisionColaborador(nombre){
   var color=pct>=80?'#6ee7b7':pct>=60?'#fcd34d':'#fca5a5';
   el.innerHTML='<div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:10px 12px;margin-top:8px"><p style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:4px">👁 Tu supervisión de hoy</p><p style="font-size:20px;font-weight:900;color:'+color+'">'+pct+'%</p></div>';
 }
+
+// Interruptor de ponderación: controla si las evaluaciones cuentan para las notas oficiales
+function renderPonderaIndicador(){
+  var cont=document.getElementById('ponderaIndicador');
+  if(!cont)return;
+  // Solo el admin (no supervisores) puede accionar el interruptor
+  var esAdmin=!supervisorActivo;
+  if(ponderaActiva){
+    cont.innerHTML='<div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.06));border:1px solid rgba(16,185,129,.35);border-radius:10px;padding:12px 14px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<div><div style="font-size:13px;font-weight:700;color:#6ee7b7">✅ Evaluación OFICIAL activa</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Las rondas que guardes ahora cuentan para las notas.</div></div>'+
+        (esAdmin?'<button onclick="togglePondera(false)" style="background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.35);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Pausar</button>':'')+
+      '</div></div>';
+  } else {
+    cont.innerHTML='<div style="background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(251,191,36,.04));border:1px solid rgba(251,191,36,.35);border-radius:10px;padding:12px 14px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<div><div style="font-size:13px;font-weight:700;color:#fcd34d">🧪 Modo PRUEBA (no pondera)</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Puedes evaluar, pero no afecta las notas oficiales.</div></div>'+
+        (esAdmin?'<button onclick="togglePondera(true)" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Activar oficial</button>':'')+
+      '</div></div>';
+  }
+}
+window.togglePondera=function(activar){
+  if(activar){
+    if(!confirm('¿Activar la evaluación OFICIAL? Desde ahora las rondas que guardes contarán para las notas de los colaboradores.'))return;
+  } else {
+    if(!confirm('¿Pausar la ponderación? Las rondas que guardes quedarán como prueba y no afectarán las notas.'))return;
+  }
+  sedeRef('ponderaActiva').set(activar===true).then(function(){
+    ponderaActiva=(activar===true);
+    renderPonderaIndicador();
+  });
+};
 
 function renderSupEstadoHoy(){
   var d=document.getElementById('supEstadoHoy');if(!d)return;
@@ -5782,6 +5866,7 @@ function renderRolLista(){
 window.quitarRol=function(k){sedeRef('rolesTecnicos/'+k).remove().then(function(){renderRolLista();});};
 
 function initSupervisionAdmin(excluir){
+  renderPonderaIndicador();
   var supNom=document.getElementById('supNombre');
   if(!supNom)return;
   supNom.innerHTML='<option value="">Selecciona colaborador</option>'+
@@ -5924,6 +6009,7 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
   var registro={
     nombre:nombre,ronda:ronda,fecha:hoy,items:items,
     puntaje:Math.round(puntaje*100),neBase:neBase,ts:Date.now(),
+    pondera:(ponderaActiva===true),
     supervisadoPor:(supervisorActivo||'Patricio Baeza (admin)'),hora:horaStr
   };
   if(estacion){
