@@ -1047,6 +1047,8 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </div>
 
             <button class="btn-sec" id="reiniciarTodoBtn" style="margin-bottom:10px;font-size:11px;color:#fca5a5;border-color:rgba(239,68,68,.3)">↺ Reiniciar evaluaciones de todo el equipo (nueva semana)</button>
+            <button class="btn-sec" id="desbloquearTodosBtn" style="margin-bottom:10px;font-size:11px;color:#6ee7b7;border-color:rgba(16,185,129,.3)">🔓 Desbloquear a todos los bloqueados hoy</button>
+            <div class="saved" id="desbloquearTodosSaved">✓ Desbloqueados</div>
             <div class="saved" id="reiniciarTodoSaved">✓ Evaluaciones reiniciadas</div>
             <div class="ilist" id="cumplimientoList"></div>
           </div>
@@ -4791,6 +4793,7 @@ function renderCumplimientoList(){
   var d=document.getElementById('cumplimientoList');if(!d)return;
   var obligatorias=Object.entries(biblioteca).filter(function(e){return e[1].obligatoria;});
   if(!obligatorias.length){d.innerHTML='<p class="empty">Sin fichas obligatorias configuradas.</p>';return;}
+  var hoy=hoyStr();
   var html='';
   obligatorias.forEach(function(e){
     var docId=e[0],doc=e[1];
@@ -4798,13 +4801,16 @@ function renderCumplimientoList(){
     nombres.forEach(function(n){
       var key=n.replace(/\s/g,'_');
       var prog=(fichaProgreso[docId]&&fichaProgreso[docId][key])||null;
+      // Bloqueado si tiene bloqueadoFecha de hoy, o 3+ fallos hoy
+      var bloqueado=prog&&((prog.bloqueadoFecha===hoy)||(prog.fallosFecha===hoy&&(prog.fallosHoy||0)>=3));
       var estado,color;
       if(!prog){estado='Sin iniciar';color='rgba(255,255,255,.3)';}
-      else if(prog.bloqueado){estado='🔒 Bloqueado (3 fallos)';color='#fca5a5';}
-      else if(prog.aprobado){estado='✓ Aprobado';color='#6ee7b7';}
-      else{estado='En progreso ('+(prog.intentos||0)+' intento'+(prog.intentos!==1?'s':'')+')';color='#fcd34d';}
+      else if(bloqueado){estado='🔒 Bloqueado (3 fallos)';color='#fca5a5';}
+      else if(prog.aprobado||prog.ultimaAprobacion){estado='✓ Aprobado';color='#6ee7b7';}
+      else if(prog.fallosFecha===hoy&&prog.fallosHoy>0){estado='En progreso ('+prog.fallosHoy+' fallo'+(prog.fallosHoy!==1?'s':'')+' hoy)';color='#fcd34d';}
+      else{estado='En progreso';color='#fcd34d';}
       html+='<div class="iitem" style="padding:5px 0;flex-wrap:wrap"><div class="iitem-info" style="font-size:12px">'+n+'</div><span style="font-size:11px;color:'+color+';font-weight:600">'+estado+'</span>';
-      if(prog&&prog.bloqueado)html+='<button style="width:100%;margin-top:6px;padding:8px;font-size:12px;font-weight:700;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:inherit;cursor:pointer" onclick="marcarCapacitada(\''+docId+'\',\''+key+'\')">🔓 Desbloquear acceso (ya la capacité)</button>';
+      if(bloqueado)html+='<button style="width:100%;margin-top:6px;padding:8px;font-size:12px;font-weight:700;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:inherit;cursor:pointer" onclick="desbloquearColaborador(\''+docId+'\',\''+key+'\')">🔓 Desbloquear acceso</button>';
       if(n.trim().toLowerCase()==='patricio baeza')html+='<button style="font-size:10px;color:rgba(255,255,255,.3);background:none;border:1px solid rgba(255,255,255,.15);border-radius:5px;padding:3px 8px;margin-left:6px;font-family:inherit;cursor:pointer" onclick="if(confirm(\'¿Reiniciar tu propio progreso en esta ficha? Podrás volver a leer y responder desde cero.\'))reiniciarProgresoFicha(\''+docId+'\',\''+key+'\')">↺ Reiniciar mi evaluación (admin)</button>';
       html+='</div>';
     });
@@ -4812,8 +4818,24 @@ function renderCumplimientoList(){
   d.innerHTML=html;
 }
 
+// Desbloquear: limpia el bloqueo y los fallos del día, dejando al colaborador libre para responder de nuevo
+window.desbloquearColaborador=function(docId,key){
+  var prog=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{};
+  var data=Object.assign({},prog);
+  delete data.bloqueadoFecha;
+  data.fallosHoy=0;
+  data.fallosFecha=hoyStr();
+  data.desbloqueadoPor='admin';
+  data.desbloqueadoFecha=Date.now();
+  if(!fichaProgreso[docId])fichaProgreso[docId]={};
+  fichaProgreso[docId][key]=data;
+  sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
+  renderCumplimientoList();
+};
+
+// Mantener marcarCapacitada por compatibilidad (aprobar directamente sin reevaluar)
 window.marcarCapacitada=function(docId,key){
-  var data={aprobado:true,fecha:Date.now(),capacitadaManual:true};
+  var data={aprobado:true,ultimaAprobacion:hoyStr(),fecha:Date.now(),capacitadaManual:true};
   if(!fichaProgreso[docId])fichaProgreso[docId]={};
   fichaProgreso[docId][key]=data;
   sedeRef('fichaProgreso/'+docId+'/'+key).set(data);
@@ -9333,6 +9355,38 @@ document.getElementById('reiniciarTodoBtn').addEventListener('click',function(){
     fichaProgreso={};
     showSaved('reiniciarTodoSaved');
     renderCumplimientoList();
+  });
+});
+
+// Desbloquear a TODOS los colaboradores bloqueados hoy (limpia bloqueo y fallos del día)
+document.getElementById('desbloquearTodosBtn').addEventListener('click',function(){
+  if(!confirm('¿Desbloquear a todos los colaboradores bloqueados hoy? Podrán volver a responder sus evaluaciones. No borra su progreso ni el ranking.'))return;
+  var hoy=hoyStr();
+  var updates={};
+  var cuenta=0;
+  Object.keys(fichaProgreso||{}).forEach(function(docId){
+    var porPersona=fichaProgreso[docId]||{};
+    Object.keys(porPersona).forEach(function(key){
+      var prog=porPersona[key]||{};
+      var bloqueado=(prog.bloqueadoFecha===hoy)||(prog.fallosFecha===hoy&&(prog.fallosHoy||0)>=3);
+      if(bloqueado){
+        var data=Object.assign({},prog);
+        delete data.bloqueadoFecha;
+        data.fallosHoy=0;
+        data.fallosFecha=hoy;
+        data.desbloqueadoPor='admin';
+        data.desbloqueadoFecha=Date.now();
+        fichaProgreso[docId][key]=data;
+        updates['fichaProgreso/'+docId+'/'+key]=data;
+        cuenta++;
+      }
+    });
+  });
+  if(!cuenta){alert('No hay colaboradores bloqueados hoy.');return;}
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('desbloquearTodosSaved');
+    renderCumplimientoList();
+    alert('✓ Se desbloquearon '+cuenta+' evaluación(es). Los colaboradores ya pueden responder.');
   });
 });
 
