@@ -2063,6 +2063,7 @@ function renderMisTurnos(nombre){
           return '<button onclick="abrirRegCustom(\''+t.tipo+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+' ›</button>';
         }
       }).join('')+
+      '<button onclick="verTodasMisGraficas()" style="display:block;width:100%;text-align:center;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px 12px;margin-top:4px;color:#93c5fd;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📊 Ver todas mis gráficas de resultados</button>'+
       '</div>';
   }
   // Badges
@@ -6342,6 +6343,32 @@ function graficoAutoclaveSVG(regs){
     var yy=padT+g/4*(H-padT-padB);
     svg+='<line x1="'+padL+'" y1="'+yy+'" x2="'+(W-padR)+'" y2="'+yy+'" stroke="rgba(255,255,255,.05)"/>';
   }
+  // Marcas del eje Y izquierdo (temperatura, rojo) y derecho (presión, azul)
+  for(var mt=0;mt<=4;mt++){
+    var vT=minT+(maxT-minT)*mt/4;
+    svg+='<text x="'+(padL-4)+'" y="'+(yT(vT)+3)+'" fill="rgba(248,113,113,.6)" font-size="8" text-anchor="end">'+vT.toFixed(0)+'°</text>';
+    var vP=minP+(maxP-minP)*mt/4;
+    svg+='<text x="'+(W-padR+2)+'" y="'+(yP(vP)+3)+'" fill="rgba(96,165,250,.6)" font-size="8">'+vP.toFixed(1)+'</text>';
+  }
+  // Líneas de PARÁMETRO OBJETIVO (referencia para ver la tendencia)
+  // Temperatura objetivo: usar el más común (instrumental 134, ropa 121). Dibujar ambas si hay mezcla.
+  var tiposPresentes={};regs.forEach(function(r){if(r.tipoCarga)tiposPresentes[r.tipoCarga]=1;});
+  var paramsDibujados={};
+  Object.keys(tiposPresentes).forEach(function(tc){
+    var p=AUTOCLAVE_PARAMS[tc];if(!p)return;
+    // Temperatura objetivo (rojo punteado)
+    if(!paramsDibujados['T'+p.temp]){
+      paramsDibujados['T'+p.temp]=1;
+      svg+='<line x1="'+padL+'" y1="'+yT(p.temp)+'" x2="'+(W-padR)+'" y2="'+yT(p.temp)+'" stroke="#f87171" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>';
+      svg+='<text x="'+(padL+4)+'" y="'+(yT(p.temp)-3)+'" fill="#f87171" font-size="8" opacity="0.8">objetivo '+p.temp+'°C</text>';
+    }
+    // Presión objetivo (azul punteado)
+    if(!paramsDibujados['P'+p.presion]){
+      paramsDibujados['P'+p.presion]=1;
+      svg+='<line x1="'+padL+'" y1="'+yP(p.presion)+'" x2="'+(W-padR)+'" y2="'+yP(p.presion)+'" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>';
+      svg+='<text x="'+(W-padR-4)+'" y="'+(yP(p.presion)-3)+'" fill="#60a5fa" font-size="8" opacity="0.8" text-anchor="end">objetivo '+p.presion+' bar</text>';
+    }
+  });
   // Línea de temperatura (roja)
   var pathT=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+yT(r.temperatura);}).join(' ');
   svg+='<path d="'+pathT+'" fill="none" stroke="#f87171" stroke-width="1.8"/>';
@@ -6657,9 +6684,17 @@ function graficoCondSVG(regs){
   function x(i){return n<=1?padL+(W-padL-padR)/2:padL+i/(n-1)*(W-padL-padR);}
   function y(v){return padT+(maxY-v)/(maxY-minY)*(H-padT-padB);}
   var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
-  // Línea límite osmosis (5)
-  svg+='<line x1="'+padL+'" y1="'+y(5)+'" x2="'+(W-padR)+'" y2="'+y(5)+'" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>';
-  svg+='<text x="'+(W-padR)+'" y="'+(y(5)-3)+'" fill="#6ee7b7" font-size="8" text-anchor="end">límite osmosis 5</text>';
+  // Marcas del eje Y con valores (para ver la tendencia respecto al parámetro)
+  for(var m=0;m<=4;m++){
+    var vY=minY+(maxY-minY)*m/4;
+    svg+='<line x1="'+padL+'" y1="'+y(vY)+'" x2="'+(W-padR)+'" y2="'+y(vY)+'" stroke="rgba(255,255,255,.05)"/>';
+    svg+='<text x="'+(padL-4)+'" y="'+(y(vY)+3)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="end">'+vY.toFixed(1)+'</text>';
+  }
+  // Línea límite/parámetro osmosis (< 5 µS/cm)
+  svg+='<line x1="'+padL+'" y1="'+y(5)+'" x2="'+(W-padR)+'" y2="'+y(5)+'" stroke="#10b981" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>';
+  svg+='<text x="'+(W-padR)+'" y="'+(y(5)-3)+'" fill="#6ee7b7" font-size="8" text-anchor="end">parámetro osmosis &lt; 5</text>';
+  // Línea parámetro ultrapura (0 exacto) — sobre el eje base
+  svg+='<text x="'+(padL+4)+'" y="'+(y(0)-3)+'" fill="#5eead4" font-size="8">parámetro ultrapura = 0</text>';
   // Osmosis
   var pO=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+y(r.osmosis);}).join(' ');
   svg+='<path d="'+pO+'" fill="none" stroke="#60a5fa" stroke-width="1.8"/>';
@@ -6675,6 +6710,52 @@ function graficoCondSVG(regs){
     '<span style="color:#fbbf24">● no óptima</span></div>';
   return svg;
 }
+
+// Vista consolidada: todas las gráficas de resultados del colaborador
+window.verTodasMisGraficas=function(){
+  var ov=document.getElementById('todasGrafOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='todasGrafOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9200;overflow-y:auto;padding:16px';
+  var mes=hoyStr().slice(0,7);
+  var html='<div style="max-width:640px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+      '<span style="font-size:16px;font-weight:800;color:#93c5fd">📊 Mis gráficas de resultados</span>'+
+      '<button onclick="document.getElementById(\'todasGrafOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-family:inherit;cursor:pointer">✕ Cerrar</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+'</div>';
+  var algo=false;
+  // Temperaturas
+  ['temp_refri','temp_ester','temp_pabellon'].forEach(function(tipo){
+    var regs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha&&r.fecha.slice(0,7)===mes;});
+    if(!regs.length)return;
+    algo=true;
+    var puntos={};regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
+    var titulo={temp_refri:'🧊 Temperatura Refrigeradores',temp_ester:'🌡️ Temperatura Esterilización',temp_pabellon:'🌡️ Temperatura Pabellón'}[tipo];
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<p style="font-size:13px;color:#fff;font-weight:600;margin-bottom:8px">'+titulo+'</p>'+
+      graficoTempSVG(regs,Object.keys(puntos),tipo==='temp_refri')+'</div>';
+  });
+  // Autoclave
+  var regsAuto=Object.values(regAutoclave||{}).filter(function(r){return r.fecha&&r.fecha.slice(0,7)===mes;}).sort(function(a,b){return a.ts-b.ts;});
+  if(regsAuto.length){
+    algo=true;
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<p style="font-size:13px;color:#fca5a5;font-weight:600;margin-bottom:8px">🔥 Rendimiento del autoclave</p>'+
+      graficoAutoclaveSVG(regsAuto)+'</div>';
+  }
+  // Conductividad
+  var regsCond=Object.keys(conductividad||{}).filter(function(k){return k.slice(0,7)===mes;}).map(function(k){return conductividad[k];}).sort(function(a,b){return (a.fecha<b.fecha?-1:1);});
+  if(regsCond.length){
+    algo=true;
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<p style="font-size:13px;color:#93c5fd;font-weight:600;margin-bottom:8px">💧 Rendimiento de conductividad</p>'+
+      graficoCondSVG(regsCond)+'</div>';
+  }
+  if(!algo)html+='<div style="background:#16233d;border-radius:10px;padding:30px;text-align:center;color:rgba(255,255,255,.5)">Aún no hay registros este mes. A medida que registres, aquí verás tus gráficas.</div>';
+  html+='</div>';
+  ov.innerHTML=html;
+  document.body.appendChild(ov);
+};
 
 function condEsOptima(tipo,valor){
   if(valor===''||valor==null||isNaN(valor))return null;
