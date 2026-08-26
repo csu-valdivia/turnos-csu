@@ -6755,6 +6755,7 @@ window.abrirRegTemp=function(tipo){
     '<label style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;display:block">Observación (opcional)</label>'+
     '<textarea id="tempObs" rows="2" placeholder="Anota si hubo alguna novedad" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
     '<button class="btn-add" onclick="guardarRegTemp(\''+tipo+'\','+cfg.doble+')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
+    '<button onclick="marcarTempNE(\''+tipo+'\','+cfg.doble+')" style="width:100%;margin-top:6px;background:rgba(148,163,184,.15);color:#cbd5e1;border:1px solid rgba(148,163,184,.35);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">🚫 NE · No evaluado</button>'+
     '<button onclick="verGraficoTemp(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver gráfico del mes</button>'+
     '<button onclick="document.getElementById(\'regTempOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '<div class="saved" id="regTempSaved">✓ Registrado</div>'+
@@ -6812,6 +6813,37 @@ window.guardarRegTemp=function(tipo,doble){
       }
     }
     setTimeout(function(){var o=document.getElementById('regTempOv');if(o)o.remove();},1000);
+  });
+};
+
+// Marcar registro de temperatura como No Evaluado (NE), con justificación obligatoria
+window.marcarTempNE=function(tipo,doble){
+  var toma=doble?(document.getElementById('tempToma')?document.getElementById('tempToma').value:'am'):'am';
+  // Ventana de justificación
+  var m=document.createElement('div');
+  m.id='tempNEOv';
+  m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9300;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML='<div style="background:#16233d;border-radius:16px;padding:22px;max-width:380px;width:100%">'+
+    '<div style="font-size:16px;font-weight:700;color:#cbd5e1;margin-bottom:4px">🚫 No evaluado'+(doble?' · '+toma.toUpperCase():'')+'</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px">Explica por qué no se pudo registrar esta temperatura. La justificación queda como respaldo.</div>'+
+    '<textarea id="tempNEjust" rows="3" placeholder="Ej: refrigerador en mantención, equipo fuera de servicio, sin acceso al área..." style="width:100%;font-size:13px;padding:9px;margin-bottom:12px"></textarea>'+
+    '<button onclick="confirmarTempNE(\''+tipo+'\',\''+toma+'\')" style="width:100%;background:linear-gradient(135deg,#64748b,#94a3b8);color:#fff;border:none;border-radius:8px;padding:10px;font-family:inherit;font-weight:600;cursor:pointer">Confirmar No Evaluado</button>'+
+    '<button onclick="document.getElementById(\'tempNEOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cancelar</button>'+
+    '</div>';
+  document.body.appendChild(m);
+  setTimeout(function(){var t=document.getElementById('tempNEjust');if(t)t.focus();},100);
+};
+
+window.confirmarTempNE=function(tipo,toma){
+  var just=document.getElementById('tempNEjust')?document.getElementById('tempNEjust').value.trim():'';
+  if(!just){alert('La justificación es obligatoria para marcar como No Evaluado.');return;}
+  var ahora=new Date();
+  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
+  var reg={tipo:tipo,toma:toma,ne:true,justificacion:just,lecturas:{},lecturasDetalle:{},
+    obs:'',quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  sedeRef('regTemperatura/'+reg.ts).set(reg).then(function(){
+    var m=document.getElementById('tempNEOv');if(m)m.remove();
+    var o=document.getElementById('regTempOv');if(o)o.remove();
   });
 };
 
@@ -7218,14 +7250,23 @@ function verificarCumplimiento(tipo,fecha){
     return {cumplido:hay,detalle:hay?'Registrado':'Sin registro de carga'};
   }
   if(tipo==='temp_ester'||tipo==='temp_pabellon'){
-    var hay2=Object.values(regTemperatura||{}).some(function(r){return r.tipo===tipo&&r.fecha===fecha;});
-    return {cumplido:hay2,detalle:hay2?'Registrado':'Sin registro'};
+    var regsE=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha===fecha;});
+    var hay2=regsE.length>0;
+    var neE=hay2&&regsE.every(function(r){return r.ne;});
+    return {cumplido:hay2,detalle:hay2?(neE?'No evaluado (justificado)':'Registrado'):'Sin registro'};
   }
   if(tipo==='temp_refri'){
     var regsR=Object.values(regTemperatura||{}).filter(function(r){return r.tipo==='temp_refri'&&r.fecha===fecha;});
-    var am=regsR.some(function(r){return r.toma==='am';});
-    var pm=regsR.some(function(r){return r.toma==='pm';});
-    if(am&&pm)return {cumplido:true,detalle:'AM y PM ✓'};
+    var amReg=regsR.filter(function(r){return r.toma==='am';});
+    var pmReg=regsR.filter(function(r){return r.toma==='pm';});
+    var am=amReg.length>0,pm=pmReg.length>0;
+    if(am&&pm){
+      var amNE=amReg.every(function(r){return r.ne;});
+      var pmNE=pmReg.every(function(r){return r.ne;});
+      if(amNE&&pmNE)return {cumplido:true,detalle:'AM y PM: No evaluado (justificado)'};
+      if(amNE||pmNE)return {cumplido:true,detalle:'AM y PM ✓ ('+(amNE?'AM':'PM')+' NE)'};
+      return {cumplido:true,detalle:'AM y PM ✓'};
+    }
     if(am||pm)return {cumplido:false,detalle:(am?'Falta PM':'Falta AM')};
     return {cumplido:false,detalle:'Sin registro (AM y PM)'};
   }
@@ -7601,10 +7642,14 @@ window.verDetalleTecnico=function(tipo){
     filas=regsT.length?regsT.map(function(r){
       var tn={temp_refri:'🧊 Refrigeradores',temp_ester:'🌡️ Esterilización',temp_pabellon:'🌡️ Pabellón'}[r.tipo]||r.tipo;
       var lecturas=Object.keys(r.lecturas||{}).map(function(p){return esc(p)+': '+r.lecturas[p]+'°C';}).join(' · ');
+      var cuerpo=r.ne
+        ? '<div style="font-size:11px;color:#cbd5e1;margin-top:2px">🚫 No evaluado</div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:1px;font-style:italic">Justificación: '+esc(r.justificacion||'—')+'</div>'
+        : '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">'+lecturas+'</div>'+
+          (r.obs?'<div style="font-size:10px;color:rgba(255,255,255,.35)">'+esc(r.obs)+'</div>':'');
       return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
         '<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#fff;font-weight:600">'+tn+(r.toma?' ('+r.toma.toUpperCase()+')':'')+'</span><span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span></div>'+
-        '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">'+lecturas+'</div>'+
-        (r.obs?'<div style="font-size:10px;color:rgba(255,255,255,.35)">'+esc(r.obs)+'</div>':'')+
+        cuerpo+
       '</div>';
     }).join(''):'<p style="color:rgba(255,255,255,.4);font-size:12px">Sin registros.</p>';
   } else if(tipo==='reas'){
