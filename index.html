@@ -7115,8 +7115,9 @@ function graficoCondSVG(regs){
   var W=560,H=240,padL=36,padR=12,padT=16,padB=34;
   var vals=regs.map(function(r){return r.osmosis;}).concat(regs.map(function(r){return r.ultra;})).concat([0,5]);
   var minY=0,maxY=Math.max.apply(null,vals)+1;
-  var n=regs.length;
-  function x(i){return n<=1?padL+(W-padL-padR)/2:padL+i/(n-1)*(W-padL-padR);}
+  var diasMes=31;
+  function diaDe(r){return Number((r.fecha||'').slice(8,10))||1;}
+  function x(dia){return padL+(dia-1)/(diasMes-1)*(W-padL-padR);}
   function y(v){return padT+(maxY-v)/(maxY-minY)*(H-padT-padB);}
   var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
   // Marcas del eje Y con valores (para ver la tendencia respecto al parámetro)
@@ -7125,19 +7126,25 @@ function graficoCondSVG(regs){
     svg+='<line x1="'+padL+'" y1="'+y(vY)+'" x2="'+(W-padR)+'" y2="'+y(vY)+'" stroke="rgba(255,255,255,.05)"/>';
     svg+='<text x="'+(padL-4)+'" y="'+(y(vY)+3)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="end">'+vY.toFixed(1)+'</text>';
   }
+  // Marcas de día en el eje X (cada 5 días)
+  for(var d=1;d<=diasMes;d+=5){
+    svg+='<text x="'+x(d)+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="middle">'+d+'</text>';
+  }
   // Línea límite/parámetro osmosis (< 5 µS/cm)
   svg+='<line x1="'+padL+'" y1="'+y(5)+'" x2="'+(W-padR)+'" y2="'+y(5)+'" stroke="#10b981" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>';
   svg+='<text x="'+(W-padR)+'" y="'+(y(5)-3)+'" fill="#6ee7b7" font-size="8" text-anchor="end">parámetro osmosis &lt; 5</text>';
   // Línea parámetro ultrapura (0 exacto) — sobre el eje base
   svg+='<text x="'+(padL+4)+'" y="'+(y(0)-3)+'" fill="#5eead4" font-size="8">parámetro ultrapura = 0</text>';
+  // Ordenar por día
+  var ordenados=regs.slice().sort(function(a,b){return diaDe(a)-diaDe(b);});
   // Osmosis
-  var pO=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+y(r.osmosis);}).join(' ');
+  var pO=ordenados.map(function(r,i){return (i===0?'M':'L')+x(diaDe(r))+' '+y(r.osmosis);}).join(' ');
   svg+='<path d="'+pO+'" fill="none" stroke="#60a5fa" stroke-width="1.8"/>';
-  regs.forEach(function(r,i){svg+='<circle cx="'+x(i)+'" cy="'+y(r.osmosis)+'" r="'+(r.osmosisOptima?2:3.5)+'" fill="'+(r.osmosisOptima?'#60a5fa':'#fbbf24')+'"/>';});
+  ordenados.forEach(function(r){svg+='<circle cx="'+x(diaDe(r))+'" cy="'+y(r.osmosis)+'" r="'+(r.osmosisOptima?2:3.5)+'" fill="'+(r.osmosisOptima?'#60a5fa':'#fbbf24')+'"/>';});
   // Ultrapura
-  var pU=regs.map(function(r,i){return (i===0?'M':'L')+x(i)+' '+y(r.ultra);}).join(' ');
+  var pU=ordenados.map(function(r,i){return (i===0?'M':'L')+x(diaDe(r))+' '+y(r.ultra);}).join(' ');
   svg+='<path d="'+pU+'" fill="none" stroke="#5eead4" stroke-width="1.8"/>';
-  regs.forEach(function(r,i){svg+='<circle cx="'+x(i)+'" cy="'+y(r.ultra)+'" r="'+(r.ultraOptima?2:3.5)+'" fill="'+(r.ultraOptima?'#5eead4':'#fbbf24')+'"/>';});
+  ordenados.forEach(function(r){svg+='<circle cx="'+x(diaDe(r))+'" cy="'+y(r.ultra)+'" r="'+(r.ultraOptima?2:3.5)+'" fill="'+(r.ultraOptima?'#5eead4':'#fbbf24')+'"/>';});
   svg+='</svg>';
   svg+='<div style="display:flex;gap:12px;margin-top:8px;font-size:10px;color:rgba(255,255,255,.6)">'+
     '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#60a5fa;margin-right:3px"></span>Osmosis (µS/cm)</span>'+
