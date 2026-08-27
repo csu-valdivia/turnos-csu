@@ -1049,6 +1049,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
             <button class="btn-sec" id="reiniciarTodoBtn" style="margin-bottom:10px;font-size:11px;color:#fca5a5;border-color:rgba(239,68,68,.3)">↺ Reiniciar evaluaciones de todo el equipo (nueva semana)</button>
             <button class="btn-sec" id="desbloquearTodosBtn" style="margin-bottom:10px;font-size:11px;color:#6ee7b7;border-color:rgba(16,185,129,.3)">🔓 Desbloquear a todos los bloqueados hoy</button>
+            <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:10px;margin-bottom:10px">
+              <div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:6px">🗓️ Resetear puntajes desde una fecha</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:8px">Borra los puntos de quiz y las supervisiones <b>anteriores</b> a la fecha que elijas. Útil para limpiar evaluaciones de prueba. No borra el progreso de fichas ni la configuración.</div>
+              <input type="date" id="resetDesdeFecha" style="font-size:12px;padding:6px;width:100%;margin-bottom:6px">
+              <button class="btn-sec" id="resetDesdeBtn" style="font-size:11px;color:#fbbf24;border-color:rgba(245,158,11,.4);width:100%">Resetear puntajes anteriores a esta fecha</button>
+              <div class="saved" id="resetDesdeSaved">✓ Puntajes reseteados</div>
+            </div>
             <div class="saved" id="desbloquearTodosSaved">✓ Desbloqueados</div>
             <div class="saved" id="reiniciarTodoSaved">✓ Evaluaciones reiniciadas</div>
             <div class="ilist" id="cumplimientoList"></div>
@@ -3330,7 +3337,7 @@ function iniciarPreguntasCombinadas(pend){
   fichaActualPreguntas.forEach(function(p,i){
     html+='<div style="margin-bottom:18px"><p style="font-size:13px;font-weight:600;margin-bottom:8px;line-height:1.5">'+(i+1)+'. '+escNL(p.pregunta)+'</p><div class="opciones-preg" data-idx="'+i+'">';
     (p.opciones||[]).forEach(function(op,j){
-      html+='<button class="opcion-btn" data-correcta="'+(j===p.correcta?'1':'0')+'" data-idx="'+i+'" data-opcion="'+j+'" style="display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+op+'</button>';
+      html+='<button class="opcion-btn" data-correcta="'+(j===Number(p.correcta)?'1':'0')+'" data-idx="'+i+'" data-opcion="'+j+'" style="display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+op+'</button>';
     });
     html+='</div></div>';
   });
@@ -3474,7 +3481,7 @@ function mostrarPasoPreguntas(docId,doc,prog){
       alert('Responde todas las preguntas antes de continuar.');
       return;
     }
-    var correctas=fichaActualPreguntas.every(function(p,i){return fichaActualRespuestas[i]===p.correcta;});
+    var correctas=fichaActualPreguntas.every(function(p,i){return Number(fichaActualRespuestas[i])===Number(p.correcta);});
     if(correctas){
       aprobarFicha(docId);
     } else {
@@ -9549,6 +9556,55 @@ document.getElementById('reiniciarTodoBtn').addEventListener('click',function(){
     fichaProgreso={};
     showSaved('reiniciarTodoSaved');
     renderCumplimientoList();
+  });
+});
+
+// Resetear puntajes (quiz + supervisiones) anteriores a una fecha elegida
+document.getElementById('resetDesdeBtn').addEventListener('click',function(){
+  var fechaInput=document.getElementById('resetDesdeFecha').value;
+  if(!fechaInput){alert('Elige una fecha primero.');return;}
+  var corte=new Date(fechaInput+'T00:00:00').getTime();
+  var fechaLegible=new Date(fechaInput+'T00:00:00').toLocaleDateString('es-CL');
+  if(!confirm('¿Borrar todos los puntos de quiz y supervisiones ANTERIORES al '+fechaLegible+'?\n\nLo del '+fechaLegible+' en adelante se conserva. Esto NO se puede deshacer.'))return;
+
+  var updates={};
+  var borradosRanking=0,borradosSup=0;
+
+  // 1. Ranking de quiz: borrar entradas con fecha < corte
+  Object.keys(ranking||{}).forEach(function(key){
+    var entradas=ranking[key]||{};
+    Object.keys(entradas).forEach(function(pushId){
+      var e=entradas[pushId];
+      var f=e&&(e.fecha||0);
+      if(f&&f<corte){
+        updates['ranking/'+key+'/'+pushId]=null; // null = borrar en Firebase
+        borradosRanking++;
+      }
+    });
+  });
+
+  // 2. Supervisiones: borrar las con fecha (fechaStr) < corte
+  Object.keys(supervisionData||{}).forEach(function(id){
+    var r=supervisionData[id];
+    if(!r)return;
+    // r.fecha es 'YYYY-MM-DD'; comparar con la fecha de corte
+    var fSup=r.fecha?new Date(r.fecha+'T00:00:00').getTime():(r.ts||0);
+    if(fSup&&fSup<corte){
+      updates['supervision/'+id]=null;
+      borradosSup++;
+    }
+  });
+
+  if(!borradosRanking&&!borradosSup){
+    alert('No hay puntajes anteriores a esa fecha.');
+    return;
+  }
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('resetDesdeSaved');
+    alert('✓ Reseteo completo:\n· '+borradosRanking+' puntaje(s) de quiz\n· '+borradosSup+' supervisión(es)\nborrados antes del '+fechaLegible+'.');
+    renderRanking&&renderRanking();
+  }).catch(function(err){
+    alert('Error al resetear: '+err.message);
   });
 });
 
