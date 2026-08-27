@@ -956,7 +956,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="inst_recibido">📥 Instrumental recibido</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
@@ -1310,7 +1310,7 @@ function jornadaLabel(j){
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},inst_recibido:{e:'📥',l:'Instrumental recibido'},inst_lavado:{e:'🧼',l:'Instrumental lavado'},inst_empaque:{e:'📦',l:'Instrumental empaquetado'},inst_secado:{e:'💨',l:'Instrumental secado'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Catálogo de roles técnicos: cada uno abre una funcionalidad de registro en Mis Turnos.
 // tipo = valor de la tarea; fn = función que abre el registro. Ampliable por el admin vía rolesTecnicos.
 var ROLES_TECNICOS_BASE={
@@ -1319,7 +1319,20 @@ var ROLES_TECNICOS_BASE={
   temp_pabellon:{emoji:'🔵',label:'Temp. Pabellón',desc:'Temperatura pabellones (diario AM)',fn:'abrirRegTemp'},
   temp_box:{emoji:'🚪',label:'Temp. Box',desc:'Temperatura de boxes (diario AM)',fn:'abrirRegTemp'},
   temp_refri:{emoji:'🧊',label:'Temp. Refrigeradores',desc:'Temperatura de refrigeradores 2–8°C (AM y PM)',fn:'abrirRegTemp'},
+  radiografias:{emoji:'🩻',label:'Radiografías',desc:'Cantidad de radiografías tomadas (diario)',fn:'abrirRegProduccion'},
+  inst_recibido:{emoji:'📥',label:'Instrumental recibido',desc:'Cantidad de instrumental recibido (diario)',fn:'abrirRegProduccion'},
+  inst_lavado:{emoji:'🧼',label:'Instrumental lavado',desc:'Cantidad de instrumental lavado (diario)',fn:'abrirRegProduccion'},
+  inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',desc:'Cantidad de instrumental empaquetado (diario)',fn:'abrirRegProduccion'},
+  inst_secado:{emoji:'💨',label:'Instrumental secado',desc:'Cantidad de instrumental secado (diario)',fn:'abrirRegProduccion'},
   aseo:{emoji:'🧹',label:'Aseo semanal',desc:'Aseo esterilización y pabellón (semanal)',fn:'abrirRegAseo'}
+};
+// Config de los registros de producción simple (solo cantidad diaria)
+var PRODUCCION_TIPOS={
+  radiografias:{emoji:'🩻',label:'Radiografías',unidad:'radiografías',color:'#a78bfa'},
+  inst_recibido:{emoji:'📥',label:'Instrumental recibido',unidad:'piezas',color:'#60a5fa'},
+  inst_lavado:{emoji:'🧼',label:'Instrumental lavado',unidad:'piezas',color:'#22d3ee'},
+  inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',unidad:'paquetes',color:'#34d399'},
+  inst_secado:{emoji:'💨',label:'Instrumental secado',unidad:'piezas',color:'#fbbf24'}
 };
 
 var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
@@ -1461,7 +1474,7 @@ var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
 var supervisorActivo='',supervisorAreas=[];
-var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={};
+var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={};
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
@@ -1630,6 +1643,7 @@ window.setSede=function(sede){
   sedeRef('pinSupervisor').on('value',function(s){pinSupervisor=s.val()||'';});
   sedeRef('conductividad').on('value',function(s){conductividad=s.val()||{};});
   sedeRef('regAutoclave').on('value',function(s){regAutoclave=s.val()||{};});
+  sedeRef('regProduccion').on('value',function(s){regProduccion=s.val()||{};});
   sedeRef('regTemperatura').on('value',function(s){regTemperatura=s.val()||{};});
   sedeRef('regAseo').on('value',function(s){regAseo=s.val()||{};});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
@@ -6719,6 +6733,101 @@ function bannerBorrador(tipo,campos){
   '</div>';
 }
 
+// ══════════════ REGISTROS DE PRODUCCIÓN (cantidad diaria simple) ══════════════
+// Radiografías, instrumental recibido/lavado/empaquetado/secado. Se asignan como autoclave.
+window.abrirRegProduccion=function(tipo){
+  var cfg=PRODUCCION_TIPOS[tipo];
+  if(!cfg){alert('Tipo de registro no reconocido.');return;}
+  var ov=document.getElementById('regProdOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regProdOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  // ¿Ya registró hoy?
+  var hoy=hoyStr();
+  var yaHoy=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tipo&&r.fecha===hoy;});
+  var totalHoy=yaHoy.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+cfg.emoji+' '+cfg.label+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Cantidad diaria · '+hoy+(totalHoy?' · ya registrado hoy: '+totalHoy+' '+cfg.unidad:'')+'</div>'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Cantidad de '+cfg.unidad+'</label>'+
+    '<input type="number" id="prodCantidad" min="0" step="1" placeholder="N° de '+cfg.unidad+'" style="width:100%;font-size:16px;padding:10px;margin-bottom:8px">'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
+    '<textarea id="prodObs" rows="2" placeholder="Anota si hubo alguna novedad" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
+    '<button class="btn-add" onclick="guardarRegProduccion(\''+tipo+'\')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
+    '<button onclick="verGraficoProduccion(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver gráfico del mes</button>'+
+    '<button onclick="document.getElementById(\'regProdOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="regProdSaved">✓ Registrado</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  setTimeout(function(){var i=document.getElementById('prodCantidad');if(i)i.focus();},100);
+};
+
+window.guardarRegProduccion=function(tipo){
+  var cant=document.getElementById('prodCantidad').value;
+  if(cant===''||Number(cant)<0){alert('Ingresa una cantidad válida.');return;}
+  var ahora=new Date();
+  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
+  var reg={tipo:tipo,cantidad:Number(cant),obs:document.getElementById('prodObs').value.trim(),
+    quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  sedeRef('regProduccion/'+reg.ts).set(reg).then(function(){
+    showSaved('regProdSaved');
+    setTimeout(function(){var o=document.getElementById('regProdOv');if(o)o.remove();},900);
+  });
+};
+
+// Gráfico de barras diarias con panorámica mensual (como instrumental por equipo)
+window.verGraficoProduccion=function(tipo){
+  var cfg=PRODUCCION_TIPOS[tipo];
+  var ov=document.getElementById('grafProdOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='grafProdOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9250;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var mes=hoyStr().slice(0,7);
+  var regs=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tipo&&r.fecha&&r.fecha.slice(0,7)===mes;});
+  var total=regs.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:620px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+cfg.emoji+' '+cfg.label+' — comportamiento mensual</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+' · total: '+total+' '+cfg.unidad+'</div>'+
+    (regs.length?graficoProduccionSVG(regs,cfg):'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros este mes.</div>')+
+    '<button onclick="document.getElementById(\'grafProdOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+// Barras diarias de cantidad, panorámica mensual
+function graficoProduccionSVG(regs,cfg){
+  function diaDe(r){return Number((r.fecha||'').slice(8,10))||1;}
+  var porDia={};
+  regs.forEach(function(r){var d=diaDe(r);porDia[d]=(porDia[d]||0)+(Number(r.cantidad)||0);});
+  var diasConDatos=Object.keys(porDia).map(Number).sort(function(a,b){return a-b;});
+  var maxDia=Math.max.apply(null,diasConDatos.map(function(d){return porDia[d];}).concat([1]));
+  var diasMes=31,W=580,H=250,padL=40,padR=12,padT=20,padB=34;
+  function x(dia){return padL+(dia-1)/(diasMes-1)*(W-padL-padR);}
+  function y(v){return padT+(maxDia-v)/(maxDia||1)*(H-padT-padB);}
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
+  for(var m=0;m<=4;m++){
+    var vY=maxDia*m/4;
+    svg+='<line x1="'+padL+'" y1="'+y(vY)+'" x2="'+(W-padR)+'" y2="'+y(vY)+'" stroke="rgba(255,255,255,.05)"/>';
+    svg+='<text x="'+(padL-4)+'" y="'+(y(vY)+3)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="end">'+Math.round(vY)+'</text>';
+  }
+  for(var d=1;d<=diasMes;d+=5){
+    svg+='<text x="'+x(d)+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="middle">'+d+'</text>';
+  }
+  var anchoBar=Math.max(4,Math.min(14,(W-padL-padR)/diasMes*0.6));
+  diasConDatos.forEach(function(dia){
+    var v=porDia[dia];if(v<=0)return;
+    var xb=x(dia)-anchoBar/2,yb=y(v);
+    svg+='<rect x="'+xb+'" y="'+yb+'" width="'+anchoBar+'" height="'+(H-padB-yb)+'" rx="2" fill="'+cfg.color+'" opacity="0.85"/>';
+    svg+='<text x="'+x(dia)+'" y="'+(yb-2)+'" fill="'+cfg.color+'" font-size="8" text-anchor="middle" font-weight="700">'+v+'</text>';
+  });
+  svg+='</svg>';
+  // Promedio diario
+  var prom=diasConDatos.length?Math.round(regs.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0)/diasConDatos.length):0;
+  svg+='<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:rgba(255,255,255,.6)">'+
+    '<span>Días con registro: <b style="color:#fff">'+diasConDatos.length+'</b></span>'+
+    '<span>Promedio/día: <b style="color:#fff">'+prom+' '+cfg.unidad+'</b></span>'+
+    '<span>Máximo en un día: <b style="color:#fff">'+maxDia+'</b></span></div>';
+  return svg;
+}
+
 window.abrirRegAutoclave=function(){
   var ov=document.getElementById('regAutoOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regAutoOv';
@@ -7550,6 +7659,17 @@ window.verTodasMisGraficas=function(){
       '<p style="font-size:13px;color:#93c5fd;font-weight:600;margin-bottom:8px">💧 Rendimiento de conductividad</p>'+
       graficoCondSVG(regsCond)+'</div>';
   }
+  // Producción del servicio
+  Object.keys(PRODUCCION_TIPOS).forEach(function(tp){
+    var cfg=PRODUCCION_TIPOS[tp];
+    var regsP=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tp&&r.fecha&&r.fecha.slice(0,7)===mes;});
+    if(!regsP.length)return;
+    algo=true;
+    var totalP=regsP.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<p style="font-size:13px;color:#fff;font-weight:600;margin-bottom:8px">'+cfg.emoji+' '+cfg.label+' <span style="color:rgba(255,255,255,.4);font-weight:400">· '+totalP+' '+cfg.unidad+'</span></p>'+
+      graficoProduccionSVG(regsP,cfg)+'</div>';
+  });
   if(!algo)html+='<div style="background:#16233d;border-radius:10px;padding:30px;text-align:center;color:rgba(255,255,255,.5)">Aún no hay registros este mes. A medida que registres, aquí verás tus gráficas.</div>';
   html+='</div>';
   ov.innerHTML=html;
@@ -7744,6 +7864,10 @@ function diaDeFecha(fechaStr){return diaDeDate(fechaStr);}
 
 // ¿Se cumplió el registro de este rol en esta fecha? Devuelve {cumplido, detalle}
 function verificarCumplimiento(tipo,fecha){
+  if(PRODUCCION_TIPOS[tipo]){
+    var hayP=Object.values(regProduccion||{}).some(function(r){return r.tipo===tipo&&r.fecha===fecha;});
+    return {cumplido:hayP,detalle:hayP?'Registrado':'Sin registro'};
+  }
   if(tipo==='autoclave'){
     var hay=Object.values(regAutoclave||{}).some(function(r){return r.fecha===fecha;});
     return {cumplido:hay,detalle:hay?'Registrado':'Sin registro de carga'};
@@ -7797,7 +7921,7 @@ function nombreRol(tipo){
 }
 
 // Tipos que son "medibles" (tienen registro verificable)
-var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1};
+var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1};
 var TIPOS_SEMANALES={aseo:1}; // tareas que se controlan 1 vez por semana, no diariamente
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
@@ -8372,6 +8496,22 @@ function renderDashboardTecnico(){
   if(regsCond.length){
     html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">💧 Rendimiento de conductividad</p>'+
       '<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+graficoCondSVG(regsCond)+'</div>';
+  }
+  // Gráficos de producción (radiografías, instrumental recibido/lavado/empaquetado/secado)
+  var hayProd=Object.keys(PRODUCCION_TIPOS).some(function(tp){
+    return Object.values(regProduccion||{}).some(function(r){return r.tipo===tp&&r.fecha&&r.fecha.slice(0,7)===mesActual;});
+  });
+  if(hayProd){
+    html+='<p style="font-size:13px;font-weight:700;color:#a78bfa;margin:14px 0 8px">📊 Producción del servicio ('+mesActual+')</p>';
+    Object.keys(PRODUCCION_TIPOS).forEach(function(tp){
+      var cfg=PRODUCCION_TIPOS[tp];
+      var regsP=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tp&&r.fecha&&r.fecha.slice(0,7)===mesActual;});
+      if(!regsP.length)return;
+      var totalP=regsP.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+      html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+
+        '<p style="font-size:12px;color:#fff;margin-bottom:6px">'+cfg.emoji+' '+cfg.label+' <span style="color:rgba(255,255,255,.4);font-weight:400">· '+totalP+' '+cfg.unidad+' este mes</span></p>'+
+        graficoProduccionSVG(regsP,cfg)+'</div>';
+    });
   }
 
   c.innerHTML=html;
