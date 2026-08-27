@@ -1064,6 +1064,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           <div class="asec" style="border-color:rgba(139,92,246,.3)">
             <p class="asec-title" style="color:#a78bfa">👁 Ronda de supervisión</p>
             <div id="ponderaIndicador" style="margin-bottom:12px"></div>
+            <div id="borradorSupBanner"></div>
             <div id="supEstadoHoy" style="margin-bottom:12px"></div>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Registra la supervisión en terreno. Máximo 2 rondas por día por colaborador (mañana y tarde).</p>
             <div class="frow">
@@ -1146,6 +1147,8 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div id="supItemCumplimiento" style="margin-top:8px"></div>
             <div id="supPuntaje" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:right"></div>
             <button class="btn-add" id="guardarSupBtn" style="margin-top:8px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">💾 Guardar ronda de supervisión</button>
+            <button id="guardarBorradorSupBtn" style="width:100%;margin-top:6px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">📝 Guardar borrador (seguir después)</button>
+            <div id="borradorSupEstado" style="font-size:11px;text-align:center;margin-top:6px;min-height:14px"></div>
             <div class="saved" id="supSaved">✓ Ronda guardada</div>
           </div>
 
@@ -1539,6 +1542,7 @@ function attach(){
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
+  on('borradores',function(v){borradoresData=v||{};});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
 
@@ -5896,8 +5900,76 @@ function renderRolLista(){
 }
 window.quitarRol=function(k){sedeRef('rolesTecnicos/'+k).remove().then(function(){renderRolLista();});};
 
+// ── Borrador de supervisión: captura el colaborador y el estado de los toggles ──
+function capturarEstadoSupervision(){
+  var estado={items:{}};
+  var nom=document.getElementById('supNombre');
+  estado.nombre=nom?nom.value:'';
+  var ron=document.getElementById('supRonda');
+  estado.ronda=ron?ron.value:'';
+  // Cada toggle: buscar el botón activo
+  document.querySelectorAll('.sup-toggle').forEach(function(tog,i){
+    var activo=tog.querySelector('.sup-btn.active');
+    if(activo)estado.items['tog'+i]=activo.dataset.val;
+  });
+  return estado;
+}
+function guardarBorradorSupervision(silencioso){
+  var estado=capturarEstadoSupervision();
+  var registro={tipo:'supervision',quien:curNombre||'admin',estado:estado,fecha:hoyStr(),
+    hora:('0'+new Date().getHours()).slice(-2)+':'+('0'+new Date().getMinutes()).slice(-2),ts:Date.now()};
+  sedeRef('borradores/supervision__ronda').set(registro).then(function(){
+    if(!silencioso){
+      var ind=document.getElementById('borradorSupEstado');
+      if(ind)ind.innerHTML='<span style="color:#6ee7b7">✓ Borrador guardado '+registro.hora+' — puedes retomarlo luego</span>';
+    }
+  });
+}
+function renderBorradorSupBanner(){
+  var cont=document.getElementById('borradorSupBanner');if(!cont)return;
+  var b=borradoresData['supervision__ronda'];
+  if(!b||!b.estado){cont.innerHTML='';return;}
+  var cuando=(b.fecha===hoyStr()?'hoy':b.fecha)+' a las '+(b.hora||'');
+  var nomB=b.estado.nombre?' · '+esc(b.estado.nombre):'';
+  cont.innerHTML='<div style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:12px;margin-bottom:12px">'+
+    '<div style="font-size:12px;font-weight:700;color:#fcd34d;margin-bottom:4px">📝 Supervisión sin terminar'+nomB+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:8px">Guardada '+cuando+'. Retoma donde quedaste.</div>'+
+    '<div style="display:flex;gap:6px">'+
+      '<button onclick="retomarBorradorSup()" style="flex:1;background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);border-radius:8px;padding:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">↩ Retomar</button>'+
+      '<button onclick="descartarBorradorSup()" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;cursor:pointer">Descartar</button>'+
+    '</div>'+
+  '</div>';
+}
+window.retomarBorradorSup=function(){
+  var b=borradoresData['supervision__ronda'];
+  if(!b||!b.estado)return;
+  var est=b.estado;
+  var nom=document.getElementById('supNombre');
+  if(nom&&est.nombre){nom.value=est.nombre;nom.dispatchEvent(new Event('change'));}
+  var ron=document.getElementById('supRonda');
+  if(ron&&est.ronda)ron.value=est.ronda;
+  // Restaurar toggles tras un breve delay (para que se rendericen los de estación)
+  setTimeout(function(){
+    document.querySelectorAll('.sup-toggle').forEach(function(tog,i){
+      var val=est.items['tog'+i];
+      if(val===undefined)return;
+      tog.querySelectorAll('.sup-btn').forEach(function(btn){
+        if(btn.dataset.val===val)btn.click();
+      });
+    });
+  },400);
+  var banner=document.getElementById('borradorSupBanner');if(banner)banner.innerHTML='';
+};
+window.descartarBorradorSup=function(){
+  if(!confirm('¿Descartar el borrador de supervisión?'))return;
+  sedeRef('borradores/supervision__ronda').remove();
+  delete borradoresData['supervision__ronda'];
+  var banner=document.getElementById('borradorSupBanner');if(banner)banner.innerHTML='';
+};
+
 function initSupervisionAdmin(excluir){
   renderPonderaIndicador();
+  renderBorradorSupBanner();
   var supNom=document.getElementById('supNombre');
   if(!supNom)return;
   supNom.innerHTML='<option value="">Selecciona colaborador</option>'+
@@ -5981,6 +6053,8 @@ function calcPreviewPuntaje(){
   }
 }
 
+var _gbs=document.getElementById('guardarBorradorSupBtn');
+if(_gbs)_gbs.addEventListener('click',function(){guardarBorradorSupervision(false);});
 document.getElementById('guardarSupBtn').addEventListener('click',function(){
   var nombre=document.getElementById('supNombre').value;
   var ronda=document.getElementById('supRonda').value;
@@ -6067,6 +6141,7 @@ document.getElementById('guardarSupBtn').addEventListener('click',function(){
     // Si es supervisor, NO se guarda cumplimiento (queda libre para el admin)
   }
   sRef('supervision').push(registro).then(function(){
+    sedeRef('borradores/supervision__ronda').remove();delete borradoresData['supervision__ronda'];
     showSaved('supSaved');
     document.querySelectorAll('.sup-btn').forEach(function(b){b.classList.remove('active-yes','active-no','active-ne');});
     document.getElementById('supPuntaje').textContent='';
@@ -6575,6 +6650,75 @@ var AUTOCLAVE_PARAMS={
   ropa:{temp:121,presion:1.2,presionMin:1.1,label:'👕 Ropa'},
   gasas:{temp:121,presion:1.2,presionMin:1.1,label:'🩹 Gasas'}
 };
+// ══════════════ SISTEMA DE BORRADORES (guardado parcial sincronizado) ══════════════
+// Permite guardar un registro a medio llenar y retomarlo después, incluso desde otro dispositivo.
+var borradoresData={};
+
+function borradorKey(tipo){return tipo+'__'+((curNombre||'anon').replace(/[.#$/\[\]]/g,'_'));}
+
+// Recolecta los valores actuales de un formulario (por ids) y los guarda como borrador
+function guardarBorrador(tipo,campos,silencioso){
+  var data={};
+  campos.forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el)return;
+    if(el.type==='checkbox')data[id]=el.checked;
+    else data[id]=el.value;
+  });
+  var registro={tipo:tipo,quien:curNombre||'—',campos:data,fecha:hoyStr(),
+    hora:('0'+new Date().getHours()).slice(-2)+':'+('0'+new Date().getMinutes()).slice(-2),
+    ts:Date.now()};
+  var key=borradorKey(tipo);
+  sedeRef('borradores/'+key).set(registro).then(function(){
+    if(!silencioso){
+      var ind=document.getElementById('borradorEstado');
+      if(ind)ind.innerHTML='<span style="color:#6ee7b7">✓ Borrador guardado '+registro.hora+' — puedes retomarlo luego</span>';
+    }
+  });
+}
+
+// Restaura un borrador en el formulario
+function restaurarBorrador(tipo,campos){
+  var key=borradorKey(tipo);
+  var b=borradoresData[key];
+  if(!b||!b.campos)return false;
+  campos.forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el||b.campos[id]===undefined)return;
+    if(el.type==='checkbox')el.checked=b.campos[id];
+    else el.value=b.campos[id];
+  });
+  return true;
+}
+
+// ¿Hay borrador guardado para este tipo?
+function hayBorrador(tipo){
+  var b=borradoresData[borradorKey(tipo)];
+  return b&&b.campos?b:null;
+}
+
+// Borra el borrador (al completar el registro o al descartar)
+function limpiarBorrador(tipo){
+  var key=borradorKey(tipo);
+  sedeRef('borradores/'+key).remove();
+  delete borradoresData[key];
+}
+
+// Banner que muestra dónde quedó el borrador y permite retomar/descartar
+function bannerBorrador(tipo,campos){
+  var b=hayBorrador(tipo);
+  if(!b)return '';
+  var cuando=(b.fecha===hoyStr()?'hoy':b.fecha)+' a las '+(b.hora||'');
+  return '<div id="borradorBanner" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:12px;margin-bottom:12px">'+
+    '<div style="font-size:12px;font-weight:700;color:#fcd34d;margin-bottom:4px">📝 Tienes un borrador sin terminar</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:8px">Guardado '+cuando+(b.quien&&b.quien!==curNombre?' por '+esc(b.quien):'')+'. Puedes retomarlo donde quedaste.</div>'+
+    '<div style="display:flex;gap:6px">'+
+      '<button onclick="retomarBorrador_'+tipo+'()" style="flex:1;background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);border-radius:8px;padding:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">↩ Retomar</button>'+
+      '<button onclick="descartarBorrador_'+tipo+'()" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;cursor:pointer">Descartar</button>'+
+    '</div>'+
+  '</div>';
+}
+
 window.abrirRegAutoclave=function(){
   var ov=document.getElementById('regAutoOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regAutoOv';
@@ -6597,9 +6741,11 @@ window.abrirRegAutoclave=function(){
     return '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">'+label+'</label>'+
       '<input type="time" id="'+id+'" style="width:100%;font-size:13px;padding:7px"></div>';
   }
+  var camposAutoclave=['autoTipo','autoEquipo','autoCarga','autoCantidad','autoHoraInicio','autoHoraTemp','autoHoraPresion','autoHoraTermino','autoTemp','autoPresion','autoObs'];
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:480px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🔥 Registro de autoclave</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Un registro por carga · '+hoyStr()+'</div>'+
+    bannerBorrador('autoclave',camposAutoclave)+
     // Tipo de carga
     '<label style="font-size:12px;color:rgba(255,255,255,.7)">Tipo de carga</label>'+
     '<select id="autoTipo" onchange="mostrarParamsAuto()" style="width:100%;font-size:14px;padding:8px;margin-bottom:8px">'+
@@ -6609,12 +6755,18 @@ window.abrirRegAutoclave=function(){
       '<option value="gasas">🩹 Gasas (121°C · 1.2 bar)</option>'+
     '</select>'+
     '<div id="autoParamsInfo" style="font-size:11px;color:#93c5fd;margin-bottom:8px;display:none"></div>'+
-    // Fecha (auto), N° carga, cantidad
+    // Fecha (auto), N° equipo, N° carga, cantidad
     '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Equipo</label>'+
+        '<select id="autoEquipo" style="width:100%;font-size:13px;padding:7px">'+
+          '<option value="1">Autoclave 1</option>'+
+          '<option value="2">Autoclave 2</option>'+
+          '<option value="3">Autoclave 3</option>'+
+        '</select></div>'+
       '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">N° de carga</label>'+
         '<input type="number" id="autoCarga" min="1" step="1" style="width:100%;font-size:13px;padding:7px"></div>'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Cantidad instrumental</label>'+
-        '<input type="number" id="autoCantidad" min="0" step="1" placeholder="N° piezas/paquetes" style="width:100%;font-size:13px;padding:7px"></div>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Cantidad</label>'+
+        '<input type="number" id="autoCantidad" min="0" step="1" placeholder="piezas" style="width:100%;font-size:13px;padding:7px"></div>'+
     '</div>'+
     // Horas del proceso
     '<p style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">Tiempos del proceso</p>'+
@@ -6643,11 +6795,38 @@ window.abrirRegAutoclave=function(){
     '<label style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;display:block">Observación general (opcional)</label>'+
     '<textarea id="autoObs" rows="2" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
     '<button class="btn-add" onclick="guardarRegAutoclave()" style="background:linear-gradient(135deg,#dc2626,#f87171)">💾 Guardar carga</button>'+
+    '<button onclick="guardarBorradorAutoclave()" style="width:100%;margin-top:6px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">📝 Guardar borrador (seguir después)</button>'+
+    '<div id="borradorEstado" style="font-size:11px;text-align:center;margin-top:6px;min-height:14px"></div>'+
     '<button onclick="verGraficoAutoclave()" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver rendimiento del mes</button>'+
     '<button onclick="document.getElementById(\'regAutoOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '<div class="saved" id="regAutoSaved">✓ Carga registrada</div>'+
     '</div>';
   document.body.appendChild(ov);
+  // Autoguardado cada vez que cambia un campo (silencioso)
+  var _autoTimer=null;
+  camposAutoclave.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.addEventListener('input',function(){
+      clearTimeout(_autoTimer);
+      _autoTimer=setTimeout(function(){guardarBorrador('autoclave',camposAutoclave,true);},800);
+    });
+  });
+};
+
+window.guardarBorradorAutoclave=function(){
+  var campos=['autoTipo','autoEquipo','autoCarga','autoCantidad','autoHoraInicio','autoHoraTemp','autoHoraPresion','autoHoraTermino','autoTemp','autoPresion','autoObs'];
+  guardarBorrador('autoclave',campos,false);
+};
+window.retomarBorrador_autoclave=function(){
+  var campos=['autoTipo','autoEquipo','autoCarga','autoCantidad','autoHoraInicio','autoHoraTemp','autoHoraPresion','autoHoraTermino','autoTemp','autoPresion','autoObs'];
+  restaurarBorrador('autoclave',campos);
+  mostrarParamsAuto();
+  var banner=document.getElementById('borradorBanner');if(banner)banner.remove();
+};
+window.descartarBorrador_autoclave=function(){
+  if(!confirm('¿Descartar el borrador guardado? Se perderá lo que habías llenado.'))return;
+  limpiarBorrador('autoclave');
+  var banner=document.getElementById('borradorBanner');if(banner)banner.remove();
 };
 
 window.mostrarParamsAuto=function(){
@@ -6717,7 +6896,7 @@ window.guardarRegAutoclave=function(){
   var cumplePresion=Number(presion)>=p.presionMin;
   var ahora=new Date();
   var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
-  var reg={tipoCarga:tipo,carga:Number(carga),cantidad:cantidad!==''?Number(cantidad):null,
+  var reg={tipoCarga:tipo,equipo:document.getElementById('autoEquipo')?document.getElementById('autoEquipo').value:'1',carga:Number(carga),cantidad:cantidad!==''?Number(cantidad):null,
     temperatura:Number(temp),presion:Number(presion),
     tempEsperada:p.temp,presionEsperada:p.presion,
     cumpleTemp:cumpleTemp,cumplePresion:cumplePresion,cumple:(cumpleTemp&&cumplePresion),
@@ -6728,6 +6907,7 @@ window.guardarRegAutoclave=function(){
     tests:tests,obs:document.getElementById('autoObs').value.trim(),
     quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
   sedeRef('regAutoclave/'+reg.ts).set(reg).then(function(){
+    limpiarBorrador('autoclave');
     showSaved('regAutoSaved');
     if(!reg.cumple){setTimeout(function(){alert('⚠ Atención: esta carga NO alcanzó los parámetros esperados ('+p.temp+'°C / '+p.presion+' bar). Quedó registrada la variación.');},300);}
     setTimeout(function(){var o=document.getElementById('regAutoOv');if(o)o.remove();},1000);
