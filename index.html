@@ -624,6 +624,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirDashTecBtn" style="background:linear-gradient(135deg,#7c3aed,#2563eb);margin-top:6px">🔬 Dashboard técnico (esterilización)</button>
             <button class="btn-add" id="abrirCumplimientoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">✅ Control de cumplimiento diario</button>
             <button class="btn-add" id="abrirSinAsignarBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">👥 Quién no tiene asignaciones</button>
+            <button class="btn-add" id="abrirRendimientoBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">💼 Rendimiento de dotación (confidencial)</button>
           </div>
 
 
@@ -1574,6 +1575,7 @@ window.ingresarRol=function(rol){
       var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;
+      var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
       // Llevar la vista al panel admin
       if(p)p.scrollIntoView({behavior:'smooth'});
     },600);
@@ -5367,7 +5369,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -7531,6 +7533,198 @@ var TIPOS_SEMANALES={aseo:1}; // tareas que se controlan 1 vez por semana, no di
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
 // Cruza el equipo (nombres) con turnos, tareas/roles y subbodegas.
+// ══════════════ RENDIMIENTO DE DOTACIÓN (CONFIDENCIAL - solo admin) ══════════════
+// Cruza costo (sueldo/horario/áreas cargados por Excel) con la carga operacional de GESTHOR.
+var dotacionData={}; // {nombre: {cargo, sueldo, horas, turno, areas:[], contrato}}
+
+window.abrirRendimiento=function(){
+  // Solo admin (no supervisores) accede
+  if(supervisorActivo){alert('Panel confidencial. Solo el enfermero jefe puede acceder.');return;}
+  var ov=document.getElementById('rendimientoOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='rendimientoOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  ov.innerHTML='<div style="max-width:820px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      '<span style="font-size:17px;font-weight:800;color:#fbbf24">💼 Rendimiento de dotación</span>'+
+      '<button onclick="document.getElementById(\'rendimientoOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#fca5a5">🔒 Confidencial — Contiene remuneraciones. Solo visible para el enfermero jefe. No se muestra a colaboradores.</div>'+
+    '<div id="rendimientoContenido"></div></div>';
+  document.body.appendChild(ov);
+  // Cargar datos guardados
+  sedeRef('dotacionData').once('value').then(function(s){
+    dotacionData=s.val()||{};
+    renderRendimiento();
+  });
+};
+
+function renderRendimiento(){
+  var c=document.getElementById('rendimientoContenido');if(!c)return;
+  var hayDatos=Object.keys(dotacionData).length>0;
+  // Zona de carga de Excel
+  var html='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:14px">'+
+    '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:6px">📤 Cargar planilla de dotación</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Sube la plantilla Excel con sueldo, horario y áreas de cada persona. Los nombres deben coincidir con GESTHOR.</div>'+
+    '<input type="file" id="rendimientoFile" accept=".xlsx,.xls" style="font-size:12px;color:#fff;margin-bottom:8px">'+
+    '<div id="rendimientoCarga" style="font-size:11px;margin-top:6px"></div>'+
+  '</div>';
+
+  if(hayDatos){
+    // ── Calcular indicadores ──
+    var mes=hoyStr().slice(0,7);
+    var filas=Object.keys(dotacionData).map(function(nombre){
+      var d=dotacionData[nombre];
+      // Carga operacional del mes: procesos técnicos que registró esta persona
+      var procesos=contarProcesosPersona(nombre,mes);
+      // Cobertura: N° de áreas que cubre
+      var nAreas=(d.areas||[]).length;
+      // Cumplimiento: % de tareas cumplidas
+      var cumpl=calcCumplimientoMesPersona(nombre,mes);
+      // Costo por proceso
+      var costoProc=procesos>0?Math.round(d.sueldo/procesos):null;
+      // Costo por hora (aprox, 4.33 semanas/mes)
+      var costoHora=d.horas>0?Math.round(d.sueldo/(d.horas*4.33)):null;
+      return {nombre:nombre,cargo:d.cargo,sueldo:d.sueldo,horas:d.horas,turno:d.turno,
+        areas:d.areas||[],contrato:d.contrato,procesos:procesos,nAreas:nAreas,cumpl:cumpl,
+        costoProc:costoProc,costoHora:costoHora};
+    });
+
+    // Resumen global
+    var totalSueldos=filas.reduce(function(a,f){return a+(f.sueldo||0);},0);
+    var totalProcesos=filas.reduce(function(a,f){return a+f.procesos;},0);
+    var totalPersonas=filas.length;
+    var costoProcGlobal=totalProcesos>0?Math.round(totalSueldos/totalProcesos):null;
+    var cumplProm=filas.length?Math.round(filas.reduce(function(a,f){return a+(f.cumpl||0);},0)/filas.length):0;
+
+    html+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px">'+
+      '<div style="background:#16233d;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:800;color:#93c5fd">'+totalPersonas+'</div><div style="font-size:10px;color:rgba(255,255,255,.5)">Personas en dotación</div></div>'+
+      '<div style="background:#16233d;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:800;color:#fbbf24">$'+miles(totalSueldos)+'</div><div style="font-size:10px;color:rgba(255,255,255,.5)">Costo mensual total</div></div>'+
+      '<div style="background:#16233d;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:800;color:#6ee7b7">'+totalProcesos+'</div><div style="font-size:10px;color:rgba(255,255,255,.5)">Procesos técnicos/mes</div></div>'+
+      '<div style="background:#16233d;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:800;color:'+(cumplProm>=80?'#6ee7b7':'#fcd34d')+'">'+cumplProm+'%</div><div style="font-size:10px;color:rgba(255,255,255,.5)">Cumplimiento promedio</div></div>'+
+    '</div>';
+    if(costoProcGlobal){
+      html+='<div style="background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px;margin-bottom:14px;text-align:center">'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.6)">Costo promedio por proceso técnico realizado</div>'+
+        '<div style="font-size:22px;font-weight:800;color:#fbbf24">$'+miles(costoProcGlobal)+'</div>'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.4)">Cada control, ciclo o registro que sostiene tu equipo cuesta esto en promedio</div>'+
+      '</div>';
+    }
+
+    // Tabla por persona
+    html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">📊 Detalle por persona</p>';
+    html+='<div style="background:#16233d;border-radius:10px;overflow:hidden">';
+    filas.sort(function(a,b){return b.procesos-a.procesos;});
+    filas.forEach(function(f,i){
+      var cumplColor=f.cumpl>=80?'#6ee7b7':f.cumpl>=60?'#fcd34d':'#fca5a5';
+      html+='<div style="padding:12px 14px;'+(i>0?'border-top:1px solid rgba(255,255,255,.06)':'')+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">'+
+          '<div><div style="font-size:13px;color:#fff;font-weight:700">'+esc(f.nombre)+'</div>'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+esc(f.cargo||'—')+' · '+esc(f.turno||'—')+' · '+(f.horas||'—')+'h/sem</div></div>'+
+          '<div style="text-align:right"><div style="font-size:13px;color:#fbbf24;font-weight:700">$'+miles(f.sueldo)+'</div>'+
+            '<div style="font-size:9px;color:rgba(255,255,255,.35)">bruto/mes</div></div>'+
+        '</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+
+          '<span style="font-size:10px;background:rgba(96,165,250,.15);color:#93c5fd;padding:2px 8px;border-radius:5px">🔧 '+f.procesos+' procesos/mes</span>'+
+          '<span style="font-size:10px;background:rgba(167,139,250,.15);color:#c4b5fd;padding:2px 8px;border-radius:5px">📍 '+f.nAreas+' área'+(f.nAreas!==1?'s':'')+'</span>'+
+          '<span style="font-size:10px;background:rgba(16,185,129,.12);color:'+cumplColor+';padding:2px 8px;border-radius:5px">✓ '+f.cumpl+'% cumplimiento</span>'+
+          (f.costoProc?'<span style="font-size:10px;background:rgba(245,158,11,.12);color:#fbbf24;padding:2px 8px;border-radius:5px">$'+miles(f.costoProc)+'/proceso</span>':'')+
+        '</div>'+
+        (f.areas.length?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:5px">Áreas: '+f.areas.map(esc).join(' · ')+'</div>':'')+
+      '</div>';
+    });
+    html+='</div>';
+    html+='<p style="font-size:10px;color:rgba(255,255,255,.35);margin-top:10px">Procesos técnicos = ciclos de autoclave, controles de temperatura, conductividad y REAS que registró la persona este mes. Los datos de carga vienen de GESTHOR; los de costo, de tu planilla.</p>';
+    html+='<button onclick="borrarDotacion()" style="margin-top:12px;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;cursor:pointer">🗑 Borrar datos de dotación</button>';
+  } else {
+    html+='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Aún no has cargado la planilla de dotación. Súbela arriba para ver el análisis de rendimiento.</div>';
+  }
+  c.innerHTML=html;
+
+  // Enganchar carga de archivo
+  var fileInput=document.getElementById('rendimientoFile');
+  if(fileInput)fileInput.onchange=leerPlanillaDotacion;
+}
+
+// Contar procesos técnicos que registró una persona en el mes
+function contarProcesosPersona(nombre,mes){
+  var n=0;
+  Object.values(regAutoclave||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)n++;});
+  Object.values(regTemperatura||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)n++;});
+  Object.keys(conductividad||{}).forEach(function(k){var r=conductividad[k];if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)n++;});
+  Object.values(regAseo||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)n++;});
+  return n;
+}
+
+// % cumplimiento del mes para una persona (reusa la lógica de tareas)
+function calcCumplimientoMesPersona(nombre,mes){
+  var hoy=hoyStr();var diaMax=(mes===hoy.slice(0,7))?new Date(hoy+'T12:00:00').getDate():31;
+  var asig=0,cumpl=0;
+  for(var d=1;d<=diaMax;d++){
+    var fechaD=mes+'-'+('0'+d).slice(-2);
+    var diaSem=diaDeFecha(fechaD);
+    Object.values(tareas||{}).forEach(function(t){
+      if(t.nombre!==nombre||t.dia!==diaSem)return;
+      if(!TIPOS_MEDIBLES[t.tipo])return;
+      if(TIPOS_SEMANALES[t.tipo])return;
+      asig++;
+      if(verificarCumplimiento(t.tipo,fechaD).cumplido)cumpl++;
+    });
+  }
+  return asig?Math.round(cumpl/asig*100):0;
+}
+
+function miles(n){return (n||0).toLocaleString('es-CL');}
+
+function leerPlanillaDotacion(e){
+  var file=e.target.files[0];if(!file)return;
+  var res=document.getElementById('rendimientoCarga');
+  if(typeof XLSX==='undefined'){res.innerHTML='<span style="color:#fca5a5">No se pudo cargar el lector de Excel.</span>';return;}
+  res.innerHTML='<span style="color:#93c5fd">Leyendo...</span>';
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      var hoja=wb.Sheets[wb.SheetNames[0]];
+      var filas=XLSX.utils.sheet_to_json(hoja,{header:1,defval:''});
+      // Buscar fila de encabezado (que contenga "Nombre")
+      var idxHdr=filas.findIndex(function(r){return r.some(function(c){return String(c).toLowerCase().indexOf('nombre')>-1;});});
+      if(idxHdr<0){res.innerHTML='<span style="color:#fca5a5">No se encontró la columna "Nombre" en la planilla.</span>';return;}
+      var nuevos={};var cuenta=0;
+      for(var i=idxHdr+1;i<filas.length;i++){
+        var r=filas[i];
+        var nombre=String(r[0]||'').trim();
+        if(!nombre)continue;
+        // Ignorar fila de ejemplo
+        if(nombre.toLowerCase().indexOf('maría gonzález')>-1&&String(r[1]||'').indexOf('TENS Esterilización')>-1)continue;
+        var sueldo=parseInt(String(r[2]||'0').replace(/[^\d]/g,''))||0;
+        var horas=parseFloat(String(r[3]||'0').replace(/[^\d.]/g,''))||0;
+        var areas=String(r[5]||'').split(/[,;]/).map(function(a){return a.trim();}).filter(Boolean);
+        nuevos[nombre]={cargo:String(r[1]||'').trim(),sueldo:sueldo,horas:horas,
+          turno:String(r[4]||'').trim(),areas:areas,contrato:String(r[6]||'').trim()};
+        cuenta++;
+      }
+      if(!cuenta){res.innerHTML='<span style="color:#fca5a5">No se encontraron personas en la planilla.</span>';return;}
+      // Guardar en Firebase (confidencial)
+      sedeRef('dotacionData').set(nuevos).then(function(){
+        dotacionData=nuevos;
+        res.innerHTML='<span style="color:#6ee7b7">✓ Cargadas '+cuenta+' personas.</span>';
+        setTimeout(renderRendimiento,500);
+      });
+    }catch(err){
+      res.innerHTML='<span style="color:#fca5a5">Error al leer: '+err.message+'</span>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+window.borrarDotacion=function(){
+  if(!confirm('¿Borrar todos los datos de dotación cargados? Esto no afecta a GESTHOR, solo los sueldos/horarios de este panel.'))return;
+  sedeRef('dotacionData').remove().then(function(){
+    dotacionData={};
+    renderRendimiento();
+  });
+};
+
 window.abrirSinAsignar=function(){
   var ov=document.getElementById('sinAsignarOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='sinAsignarOv';
