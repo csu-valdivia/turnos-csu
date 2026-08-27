@@ -6925,10 +6925,72 @@ window.verGraficoAutoclave=function(){
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🔥 Rendimiento del autoclave</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+' · '+regs.length+' cargas</div>'+
     (regs.length?graficoAutoclaveSVG(regs):'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin cargas este mes.</div>')+
+    (regs.length?'<div style="font-size:13px;font-weight:700;color:#93c5fd;margin:18px 0 6px">📦 Instrumental procesado por equipo</div>'+graficoInstrumentalEquipoSVG(regs):'')+
     '<button onclick="document.getElementById(\'grafAutoOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '</div>';
   document.body.appendChild(ov);
 };
+
+// Barras diarias de instrumental procesado, una serie/color por equipo (1,2,3)
+function graficoInstrumentalEquipoSVG(regs){
+  function diaDe(r){return Number((r.fecha||'').slice(8,10))||1;}
+  var COLOR_EQUIPO={'1':'#60a5fa','2':'#f59e0b','3':'#34d399'};
+  var equipos=['1','2','3'];
+  // Agrupar cantidad de instrumental por día y equipo
+  var porDia={}; // dia -> {1:n,2:n,3:n}
+  var diasMes=31;
+  regs.forEach(function(r){
+    var d=diaDe(r);
+    var eq=String(r.equipo||'1');
+    var cant=Number(r.cantidad)||0;
+    if(!porDia[d])porDia[d]={'1':0,'2':0,'3':0};
+    porDia[d][eq]=(porDia[d][eq]||0)+cant;
+  });
+  var diasConDatos=Object.keys(porDia).map(Number).sort(function(a,b){return a-b;});
+  // Total por equipo (para resumen y leyenda)
+  var totalEq={'1':0,'2':0,'3':0};
+  diasConDatos.forEach(function(d){equipos.forEach(function(e){totalEq[e]+=porDia[d][e]||0;});});
+  var maxDia=Math.max.apply(null,diasConDatos.map(function(d){
+    return equipos.reduce(function(a,e){return Math.max(a,porDia[d][e]||0);},0);
+  }).concat([1]));
+
+  var W=580,H=260,padL=40,padR=12,padT=20,padB=34;
+  function x(dia){return padL+(dia-1)/(diasMes-1)*(W-padL-padR);}
+  function y(v){return padT+(maxDia-v)/(maxDia||1)*(H-padT-padB);}
+
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;background:#0f1a30;border-radius:8px">';
+  // Marcas eje Y
+  for(var m=0;m<=4;m++){
+    var vY=maxDia*m/4;
+    svg+='<line x1="'+padL+'" y1="'+y(vY)+'" x2="'+(W-padR)+'" y2="'+y(vY)+'" stroke="rgba(255,255,255,.05)"/>';
+    svg+='<text x="'+(padL-4)+'" y="'+(y(vY)+3)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="end">'+Math.round(vY)+'</text>';
+  }
+  // Marcas de día (cada 5)
+  for(var d=1;d<=diasMes;d+=5){
+    svg+='<text x="'+x(d)+'" y="'+(H-padB+16)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="middle">'+d+'</text>';
+  }
+  // Barras agrupadas: 3 barritas por día (una por equipo)
+  var anchoGrupo=Math.max(6,Math.min(18,(W-padL-padR)/diasMes*0.7));
+  var anchoBar=anchoGrupo/3;
+  diasConDatos.forEach(function(dia){
+    equipos.forEach(function(eq,ei){
+      var cant=porDia[dia][eq]||0;
+      if(cant<=0)return;
+      var xb=x(dia)-anchoGrupo/2+ei*anchoBar;
+      var yb=y(cant);
+      svg+='<rect x="'+xb+'" y="'+yb+'" width="'+(anchoBar-0.5)+'" height="'+(H-padB-yb)+'" fill="'+COLOR_EQUIPO[eq]+'" opacity="0.85"/>';
+    });
+  });
+  svg+='</svg>';
+  // Leyenda con totales
+  svg+='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:11px;color:rgba(255,255,255,.7)">';
+  equipos.forEach(function(eq){
+    svg+='<span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+COLOR_EQUIPO[eq]+';margin-right:4px"></span>Autoclave '+eq+': <b>'+totalEq[eq]+'</b> piezas</span>';
+  });
+  svg+='</div>';
+  svg+='<p style="font-size:10px;color:rgba(255,255,255,.35);margin-top:6px">Instrumental (piezas/paquetes) procesado por día en cada equipo. Requiere haber registrado la cantidad y el equipo en cada carga.</p>';
+  return svg;
+}
 
 function graficoAutoclaveSVG(regs){
   function evalT(r){var p=AUTOCLAVE_PARAMS[r.tipoCarga];if(!p)return true;return Number(r.temperatura)>=p.temp;}
@@ -7270,11 +7332,26 @@ window.verGraficoTemp=function(tipo){
   var puntosArr=Object.keys(puntos);
   var titulo={temp_ester:'🌡️ Temp. Esterilización',temp_pabellon:'🔵 Temp. Pabellón',temp_box:'🚪 Temp. Box',temp_refri:'🧊 Temp. Refrigeradores'}[tipo]||'Temperatura';
   var esRefri=(tipo==='temp_refri');
-  var svg=graficoTempSVG(regs,puntosArr,esRefri);
+  // UN GRÁFICO POR CADA ESPACIO (ítem) evaluado
+  var contenido='';
+  if(!regs.length){
+    contenido='<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros este mes.</div>';
+  } else if(!puntosArr.length){
+    contenido='<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Hay registros pero sin lecturas numéricas (posibles NE).</div>';
+  } else {
+    contenido=puntosArr.map(function(punto){
+      // Filtrar registros que tengan lectura de este punto
+      var regsPunto=regs.filter(function(r){return r.lecturas&&r.lecturas[punto]!==undefined;});
+      return '<div style="margin-bottom:20px">'+
+        '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">'+esc(punto)+'</div>'+
+        graficoTempSVG(regsPunto,[punto],esRefri)+
+      '</div>';
+    }).join('');
+  }
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:640px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+titulo+' — comportamiento mensual</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+' · '+(esRefri?'banda óptima 2–8°C':'sin banda definida')+'</div>'+
-    (regs.length?svg:'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros este mes.</div>')+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+' · '+(esRefri?'banda óptima 2–8°C':'sin banda definida')+' · un gráfico por espacio</div>'+
+    contenido+
     '<button onclick="document.getElementById(\'graftempOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '</div>';
   document.body.appendChild(ov);
@@ -7441,16 +7518,21 @@ window.verTodasMisGraficas=function(){
     '</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+'</div>';
   var algo=false;
-  // Temperaturas
-  ['temp_refri','temp_ester','temp_pabellon'].forEach(function(tipo){
+  // Temperaturas — un gráfico por cada espacio
+  ['temp_refri','temp_ester','temp_pabellon','temp_box'].forEach(function(tipo){
     var regs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha&&r.fecha.slice(0,7)===mes;});
     if(!regs.length)return;
     algo=true;
     var puntos={};regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
     var titulo={temp_refri:'🧊 Temperatura Refrigeradores',temp_ester:'🌡️ Temperatura Esterilización',temp_pabellon:'🔵 Temperatura Pabellón',temp_box:'🚪 Temperatura Box'}[tipo];
+    var puntosArr=Object.keys(puntos);
+    var graficos=puntosArr.length?puntosArr.map(function(punto){
+      var regsPunto=regs.filter(function(r){return r.lecturas&&r.lecturas[punto]!==undefined;});
+      return '<p style="font-size:11px;color:#c4b5fd;margin:8px 0 4px">'+esc(punto)+'</p>'+graficoTempSVG(regsPunto,[punto],tipo==='temp_refri');
+    }).join(''):'<p style="font-size:11px;color:rgba(255,255,255,.4)">Registros sin lecturas numéricas.</p>';
     html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
       '<p style="font-size:13px;color:#fff;font-weight:600;margin-bottom:8px">'+titulo+'</p>'+
-      graficoTempSVG(regs,Object.keys(puntos),tipo==='temp_refri')+'</div>';
+      graficos+'</div>';
   });
   // Autoclave
   var regsAuto=Object.values(regAutoclave||{}).filter(function(r){return r.fecha&&r.fecha.slice(0,7)===mes;}).sort(function(a,b){return a.ts-b.ts;});
@@ -8263,16 +8345,21 @@ function renderDashboardTecnico(){
     html+='<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#6ee7b7">✓ Sin alertas técnicas — todos los parámetros dentro de rango.</div>';
   }
 
-  // Gráficos de temperatura del mes
+  // Gráficos de temperatura del mes — un gráfico por cada espacio
   html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">📈 Comportamiento térmico del mes ('+mesActual+')</p>';
-  ['temp_refri','temp_ester','temp_pabellon'].forEach(function(tipo){
+  ['temp_refri','temp_ester','temp_pabellon','temp_box'].forEach(function(tipo){
     var regs=Object.values(regTemperatura||{}).filter(function(r){return r.tipo===tipo&&r.fecha&&r.fecha.slice(0,7)===mesActual;});
     if(!regs.length)return;
     var puntos={};regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
     var titulo={temp_refri:'🧊 Refrigeradores',temp_ester:'🌡️ Esterilización',temp_pabellon:'🔵 Pabellón',temp_box:'🚪 Box'}[tipo];
+    var puntosArr=Object.keys(puntos);
+    var graficos=puntosArr.length?puntosArr.map(function(punto){
+      var regsPunto=regs.filter(function(r){return r.lecturas&&r.lecturas[punto]!==undefined;});
+      return '<p style="font-size:11px;color:#c4b5fd;margin:8px 0 4px">'+esc(punto)+'</p>'+graficoTempSVG(regsPunto,[punto],tipo==='temp_refri');
+    }).join(''):'';
     html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+
       '<p style="font-size:12px;color:#fff;margin-bottom:6px">'+titulo+'</p>'+
-      graficoTempSVG(regs,Object.keys(puntos),tipo==='temp_refri')+'</div>';
+      graficos+'</div>';
   });
   // Gráfico de autoclave
   var regsAuto=Object.values(regAutoclave||{}).filter(function(r){return r.fecha&&r.fecha.slice(0,7)===mesActual;}).sort(function(a,b){return a.ts-b.ts;});
