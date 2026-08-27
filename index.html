@@ -8178,6 +8178,73 @@ function renderRendimiento(){
       '</div>';
     }
 
+    // ══════ ANÁLISIS INTERPRETADO (diario y mensual) ══════
+    var mesHoy=(mes===hoyStr().slice(0,7));
+    var diasTranscurridos=mesHoy?new Date(hoyStr()+'T12:00:00').getDate():30;
+    var totalUnidades=filas.reduce(function(a,f){return a+contarUnidadesPersona(f.nombre,mes);},0);
+    var procesosDia=Math.round(totalProcesos/Math.max(diasTranscurridos,1));
+    var unidadesDia=Math.round(totalUnidades/Math.max(diasTranscurridos,1));
+    var costoDia=Math.round(totalSueldos/30); // costo diario aprox del equipo
+    var costoPorUnidad=totalUnidades>0?Math.round(totalSueldos/totalUnidades):null;
+
+    html+='<p style="font-size:14px;font-weight:700;color:#c4b5fd;margin:18px 0 8px">🧭 Cómo interpretar esto</p>';
+    html+='<div style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(124,58,237,.03));border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.6">'+
+      '<div style="margin-bottom:8px"><b style="color:#c4b5fd">📅 Análisis diario:</b> En promedio, tu equipo realiza <b style="color:#fff">'+procesosDia+' procesos</b> y produce <b style="color:#fff">'+unidadesDia+' unidades</b> por día'+(costoDia?', a un costo operacional de <b style="color:#fbbf24">$'+miles(costoDia)+'/día</b>':'')+'.</div>'+
+      '<div><b style="color:#c4b5fd">📆 Análisis mensual:</b> En '+diasTranscurridos+' días del mes, el equipo acumula <b style="color:#fff">'+totalProcesos+' procesos</b> y <b style="color:#fff">'+totalUnidades+' unidades procesadas</b>'+(costoPorUnidad?', lo que da un costo de <b style="color:#fbbf24">$'+miles(costoPorUnidad)+' por unidad producida</b>':'')+'.</div>'+
+    '</div>';
+
+    // ══════ CARGA VS CAPACIDAD ══════
+    // Estimación simple: capacidad = horas contratadas del equipo; carga = procesos (cada uno ~tiempo estándar)
+    var horasEquipo=filas.reduce(function(a,f){return a+((f.horas||0)*4.33);},0); // horas/mes
+    // Supuesto: cada proceso técnico toma ~0.5h en promedio (ajustable)
+    var horasCarga=totalProcesos*0.5;
+    var utilizacion=horasEquipo>0?Math.min(100,Math.round(horasCarga/horasEquipo*100)):0;
+    var utilColor=utilizacion>=85?'#fca5a5':utilizacion>=60?'#fcd34d':'#6ee7b7';
+    var utilMsg=utilizacion>=85?'Equipo cerca de saturación — poco margen para asumir más carga o reducir personal sin afectar el servicio.':
+                utilizacion>=60?'Carga equilibrada — el equipo trabaja a buen ritmo con margen acotado.':
+                'Hay holgura aparente, pero recuerda que muchas tareas (supervisión, atención, imprevistos) no quedan registradas como "procesos".';
+    html+='<p style="font-size:14px;font-weight:700;color:#93c5fd;margin:16px 0 8px">⚙️ Carga vs capacidad</p>';
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+        '<span style="font-size:12px;color:rgba(255,255,255,.6)">Utilización estimada del equipo</span>'+
+        '<span style="font-size:18px;font-weight:800;color:'+utilColor+'">'+utilizacion+'%</span>'+
+      '</div>'+
+      '<div style="height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden"><div style="height:100%;width:'+utilizacion+'%;background:'+utilColor+'"></div></div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:8px;line-height:1.5">'+utilMsg+'</div>'+
+      '<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:6px">Estimación: '+Math.round(horasCarga)+'h de carga registrada sobre '+Math.round(horasEquipo)+'h contratadas/mes. Es una cota mínima: no capta todas las tareas.</div>'+
+    '</div>';
+
+    // ══════ SIMULADOR: ¿QUÉ PASA SI RECORTAN? ══════
+    // Persona con menos carga (candidata típica a recorte según gerencia)
+    var ordenCarga=filas.slice().sort(function(a,b){return a.procesos-b.procesos;});
+    var menorCarga=ordenCarga[0];
+    if(menorCarga&&filas.length>1){
+      var procSinEsa=totalProcesos-menorCarga.procesos;
+      var pctCapacidadPerdida=totalProcesos>0?Math.round(menorCarga.procesos/totalProcesos*100):0;
+      var ahorroMensual=menorCarga.sueldo;
+      var nuevaUtil=horasEquipo>0?Math.min(100,Math.round(totalProcesos*0.5/((horasEquipo-(menorCarga.horas||0)*4.33)||1)*100)):0;
+      html+='<p style="font-size:14px;font-weight:700;color:#fca5a5;margin:16px 0 8px">🎯 Simulación: si se recorta 1 persona</p>';
+      html+='<div style="background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.03));border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.6">'+
+        '<div style="margin-bottom:6px">Si se recortara a la persona con menor carga registrada:</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0">'+
+          '<span style="background:rgba(16,185,129,.15);color:#6ee7b7;padding:3px 10px;border-radius:6px;font-size:11px">Ahorro: $'+miles(ahorroMensual)+'/mes</span>'+
+          '<span style="background:rgba(239,68,68,.15);color:#fca5a5;padding:3px 10px;border-radius:6px;font-size:11px">Pierde '+pctCapacidadPerdida+'% de capacidad</span>'+
+          '<span style="background:rgba(251,191,36,.15);color:#fcd34d;padding:3px 10px;border-radius:6px;font-size:11px">Utilización sube a '+nuevaUtil+'%</span>'+
+        '</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.6)">'+(nuevaUtil>=90?'⚠ El equipo restante quedaría al límite ('+nuevaUtil+'%), con alto riesgo de incumplimiento y sobrecarga.':'El equipo restante absorbería la carga subiendo su utilización, con menor margen ante imprevistos.')+'</div>'+
+      '</div>';
+    }
+
+    // ══════ GUIÓN DE DEFENSA (números insertados, listo para leer) ══════
+    var frasesCosto=costoPorUnidad?'a un costo de $'+miles(costoPorUnidad)+' por unidad producida':'con un costo unitario que se afina al registrar cantidades';
+    html+='<p style="font-size:14px;font-weight:700;color:#6ee7b7;margin:16px 0 8px">🗣️ Guión para la reunión (listo para leer)</p>';
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.7;border-left:3px solid #6ee7b7">'+
+      '<p style="margin:0 0 8px">"Nuestro equipo de <b>'+totalPersonas+' personas</b> sostiene la operación completa de esterilización y apoyo clínico. Este mes hemos procesado <b>'+totalProcesos+' controles y ciclos</b> y <b>'+totalUnidades+' unidades</b> (instrumental, radiografías, atenciones), '+frasesCosto+'.</p>'+
+      '<p style="margin:0 0 8px">El costo mensual de remuneraciones es de <b>$'+miles(totalSueldos)+'</b>, lo que equivale a <b>$'+miles(costoDia)+' diarios</b> para mantener el servicio funcionando con un cumplimiento del <b>'+cumplProm+'%</b>.</p>'+
+      '<p style="margin:0">La utilización estimada del equipo es del <b>'+utilizacion+'%</b>'+(utilizacion>=85?', es decir, estamos cerca de la saturación. Una reducción de dotación comprometería directamente la continuidad y la calidad del servicio.':'. Cualquier reducción trasladaría esa carga al resto del equipo, aumentando el riesgo de incumplimiento en un servicio crítico."')+(utilizacion>=85?'"':'')+'</p>'+
+    '</div>';
+    html+='<div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:10px">💡 Estos textos se generan con tus datos reales de GESTHOR + la planilla. Mientras más completo el registro diario, más sólida la defensa. Ajusta las cifras si tu realidad difiere.</div>';
+
     // Tabla por persona
     html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">📊 Detalle por persona</p>';
     html+='<div style="background:#16233d;border-radius:10px;overflow:hidden">';
@@ -8220,7 +8287,16 @@ function contarProcesosPersona(nombre,mes){
   Object.values(regTemperatura||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)n++;});
   Object.keys(conductividad||{}).forEach(function(k){var r=conductividad[k];if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)n++;});
   Object.values(regAseo||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)n++;});
+  Object.values(regProduccion||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)n++;});
   return n;
+}
+
+// Unidades producidas (piezas, radiografías, atenciones...) que registró una persona
+function contarUnidadesPersona(nombre,mes){
+  var u=0;
+  Object.values(regAutoclave||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)u+=(Number(r.cantidad)||0);});
+  Object.values(regProduccion||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)u+=(Number(r.cantidad)||0);});
+  return u;
 }
 
 // % cumplimiento del mes para una persona (reusa la lógica de tareas)
