@@ -1352,7 +1352,8 @@ var TIEMPOS_PROCESO={
   conductividad:{h:0.15,modo:'lote'},reas:{h:0.25,modo:'lote'}
 };
 var COSTO_TERCERIZAR_CARGA=200000; // $ por carga de autoclave (150 lts) tercerizada
-var factorIndirecto=0.40; // 40% de tiempo indirecto (traslados, preparación, coordinación, documentación)
+var factorIndirecto=0.40; // se recalcula desde horasIndirectasDia; 40% es el valor inicial de referencia
+var horasIndirectasDia=0; // horas indirectas totales del área por día (0 = usar factor 40% por defecto)
 
 var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
@@ -1576,6 +1577,7 @@ function attach(){
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
   on('borradores',function(v){borradoresData=v||{};});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
+  on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
 
@@ -8214,10 +8216,24 @@ function renderRendimiento(){
     // Estimación con TIEMPOS REALES calibrados por tipo de proceso
     var horasEquipo=filas.reduce(function(a,f){return a+((f.horas||0)*4.33);},0); // horas/mes contratadas
     var horasProceso=calcHorasCargaMes(mes); // horas de proceso directo según tiempos calibrados
-    var horasIndirecto=horasProceso*factorIndirecto; // trabajo de apoyo no registrado
+    // Días laborales transcurridos del mes (aprox días con actividad, mín 1)
+    var diasLaborales=Math.max(1,diasTranscurridos);
+    // Horas-persona del equipo por día (capacidad diaria)
+    var horasPersonaDia=filas.reduce(function(a,f){return a+((f.horas||0)/5);},0); // h/sem ÷ 5 días
+    // Factor indirecto: si el usuario marcó horas indirectas/día, se traduce a %; si no, usa 40%
+    var factorUsado,pctIndirecto,indirectoDesc;
+    if(horasIndirectasDia>0&&horasPersonaDia>0){
+      factorUsado=horasIndirectasDia/horasPersonaDia; // proporción del día que es indirecto
+      pctIndirecto=Math.round(factorUsado*100);
+      indirectoDesc='medido: '+horasIndirectasDia+'h indirectas/día sobre '+Math.round(horasPersonaDia)+'h-persona/día del área';
+    } else {
+      factorUsado=0.40;
+      pctIndirecto=40;
+      indirectoDesc='valor estándar 40% (marca las horas reales abajo para calibrar)';
+    }
+    var horasIndirecto=horasProceso*factorUsado;
     var horasCarga=horasProceso+horasIndirecto; // carga total real
     var utilizacion=horasEquipo>0?Math.min(100,Math.round(horasCarga/horasEquipo*100)):0;
-    var pctIndirecto=Math.round(factorIndirecto*100);
     var utilColor=utilizacion>=85?'#fca5a5':utilizacion>=60?'#fcd34d':'#6ee7b7';
     var utilMsg=utilizacion>=85?'Equipo cerca de saturación — poco margen para asumir más carga o reducir personal sin afectar el servicio.':
                 utilizacion>=60?'Carga equilibrada — el equipo trabaja a buen ritmo con margen acotado.':
@@ -8230,14 +8246,18 @@ function renderRendimiento(){
       '</div>'+
       '<div style="height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden"><div style="height:100%;width:'+utilizacion+'%;background:'+utilColor+'"></div></div>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:8px;line-height:1.5">'+utilMsg+'</div>'+
-      // Deslizador del factor indirecto
+      // Predictor por HORAS indirectas del área/día → se traduce a %
       '<div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px;margin-top:10px">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
-          '<span style="font-size:11px;color:#93c5fd;font-weight:600">🕐 Factor de tiempo indirecto</span>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+          '<span style="font-size:11px;color:#93c5fd;font-weight:600">🕐 Tiempo indirecto del área</span>'+
           '<span style="font-size:13px;font-weight:800;color:#93c5fd">'+pctIndirecto+'%</span>'+
         '</div>'+
-        '<input type="range" min="0" max="80" step="5" value="'+pctIndirecto+'" oninput="ajustarFactorIndirecto(this.value)" style="width:100%;accent-color:#60a5fa">'+
-        '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.5">Por cada hora de proceso registrado, se suma este % por el trabajo que ese proceso genera pero no se cronometra: traslado de material, preparación de estación, documentación, coordinación y espera de ciclos. <b>El 40% es un valor conservador estándar</b> en gestión sanitaria (el trabajo productivo directo suele ser 50-65% de la jornada).</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+          '<span style="font-size:11px;color:rgba(255,255,255,.6)">Horas indirectas totales del área por día:</span>'+
+          '<input type="number" id="horasIndirInput" min="0" max="'+Math.round(horasPersonaDia)+'" step="0.5" value="'+(horasIndirectasDia||'')+'" placeholder="ej: 6" oninput="ajustarHorasIndirectas(this.value)" style="width:70px;font-size:14px;padding:5px;text-align:center">'+
+          '<span style="font-size:11px;color:rgba(255,255,255,.4)">h/día</span>'+
+        '</div>'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.5);line-height:1.5">'+indirectoDesc+'. Marca cuántas horas al día se van, en toda el área, en traslados, preparación de estación, documentación, coordinación y espera de ciclos. El sistema lo traduce a % y lo aplica a la carga real. <b>Deja 0 para usar el 40% estándar.</b></div>'+
       '</div>'+
       '<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:8px">Cálculo: '+Math.round(horasProceso)+'h de proceso directo + '+Math.round(horasIndirecto)+'h de trabajo indirecto ('+pctIndirecto+'%) = '+Math.round(horasCarga)+'h sobre '+Math.round(horasEquipo)+'h contratadas/mes. Tiempos reales: autoclave 1.25h/carga, lavado/secado 1.5h/lote, empaque 1h/25pzs, radiografía 12.5min, dispensario 5min.</div>'+
     '</div>';
@@ -8302,6 +8322,64 @@ function renderRendimiento(){
         '<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:6px">La tercerización cubre solo la esterilización. Tu equipo cubre toda la cadena, así que la comparación es conservadora a tu favor.</div>'+
       '</div>';
     }
+
+    // ══════ ANÁLISIS POR ÁREA + ÓPTIMO + SIMULADOR ══════
+    // Agrupar personal y carga por área
+    var areasMap=calcCargaPorArea(mes,filas,factorUsado);
+    var areasList=Object.keys(areasMap).sort();
+    if(areasList.length){
+      html+='<p style="font-size:14px;font-weight:700;color:#34d399;margin:18px 0 8px">🏭 Dotación óptima por área</p>';
+      html+='<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Compara el personal actual de cada área con el necesario según la carga real registrada. Sugiere movimientos.</div>';
+      html+='<div style="background:#16233d;border-radius:10px;overflow:hidden;margin-bottom:8px">';
+      areasList.forEach(function(area,i){
+        var a=areasMap[area];
+        // Personal necesario = horas de carga del área / horas disponibles por persona
+        var horasPersonaMes=a.personas.length?(a.horasContratadas/a.personas.length):(44*4.33);
+        var necesario=horasPersonaMes>0?Math.ceil(a.horasCarga/horasPersonaMes):0;
+        var actual=a.personas.length;
+        var dif=actual-necesario;
+        var estado,color,sugerencia;
+        if(dif>0){estado='+' +dif+' de holgura';color='#fcd34d';sugerencia='Podría ceder '+dif+' persona'+(dif>1?'s':'')+' a un área saturada.';}
+        else if(dif<0){estado=Math.abs(dif)+' faltante'+(Math.abs(dif)>1?'s':'');color='#fca5a5';sugerencia='Necesita '+Math.abs(dif)+' persona'+(Math.abs(dif)>1?'s':'')+' más para la carga actual.';}
+        else{estado='Óptimo';color='#6ee7b7';sugerencia='Dotación ajustada a la carga.';}
+        var util=a.horasContratadas>0?Math.min(100,Math.round(a.horasCarga/a.horasContratadas*100)):0;
+        html+='<div style="padding:12px 14px;'+(i>0?'border-top:1px solid rgba(255,255,255,.06)':'')+'">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+            '<span style="font-size:13px;color:#fff;font-weight:700">'+esc(area)+'</span>'+
+            '<span style="font-size:11px;font-weight:700;color:'+color+'">'+estado+'</span>'+
+          '</div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0">'+
+            '<span style="font-size:10px;background:rgba(96,165,250,.15);color:#93c5fd;padding:2px 8px;border-radius:5px">👥 '+actual+' actual</span>'+
+            '<span style="font-size:10px;background:rgba(52,211,153,.15);color:#6ee7b7;padding:2px 8px;border-radius:5px">🎯 '+necesario+' necesario</span>'+
+            '<span style="font-size:10px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);padding:2px 8px;border-radius:5px">⚙️ '+util+'% util.</span>'+
+          '</div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.5)">'+sugerencia+'</div>'+
+        '</div>';
+      });
+      html+='</div>';
+
+      // Recomendaciones de movimiento entre áreas
+      var conHolgura=areasList.filter(function(ar){var a=areasMap[ar];var hpm=a.personas.length?(a.horasContratadas/a.personas.length):(44*4.33);return (a.personas.length-Math.ceil(a.horasCarga/hpm))>0;});
+      var conFalta=areasList.filter(function(ar){var a=areasMap[ar];var hpm=a.personas.length?(a.horasContratadas/a.personas.length):(44*4.33);return (a.personas.length-Math.ceil(a.horasCarga/hpm))<0;});
+      if(conHolgura.length&&conFalta.length){
+        html+='<div style="background:linear-gradient(135deg,rgba(52,211,153,.1),rgba(52,211,153,.03));border:1px solid rgba(52,211,153,.3);border-radius:8px;padding:12px;margin-bottom:12px">'+
+          '<div style="font-size:12px;font-weight:700;color:#6ee7b7;margin-bottom:6px">💡 Movimientos sugeridos</div>'+
+          '<div style="font-size:11px;color:rgba(255,255,255,.75);line-height:1.5">Considera mover personal de <b style="color:#fcd34d">'+conHolgura.map(esc).join(', ')+'</b> (con holgura) hacia <b style="color:#fca5a5">'+conFalta.map(esc).join(', ')+'</b> (con carga alta). Esto equilibra la utilización sin cambiar la dotación total.</div>'+
+        '</div>';
+      }
+    }
+
+    // ══════ SIMULADOR INTERACTIVO ══════
+    html+='<p style="font-size:14px;font-weight:700;color:#a78bfa;margin:18px 0 8px">🎛️ Simulador de dotación</p>';
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px">Simula quitar personal y ve el impacto en la utilización del equipo.</div>'+
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+        '<span style="font-size:12px;color:rgba(255,255,255,.7)">Si quito</span>'+
+        '<input type="number" id="simQuitar" min="0" max="'+totalPersonas+'" value="0" step="1" oninput="simularDotacion('+utilizacion+','+horasEquipo+','+horasCarga+','+totalPersonas+')" style="width:60px;font-size:14px;padding:5px;text-align:center">'+
+        '<span style="font-size:12px;color:rgba(255,255,255,.7)">persona(s) del equipo:</span>'+
+      '</div>'+
+      '<div id="simResultado" style="margin-top:10px"></div>'+
+    '</div>';
 
     // Tabla por persona
     html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">📊 Detalle por persona</p>';
@@ -8443,10 +8521,69 @@ function leerPlanillaDotacion(e){
   reader.readAsArrayBuffer(file);
 }
 
-window.ajustarFactorIndirecto=function(pct){
-  factorIndirecto=Number(pct)/100;
-  sedeRef('factorIndirecto').set(factorIndirecto);
+window.ajustarHorasIndirectas=function(h){
+  horasIndirectasDia=Number(h)||0;
+  sedeRef('horasIndirectasDia').set(horasIndirectasDia);
   renderRendimiento();
+};
+
+// Carga y capacidad agrupada por área (según áreas de la planilla de dotación)
+function calcCargaPorArea(mes,filas,factorUsado){
+  var areas={};
+  // Inicializar áreas desde el personal
+  filas.forEach(function(f){
+    (f.areas||[]).forEach(function(area){
+      if(!areas[area])areas[area]={personas:[],horasContratadas:0,horasCarga:0};
+      areas[area].personas.push(f.nombre);
+      // Repartir las horas de la persona entre sus áreas
+      var nA=(f.areas||[]).length||1;
+      areas[area].horasContratadas+=((f.horas||0)*4.33)/nA;
+    });
+  });
+  // Repartir la carga de procesos por área según quién los registró
+  // Mapeo simple: procesos de cada persona → sus áreas
+  filas.forEach(function(f){
+    var procHoras=calcHorasPersonaMes(f.nombre,mes)*(1+factorUsado);
+    var nA=(f.areas||[]).length||1;
+    (f.areas||[]).forEach(function(area){
+      if(areas[area])areas[area].horasCarga+=procHoras/nA;
+    });
+  });
+  return areas;
+}
+
+// Horas de proceso directo de una persona en el mes (según tiempos calibrados)
+function calcHorasPersonaMes(nombre,mes){
+  var h=0;
+  Object.values(regAutoclave||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre)h+=TIEMPOS_PROCESO.autoclave.h;});
+  Object.values(regProduccion||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre){var t=TIEMPOS_PROCESO[r.tipo];if(t)h+=(t.modo==='unidad'?t.h*(Number(r.cantidad)||0):t.h);}});
+  Object.values(regTemperatura||{}).forEach(function(r){if(r&&r.fecha&&r.fecha.slice(0,7)===mes&&r.quien===nombre){var t=TIEMPOS_PROCESO[r.tipo];if(t)h+=t.h;}});
+  return h;
+}
+
+window.simularDotacion=function(utilActual,horasEquipo,horasCarga,totalPersonas){
+  var quitar=Number(document.getElementById('simQuitar').value)||0;
+  var res=document.getElementById('simResultado');if(!res)return;
+  if(quitar<=0){res.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4)">Ajusta el número para ver el impacto.</div>';return;}
+  if(quitar>=totalPersonas){res.innerHTML='<div style="font-size:12px;color:#fca5a5">No puedes quitar todo el equipo.</div>';return;}
+  // Nueva capacidad: proporcional a las personas restantes
+  var horasPorPersona=horasEquipo/totalPersonas;
+  var nuevaCapacidad=horasEquipo-(quitar*horasPorPersona);
+  var nuevaUtil=nuevaCapacidad>0?Math.min(150,Math.round(horasCarga/nuevaCapacidad*100)):999;
+  var color=nuevaUtil>=100?'#fca5a5':nuevaUtil>=85?'#fcd34d':'#6ee7b7';
+  var msg;
+  if(nuevaUtil>=100)msg='⛔ El equipo restante NO podría absorber la carga actual — quedaría sobrepasado ('+nuevaUtil+'%). Habría incumplimiento seguro.';
+  else if(nuevaUtil>=85)msg='⚠️ El equipo quedaría al límite ('+nuevaUtil+'%), sin margen para imprevistos, licencias ni vacaciones.';
+  else msg='El equipo podría absorber la carga subiendo a '+nuevaUtil+'% de utilización, con menos margen.';
+  res.innerHTML='<div style="background:'+color+'22;border:1px solid '+color+'55;border-radius:8px;padding:12px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:12px;color:rgba(255,255,255,.7)">Utilización tras quitar '+quitar+':</span>'+
+      '<span style="font-size:20px;font-weight:800;color:'+color+'">'+nuevaUtil+'%</span>'+
+    '</div>'+
+    '<div style="height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:'+Math.min(100,nuevaUtil)+'%;background:'+color+'"></div></div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.75);line-height:1.5">'+msg+'</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:6px">Pasarías de '+totalPersonas+' a '+(totalPersonas-quitar)+' personas. Utilización actual: '+utilActual+'% → '+nuevaUtil+'%.</div>'+
+  '</div>';
 };
 
 window.borrarDotacion=function(){
