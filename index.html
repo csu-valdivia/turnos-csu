@@ -957,10 +957,16 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario">💊 Atenciones dispensario</option><option value="inst_recibido">📥 Instrumental recibido</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario">💊 Atenciones dispensario</option><option value="inst_recibido">📥 Instrumental recibido</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="entrega_esteril">📤 Entrega material estéril</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
+            <div id="tPabHorario" style="display:none;gap:8px;margin-bottom:8px">
+              <div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">🏥 Inicio programado</label>
+                <input type="time" id="tPabInicio" style="width:100%;font-size:13px;padding:7px"></div>
+              <div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">🏥 Término programado</label>
+                <input type="time" id="tPabTermino" style="width:100%;font-size:13px;padding:7px"></div>
+            </div>
             <button class="btn-add" id="addTareaBtn">Agregar</button>
             <div class="saved" id="tareaSaved">✓ Guardado</div>
             <div class="ilist" id="tareasList"></div>
@@ -1311,7 +1317,7 @@ function jornadaLabel(j){
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario:{e:'💊',l:'Atenciones dispensario'},inst_recibido:{e:'📥',l:'Instrumental recibido'},inst_lavado:{e:'🧼',l:'Instrumental lavado'},inst_empaque:{e:'📦',l:'Instrumental empaquetado'},inst_secado:{e:'💨',l:'Instrumental secado'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario:{e:'💊',l:'Atenciones dispensario'},inst_recibido:{e:'📥',l:'Instrumental recibido'},inst_lavado:{e:'🧼',l:'Instrumental lavado'},inst_empaque:{e:'📦',l:'Instrumental empaquetado'},inst_secado:{e:'💨',l:'Instrumental secado'},entrega_esteril:{e:'📤',l:'Entrega material estéril'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Catálogo de roles técnicos: cada uno abre una funcionalidad de registro en Mis Turnos.
 // tipo = valor de la tarea; fn = función que abre el registro. Ampliable por el admin vía rolesTecnicos.
 var ROLES_TECNICOS_BASE={
@@ -1326,6 +1332,7 @@ var ROLES_TECNICOS_BASE={
   inst_lavado:{emoji:'🧼',label:'Instrumental lavado',desc:'Cantidad de instrumental lavado (diario)',fn:'abrirRegProduccion'},
   inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',desc:'Cantidad de instrumental empaquetado (diario)',fn:'abrirRegProduccion'},
   inst_secado:{emoji:'💨',label:'Instrumental secado',desc:'Cantidad de instrumental secado (diario)',fn:'abrirRegProduccion'},
+  entrega_esteril:{emoji:'📤',label:'Entrega material estéril',desc:'Entrega con N° estudiantes atendidos y horario (diario)',fn:'abrirRegProduccion'},
   aseo:{emoji:'🧹',label:'Aseo semanal',desc:'Aseo esterilización y pabellón (semanal)',fn:'abrirRegAseo'}
 };
 // Config de los registros de producción simple (solo cantidad diaria)
@@ -1335,7 +1342,8 @@ var PRODUCCION_TIPOS={
   inst_recibido:{emoji:'📥',label:'Instrumental recibido',unidad:'piezas',color:'#60a5fa'},
   inst_lavado:{emoji:'🧼',label:'Instrumental lavado',unidad:'piezas',color:'#22d3ee'},
   inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',unidad:'paquetes',color:'#34d399'},
-  inst_secado:{emoji:'💨',label:'Instrumental secado',unidad:'piezas',color:'#fbbf24'}
+  inst_secado:{emoji:'💨',label:'Instrumental secado',unidad:'piezas',color:'#fbbf24'},
+  entrega_esteril:{emoji:'📤',label:'Entrega material estéril',unidad:'estudiantes',color:'#f97316'}
 };
 // Tiempos reales calibrados por proceso (horas). modo: 'lote' = fijo por registro; 'unidad' = tiempo × cantidad.
 var TIEMPOS_PROCESO={
@@ -1343,7 +1351,7 @@ var TIEMPOS_PROCESO={
   inst_lavado:{h:1.5,modo:'lote'},         // 1-2h por tanda
   inst_secado:{h:1.5,modo:'lote'},         // 1-2h por tanda
   inst_recibido:{h:1,modo:'lote'},         // ~1h recepción
-  inst_empaque:{h:0.04,modo:'unidad'},     // 1h/25 piezas = 0.04h por pieza
+  inst_empaque:{h:0.04,modo:'unidad'},entrega_esteril:{h:0.083,modo:'unidad'},     // 1h/25 piezas = 0.04h por pieza
   radiografias:{h:0.208,modo:'unidad'},    // 12.5 min = 0.208h por imagen
   dispensario:{h:0.083,modo:'unidad'},     // 5 min = 0.083h por estudiante
   // Registros de control (tiempo breve fijo)
@@ -1578,6 +1586,7 @@ function attach(){
   on('borradores',function(v){borradoresData=v||{};});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
+  on('tiemposCalibrados',function(v){if(v&&typeof v==='object'){Object.keys(v).forEach(function(tp){if(TIEMPOS_PROCESO[tp]&&typeof v[tp]==='number')TIEMPOS_PROCESO[tp].h=v[tp];});}});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
 
@@ -2332,13 +2341,20 @@ function renderMisTurnos(nombre){
     var col=dia!=='Sábado'?(COLACION[minH]||null):null;
     var tds=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
     var notaObj=notas[nombre.replace(/\s/g,'_')+'_'+dia];
-    var notaLista=notaObj?Object.values(notaObj).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
+    var notaLista=notaObj?Object.keys(notaObj).map(function(k){var o=notaObj[k];o.pushKey=k;return o;}).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
     var cobDia=cobP.find(function(cv){return cv.dia===dia;});
     html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">📅</span><span class="day-name">'+dia+'</span>'+(cobDia?'<span style="font-size:11px;background:rgba(239,68,68,.1);color:#991b1b;padding:2px 8px;border-radius:4px;margin-left:auto">Cubre '+cobDia.destino+'</span>':'')+'</div>';
     ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?SUBAREAS[b.turno]:null;html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
     if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span></div></div>';
-    tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+'</div>'+t.texto+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
-    notaLista.forEach(function(nt){html+='<div class="nota-box">📣 '+nt.texto+'</div>';});
+    tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
+    notaLista.forEach(function(nt){
+      var respuestas=nt.respuestas?Object.values(nt.respuestas).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
+      var respHtml=respuestas.map(function(rp){return '<div style="margin-top:6px;padding:6px 10px;background:rgba(96,165,250,.1);border-left:2px solid #60a5fa;border-radius:4px;font-size:12px;color:rgba(255,255,255,.85)"><b style="color:#93c5fd">↳ '+esc(rp.quien||'Jefatura')+':</b> '+esc(rp.texto)+'</div>';}).join('');
+      // Ruta de la nota para responder: notaKey + pushId. Guardamos ambos en data-attrs vía onclick.
+      html+='<div class="nota-box">📣 '+esc(nt.texto)+(nt.nombre?' <span style="font-size:10px;color:rgba(255,255,255,.4)">— '+esc(nt.nombre)+'</span>':'')+respHtml+
+        (adminUnlocked?'<button onclick="responderNota(\''+(nombre.replace(/\s/g,'_')+'_'+dia)+'\',\''+nt.pushKey+'\')" style="margin-top:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:6px;padding:4px 10px;font-family:inherit;cursor:pointer">↩ Responder</button>':'')+
+      '</div>';
+    });
     html+='<div class="tactions">'+btnLl+'<button class="btn-nota" onclick="dejarNota(\''+nombre+'\',\''+dia+'\')">✏ Nota</button><button class="btn-ct" onclick="document.getElementById(\'cambioSol\').value=\''+nombre+'\';goTab(\'cambios\')">↔ Cambio</button></div>';
     html+='</div>';
   });
@@ -2361,7 +2377,22 @@ window.dejarNota=function(n,dia){
   box.appendChild(ta);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
 };
 
-// ── ASISTENCIA ──
+// Responder a una nota/novedad del equipo (solo jefatura)
+window.responderNota=function(notaKey,pushKey){
+  var m=mkOverlay();
+  var box=document.createElement('div');box.className='obox';
+  box.innerHTML='<h3>↩ Responder novedad</h3><p style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px">Tu respuesta quedará visible junto a la novedad, para todo el equipo.</p>';
+  var ta=document.createElement('textarea');ta.className='atxt';ta.style.marginBottom='12px';ta.style.minHeight='70px';ta.placeholder='Escribe tu respuesta...';
+  var row=document.createElement('div');row.style.cssText='display:flex;gap:8px';
+  row.appendChild(oBtn('Cancelar',function(){m.remove();}));
+  row.appendChild(pBtn('Responder',function(){
+    var t=ta.value.trim();if(!t)return;
+    sRef('notas/'+notaKey+'/'+pushKey+'/respuestas').push({
+      texto:t,quien:(curNombre||'Jefatura'),fecha:Date.now()
+    }).then(function(){m.remove();});
+  }));
+  box.appendChild(ta);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
+};
 function renderAsist(){
   var d=document.getElementById('asistView');if(!d)return;
   if(!nombres.length){d.innerHTML='<p style="text-align:center;color:rgba(255,255,255,.3);padding:2rem">Sin personal registrado.</p>';return;}
@@ -2807,12 +2838,14 @@ function bibIcono(cat){return BIB_ICONOS[cat]||'📄';}
 
 function renderNovedades(){
   var d=document.getElementById('novedadesView');if(!d)return;
-  // notas = { 'nombre_dia': { pushId: {texto,nombre,dia,fecha} } }
+  // notas = { 'nombre_dia': { pushId: {texto,nombre,dia,fecha,respuestas} } }
   var todas=[];
-  Object.values(notas).forEach(function(grupo){
+  Object.entries(notas).forEach(function(ge){
+    var gk=ge[0],grupo=ge[1];
     if(!grupo||typeof grupo!=='object')return;
-    Object.values(grupo).forEach(function(n){
-      if(n&&n.texto)todas.push(n);
+    Object.entries(grupo).forEach(function(ne){
+      var nid=ne[0],n=ne[1];
+      if(n&&n.texto){n._gk=gk;n._nid=nid;todas.push(n);}
     });
   });
   todas.sort(function(a,b){return (b.fecha||0)-(a.fecha||0);});
@@ -2820,11 +2853,46 @@ function renderNovedades(){
     d.innerHTML='<div class="no-result"><p style="font-size:32px;margin-bottom:8px">📣</p><p>Aún no hay novedades publicadas esta semana.</p></div>';
     return;
   }
+  var esAdmin=adminUnlocked;
   d.innerHTML=todas.map(function(n){
     var fechaStr=n.fecha?new Date(n.fecha).toLocaleDateString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
-    return '<div class="wcard" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong style="font-size:13px">'+n.nombre+'</strong><span style="font-size:10px;color:var(--text3)">'+n.dia+(fechaStr?' · '+fechaStr:'')+'</span></div><p style="font-size:13px;color:var(--text2);line-height:1.5">'+n.texto+'</p></div>';
+    var h='<div class="wcard" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong style="font-size:13px">'+n.nombre+'</strong><span style="font-size:10px;color:var(--text3)">'+n.dia+(fechaStr?' · '+fechaStr:'')+'</span></div><p style="font-size:13px;color:var(--text2);line-height:1.5">'+n.texto+'</p>';
+    // Respuestas existentes
+    var resp=n.respuestas?Object.values(n.respuestas).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
+    if(resp.length){
+      h+='<div style="margin-top:8px;padding-left:10px;border-left:2px solid rgba(124,58,237,.4)">';
+      resp.forEach(function(r){
+        var rf=r.fecha?new Date(r.fecha).toLocaleDateString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+        h+='<div style="margin-bottom:6px"><div style="font-size:11px;color:#c4b5fd;font-weight:700">↳ '+esc(r.autor||'Jefatura')+' <span style="color:var(--text3);font-weight:400">'+rf+'</span></div><div style="font-size:12px;color:var(--text2)">'+esc(r.texto)+'</div></div>';
+      });
+      h+='</div>';
+    }
+    // Botón responder (solo admin)
+    if(esAdmin){
+      h+='<button onclick="responderNovedad(\''+n._gk+'\',\''+n._nid+'\')" style="margin-top:8px;background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:6px 12px;font-family:inherit;font-size:12px;cursor:pointer">💬 Responder</button>';
+    }
+    h+='</div>';
+    return h;
   }).join('');
 }
+
+window.responderNovedad=function(gk,nid){
+  var m=mkOverlay();
+  var box=document.createElement('div');box.className='obox';
+  box.innerHTML='<h3>💬 Responder novedad</h3><p style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px">Tu respuesta será visible para el equipo bajo esta novedad.</p>';
+  var ta=document.createElement('textarea');ta.className='atxt';ta.style.marginBottom='12px';ta.style.minHeight='80px';ta.placeholder='Escribe tu respuesta...';
+  box.appendChild(ta);
+  var row=document.createElement('div');row.style.cssText='display:flex;gap:8px';
+  var cancel=document.createElement('button');cancel.className='btn-sec';cancel.textContent='Cancelar';cancel.onclick=function(){m.remove();};
+  var save=document.createElement('button');save.className='btn-add';save.textContent='Enviar respuesta';
+  save.onclick=function(){
+    var txt=ta.value.trim();if(!txt){alert('Escribe una respuesta.');return;}
+    var resp={texto:txt,autor:'Jefatura',fecha:Date.now()};
+    sRef('notas/'+gk+'/'+nid+'/respuestas').push(resp).then(function(){m.remove();renderNovedades();});
+  };
+  row.appendChild(cancel);row.appendChild(save);box.appendChild(row);
+  m.appendChild(box);
+};
 
 function renderBiblioteca(){
   var d=document.getElementById('bibliotecaView');if(!d)return;
@@ -6926,6 +6994,82 @@ function bannerBorrador(tipo,campos){
 
 // ══════════════ REGISTROS DE PRODUCCIÓN (cantidad diaria simple) ══════════════
 // Radiografías, instrumental recibido/lavado/empaquetado/secado. Se asignan como autoclave.
+// Ventana de tiempos medidos y promedios por proceso
+window.verTiemposProceso=function(tipo){
+  var cfg=PRODUCCION_TIPOS[tipo]||{emoji:'⏱',label:tipo,unidad:'unidades',color:'#c4b5fd'};
+  var ov=document.getElementById('tiemposOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='tiemposOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  // Registros con duración medida
+  var regs=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tipo&&r.duracionMin>0;});
+  var stats=calcTiemposProceso(regs);
+  var html='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:520px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">⏱ Tiempos de '+cfg.label+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Medición real de duración por tanda y por unidad</div>';
+  if(!regs.length){
+    html+='<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Aún no hay registros con hora de inicio y término.<br>Registra marcando ambas horas para medir tiempos reales.</div>';
+  } else {
+    // Tarjetas de promedio
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
+      '<div style="background:#0f1a30;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:800;color:'+cfg.color+'">'+formatoDur(Math.round(stats.promDur))+'</div><div style="font-size:9px;color:rgba(255,255,255,.5)">Duración promedio por tanda</div></div>'+
+      '<div style="background:#0f1a30;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:800;color:#6ee7b7">'+stats.promUnidad.toFixed(1)+' min</div><div style="font-size:9px;color:rgba(255,255,255,.5)">Por unidad ('+cfg.unidad+')</div></div>'+
+      '<div style="background:#0f1a30;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:800;color:#93c5fd">'+regs.length+'</div><div style="font-size:9px;color:rgba(255,255,255,.5)">Mediciones</div></div>'+
+    '</div>';
+    // Rango
+    html+='<div style="background:rgba(96,165,250,.08);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:rgba(255,255,255,.7)">'+
+      'Rango: de <b style="color:#6ee7b7">'+formatoDur(stats.minDur)+'</b> (más rápido) a <b style="color:#fca5a5">'+formatoDur(stats.maxDur)+'</b> (más lento) por tanda.</div>';
+    // Botón de calibración automática
+    html+='<div style="background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(52,211,153,.03));border:1px solid rgba(52,211,153,.3);border-radius:8px;padding:12px;margin-bottom:12px">'+
+      '<div style="font-size:12px;font-weight:700;color:#6ee7b7;margin-bottom:4px">🎯 Calibración automática</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.7);line-height:1.5;margin-bottom:8px">El panel de rendimiento usa actualmente <b>'+(TIEMPOS_PROCESO[tipo]?formatoDur(Math.round(TIEMPOS_PROCESO[tipo].h*60)):'—')+'</b> para este proceso. Tu medición real da <b>'+formatoDur(Math.round(stats.promDur))+'</b> por tanda'+(stats.modo==='unidad'?' ('+stats.promUnidad.toFixed(1)+' min/unidad)':'')+'.</div>'+
+      '<button onclick="calibrarTiempoReal(\''+tipo+'\','+stats.promDur+','+stats.promUnidad+')" style="width:100%;background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.4);border-radius:8px;padding:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">Actualizar calibración con este promedio real</button>'+
+    '</div>';
+    // Detalle de mediciones
+    html+='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">Mediciones registradas</div>';
+    html+='<div style="background:#0f1a30;border-radius:8px;overflow:hidden;max-height:200px;overflow-y:auto">';
+    regs.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).forEach(function(r,i){
+      var porUnidad=(r.cantidad>0)?(r.duracionMin/r.cantidad).toFixed(1)+' min/u':'';
+      html+='<div style="padding:8px 12px;'+(i>0?'border-top:1px solid rgba(255,255,255,.05)':'')+';display:flex;justify-content:space-between;font-size:11px">'+
+        '<span style="color:rgba(255,255,255,.7)">'+esc(r.fecha)+' · '+esc(r.horaInicio||'')+'–'+esc(r.horaTermino||'')+'</span>'+
+        '<span style="color:#fff">'+formatoDur(r.duracionMin)+' <span style="color:rgba(255,255,255,.4)">('+(Number(r.cantidad)||0)+' '+cfg.unidad+(porUnidad?', '+porUnidad:'')+')</span></span>'+
+      '</div>';
+    });
+    html+='</div>';
+  }
+  html+='<button onclick="document.getElementById(\'tiemposOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button></div>';
+  ov.innerHTML=html;
+  document.body.appendChild(ov);
+};
+
+function calcTiemposProceso(regs){
+  if(!regs.length)return {promDur:0,promUnidad:0,minDur:0,maxDur:0,modo:'lote'};
+  var sumaDur=0,sumaUnidad=0,nUnidad=0,minDur=Infinity,maxDur=0;
+  regs.forEach(function(r){
+    sumaDur+=r.duracionMin;
+    if(r.duracionMin<minDur)minDur=r.duracionMin;
+    if(r.duracionMin>maxDur)maxDur=r.duracionMin;
+    if(r.cantidad>0){sumaUnidad+=r.duracionMin/r.cantidad;nUnidad++;}
+  });
+  return {promDur:sumaDur/regs.length,promUnidad:nUnidad?sumaUnidad/nUnidad:0,
+    minDur:minDur,maxDur:maxDur,modo:nUnidad?'unidad':'lote'};
+}
+
+// Actualiza el tiempo calibrado del proceso con la medición real
+window.calibrarTiempoReal=function(tipo,promDurMin,promUnidadMin){
+  if(!TIEMPOS_PROCESO[tipo]){alert('Este proceso no está en la tabla de calibración.');return;}
+  var modo=TIEMPOS_PROCESO[tipo].modo;
+  var nuevoH;
+  if(modo==='unidad')nuevoH=promUnidadMin/60; // horas por unidad
+  else nuevoH=promDurMin/60; // horas por lote
+  if(!confirm('¿Actualizar el tiempo de este proceso a '+formatoDur(Math.round(modo==='unidad'?promUnidadMin:promDurMin))+(modo==='unidad'?' por unidad':' por tanda')+'?\n\nEsto afectará los cálculos de carga y utilización del panel de rendimiento, haciéndolos más precisos.'))return;
+  TIEMPOS_PROCESO[tipo].h=nuevoH;
+  // Persistir en Firebase
+  sedeRef('tiemposCalibrados/'+tipo).set(nuevoH).then(function(){
+    alert('✓ Calibración actualizada con tu medición real. El panel de rendimiento ahora usa este tiempo.');
+    var ov=document.getElementById('tiemposOv');if(ov)ov.remove();
+  });
+};
+
 window.abrirRegProduccion=function(tipo){
   var cfg=PRODUCCION_TIPOS[tipo];
   if(!cfg){alert('Tipo de registro no reconocido.');return;}
@@ -6940,11 +7084,21 @@ window.abrirRegProduccion=function(tipo){
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+cfg.emoji+' '+cfg.label+'</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Cantidad diaria · '+hoy+(totalHoy?' · ya registrado hoy: '+totalHoy+' '+cfg.unidad:'')+'</div>'+
     '<label style="font-size:12px;color:rgba(255,255,255,.7)">Cantidad de '+cfg.unidad+'</label>'+
-    '<input type="number" id="prodCantidad" min="0" step="1" placeholder="N° de '+cfg.unidad+'" style="width:100%;font-size:16px;padding:10px;margin-bottom:8px">'+
+    '<input type="number" id="prodCantidad" min="0" step="1" placeholder="N° de '+cfg.unidad+'" style="width:100%;font-size:16px;padding:10px;margin-bottom:10px" oninput="calcDuracionProd()">'+
+    // Hora de inicio y término
+    '<div style="display:flex;gap:8px;margin-bottom:6px">'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora inicio</label>'+
+        '<input type="time" id="prodInicio" style="width:100%;font-size:13px;padding:7px" oninput="calcDuracionProd()"></div>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora término</label>'+
+        '<input type="time" id="prodTermino" style="width:100%;font-size:13px;padding:7px" oninput="calcDuracionProd()"></div>'+
+    '</div>'+
+    '<div id="prodDuracion" style="font-size:11px;color:#6ee7b7;margin-bottom:10px;min-height:16px"></div>'+
     '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
     '<textarea id="prodObs" rows="2" placeholder="Anota si hubo alguna novedad" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
     '<button class="btn-add" onclick="guardarRegProduccion(\''+tipo+'\')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
     '<button onclick="verGraficoProduccion(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver gráfico del mes</button>'+
+    '<button onclick="verTiemposProceso(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(167,139,250,.12);color:#c4b5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">⏱ Ver tiempos y promedios</button>'+
+    '<button onclick="verRegistrosProduccion(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(52,211,153,.12);color:#6ee7b7;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📋 Ver registros (quién y cuándo)</button>'+
     '<button onclick="document.getElementById(\'regProdOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '<div class="saved" id="regProdSaved">✓ Registrado</div>'+
     '</div>';
@@ -6952,16 +7106,90 @@ window.abrirRegProduccion=function(tipo){
   setTimeout(function(){var i=document.getElementById('prodCantidad');if(i)i.focus();},100);
 };
 
+// Calcula y muestra la duración (término - inicio) y el tiempo por unidad
+window.calcDuracionProd=function(){
+  var ini=document.getElementById('prodInicio'),ter=document.getElementById('prodTermino');
+  var cantEl=document.getElementById('prodCantidad');
+  var out=document.getElementById('prodDuracion');
+  if(!ini||!ter||!out)return;
+  if(!ini.value||!ter.value){out.innerHTML='';return;}
+  var dur=minutosEntre(ini.value,ter.value);
+  if(dur<=0){out.innerHTML='<span style="color:#fca5a5">La hora de término debe ser posterior al inicio.</span>';return;}
+  var cant=Number(cantEl.value)||0;
+  var txt='⏱ Duración: <b>'+formatoDur(dur)+'</b>';
+  if(cant>0)txt+=' · <b>'+(dur/cant).toFixed(1)+' min</b> por unidad';
+  out.innerHTML=txt;
+};
+function minutosEntre(hIni,hTer){
+  var a=hIni.split(':'),b=hTer.split(':');
+  var mi=Number(a[0])*60+Number(a[1]),mf=Number(b[0])*60+Number(b[1]);
+  return mf-mi;
+}
+function formatoDur(min){
+  if(min<60)return min+' min';
+  var h=Math.floor(min/60),m=min%60;
+  return h+'h'+(m?' '+m+'min':'');
+}
+
 window.guardarRegProduccion=function(tipo){
   var cant=document.getElementById('prodCantidad').value;
   if(cant===''||Number(cant)<0){alert('Ingresa una cantidad válida.');return;}
   var ahora=new Date();
   var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
+  var hIni=document.getElementById('prodInicio').value;
+  var hTer=document.getElementById('prodTermino').value;
+  var duracion=(hIni&&hTer)?minutosEntre(hIni,hTer):null;
   var reg={tipo:tipo,cantidad:Number(cant),obs:document.getElementById('prodObs').value.trim(),
     quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  if(hIni)reg.horaInicio=hIni;
+  if(hTer)reg.horaTermino=hTer;
+  if(duracion&&duracion>0)reg.duracionMin=duracion;
   sedeRef('regProduccion/'+reg.ts).set(reg).then(function(){
     showSaved('regProdSaved');
     setTimeout(function(){var o=document.getElementById('regProdOv');if(o)o.remove();},900);
+  });
+};
+
+// Detalle de todos los registros de un tipo: fecha, cantidad, quién, hora, con opción de borrar
+window.verRegistrosProduccion=function(tipo){
+  var cfg=PRODUCCION_TIPOS[tipo];
+  var ov=document.getElementById('regDetalleOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regDetalleOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.96);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var regs=Object.keys(regProduccion||{}).map(function(k){var r=regProduccion[k];r._key=k;return r;})
+    .filter(function(r){return r.tipo===tipo;})
+    .sort(function(a,b){return (b.ts||0)-(a.ts||0);}); // más reciente primero
+  var esAdmin=adminUnlocked;
+  var filas=regs.map(function(r){
+    var dur=r.duracionMin?' · ⏱ '+formatoDur(r.duracionMin):'';
+    var horario=(r.horaInicio&&r.horaTermino)?' ('+r.horaInicio+'–'+r.horaTermino+')':'';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<div>'+
+        '<div style="font-size:13px;color:#fff;font-weight:600">'+r.fecha+' · '+(Number(r.cantidad)||0)+' '+cfg.unidad+'</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5)">👤 '+esc(r.quien||'—')+' · '+(r.hora||'')+horario+dur+'</div>'+
+        (r.obs?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">📝 '+esc(r.obs)+'</div>':'')+
+      '</div>'+
+      (esAdmin?'<button onclick="borrarRegProduccion(\''+r._key+'\',\''+tipo+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer;flex-shrink:0">🗑</button>':'')+
+    '</div>';
+  }).join('');
+  var total=regs.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:520px;width:100%;margin-top:20px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+      '<span style="font-size:15px;font-weight:700;color:#fff">'+cfg.emoji+' '+cfg.label+' — registros</span>'+
+      '<button onclick="document.getElementById(\'regDetalleOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">'+regs.length+' registro(s) · '+total+' '+cfg.unidad+' en total'+(esAdmin?' · toca 🗑 para borrar registros de prueba':'')+'</div>'+
+    (regs.length?'<div style="background:#0f1a30;border-radius:10px;overflow:hidden">'+filas+'</div>':'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros de este tipo.</div>')+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+window.borrarRegProduccion=function(key,tipo){
+  if(!adminUnlocked){alert('Solo la jefatura puede borrar registros.');return;}
+  if(!confirm('¿Borrar este registro? No se puede deshacer.'))return;
+  sedeRef('regProduccion/'+key).remove().then(function(){
+    delete regProduccion[key];
+    verRegistrosProduccion(tipo); // refrescar
   });
 };
 
@@ -6969,7 +7197,7 @@ window.guardarRegProduccion=function(tipo){
 window.verGraficoProduccion=function(tipo){
   var cfg=PRODUCCION_TIPOS[tipo];
   var ov=document.getElementById('grafProdOv');if(ov)ov.remove();
-  ov=document.createElement('div');ov.id='grafProdOv';
+  ov=document.createElement('div');ov.id='grafProdOv';ov.setAttribute('data-tipo',tipo);
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9250;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
   var mes=hoyStr().slice(0,7);
   var regs=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tipo&&r.fecha&&r.fecha.slice(0,7)===mes;});
@@ -6978,9 +7206,37 @@ window.verGraficoProduccion=function(tipo){
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+cfg.emoji+' '+cfg.label+' — comportamiento mensual</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Mes '+mes+' · total: '+total+' '+cfg.unidad+'</div>'+
     (regs.length?graficoProduccionSVG(regs,cfg):'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros este mes.</div>')+
+    (regs.length?detalleRegistrosProduccion(regs,cfg):'')+
     '<button onclick="document.getElementById(\'grafProdOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '</div>';
   document.body.appendChild(ov);
+};
+
+// Detalle de cada registro: fecha, cantidad, quién y hora (para auditar el origen)
+function detalleRegistrosProduccion(regs,cfg){
+  var ordenados=regs.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+  var h='<div style="margin-top:14px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">🔍 Detalle de registros ('+regs.length+')</div>';
+  h+='<div style="background:#0f1a30;border-radius:8px;overflow:hidden;max-height:260px;overflow-y:auto">';
+  ordenados.forEach(function(r,i){
+    var dur=(r.horaInicio&&r.horaTermino)?' · ⏱ '+r.horaInicio+'–'+r.horaTermino:'';
+    h+='<div style="padding:8px 12px;'+(i>0?'border-top:1px solid rgba(255,255,255,.05)':'')+';display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-size:12px;color:#fff">'+cfg.emoji+' <b style="color:'+cfg.color+'">'+(Number(r.cantidad)||0)+'</b> '+cfg.unidad+'</div>'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.45)">📅 '+esc(r.fecha||'—')+(r.hora?' '+r.hora:'')+dur+'</div></div>'+
+      '<div style="text-align:right"><div style="font-size:11px;color:#fcd34d">'+esc(r.quien||'—')+'</div>'+
+        '<div style="font-size:12px;color:rgba(255,255,255,.2);cursor:pointer" onclick="borrarRegProduccion(\''+r.ts+'\')" title="Borrar este registro">🗑</div></div>'+
+    '</div>';
+  });
+  h+='</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:6px">Si ves un registro de prueba, puedes borrarlo con la papelera. Muestra quién y cuándo lo ingresó.</div></div>';
+  return h;
+}
+
+window.borrarRegProduccion=function(ts){
+  if(!confirm('¿Borrar este registro de producción? No se puede deshacer.'))return;
+  sedeRef('regProduccion/'+ts).remove().then(function(){
+    // Refrescar la vista si está abierta
+    var ov=document.getElementById('grafProdOv');
+    if(ov){var tipoActual=ov.getAttribute('data-tipo');if(tipoActual){ov.remove();verGraficoProduccion(tipoActual);}}
+  });
 };
 
 // Barras diarias de cantidad, panorámica mensual
@@ -8115,7 +8371,7 @@ function nombreRol(tipo){
 }
 
 // Tipos que son "medibles" (tienen registro verificable)
-var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1};
+var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1};
 var TIPOS_SEMANALES={aseo:1}; // tareas que se controlan 1 vez por semana, no diariamente
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
@@ -10361,16 +10617,30 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
   var x=document.getElementById('tTxt').value.trim();
   var jornada=document.getElementById('tJornada').value||'dia';
   if(!n||!dias.length||!t||!x){alert('Selecciona persona, al menos un día, tipo y descripción.');return;}
+  // Horario programado (solo para pabellón)
+  var pabIni=(t==='pabellon')?document.getElementById('tPabInicio').value:'';
+  var pabTer=(t==='pabellon')?document.getElementById('tPabTermino').value:'';
   Promise.all(dias.map(function(dia){
-    return sRef('tareas').push({dia:dia,nombre:n,tipo:t,texto:x,jornada:jornada});
+    var tarea={dia:dia,nombre:n,tipo:t,texto:x,jornada:jornada};
+    if(pabIni)tarea.pabInicio=pabIni;
+    if(pabTer)tarea.pabTermino=pabTer;
+    return sRef('tareas').push(tarea);
   })).then(function(){
     document.getElementById('tN').value='';
     document.getElementById('tTip').value='';
     document.getElementById('tTxt').value='';
     document.getElementById('tJornada').value='dia';
+    if(document.getElementById('tPabInicio'))document.getElementById('tPabInicio').value='';
+    if(document.getElementById('tPabTermino'))document.getElementById('tPabTermino').value='';
+    if(document.getElementById('tPabHorario'))document.getElementById('tPabHorario').style.display='none';
     document.querySelectorAll('#tareaDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
     showSaved('tareaSaved');
   });
+});
+// Mostrar campos de horario solo cuando el tipo es pabellón
+document.getElementById('tTip').addEventListener('change',function(){
+  var box=document.getElementById('tPabHorario');
+  if(box)box.style.display=(this.value==='pabellon')?'flex':'none';
 });
 document.getElementById('addPendBtn').addEventListener('click',function(){var d=document.getElementById('pD').value,a=document.getElementById('pA').value,h=document.getElementById('pH').value;if(!d||!a||!h)return;sRef('pendientes').push({dia:d,area:a,horario:h,auto:false}).then(function(){['pD','pA','pH'].forEach(function(id){document.getElementById(id).value='';});showSaved('pendSaved');renderPendList();});});
 document.getElementById('addLicBtn').addEventListener('click',function(){var n=document.getElementById('licN').value,ini=document.getElementById('licIni').value,fin=document.getElementById('licFin').value;if(!n||!ini||!fin){alert('Completa todos los campos.');return;}if(ini>fin){alert('Inicio debe ser antes que fin.');return;}sRef('ausencias').push({nombre:n,tipo:'licencia',tipoLabel:'Licencia médica',inicio:ini,fin:fin,motivo:'Licencia médica',estado:'aprobado',ts:Date.now()}).then(function(){var fechas=fechasRango(ini,fin);var dias=fechas.map(function(f){return diaDeDate(f);});var del=Object.entries(bloques).filter(function(e){return e[1].nombre===n&&dias.indexOf(e[1].dia)!==-1;});Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});['licN','licIni','licFin'].forEach(function(id){document.getElementById(id).value='';});showSaved('licSaved');});});
