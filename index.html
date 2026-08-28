@@ -1337,6 +1337,22 @@ var PRODUCCION_TIPOS={
   inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',unidad:'paquetes',color:'#34d399'},
   inst_secado:{emoji:'💨',label:'Instrumental secado',unidad:'piezas',color:'#fbbf24'}
 };
+// Tiempos reales calibrados por proceso (horas). modo: 'lote' = fijo por registro; 'unidad' = tiempo × cantidad.
+var TIEMPOS_PROCESO={
+  autoclave:{h:1.25,modo:'lote'},          // carga 1-1.5h
+  inst_lavado:{h:1.5,modo:'lote'},         // 1-2h por tanda
+  inst_secado:{h:1.5,modo:'lote'},         // 1-2h por tanda
+  inst_recibido:{h:1,modo:'lote'},         // ~1h recepción
+  inst_empaque:{h:0.04,modo:'unidad'},     // 1h/25 piezas = 0.04h por pieza
+  radiografias:{h:0.208,modo:'unidad'},    // 12.5 min = 0.208h por imagen
+  dispensario:{h:0.083,modo:'unidad'},     // 5 min = 0.083h por estudiante
+  // Registros de control (tiempo breve fijo)
+  temp_ester:{h:0.1,modo:'lote'},temp_pabellon:{h:0.1,modo:'lote'},
+  temp_box:{h:0.1,modo:'lote'},temp_refri:{h:0.1,modo:'lote'},
+  conductividad:{h:0.15,modo:'lote'},reas:{h:0.25,modo:'lote'}
+};
+var COSTO_TERCERIZAR_CARGA=200000; // $ por carga de autoclave (150 lts) tercerizada
+var factorIndirecto=0.40; // 40% de tiempo indirecto (traslados, preparación, coordinación, documentación)
 
 var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
@@ -1559,6 +1575,7 @@ function attach(){
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
   on('borradores',function(v){borradoresData=v||{};});
+  on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
 
@@ -8194,11 +8211,13 @@ function renderRendimiento(){
     '</div>';
 
     // ══════ CARGA VS CAPACIDAD ══════
-    // Estimación simple: capacidad = horas contratadas del equipo; carga = procesos (cada uno ~tiempo estándar)
-    var horasEquipo=filas.reduce(function(a,f){return a+((f.horas||0)*4.33);},0); // horas/mes
-    // Supuesto: cada proceso técnico toma ~0.5h en promedio (ajustable)
-    var horasCarga=totalProcesos*0.5;
+    // Estimación con TIEMPOS REALES calibrados por tipo de proceso
+    var horasEquipo=filas.reduce(function(a,f){return a+((f.horas||0)*4.33);},0); // horas/mes contratadas
+    var horasProceso=calcHorasCargaMes(mes); // horas de proceso directo según tiempos calibrados
+    var horasIndirecto=horasProceso*factorIndirecto; // trabajo de apoyo no registrado
+    var horasCarga=horasProceso+horasIndirecto; // carga total real
     var utilizacion=horasEquipo>0?Math.min(100,Math.round(horasCarga/horasEquipo*100)):0;
+    var pctIndirecto=Math.round(factorIndirecto*100);
     var utilColor=utilizacion>=85?'#fca5a5':utilizacion>=60?'#fcd34d':'#6ee7b7';
     var utilMsg=utilizacion>=85?'Equipo cerca de saturación — poco margen para asumir más carga o reducir personal sin afectar el servicio.':
                 utilizacion>=60?'Carga equilibrada — el equipo trabaja a buen ritmo con margen acotado.':
@@ -8211,7 +8230,16 @@ function renderRendimiento(){
       '</div>'+
       '<div style="height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden"><div style="height:100%;width:'+utilizacion+'%;background:'+utilColor+'"></div></div>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:8px;line-height:1.5">'+utilMsg+'</div>'+
-      '<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:6px">Estimación: '+Math.round(horasCarga)+'h de carga registrada sobre '+Math.round(horasEquipo)+'h contratadas/mes. Es una cota mínima: no capta todas las tareas.</div>'+
+      // Deslizador del factor indirecto
+      '<div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px;margin-top:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+          '<span style="font-size:11px;color:#93c5fd;font-weight:600">🕐 Factor de tiempo indirecto</span>'+
+          '<span style="font-size:13px;font-weight:800;color:#93c5fd">'+pctIndirecto+'%</span>'+
+        '</div>'+
+        '<input type="range" min="0" max="80" step="5" value="'+pctIndirecto+'" oninput="ajustarFactorIndirecto(this.value)" style="width:100%;accent-color:#60a5fa">'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.5">Por cada hora de proceso registrado, se suma este % por el trabajo que ese proceso genera pero no se cronometra: traslado de material, preparación de estación, documentación, coordinación y espera de ciclos. <b>El 40% es un valor conservador estándar</b> en gestión sanitaria (el trabajo productivo directo suele ser 50-65% de la jornada).</div>'+
+      '</div>'+
+      '<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:8px">Cálculo: '+Math.round(horasProceso)+'h de proceso directo + '+Math.round(horasIndirecto)+'h de trabajo indirecto ('+pctIndirecto+'%) = '+Math.round(horasCarga)+'h sobre '+Math.round(horasEquipo)+'h contratadas/mes. Tiempos reales: autoclave 1.25h/carga, lavado/secado 1.5h/lote, empaque 1h/25pzs, radiografía 12.5min, dispensario 5min.</div>'+
     '</div>';
 
     // ══════ SIMULADOR: ¿QUÉ PASA SI RECORTAN? ══════
@@ -8222,7 +8250,7 @@ function renderRendimiento(){
       var procSinEsa=totalProcesos-menorCarga.procesos;
       var pctCapacidadPerdida=totalProcesos>0?Math.round(menorCarga.procesos/totalProcesos*100):0;
       var ahorroMensual=menorCarga.sueldo;
-      var nuevaUtil=horasEquipo>0?Math.min(100,Math.round(totalProcesos*0.5/((horasEquipo-(menorCarga.horas||0)*4.33)||1)*100)):0;
+      var nuevaUtil=horasEquipo>0?Math.min(100,Math.round(horasCarga/((horasEquipo-(menorCarga.horas||0)*4.33)||1)*100)):0;
       html+='<p style="font-size:14px;font-weight:700;color:#fca5a5;margin:16px 0 8px">🎯 Simulación: si se recorta 1 persona</p>';
       html+='<div style="background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.03));border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.6">'+
         '<div style="margin-bottom:6px">Si se recortara a la persona con menor carga registrada:</div>'+
@@ -8244,6 +8272,36 @@ function renderRendimiento(){
       '<p style="margin:0">La utilización estimada del equipo es del <b>'+utilizacion+'%</b>'+(utilizacion>=85?', es decir, estamos cerca de la saturación. Una reducción de dotación comprometería directamente la continuidad y la calidad del servicio.':'. Cualquier reducción trasladaría esa carga al resto del equipo, aumentando el riesgo de incumplimiento en un servicio crítico."')+(utilizacion>=85?'"':'')+'</p>'+
     '</div>';
     html+='<div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:10px">💡 Estos textos se generan con tus datos reales de GESTHOR + la planilla. Mientras más completo el registro diario, más sólida la defensa. Ajusta las cifras si tu realidad difiere.</div>';
+
+    // ══════ COMPARACIÓN: COSTO INTERNO vs TERCERIZAR ══════
+    var cargasAuto=Object.values(regAutoclave||{}).filter(function(r){return r.fecha&&r.fecha.slice(0,7)===mes;});
+    var cargasMes=cargasAuto.length;
+    var costoTercerizarMes=cargasMes*COSTO_TERCERIZAR_CARGA;
+    if(cargasMes>0){
+      var difClara=costoTercerizarMes-totalSueldos;
+      var esConveniente=totalSueldos<costoTercerizarMes;
+      html+='<p style="font-size:14px;font-weight:700;color:#fbbf24;margin:16px 0 8px">💰 Interno vs tercerizar</p>';
+      html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:12px">'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
+          '<div style="text-align:center;padding:10px;background:rgba(16,185,129,.1);border-radius:8px">'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.5)">Costo interno (tu equipo)</div>'+
+            '<div style="font-size:18px;font-weight:800;color:#6ee7b7">$'+miles(totalSueldos)+'</div>'+
+            '<div style="font-size:9px;color:rgba(255,255,255,.4)">remuneraciones/mes · TODO el servicio</div>'+
+          '</div>'+
+          '<div style="text-align:center;padding:10px;background:rgba(245,158,11,.1);border-radius:8px">'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.5)">Tercerizar '+cargasMes+' cargas</div>'+
+            '<div style="font-size:18px;font-weight:800;color:#fbbf24">$'+miles(costoTercerizarMes)+'</div>'+
+            '<div style="font-size:9px;color:rgba(255,255,255,.4)">solo esterilización · $'+miles(COSTO_TERCERIZAR_CARGA)+'/carga</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="background:'+(esConveniente?'rgba(16,185,129,.12)':'rgba(239,68,68,.12)')+';border-radius:8px;padding:10px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.5">'+
+          (esConveniente
+            ? '✅ <b>Tu equipo interno es más económico.</b> Tercerizar solo las '+cargasMes+' cargas de esterilización ya costaría <b>$'+miles(costoTercerizarMes)+'</b> — <b>$'+miles(Math.abs(difClara))+' más</b> que TODO tu equipo, que además cubre lavado, empaque, radiografías, dispensario y controles. La internalización ahorra al menos esa diferencia.'
+            : '⚠️ El costo interno ($'+miles(totalSueldos)+') supera lo que costaría tercerizar solo las cargas ($'+miles(costoTercerizarMes)+'), pero recuerda que tu equipo hace mucho más que esterilizar: lavado, empaque, radiografías, dispensario y controles que la tercerización NO incluye.')+
+        '</div>'+
+        '<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:6px">La tercerización cubre solo la esterilización. Tu equipo cubre toda la cadena, así que la comparación es conservadora a tu favor.</div>'+
+      '</div>';
+    }
 
     // Tabla por persona
     html+='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">📊 Detalle por persona</p>';
@@ -8319,6 +8377,30 @@ function calcCumplimientoMesPersona(nombre,mes){
 
 function miles(n){return (n||0).toLocaleString('es-CL');}
 
+// Horas reales de carga operacional del mes, usando los tiempos calibrados por proceso
+function calcHorasCargaMes(mes){
+  var h=0;
+  // Autoclave (por lote/carga)
+  Object.values(regAutoclave||{}).forEach(function(r){
+    if(r&&r.fecha&&r.fecha.slice(0,7)===mes)h+=TIEMPOS_PROCESO.autoclave.h;
+  });
+  // Producción: cada tipo según su modo (lote o unidad)
+  Object.values(regProduccion||{}).forEach(function(r){
+    if(!r||!r.fecha||r.fecha.slice(0,7)!==mes)return;
+    var t=TIEMPOS_PROCESO[r.tipo];if(!t)return;
+    if(t.modo==='unidad')h+=t.h*(Number(r.cantidad)||0);
+    else h+=t.h; // por lote
+  });
+  // Controles de temperatura/conductividad/reas (por lote, tiempo breve)
+  Object.values(regTemperatura||{}).forEach(function(r){
+    if(r&&r.fecha&&r.fecha.slice(0,7)===mes){var t=TIEMPOS_PROCESO[r.tipo];if(t)h+=t.h;}
+  });
+  Object.keys(conductividad||{}).forEach(function(k){
+    var r=conductividad[k];if(r&&r.fecha&&r.fecha.slice(0,7)===mes)h+=TIEMPOS_PROCESO.conductividad.h;
+  });
+  return h;
+}
+
 function leerPlanillaDotacion(e){
   var file=e.target.files[0];if(!file)return;
   var res=document.getElementById('rendimientoCarga');
@@ -8360,6 +8442,12 @@ function leerPlanillaDotacion(e){
   };
   reader.readAsArrayBuffer(file);
 }
+
+window.ajustarFactorIndirecto=function(pct){
+  factorIndirecto=Number(pct)/100;
+  sedeRef('factorIndirecto').set(factorIndirecto);
+  renderRendimiento();
+};
 
 window.borrarDotacion=function(){
   if(!confirm('¿Borrar todos los datos de dotación cargados? Esto no afecta a GESTHOR, solo los sueldos/horarios de este panel.'))return;
