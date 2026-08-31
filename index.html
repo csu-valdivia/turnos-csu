@@ -2217,6 +2217,73 @@ function getChipPfx(nombre,area,dia){
   return '';
 }
 
+// ══════════════ EDICIÓN RÁPIDA DE TURNOS (solo admin) ══════════════
+// Permite mover (área/horario), cambiar horario o quitar un bloque de turno desde el panorama o mis-turnos.
+window.editarBloqueTurno=function(bloqueKey){
+  if(!adminUnlocked){alert('Solo la jefatura puede editar la planificación.');return;}
+  var b=bloques[bloqueKey];
+  if(!b){alert('No se encontró el turno.');return;}
+  var ov=document.getElementById('editBloqueOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='editBloqueOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9400;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var opcAreas=AREAS.map(function(a){return '<option value="'+a+'"'+(a===b.area?' selected':'')+'>'+a+'</option>';}).join('');
+  var opcHor=HORARIOS.map(function(h){return '<option value="'+h+'"'+(h===b.horario?' selected':'')+'>'+h+'</option>';}).join('');
+  var opcDias=DIAS.map(function(d){return '<option value="'+d+'"'+(d===b.dia?' selected':'')+'>'+d+'</option>';}).join('');
+  // Subárea (solo esterilización)
+  var opcSub='<option value="">— Sin subárea —</option>'+Object.keys(SUBAREAS).map(function(t){return '<option value="'+t+'"'+(t===b.turno?' selected':'')+'>'+t+' · '+SUBAREAS[t]+'</option>';}).join('');
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">✏️ Editar turno</div>'+
+    '<div style="font-size:12px;color:#93c5fd;margin-bottom:14px">'+esc(b.nombre)+'</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.7)">Día</label>'+
+    '<select id="ebDia" style="width:100%;font-size:14px;padding:8px;margin-bottom:10px">'+opcDias+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.7)">Área</label>'+
+    '<select id="ebArea" style="width:100%;font-size:14px;padding:8px;margin-bottom:10px">'+opcAreas+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.7)">Horario</label>'+
+    '<select id="ebHorario" style="width:100%;font-size:14px;padding:8px;margin-bottom:10px">'+opcHor+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.7)">Subárea (solo Esterilización)</label>'+
+    '<select id="ebSub" style="width:100%;font-size:14px;padding:8px;margin-bottom:14px">'+opcSub+'</select>'+
+    '<button onclick="guardarEdicionBloque(\''+bloqueKey+'\')" class="btn-add" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar cambios</button>'+
+    '<button onclick="quitarBloqueTurno(\''+bloqueKey+'\')" style="width:100%;margin-top:6px;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">🗑 Quitar este turno</button>'+
+    '<button onclick="document.getElementById(\'editBloqueOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cancelar</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+window.guardarEdicionBloque=function(bloqueKey){
+  var b=bloques[bloqueKey];if(!b)return;
+  var nuevoDia=document.getElementById('ebDia').value;
+  var nuevaArea=document.getElementById('ebArea').value;
+  var nuevoHor=document.getElementById('ebHorario').value;
+  var nuevaSub=document.getElementById('ebSub').value;
+  var actualizado=Object.assign({},b,{dia:nuevoDia,area:nuevaArea,horario:nuevoHor});
+  if(nuevaSub)actualizado.turno=nuevaSub;else delete actualizado.turno;
+  sRef('bloques/'+bloqueKey).set(actualizado).then(function(){
+    var ov=document.getElementById('editBloqueOv');if(ov)ov.remove();
+    renderPanorama();if(typeof renderMisTurnos==='function')renderMisTurnos();
+    setTimeout(function(){genPendientes(function(){});},400);
+  });
+};
+
+window.quitarBloqueTurno=function(bloqueKey){
+  var b=bloques[bloqueKey];if(!b)return;
+  if(!confirm('¿Quitar el turno de '+b.nombre+' ('+b.dia+' · '+b.area+' · '+b.horario+')? Esto corrige la planificación.'))return;
+  sRef('bloques/'+bloqueKey).remove().then(function(){
+    var ov=document.getElementById('editBloqueOv');if(ov)ov.remove();
+    renderPanorama();if(typeof renderMisTurnos==='function')renderMisTurnos();
+    setTimeout(function(){genPendientes(function(){});},400);
+  });
+};
+
+// Encuentra la clave de un bloque por sus datos (para los chips del panorama)
+function buscarClaveBloque(nombre,dia,area,horario){
+  var found=null;
+  Object.keys(bloques).forEach(function(k){
+    var b=bloques[k];
+    if(b.nombre===nombre&&b.dia===dia&&b.area===area&&b.horario===horario)found=k;
+  });
+  return found;
+}
+
 function renderPanorama(){
   var dia=DIAS[panIdx];document.getElementById('panDay').textContent=dia;
   var tbl=document.getElementById('panTable');
@@ -2240,7 +2307,10 @@ function renderPanorama(){
         var sb=b.area==='Esterilización'&&b.turno?SUBAREAS[b.turno]||null:null;
         var cobH=Object.values(coberturas).find(function(cv){return cv.persona===b.nombre&&cv.dia===dia&&cv.destino===area&&cv.horario;});
         var horLabel=cobH?' '+cobH.horario:'';
-        cell+='<span class="'+cls+'">'+pfx+b.nombre+horLabel+'</span>';
+        // Si es admin, el chip es editable (busca su clave)
+        var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,area,b.horario):null;
+        var editAttr=claveB?' onclick="editarBloqueTurno(\''+claveB+'\')" style="cursor:pointer" title="Tocar para editar/mover/quitar"':'';
+        cell+='<span class="'+cls+'"'+editAttr+'>'+(claveB?'✎ ':'')+pfx+b.nombre+horLabel+'</span>';
         if(sb)cell+='<span class="sub">'+sb+'</span>';
       });
       ls.forEach(function(l){cell+='<span class="chip chip-llamado">📞 '+l.nombre+'</span>';});
@@ -2350,7 +2420,7 @@ function renderMisTurnos(nombre){
     var notaLista=notaObj?Object.keys(notaObj).map(function(k){var o=notaObj[k];o.pushKey=k;return o;}).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
     var cobDia=cobP.find(function(cv){return cv.dia===dia;});
     html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">📅</span><span class="day-name">'+dia+'</span>'+(cobDia?'<span style="font-size:11px;background:rgba(239,68,68,.1);color:#991b1b;padding:2px 8px;border-radius:4px;margin-left:auto">Cubre '+cobDia.destino+'</span>':'')+'</div>';
-    ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?SUBAREAS[b.turno]:null;html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
+    ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?SUBAREAS[b.turno]:null;var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,b.area,b.horario):null;var editBtn=claveB?'<button onclick="editarBloqueTurno(\''+claveB+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'';html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+editBtn+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
     if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span></div></div>';
     tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
     notaLista.forEach(function(nt){
