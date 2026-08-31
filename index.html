@@ -1912,50 +1912,124 @@ function showApp(){
 }
 
 // Aviso de mediodía: a las 12:00 o más, recuerda a quien tiene tareas medibles sin registrar.
-// A quien ya completó, un mensaje positivo. Solo se muestra una vez al día por persona.
+// INSISTE: reaparece mientras queden pendientes. Al completar todo, muestra el mensaje positivo una vez.
 function verificarAvisoMediodia(){
   if(!curNombre)return;
   if(curNombre.trim().toLowerCase()==='patricio baeza')return; // el jefe no recibe el aviso
   var ahora=new Date();
-  if(ahora.getHours()<12)return; // solo desde mediodía
+  if(ahora.getHours()<12){
+    // Aún no es mediodía: programar la primera revisión para cuando lleguen las 12
+    return;
+  }
+  chequearPendientesMediodia();
+  // Revisar cada 5 minutos si sigue con pendientes (insistir)
+  if(!window._avisoMediodiaTimer){
+    window._avisoMediodiaTimer=setInterval(chequearPendientesMediodia,5*60*1000);
+  }
+}
+
+function chequearPendientesMediodia(){
+  if(!curNombre)return;
+  if(new Date().getHours()<12)return;
+  // Si ya hay un aviso abierto, no duplicar
+  if(document.getElementById('avisoMediodiaOv'))return;
   var hoy=hoyStr();
-  var lsKey='tcsu_aviso12_'+S+'_'+hoy+'_'+curNombre.replace(/\s/g,'_');
-  if(localStorage.getItem(lsKey))return; // ya lo vio hoy
   var diaHoy=diaDeFecha(hoy);
   var misTareas=Object.values(tareas||{}).filter(function(t){
     return t.nombre===curNombre&&t.dia===diaHoy&&TIPOS_MEDIBLES[t.tipo]&&!TIPOS_SEMANALES[t.tipo];
   });
-  if(!misTareas.length)return; // sin tareas medibles hoy → no se muestra nada
+  if(!misTareas.length)return; // sin tareas medibles hoy → nada
   var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy).cumplido;});
-  localStorage.setItem(lsKey,'1');
+  var lsKeyOK='tcsu_aviso12ok_'+S+'_'+hoy+'_'+curNombre.replace(/\s/g,'_');
   if(pendientes.length){
+    // Tiene pendientes → mostrar aviso (insiste cada vez que se chequea y no está completo)
     mostrarAvisoMediodia(false,pendientes,misTareas.length);
   } else {
-    mostrarAvisoMediodia(true,[],misTareas.length);
+    // Completó todo → mostrar felicitación UNA sola vez, y detener la insistencia
+    if(!localStorage.getItem(lsKeyOK)){
+      localStorage.setItem(lsKeyOK,'1');
+      mostrarAvisoMediodia(true,[],misTareas.length);
+    }
+    if(window._avisoMediodiaTimer){clearInterval(window._avisoMediodiaTimer);window._avisoMediodiaTimer=null;}
   }
 }
 
 function mostrarAvisoMediodia(completado,pendientes,total){
+  // Obtener género para el avatar (como en cumpleaños)
+  sedeRef('cumpleanos').once('value').then(function(s){
+    var todos=s.val()||{};
+    var val=todos[curNombre.replace(/\s/g,'_')];
+    var genero=(typeof val==='object'&&val&&val.genero)?val.genero:'F';
+    renderAvisoMediodia(completado,pendientes,total,genero);
+  });
+}
+
+// Avatar de recordatorio: mismo estilo del de bienvenida pero sin corona/copa, con reloj y expresión atenta
+function svgAvatarRecordatorio(genero,completado){
+  var piel='#FBBF7A';
+  var ropa=completado?'#059669':'#2563eb';
+  var reloj=completado
+    ? '<g transform="translate(104,84)"><circle cx="12" cy="12" r="12" fill="#10b981" stroke="#047857" stroke-width="2"/><path d="M6 12 L10 16 L18 7" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>'
+    : '<g transform="translate(104,84)"><circle cx="12" cy="12" r="12" fill="#fbbf24" stroke="#d97706" stroke-width="2"/><line x1="12" y1="12" x2="12" y2="6" stroke="#7c2d12" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="16" y2="14" stroke="#7c2d12" stroke-width="2" stroke-linecap="round"/></g>';
+  var pelo=genero==='M'
+    ? '<ellipse cx="80" cy="36" rx="32" ry="20" fill="#1a0a00"/><rect x="48" y="30" width="64" height="18" rx="4" fill="#1a0a00"/>'
+    : '<path d="M48 60 Q40 20 80 18 Q120 20 112 60 L112 78 Q112 40 80 38 Q48 40 48 78 Z" fill="#3b1f0f"/>';
+  // Expresión: completado = sonrisa; pendiente = boca neutra/atenta
+  var boca=completado
+    ? '<path d="M67 72 Q80 82 93 72" stroke="#c2410c" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+    : '<path d="M70 74 Q80 70 90 74" stroke="#c2410c" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+  var anim='<style>@keyframes flotaR{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes tocaR{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}.br{animation:flotaR 1.8s ease-in-out infinite}.mano{transform-origin:110px 100px;animation:tocaR .6s ease-in-out infinite}</style>';
+  return '<svg width="140" height="200" viewBox="0 0 160 230" style="display:block;margin:0 auto">'+anim+
+    '<g class="br">'+
+    pelo+
+    '<ellipse cx="80" cy="62" rx="28" ry="30" fill="'+piel+'"/>'+
+    '<path d="M64 46 Q70 43 76 46" stroke="#1a0a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M84 46 Q90 43 96 46" stroke="#1a0a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>'+
+    '<ellipse cx="70" cy="55" rx="5" ry="5.5" fill="#fff"/><ellipse cx="90" cy="55" rx="5" ry="5.5" fill="#fff"/>'+
+    '<circle cx="71" cy="56" r="3.5" fill="#1e293b"/><circle cx="91" cy="56" r="3.5" fill="#1e293b"/>'+
+    '<circle cx="72" cy="55" r="1.2" fill="#fff"/><circle cx="92" cy="55" r="1.2" fill="#fff"/>'+
+    boca+
+    '<ellipse cx="63" cy="68" rx="7" ry="4" fill="#fca5a5" opacity=".4"/><ellipse cx="97" cy="68" rx="7" ry="4" fill="#fca5a5" opacity=".4"/>'+
+    '<rect x="72" y="90" width="16" height="12" rx="4" fill="'+piel+'"/>'+
+    '<rect x="54" y="100" width="52" height="58" rx="10" fill="'+ropa+'"/>'+
+    '<rect x="60" y="158" width="16" height="42" rx="7" fill="#1e293b"/><rect x="84" y="158" width="16" height="42" rx="7" fill="#1e293b"/>'+
+    '</g>'+
+    '<g class="mano"><rect x="104" y="98" width="14" height="38" rx="7" fill="'+ropa+'"/><ellipse cx="111" cy="140" rx="10" ry="10" fill="'+piel+'"/></g>'+
+    reloj+'</svg>';
+}
+
+function renderAvisoMediodia(completado,pendientes,total,genero){
+  var existing=document.getElementById('avisoMediodiaOv');if(existing)existing.remove();
   var m=document.createElement('div');
-  m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.9);z-index:9600;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.id='avisoMediodiaOv';
+  m.style.cssText='position:fixed;inset:0;background:rgba(10,20,50,.93);z-index:9600;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeInCump .5s ease';
+  var primerNombre=curNombre.split(' ')[0];
   var contenido;
   if(completado){
-    contenido='<div style="font-size:48px;margin-bottom:8px">✅</div>'+
-      '<div style="font-size:19px;font-weight:800;color:#6ee7b7;margin-bottom:8px">¡Vas al día!</div>'+
-      '<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6">Ya registraste todas tus tareas asignadas para hoy ('+total+'). Excelente trabajo, sigue así. 💪</div>';
+    contenido=svgAvatarRecordatorio(genero,true)+
+      '<p style="font-size:19px;font-weight:900;color:#6ee7b7;margin:10px 0 6px">¡Vas al día, '+primerNombre+'! ✅</p>'+
+      '<p style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:20px">Ya registraste todas tus tareas de hoy ('+total+'). Gracias por tu compromiso. 💙</p>'+
+      '<button onclick="cerrarAvisoMediodia()" style="background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">¡Genial! 💪</button>';
   } else {
     var lista=pendientes.map(function(t){return '<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:13px;color:#fcd34d;text-align:left">⏳ '+nombreRol(t.tipo)+'</div>';}).join('');
-    contenido='<div style="font-size:48px;margin-bottom:8px">🔔</div>'+
-      '<div style="font-size:19px;font-weight:800;color:#fbbf24;margin-bottom:6px">Recordatorio de mediodía</div>'+
-      '<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:14px">Tienes '+pendientes.length+' de '+total+' tarea'+(total!==1?'s':'')+' sin registrar. Cuando las completes, recuerda marcarlas:</div>'+
-      lista;
+    contenido=svgAvatarRecordatorio(genero,false)+
+      '<p style="font-size:19px;font-weight:900;color:#fbbf24;margin:10px 0 6px">'+primerNombre+', te faltan tareas ⏰</p>'+
+      '<p style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:12px">Tienes '+pendientes.length+' de '+total+' sin registrar. Este recordatorio seguirá apareciendo hasta que las completes:</p>'+
+      lista+
+      '<button onclick="cerrarAvisoMediodia()" style="margin-top:16px;background:linear-gradient(135deg,#2563eb,#60a5fa);color:#fff;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Ir a registrar →</button>';
   }
-  m.innerHTML='<div style="background:#16233d;border-radius:18px;padding:26px;max-width:380px;width:100%;text-align:center">'+
-    contenido+
-    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;margin-top:18px;background:linear-gradient(135deg,#2563eb,#60a5fa);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">Entendido</button>'+
-    '</div>';
+  var box=document.createElement('div');
+  box.style.cssText='position:relative;z-index:1;text-align:center;padding:1.5rem 1rem;max-width:340px;background:#16233d;border-radius:20px;box-shadow:0 10px 40px rgba(0,0,0,.4)';
+  box.innerHTML=contenido;
+  m.appendChild(box);
   document.body.appendChild(m);
 }
+
+window.cerrarAvisoMediodia=function(){
+  var ov=document.getElementById('avisoMediodiaOv');if(ov)ov.remove();
+  // Si tenía pendientes, llevarlo a la pestaña de sus registros
+  if(typeof goTab==='function'){try{goTab('mis-turnos');}catch(e){}}
+};
 
 function verificarBienvenidaSemana(){
   if(!curNombre||!W||!semanas[W])return false;
