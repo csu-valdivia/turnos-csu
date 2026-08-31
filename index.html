@@ -998,13 +998,18 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           </div>
 
           <div class="asec">
-            <p class="asec-title">🏥 Licencias médicas</p>
+            <p class="asec-title">🗓️ Ausencias (licencia · permiso · vacaciones)</p>
             <div class="frow"><select id="licN"><option value="">Persona</option></select></div>
+            <div class="frow"><select id="licTipo">
+              <option value="licencia">🏥 Licencia médica</option>
+              <option value="administrativo">📋 Permiso administrativo</option>
+              <option value="vacaciones">🌴 Vacaciones</option>
+            </select></div>
             <div class="frow">
               <div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.3);display:block;margin-bottom:3px">Inicio</label><input type="date" id="licIni"></div>
               <div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.3);display:block;margin-bottom:3px">Fin</label><input type="date" id="licFin"></div>
             </div>
-            <button class="btn-add" id="addLicBtn">Registrar licencia</button>
+            <button class="btn-add" id="addLicBtn">Registrar ausencia</button>
             <div class="saved" id="licSaved">✓ Registrada</div>
           </div>
 
@@ -2312,7 +2317,8 @@ function renderMisTurnos(nombre){
   // Badges
   Object.values(ausencias).filter(function(a){return a.nombre===nombre&&a.estado==='aprobado';}).forEach(function(a){
     var c=a.tipo==='licencia'?'rgba(124,58,237,.15)':a.tipo==='vacaciones'?'rgba(74,144,217,.15)':'rgba(16,185,129,.15)';
-    html+='<div class="badge-row" style="background:'+c+';border:1px solid rgba(255,255,255,.1);color:#fff">📅 '+(a.tipoLabel||a.tipo)+' · '+a.inicio+(a.inicio!==a.fin?' → '+a.fin:'')+'</div>';
+    var emo=a.tipo==='licencia'?'🏥':a.tipo==='vacaciones'?'🌴':a.tipo==='administrativo'?'📋':'📅';
+    html+='<div class="badge-row" style="background:'+c+';border:1px solid rgba(255,255,255,.1);color:#fff">'+emo+' '+(a.tipoLabel||a.tipo)+' · '+a.inicio+(a.inicio!==a.fin?' → '+a.fin:'')+'</div>';
   });
   Object.values(llamados).filter(function(l){return l.nombre===nombre;}).forEach(function(l){html+='<div style="background:rgba(251,191,36,.06);border:1px dashed rgba(251,191,36,.25);border-radius:10px;padding:10px 14px;margin-bottom:8px"><p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px">📞 De llamado</p><p style="font-size:12px;color:rgba(255,255,255,.5)">'+l.dia+' · '+l.area+' · '+l.horario+'</p></div>';});
   Object.values(encargados).filter(function(e){return e.nombre===nombre;}).forEach(function(e){html+='<div style="background:rgba(251,191,36,.06);border:1px dashed rgba(251,191,36,.25);border-radius:10px;padding:10px 14px;margin-bottom:8px"><p style="font-size:13px;font-weight:700;color:#fcd34d">⭐ Enfermero/a a cargo · '+e.dia+'</p></div>';});
@@ -10643,7 +10649,7 @@ document.getElementById('tTip').addEventListener('change',function(){
   if(box)box.style.display=(this.value==='pabellon')?'flex':'none';
 });
 document.getElementById('addPendBtn').addEventListener('click',function(){var d=document.getElementById('pD').value,a=document.getElementById('pA').value,h=document.getElementById('pH').value;if(!d||!a||!h)return;sRef('pendientes').push({dia:d,area:a,horario:h,auto:false}).then(function(){['pD','pA','pH'].forEach(function(id){document.getElementById(id).value='';});showSaved('pendSaved');renderPendList();});});
-document.getElementById('addLicBtn').addEventListener('click',function(){var n=document.getElementById('licN').value,ini=document.getElementById('licIni').value,fin=document.getElementById('licFin').value;if(!n||!ini||!fin){alert('Completa todos los campos.');return;}if(ini>fin){alert('Inicio debe ser antes que fin.');return;}sRef('ausencias').push({nombre:n,tipo:'licencia',tipoLabel:'Licencia médica',inicio:ini,fin:fin,motivo:'Licencia médica',estado:'aprobado',ts:Date.now()}).then(function(){var fechas=fechasRango(ini,fin);var dias=fechas.map(function(f){return diaDeDate(f);});var del=Object.entries(bloques).filter(function(e){return e[1].nombre===n&&dias.indexOf(e[1].dia)!==-1;});Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});['licN','licIni','licFin'].forEach(function(id){document.getElementById(id).value='';});showSaved('licSaved');});});
+document.getElementById('addLicBtn').addEventListener('click',function(){var n=document.getElementById('licN').value,ini=document.getElementById('licIni').value,fin=document.getElementById('licFin').value;var tipoAus=document.getElementById('licTipo').value||'licencia';if(!n||!ini||!fin){alert('Completa todos los campos.');return;}if(ini>fin){alert('Inicio debe ser antes que fin.');return;}var etiquetas={licencia:'Licencia médica',administrativo:'Permiso administrativo',vacaciones:'Vacaciones'};var lab=etiquetas[tipoAus]||'Ausencia';sRef('ausencias').push({nombre:n,tipo:tipoAus,tipoLabel:lab,inicio:ini,fin:fin,motivo:lab,estado:'aprobado',ts:Date.now()}).then(function(){var fechas=fechasRango(ini,fin);var dias=fechas.map(function(f){return diaDeDate(f);});var del=Object.entries(bloques).filter(function(e){return e[1].nombre===n&&dias.indexOf(e[1].dia)!==-1;});Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});['licN','licIni','licFin'].forEach(function(id){document.getElementById(id).value='';});showSaved('licSaved');});});
 // Populate ssH with HORARIOS
 (function(){var s=document.getElementById('ssH');if(s)HORARIOS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;s.appendChild(o);});})();
 
