@@ -1070,6 +1070,16 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </div>
             <div class="saved" id="desbloquearTodosSaved">✓ Desbloqueados</div>
             <div class="saved" id="reiniciarTodoSaved">✓ Evaluaciones reiniciadas</div>
+            <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px;margin:10px 0">
+              <div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:4px">🔔 Aviso de tareas pendientes</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:8px">Hora desde la cual el colaborador recibe el recordatorio de tareas sin registrar (le insiste hasta completar). Quien ya cumplió recibe una felicitación.</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:12px;color:rgba(255,255,255,.7)">Aparece desde las</span>
+                <select id="horaAvisoSelect" onchange="guardarHoraAviso(this.value)" style="font-size:14px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px"></select>
+                <span style="font-size:12px;color:rgba(255,255,255,.7)">hrs</span>
+              </div>
+              <div class="saved" id="horaAvisoSaved">✓ Hora guardada</div>
+            </div>
             <div class="ilist" id="cumplimientoList"></div>
           </div>
 
@@ -1367,6 +1377,7 @@ var TIEMPOS_PROCESO={
 var COSTO_TERCERIZAR_CARGA=200000; // $ por carga de autoclave (150 lts) tercerizada
 var factorIndirecto=0.40; // se recalcula desde horasIndirectasDia; 40% es el valor inicial de referencia
 var horasIndirectasDia=0; // horas indirectas totales del área por día (0 = usar factor 40% por defecto)
+var horaAvisoTareas=12; // hora (0-23) desde la cual aparece el aviso de tareas pendientes
 
 var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
@@ -1591,6 +1602,7 @@ function attach(){
   on('borradores',function(v){borradoresData=v||{};});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
+  on('horaAvisoTareas',function(v){if(typeof v==='number'&&v>=0&&v<=23)horaAvisoTareas=v;});
   on('tiemposCalibrados',function(v){if(v&&typeof v==='object'){Object.keys(v).forEach(function(tp){if(TIEMPOS_PROCESO[tp]&&typeof v[tp]==='number')TIEMPOS_PROCESO[tp].h=v[tp];});}});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
 }
@@ -1637,6 +1649,7 @@ window.ingresarRol=function(rol){
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
+      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();
       // Llevar la vista al panel admin
       if(p)p.scrollIntoView({behavior:'smooth'});
     },600);
@@ -1917,8 +1930,8 @@ function verificarAvisoMediodia(){
   if(!curNombre)return;
   if(curNombre.trim().toLowerCase()==='patricio baeza')return; // el jefe no recibe el aviso
   var ahora=new Date();
-  if(ahora.getHours()<12){
-    // Aún no es mediodía: programar la primera revisión para cuando lleguen las 12
+  if(ahora.getHours()<horaAvisoTareas){
+    // Aún no es la hora del aviso
     return;
   }
   chequearPendientesMediodia();
@@ -1930,7 +1943,7 @@ function verificarAvisoMediodia(){
 
 function chequearPendientesMediodia(){
   if(!curNombre)return;
-  if(new Date().getHours()<12)return;
+  if(new Date().getHours()<horaAvisoTareas)return;
   // Si ya hay un aviso abierto, no duplicar
   if(document.getElementById('avisoMediodiaOv'))return;
   var hoy=hoyStr();
@@ -5683,7 +5696,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -6691,6 +6704,19 @@ function reporteKPI(emoji,valor,label,sub,color){
     '<div style="font-size:11px;color:rgba(255,255,255,.6)">'+label+'</div>'+
     '<div style="font-size:9px;color:rgba(255,255,255,.35)">'+sub+'</div>'+
   '</div>';
+}
+
+window.guardarHoraAviso=function(h){
+  horaAvisoTareas=Number(h);
+  sedeRef('horaAvisoTareas').set(horaAvisoTareas);
+  showSaved('horaAvisoSaved');
+};
+function initHoraAvisoSelect(){
+  var sel=document.getElementById('horaAvisoSelect');
+  if(!sel)return;
+  var opts='';
+  for(var h=7;h<=20;h++){opts+='<option value="'+h+'"'+(h===horaAvisoTareas?' selected':'')+'>'+('0'+h).slice(-2)+':00</option>';}
+  sel.innerHTML=opts;
 }
 
 window.guardarSnapshotMes=function(mes){
