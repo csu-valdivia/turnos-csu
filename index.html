@@ -1907,6 +1907,54 @@ function showApp(){
   if(verificarFichasPendientes())return;
   document.getElementById('fichaObligView').style.display='none';
   document.getElementById('appView').style.display='block';
+  // 4. Aviso de mediodía: recordar tareas pendientes (solo si son las 12:00+ y tiene pendientes)
+  setTimeout(verificarAvisoMediodia,1500);
+}
+
+// Aviso de mediodía: a las 12:00 o más, recuerda a quien tiene tareas medibles sin registrar.
+// A quien ya completó, un mensaje positivo. Solo se muestra una vez al día por persona.
+function verificarAvisoMediodia(){
+  if(!curNombre)return;
+  if(curNombre.trim().toLowerCase()==='patricio baeza')return; // el jefe no recibe el aviso
+  var ahora=new Date();
+  if(ahora.getHours()<12)return; // solo desde mediodía
+  var hoy=hoyStr();
+  var lsKey='tcsu_aviso12_'+S+'_'+hoy+'_'+curNombre.replace(/\s/g,'_');
+  if(localStorage.getItem(lsKey))return; // ya lo vio hoy
+  var diaHoy=diaDeFecha(hoy);
+  var misTareas=Object.values(tareas||{}).filter(function(t){
+    return t.nombre===curNombre&&t.dia===diaHoy&&TIPOS_MEDIBLES[t.tipo]&&!TIPOS_SEMANALES[t.tipo];
+  });
+  if(!misTareas.length)return; // sin tareas medibles hoy → no se muestra nada
+  var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy).cumplido;});
+  localStorage.setItem(lsKey,'1');
+  if(pendientes.length){
+    mostrarAvisoMediodia(false,pendientes,misTareas.length);
+  } else {
+    mostrarAvisoMediodia(true,[],misTareas.length);
+  }
+}
+
+function mostrarAvisoMediodia(completado,pendientes,total){
+  var m=document.createElement('div');
+  m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.9);z-index:9600;display:flex;align-items:center;justify-content:center;padding:20px';
+  var contenido;
+  if(completado){
+    contenido='<div style="font-size:48px;margin-bottom:8px">✅</div>'+
+      '<div style="font-size:19px;font-weight:800;color:#6ee7b7;margin-bottom:8px">¡Vas al día!</div>'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6">Ya registraste todas tus tareas asignadas para hoy ('+total+'). Excelente trabajo, sigue así. 💪</div>';
+  } else {
+    var lista=pendientes.map(function(t){return '<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:13px;color:#fcd34d;text-align:left">⏳ '+nombreRol(t.tipo)+'</div>';}).join('');
+    contenido='<div style="font-size:48px;margin-bottom:8px">🔔</div>'+
+      '<div style="font-size:19px;font-weight:800;color:#fbbf24;margin-bottom:6px">Recordatorio de mediodía</div>'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:14px">Tienes '+pendientes.length+' de '+total+' tarea'+(total!==1?'s':'')+' sin registrar. Cuando las completes, recuerda marcarlas:</div>'+
+      lista;
+  }
+  m.innerHTML='<div style="background:#16233d;border-radius:18px;padding:26px;max-width:380px;width:100%;text-align:center">'+
+    contenido+
+    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;margin-top:18px;background:linear-gradient(135deg,#2563eb,#60a5fa);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">Entendido</button>'+
+    '</div>';
+  document.body.appendChild(m);
 }
 
 function verificarBienvenidaSemana(){
@@ -8087,8 +8135,10 @@ window.confirmarTempNE=function(tipo,toma){
 };
 
 // Gráfico mensual de temperatura con banda 2-8°C
-window.verGraficoTemp=function(tipo,periodo){
+window.verGraficoTemp=function(tipo,periodo,ocultarVacios){
   periodo=periodo||'mes'; // 'mes' | 'mesAnterior' | '30dias'
+  ocultarVacios=(ocultarVacios===true); // ocultar espacios con ≤1 lectura (duplicados)
+  window.ocultarVaciosTemp=ocultarVacios;
   var ov=document.getElementById('graftempOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='graftempOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
@@ -8097,26 +8147,42 @@ window.verGraficoTemp=function(tipo,periodo){
   var regs=Object.values(regTemperatura||{}).filter(function(r){
     return r.tipo===tipo&&r.fecha&&r.fecha>=rango.desde&&r.fecha<=rango.hasta;
   });
-  // Puntos a graficar: todos los "punto" distintos
-  var puntos={};
-  regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){puntos[p]=1;});});
-  var puntosArr=Object.keys(puntos);
+  // Puntos a graficar: contar cuántas lecturas tiene cada uno para descartar duplicados vacíos
+  var puntosConteo={};
+  regs.forEach(function(r){Object.keys(r.lecturas||{}).forEach(function(p){
+    if(r.lecturas[p]!==undefined&&r.lecturas[p]!==null&&r.lecturas[p]!=='')puntosConteo[p]=(puntosConteo[p]||0)+1;
+  });});
+  // Ordenar por cantidad de datos (más historial primero)
+  var puntosArr=Object.keys(puntosConteo).sort(function(a,b){return puntosConteo[b]-puntosConteo[a];});
+  // Detectar posibles duplicados: si hay puntos con 1 sola lectura y existe otro con nombre similar y más datos, se marcan
+  var maxConteo=puntosArr.length?puntosConteo[puntosArr[0]]:0;
   var titulo={temp_ester:'🌡️ Temp. Esterilización',temp_pabellon:'🔵 Temp. Pabellón',temp_box:'🚪 Temp. Box',temp_refri:'🧊 Temp. Refrigeradores'}[tipo]||'Temperatura';
   var esRefri=(tipo==='temp_refri');
   // Selector de período
-  function btnP(val,lab){return '<button onclick="verGraficoTemp(\''+tipo+'\',\''+val+'\')" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;background:'+(periodo===val?'rgba(96,165,250,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
-  var selector='<div style="display:flex;gap:6px;margin-bottom:14px">'+btnP('mes','Mes actual')+btnP('mesAnterior','Mes anterior')+btnP('30dias','Últimos 30 días')+'</div>';
+  function btnP(val,lab){return '<button onclick="verGraficoTemp(\''+tipo+'\',\''+val+'\',ocultarVaciosTemp)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;background:'+(periodo===val?'rgba(96,165,250,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
+  var selector='<div style="display:flex;gap:6px;margin-bottom:8px">'+btnP('mes','Mes actual')+btnP('mesAnterior','Mes anterior')+btnP('30dias','Últimos 30 días')+'</div>';
+  // Toggle para ocultar espacios con pocos datos (duplicados vacíos)
+  var hayPocos=puntosArr.some(function(p){return puntosConteo[p]<=1;});
+  if(hayPocos){
+    selector+='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:12px;cursor:pointer">'+
+      '<input type="checkbox" '+(ocultarVacios?'checked':'')+' onchange="verGraficoTemp(\''+tipo+'\',\''+periodo+'\',this.checked)" style="accent-color:#60a5fa">'+
+      'Ocultar espacios con 1 o menos lecturas (duplicados o sin usar)</label>';
+  }
+  // Aplicar filtro si está activo
+  if(ocultarVacios)puntosArr=puntosArr.filter(function(p){return puntosConteo[p]>1;});
   // UN GRÁFICO POR CADA ESPACIO (ítem) evaluado
   var contenido='';
   if(!regs.length){
     contenido='<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros en este período.</div>';
   } else if(!puntosArr.length){
-    contenido='<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Hay registros pero sin lecturas numéricas (posibles NE).</div>';
+    contenido='<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin espacios con datos suficientes en este período.</div>';
   } else {
     contenido=puntosArr.map(function(punto){
       var regsPunto=regs.filter(function(r){return r.lecturas&&r.lecturas[punto]!==undefined;});
+      var nLecturas=puntosConteo[punto]||0;
+      var badge=nLecturas<=1?'<span style="font-size:9px;background:rgba(251,191,36,.15);color:#fbbf24;padding:1px 6px;border-radius:4px;margin-left:6px">solo '+nLecturas+' dato</span>':'<span style="font-size:9px;color:rgba(255,255,255,.35);margin-left:6px">'+nLecturas+' lecturas</span>';
       return '<div style="margin-bottom:20px">'+
-        '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">'+esc(punto)+'</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">'+esc(punto)+badge+'</div>'+
         graficoTempSVG(regsPunto,[punto],esRefri,rango)+
       '</div>';
     }).join('');
@@ -8186,13 +8252,13 @@ function graficoTempSVG(regs,puntosArr,esRefri,rango){
     svg+='<line x1="'+padL+'" y1="'+y(g)+'" x2="'+(W-padR)+'" y2="'+y(g)+'" stroke="rgba(255,255,255,.05)"/>';
     svg+='<text x="'+(padL-4)+'" y="'+(y(g)+3)+'" fill="rgba(255,255,255,.4)" font-size="9" text-anchor="end">'+g+'°</text>';
   }
-  // Marcas de día (cada ~5, con etiqueta de fecha si es rango absoluto)
-  var paso=Math.max(1,Math.round(totalDias/6));
-  for(var d=0;d<totalDias;d+=paso){
+  // Marcas de día CONTINUAS (todos los números, o cada 2 si el rango es grande)
+  var pasoX=totalDias<=16?1:(totalDias<=31?2:3);
+  for(var d=0;d<totalDias;d+=pasoX){
     var lab;
-    if(usarFechaAbs){var fx=new Date(fechaDesde);fx.setDate(fx.getDate()+d);lab=fx.getDate()+'/'+(fx.getMonth()+1);}
+    if(usarFechaAbs){var fx=new Date(fechaDesde);fx.setDate(fx.getDate()+d);lab=fx.getDate();}
     else lab=(d+1);
-    svg+='<text x="'+x(d)+'" y="'+(H-padB+14)+'" fill="rgba(255,255,255,.4)" font-size="8" text-anchor="middle">'+lab+'</text>';
+    svg+='<text x="'+x(d)+'" y="'+(H-padB+13)+'" fill="rgba(255,255,255,.45)" font-size="7.5" text-anchor="middle">'+lab+'</text>';
   }
   // Una línea por cada punto
   puntosArr.forEach(function(punto,idx){
