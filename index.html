@@ -1083,6 +1083,12 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="ilist" id="cumplimientoList"></div>
           </div>
 
+          <div class="asec" style="border-color:rgba(52,211,153,.3)">
+            <p class="asec-title" style="color:#34d399">🎓 Inducción de colaboradores nuevos</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Un colaborador en inducción no recibe preguntas ni supervisión hasta que tú lo actives. Puedes activar protocolo por protocolo, o darle la bienvenida al equipo cuando esté listo.</p>
+            <div class="ilist" id="induccionList"></div>
+          </div>
+
           <div class="asec" style="border-color:rgba(139,92,246,.3)">
             <p class="asec-title" style="color:#a78bfa">👁 Ronda de supervisión</p>
             <div id="ponderaIndicador" style="margin-bottom:12px"></div>
@@ -1513,7 +1519,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1523,7 +1529,7 @@ var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var bancoActivo={}; // banco activo por sede (nuevo sistema)
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={};
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={},induccion={};
 var anunIdx=0,anunTimer=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1649,7 +1655,7 @@ window.ingresarRol=function(rol){
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
-      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();
+      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
       if(p)p.scrollIntoView({behavior:'smooth'});
     },600);
@@ -1759,6 +1765,7 @@ window.setSede=function(sede){
     ultimoBibCount=totalAhora;
   });
   sedeRef('fichaProgreso').on('value',function(s){fichaProgreso=s.val()||{};renderCumplimientoList();renderAlertasCapacitacion();});
+  sedeRef('induccion').on('value',function(s){induccion=s.val()||{};if(document.getElementById('induccionList'))renderInduccionList();});
   var primerCargaLogros=true;
   sedeRef('logros').on('child_added',function(s){
     if(primerCargaLogros)return; // skip historical logros on initial load
@@ -1922,6 +1929,71 @@ function showApp(){
   document.getElementById('appView').style.display='block';
   // 4. Aviso de mediodía: recordar tareas pendientes (solo si son las 12:00+ y tiene pendientes)
   setTimeout(verificarAvisoMediodia,1500);
+  // 5. Bienvenida al equipo si quedó pendiente (recién activado desde inducción)
+  setTimeout(verificarBienvenidaInduccion,800);
+}
+
+// Verifica si hay bienvenida pendiente para el colaborador y muestra el avatar
+function verificarBienvenidaInduccion(){
+  if(!curNombre)return;
+  var e=estadoInduccion(curNombre);
+  if(!e||!e.bienvenidaPendiente)return;
+  var k=keyPersona(curNombre);
+  sedeRef('cumpleanos').once('value').then(function(s){
+    var todos=s.val()||{};
+    var val=todos[k];
+    var genero=(typeof val==='object'&&val&&val.genero)?val.genero:'F';
+    mostrarBienvenidaEquipo(curNombre,genero);
+    sedeRef('induccion/'+k+'/bienvenidaPendiente').set(false);
+  });
+}
+
+function svgAvatarBienvenida(genero){
+  var piel='#FBBF7A';
+  var ropa=genero==='M'?'#2563eb':'#7c3aed';
+  var pelo=genero==='M'
+    ? '<ellipse cx="80" cy="36" rx="32" ry="20" fill="#1a0a00"/><rect x="48" y="30" width="64" height="18" rx="4" fill="#1a0a00"/>'
+    : '<path d="M48 60 Q40 20 80 18 Q120 20 112 60 L112 78 Q112 40 80 38 Q48 40 48 78 Z" fill="#3b1f0f"/>';
+  var anim='<style>@keyframes salta{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes saluda{0%,100%{transform:rotate(-15deg)}50%{transform:rotate(15deg)}}.bv{animation:salta 1.4s ease-in-out infinite}.manob{transform-origin:112px 100px;animation:saluda .5s ease-in-out infinite}@keyframes confeti{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(180px) rotate(360deg);opacity:0}}.cf{animation:confeti 2s linear infinite}</style>';
+  var confeti='';
+  var colores=['#f472b6','#fbbf24','#34d399','#60a5fa','#a78bfa'];
+  for(var i=0;i<8;i++){
+    var cx=20+i*18; var col=colores[i%colores.length]; var delay=(i*0.25);
+    confeti+='<rect class="cf" x="'+cx+'" y="10" width="6" height="6" rx="1" fill="'+col+'" style="animation-delay:'+delay+'s"/>';
+  }
+  return '<svg width="160" height="210" viewBox="0 0 160 230" style="display:block;margin:0 auto">'+anim+
+    confeti+
+    '<g class="bv">'+
+    pelo+
+    '<ellipse cx="80" cy="62" rx="28" ry="30" fill="'+piel+'"/>'+
+    '<path d="M64 46 Q70 43 76 46" stroke="#1a0a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M84 46 Q90 43 96 46" stroke="#1a0a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>'+
+    '<ellipse cx="70" cy="55" rx="5" ry="5.5" fill="#fff"/><ellipse cx="90" cy="55" rx="5" ry="5.5" fill="#fff"/>'+
+    '<circle cx="71" cy="56" r="3.5" fill="#1e293b"/><circle cx="91" cy="56" r="3.5" fill="#1e293b"/>'+
+    '<circle cx="72" cy="55" r="1.2" fill="#fff"/><circle cx="92" cy="55" r="1.2" fill="#fff"/>'+
+    '<path d="M66 70 Q80 84 94 70" stroke="#c2410c" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<ellipse cx="63" cy="68" rx="7" ry="4" fill="#fca5a5" opacity=".5"/><ellipse cx="97" cy="68" rx="7" ry="4" fill="#fca5a5" opacity=".5"/>'+
+    '<rect x="72" y="90" width="16" height="12" rx="4" fill="'+piel+'"/>'+
+    '<rect x="54" y="100" width="52" height="58" rx="10" fill="'+ropa+'"/>'+
+    '<rect x="60" y="158" width="16" height="42" rx="7" fill="#1e293b"/><rect x="84" y="158" width="16" height="42" rx="7" fill="#1e293b"/>'+
+    '</g>'+
+    '<g class="manob"><rect x="106" y="96" width="14" height="38" rx="7" fill="'+ropa+'"/><ellipse cx="113" cy="94" rx="10" ry="10" fill="'+piel+'"/></g>'+
+    '</svg>';
+}
+
+function mostrarBienvenidaEquipo(nombre,genero){
+  var m=document.createElement('div');
+  m.id='bienvenidaOv';
+  m.style.cssText='position:fixed;inset:0;background:rgba(10,20,50,.93);z-index:9700;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeInCump .5s ease';
+  var primerNombre=nombre.split(' ')[0];
+  var box=document.createElement('div');
+  box.style.cssText='position:relative;text-align:center;padding:1.8rem 1.4rem;max-width:360px;background:#16233d;border-radius:22px;box-shadow:0 12px 48px rgba(0,0,0,.5)';
+  box.innerHTML=svgAvatarBienvenida(genero)+
+    '<p style="font-size:22px;font-weight:900;color:#6ee7b7;margin:12px 0 6px">¡Bienvenido/a al equipo, '+primerNombre+'! 🎉</p>'+
+    '<p style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.6;margin-bottom:18px">Ya completaste tu inducción. Desde hoy eres parte del equipo del Servicio de Esterilización. ¡Nos alegra tenerte con nosotros! 💙</p>'+
+    '<button onclick="document.getElementById(\'bienvenidaOv\').remove()" style="background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;padding:12px 30px;border-radius:50px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">¡Gracias! 🙌</button>';
+  m.appendChild(box);
+  document.body.appendChild(m);
 }
 
 // Aviso de mediodía: a las 12:00 o más, recuerda a quien tiene tareas medibles sin registrar.
@@ -3541,6 +3613,8 @@ function fichasObligatoriasPendientes(nombre){
   return Object.entries(biblioteca).filter(function(e){
     var docId=e[0],doc=e[1];
     if(!doc.obligatoria)return false;
+    // Si la persona está en inducción, solo cuentan las fichas que le fueron activadas
+    if(!fichaActivaParaPersona(nombre,docId))return false;
     // Check visible toggle
     if(doc.visible===false)return false;
     // Check banco cerrado - solo bancos cerrados participan en sorteo
@@ -3583,13 +3657,42 @@ function dentroHorarioEvaluacion(){
   return true;
 }
 
+// ══════════════ INDUCCIÓN DE COLABORADORES NUEVOS ══════════════
+// Estado: induccion[key] = {enInduccion, fichasActivas:{docId:true}, supervisionActiva, bienvenidaPendiente}
+function keyPersona(nombre){return (nombre||'').replace(/\s/g,'_');}
+function estadoInduccion(nombre){
+  var k=keyPersona(nombre);
+  return induccion[k]||null;
+}
+// ¿Esta persona está en inducción (no debe recibir evaluaciones aún)?
+function estaEnInduccion(nombre){
+  var e=estadoInduccion(nombre);
+  return e&&e.enInduccion===true;
+}
+// ¿Una ficha específica está activada para esta persona?
+function fichaActivaParaPersona(nombre,docId){
+  var e=estadoInduccion(nombre);
+  if(!e||!e.enInduccion)return true; // no está en inducción → todas activas
+  return !!(e.fichasActivas&&e.fichasActivas[docId]); // en inducción → solo las activadas
+}
+// ¿La supervisión en terreno está activa para esta persona?
+function supervisionActivaParaPersona(nombre){
+  var e=estadoInduccion(nombre);
+  if(!e||!e.enInduccion)return true; // no está en inducción → activa
+  return e.supervisionActiva===true;
+}
+
 function verificarFichasPendientes(){
   if(!curNombre)return false;
   if(curNombre.trim().toLowerCase()==='patricio baeza')return false;
   if(!dentroHorarioEvaluacion())return false;
+  // Si está en inducción, verificar la bienvenida y no evaluar
+  if(estaEnInduccion(curNombre)){
+    verificarBienvenidaInduccion();
+    return false; // no se le muestran preguntas
+  }
   var pend=fichasObligatoriasPendientes(curNombre);
   if(!pend.length)return false;
-  // Si alguno está bloqueado hoy, mostrar pantalla de bloqueo del primero bloqueado
   var hoyStr2=hoyStr();
   var key=curNombre.replace(/\s/g,'_');
   var bloqueado=pend.find(function(e){
@@ -3597,7 +3700,6 @@ function verificarFichasPendientes(){
     return prog&&prog.bloqueadoFecha===hoyStr2;
   });
   if(bloqueado){mostrarFichaObligatoria(bloqueado[0],bloqueado[1]);return true;}
-  // Combinar preguntas de TODOS los documentos obligatorios pendientes
   mostrarEvaluacionCombinada(pend);
   return true;
 }
@@ -5148,6 +5250,95 @@ function renderCumplimientoList(){
 }
 
 // Desbloquear: limpia el bloqueo y los fallos del día, dejando al colaborador libre para responder de nuevo
+// ══════════════ GESTIÓN DE INDUCCIÓN (Admin) ══════════════
+function renderInduccionList(){
+  var d=document.getElementById('induccionList');if(!d)return;
+  var personas=(nombres||[]).filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';});
+  if(!personas.length){d.innerHTML='<p class="empty">Sin colaboradores.</p>';return;}
+  // Fichas obligatorias disponibles
+  var fichasOblig=Object.entries(biblioteca).filter(function(e){return e[1].obligatoria;});
+  var html='';
+  // Botón para poner a alguien en inducción
+  html+='<div style="margin-bottom:10px"><select id="nuevoInduccionSel" style="width:100%;font-size:13px;padding:8px;margin-bottom:6px"><option value="">— Poner un colaborador en inducción —</option>'+
+    personas.filter(function(n){return !estaEnInduccion(n);}).map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('')+
+    '</select><button onclick="ponerEnInduccion()" style="width:100%;background:rgba(52,211,153,.15);color:#6ee7b7;border:1px solid rgba(52,211,153,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">🎓 Marcar en inducción</button></div>';
+
+  // Lista de personas EN inducción
+  var enInd=personas.filter(function(n){return estaEnInduccion(n);});
+  if(!enInd.length){
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;font-size:12px;color:rgba(255,255,255,.5);text-align:center">Nadie está en inducción actualmente. Todos reciben evaluaciones normalmente.</div>';
+  } else {
+    enInd.forEach(function(n){
+      var e=estadoInduccion(n)||{};
+      var k=keyPersona(n);
+      var fichasActivas=e.fichasActivas||{};
+      var nActivas=Object.keys(fichasActivas).filter(function(fid){return fichasActivas[fid];}).length;
+      html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+          '<span style="font-size:14px;color:#fff;font-weight:700">🎓 '+esc(n)+'</span>'+
+          '<span style="font-size:10px;background:rgba(52,211,153,.15);color:#6ee7b7;padding:2px 8px;border-radius:5px">En inducción</span>'+
+        '</div>';
+      // Supervisión
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.05)">'+
+        '<span style="font-size:12px;color:rgba(255,255,255,.7)">👁 Supervisión en terreno</span>'+
+        '<button onclick="toggleSupervisionInduccion(\''+k+'\')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:none;font-family:inherit;cursor:pointer;background:'+(e.supervisionActiva?'rgba(52,211,153,.2);color:#6ee7b7':'rgba(255,255,255,.08);color:rgba(255,255,255,.5)')+'">'+(e.supervisionActiva?'✓ Activa':'Pausada')+'</button>'+
+      '</div>';
+      // Fichas (protocolos) una por una
+      html+='<div style="padding:6px 0;border-top:1px solid rgba(255,255,255,.05)"><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">📋 Preguntas por protocolo ('+nActivas+'/'+fichasOblig.length+' activas):</div>';
+      fichasOblig.forEach(function(fe){
+        var docId=fe[0],doc=fe[1];
+        var activa=!!fichasActivas[docId];
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">'+
+          '<span style="font-size:11px;color:rgba(255,255,255,.7)">'+esc(doc.titulo)+'</span>'+
+          '<button onclick="toggleFichaInduccion(\''+k+'\',\''+docId+'\')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:none;font-family:inherit;cursor:pointer;background:'+(activa?'rgba(52,211,153,.2);color:#6ee7b7':'rgba(255,255,255,.08);color:rgba(255,255,255,.4)')+'">'+(activa?'✓ Activa':'Activar')+'</button>'+
+        '</div>';
+      });
+      html+='</div>';
+      // Botones generales
+      html+='<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'+
+        '<button onclick="activarTodasFichasInduccion(\''+k+'\')" style="flex:1;font-size:11px;padding:7px;border-radius:6px;border:none;font-family:inherit;cursor:pointer;background:rgba(96,165,250,.15);color:#93c5fd">Activar todas las preguntas</button>'+
+        '<button onclick="darBienvenidaEquipo(\''+k+'\',\''+esc(n).replace(/'/g,"")+'\')" style="flex:1;font-size:11px;padding:7px;border-radius:6px;border:none;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#059669,#34d399);color:#fff;font-weight:600">🎉 Activar al equipo</button>'+
+      '</div>';
+      html+='</div>';
+    });
+  }
+  d.innerHTML=html;
+}
+
+window.ponerEnInduccion=function(){
+  var sel=document.getElementById('nuevoInduccionSel');
+  var n=sel?sel.value:'';
+  if(!n){alert('Selecciona un colaborador.');return;}
+  var k=keyPersona(n);
+  sedeRef('induccion/'+k).set({enInduccion:true,fichasActivas:{},supervisionActiva:false,bienvenidaPendiente:false,desde:Date.now()}).then(function(){
+    renderInduccionList();
+  });
+};
+window.toggleSupervisionInduccion=function(k){
+  var e=induccion[k]||{};
+  var nuevo=!e.supervisionActiva;
+  sedeRef('induccion/'+k+'/supervisionActiva').set(nuevo).then(renderInduccionList);
+};
+window.toggleFichaInduccion=function(k,docId){
+  var e=induccion[k]||{};
+  var fa=e.fichasActivas||{};
+  var nuevo=!fa[docId];
+  sedeRef('induccion/'+k+'/fichasActivas/'+docId).set(nuevo).then(renderInduccionList);
+};
+window.activarTodasFichasInduccion=function(k){
+  var fichasOblig=Object.keys(biblioteca).filter(function(id){return biblioteca[id].obligatoria;});
+  var fa={};fichasOblig.forEach(function(id){fa[id]=true;});
+  sedeRef('induccion/'+k+'/fichasActivas').set(fa).then(renderInduccionList);
+};
+// Activar al equipo: saca de inducción y deja la bienvenida pendiente (avatar aparece al entrar)
+window.darBienvenidaEquipo=function(k,nombre){
+  if(!confirm('¿Activar a '+nombre+' como miembro pleno del equipo? Recibirá la bienvenida y comenzará a recibir evaluaciones normalmente.'))return;
+  sedeRef('induccion/'+k).set({enInduccion:false,bienvenidaPendiente:true,activadoEl:Date.now()}).then(function(){
+    renderInduccionList();
+    alert('✓ '+nombre+' fue activado al equipo. Verá el mensaje de bienvenida la próxima vez que ingrese.');
+  });
+};
+
 window.desbloquearColaborador=function(docId,key){
   var prog=(fichaProgreso[docId]&&fichaProgreso[docId][key])||{};
   var data=Object.assign({},prog);
@@ -5696,7 +5887,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();renderInduccionList();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -6291,7 +6482,10 @@ function initSupervisionAdmin(excluir){
   supNom.innerHTML='<option value="">Selecciona colaborador</option>'+
     nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';})
     .filter(function(n){return !excluir||n!==excluir;})
-    .map(function(n){return '<option>'+n+'</option>';}).join('');
+    .map(function(n){
+      var enInd=estaEnInduccion(n)&&!supervisionActivaParaPersona(n);
+      return '<option value="'+n+'"'+(enInd?' disabled':'')+'>'+n+(enInd?' (en inducción)':'')+'</option>';
+    }).join('');
   supNom.onchange=function(){renderItemPedidoCondicional();};
   renderItemPedidoCondicional();
   initConfigSupervisores();
