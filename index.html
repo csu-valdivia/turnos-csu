@@ -2593,9 +2593,10 @@ function renderMisTurnos(nombre){
         }
       }).join('')+
       '<button onclick="verTodasMisGraficas()" style="display:block;width:100%;text-align:center;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px 12px;margin-top:4px;color:#93c5fd;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📊 Ver todas mis gráficas de resultados</button>'+
-      botonBorradoresPendientes()+
       '</div>';
   }
+  // Botón de borradores pendientes — SIEMPRE visible si hay borradores (fuera del bloque de roles)
+  html+=botonBorradoresPendientesBloque();
   // Badges
   Object.values(ausencias).filter(function(a){return a.nombre===nombre&&a.estado==='aprobado';}).forEach(function(a){
     var c=a.tipo==='licencia'?'rgba(124,58,237,.15)':a.tipo==='vacaciones'?'rgba(74,144,217,.15)':'rgba(16,185,129,.15)';
@@ -7552,6 +7553,16 @@ function botonBorradoresPendientes(){
   var lista=listarBorradoresPendientes().filter(function(b){return b.esMio;});
   if(!lista.length)return '';
   return '<button onclick="abrirPanelBorradores()" style="display:block;width:100%;text-align:center;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);border-radius:8px;padding:9px 12px;margin-top:5px;color:#fbbf24;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📝 Retomar borradores sin terminar ('+lista.length+')</button>';
+}
+
+// Versión en su propia tarjeta (para mostrar fuera del bloque de roles de hoy)
+function botonBorradoresPendientesBloque(){
+  var lista=listarBorradoresPendientes().filter(function(b){return b.esMio;});
+  if(!lista.length)return '';
+  return '<div style="background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
+    '<p style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px">📝 Tienes registros sin terminar</p>'+
+    '<button onclick="abrirPanelBorradores()" style="display:block;width:100%;text-align:center;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:9px 12px;color:#fbbf24;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">↩ Retomar borradores ('+lista.length+')</button>'+
+  '</div>';
 }
 
 // ══════════════ PANEL CENTRAL DE BORRADORES PENDIENTES ══════════════
