@@ -7487,6 +7487,14 @@ function borradorKey(tipo){return tipo+'__'+((curNombre||'anon').replace(/[.#$/\
 
 // Recolecta los valores actuales de un formulario (por ids) y los guarda como borrador
 function guardarBorrador(tipo,campos,silencioso){
+  // El borrador debe seguir a quien lo empieza. Si no hay perfil identificado, avisar (salvo autoguardado silencioso).
+  if(!curNombre&&!adminUnlocked){
+    if(!silencioso){
+      var ind0=document.getElementById('borradorEstado')||document.getElementById('borradorSupEstado');
+      if(ind0)ind0.innerHTML='<span style="color:#fca5a5">⚠ Selecciona tu perfil antes de guardar el borrador, para poder recuperarlo luego.</span>';
+    }
+    return;
+  }
   var data={};
   campos.forEach(function(id){
     var el=document.getElementById(id);
