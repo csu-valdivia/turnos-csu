@@ -625,6 +625,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirDashTecBtn" style="background:linear-gradient(135deg,#7c3aed,#2563eb);margin-top:6px">🔬 Dashboard técnico (esterilización)</button>
             <button class="btn-add" id="abrirCumplimientoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">✅ Control de cumplimiento diario</button>
             <button class="btn-add" id="abrirSinAsignarBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">👥 Quién no tiene asignaciones</button>
+            <button class="btn-add" id="abrirBorradoresBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">📝 Borradores del equipo sin terminar</button>
             <button class="btn-add" id="abrirRendimientoBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">💼 Rendimiento de dotación (confidencial)</button>
           </div>
 
@@ -1654,6 +1655,7 @@ window.ingresarRol=function(rol){
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
+      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
@@ -1931,6 +1933,8 @@ function showApp(){
   setTimeout(verificarAvisoMediodia,1500);
   // 5. Bienvenida al equipo si quedó pendiente (recién activado desde inducción)
   setTimeout(verificarBienvenidaInduccion,800);
+  // 6. Aviso de borradores pendientes sin terminar
+  setTimeout(verificarBorradoresPendientes,2200);
 }
 
 // Verifica si hay bienvenida pendiente para el colaborador y muestra el avatar
@@ -2589,6 +2593,7 @@ function renderMisTurnos(nombre){
         }
       }).join('')+
       '<button onclick="verTodasMisGraficas()" style="display:block;width:100%;text-align:center;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px 12px;margin-top:4px;color:#93c5fd;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📊 Ver todas mis gráficas de resultados</button>'+
+      botonBorradoresPendientes()+
       '</div>';
   }
   // Badges
@@ -5887,7 +5892,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();renderInduccionList();var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();renderInduccionList();var _bpPin=document.getElementById('abrirBorradoresBtn');if(_bpPin)_bpPin.onclick=abrirPanelBorradores;var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -7540,6 +7545,115 @@ function bannerBorrador(tipo,campos){
       '<button onclick="descartarBorrador_'+tipo+'()" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;cursor:pointer">Descartar</button>'+
     '</div>'+
   '</div>';
+}
+
+// Botón que muestra los borradores pendientes (solo aparece si hay alguno)
+function botonBorradoresPendientes(){
+  var lista=listarBorradoresPendientes().filter(function(b){return b.esMio;});
+  if(!lista.length)return '';
+  return '<button onclick="abrirPanelBorradores()" style="display:block;width:100%;text-align:center;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);border-radius:8px;padding:9px 12px;margin-top:5px;color:#fbbf24;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📝 Retomar borradores sin terminar ('+lista.length+')</button>';
+}
+
+// ══════════════ PANEL CENTRAL DE BORRADORES PENDIENTES ══════════════
+// Lista todos los borradores sin terminar. Cada colaborador ve los suyos; el admin ve todos.
+function listarBorradoresPendientes(){
+  var lista=[];
+  Object.keys(borradoresData||{}).forEach(function(key){
+    var b=borradoresData[key];
+    if(!b||!b.campos)return;
+    // Filtrar: admin ve todos; colaborador solo los suyos
+    var esMio=(b.quien===curNombre);
+    if(!adminUnlocked&&!esMio)return;
+    lista.push({key:key,tipo:b.tipo,quien:b.quien,fecha:b.fecha,hora:b.hora,ts:b.ts,esMio:esMio});
+  });
+  lista.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+  return lista;
+}
+
+function nombreTipoBorrador(tipo){
+  if(tipo==='autoclave')return '🔥 Registro de autoclave';
+  if(tipo==='supervision')return '👁 Ronda de supervisión';
+  var cfg=PRODUCCION_TIPOS&&PRODUCCION_TIPOS[tipo];
+  if(cfg)return cfg.emoji+' '+cfg.label;
+  return '📝 '+tipo;
+}
+
+window.abrirPanelBorradores=function(){
+  var ov=document.getElementById('panelBorradoresOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='panelBorradoresOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var lista=listarBorradoresPendientes();
+  var filas=lista.map(function(b){
+    var cuando=(b.fecha===hoyStr()?'hoy':b.fecha)+' a las '+(b.hora||'');
+    var deQuien=(adminUnlocked&&!b.esMio)?'<span style="font-size:10px;color:#fbbf24"> · '+esc(b.quien)+'</span>':'';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<div>'+
+        '<div style="font-size:13px;color:#fff;font-weight:600">'+nombreTipoBorrador(b.tipo)+deQuien+'</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5)">Guardado '+cuando+'</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:6px;flex-shrink:0">'+
+        (b.esMio?'<button onclick="retomarBorradorDesdePanel(\''+b.key+'\',\''+b.tipo+'\')" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);border-radius:7px;padding:6px 12px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">↩ Retomar</button>':'')+
+        '<button onclick="descartarBorradorDesdePanel(\''+b.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:7px;padding:6px 10px;font-family:inherit;font-size:12px;cursor:pointer">🗑</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:480px;width:100%;margin-top:20px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+      '<span style="font-size:15px;font-weight:700;color:#fbbf24">📝 Borradores pendientes</span>'+
+      '<button onclick="document.getElementById(\'panelBorradoresOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">'+(adminUnlocked?'Todos los borradores del equipo sin terminar.':'Tus registros guardados sin terminar.')+'</div>'+
+    (lista.length?'<div style="background:#0f1a30;border-radius:10px;overflow:hidden">'+filas+'</div>':'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">✓ No tienes borradores pendientes. Todo lo que empezaste está terminado.</div>')+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+window.retomarBorradorDesdePanel=function(key,tipo){
+  document.getElementById('panelBorradoresOv').remove();
+  // Abrir el formulario correspondiente; el banner de retomar aparecerá dentro
+  if(tipo==='autoclave'){
+    abrirRegAutoclave();
+    setTimeout(function(){if(typeof retomarBorrador_autoclave==='function')retomarBorrador_autoclave();},300);
+  } else if(tipo==='supervision'){
+    // Ir al panel de supervisión (admin)
+    if(typeof goTab==='function'){try{goTab('panorama');}catch(e){}}
+    alert('El borrador de supervisión está en el panel de Admin → Ronda de supervisión. Ábrelo y usa "Retomar".');
+  } else if(PRODUCCION_TIPOS&&PRODUCCION_TIPOS[tipo]){
+    abrirRegProduccion(tipo);
+    setTimeout(function(){
+      var campos=['prodCantidad','prodObs','prodHoraInicio','prodHoraTermino'];
+      restaurarBorrador(tipo,campos);
+    },300);
+  }
+};
+
+window.descartarBorradorDesdePanel=function(key){
+  if(!confirm('¿Descartar este borrador? Se perderá lo que habías llenado.'))return;
+  sedeRef('borradores/'+key).remove();
+  delete borradoresData[key];
+  abrirPanelBorradores(); // refrescar
+};
+
+// Aviso al entrar: si hay borradores pendientes, mostrar un recordatorio discreto
+function verificarBorradoresPendientes(){
+  if(!curNombre)return;
+  var lista=listarBorradoresPendientes().filter(function(b){return b.esMio;});
+  if(!lista.length)return;
+  var lsKey='tcsu_borrAviso_'+S+'_'+hoyStr()+'_'+curNombre.replace(/\s/g,'_');
+  // Mostrar el aviso una vez por sesión/día
+  if(sessionStorage.getItem(lsKey))return;
+  sessionStorage.setItem(lsKey,'1');
+  var m=document.createElement('div');
+  m.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9550;max-width:340px;width:90%';
+  m.innerHTML='<div style="background:linear-gradient(135deg,#b45309,#f59e0b);border-radius:12px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px">'+
+    '<div style="font-size:26px">📝</div>'+
+    '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#fff">Tienes '+lista.length+' borrador'+(lista.length>1?'es':'')+' sin terminar</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.85)">Toca para retomarlos donde quedaste.</div></div>'+
+    '<button onclick="this.closest(\'div[style*=fixed]\').remove();abrirPanelBorradores()" style="background:rgba(255,255,255,.25);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Ver</button>'+
+    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;color:rgba(255,255,255,.7);border:none;font-size:18px;cursor:pointer;flex-shrink:0">×</button>'+
+  '</div>';
+  document.body.appendChild(m);
+  setTimeout(function(){if(m.parentNode)m.remove();},12000); // se oculta solo a los 12s
 }
 
 // ══════════════ REGISTROS DE PRODUCCIÓN (cantidad diaria simple) ══════════════
