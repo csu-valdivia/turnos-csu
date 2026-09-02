@@ -1081,6 +1081,18 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               </div>
               <div class="saved" id="horaAvisoSaved">✓ Hora guardada</div>
             </div>
+            <div style="background:rgba(126,200,247,.06);border:1px solid rgba(126,200,247,.2);border-radius:8px;padding:10px;margin-bottom:10px">
+              <div style="font-size:12px;font-weight:700;color:#7ec8f7;margin-bottom:4px">🏆 Ponderación del ranking</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:8px">Define cuánto pesa cada componente en el puntaje del ranking. Deben sumar 100%.</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#6ee7b7;flex:1">✅ Cumplimiento de tareas</span><input type="number" id="pesoCumpl" min="0" max="100" step="5" value="35" style="width:60px;font-size:14px;padding:5px;text-align:center"><span style="font-size:12px;color:rgba(255,255,255,.5)">%</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#93c5fd;flex:1">🧠 Conocimiento (quiz)</span><input type="number" id="pesoConoc" min="0" max="100" step="5" value="40" style="width:60px;font-size:14px;padding:5px;text-align:center"><span style="font-size:12px;color:rgba(255,255,255,.5)">%</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#c4b5fd;flex:1">👁 Supervisión en terreno</span><input type="number" id="pesoSuperv" min="0" max="100" step="5" value="25" style="width:60px;font-size:14px;padding:5px;text-align:center"><span style="font-size:12px;color:rgba(255,255,255,.5)">%</span></div>
+              </div>
+              <div id="pesoSuma" style="font-size:11px;text-align:right;margin-top:6px;color:rgba(255,255,255,.5)">Suma: 100%</div>
+              <button class="btn-sec" id="guardarPesosBtn" style="font-size:11px;color:#7ec8f7;border-color:rgba(126,200,247,.4);width:100%;margin-top:6px">Guardar ponderación</button>
+              <div class="saved" id="pesosSaved">✓ Ponderación guardada</div>
+            </div>
             <div class="ilist" id="cumplimientoList"></div>
           </div>
 
@@ -1607,6 +1619,7 @@ function attach(){
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
   on('borradores',function(v){borradoresData=v||{};});
+  on('rankPesos',function(v){if(v&&typeof v==='object'&&typeof v.conocimiento==='number'){RANK_PESOS={cumplimiento:(v.cumplimiento||0),conocimiento:(v.conocimiento||0),supervision:(v.supervision||0)};renderRanking();}});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horaAvisoTareas',function(v){if(typeof v==='number'&&v>=0&&v<=23)horaAvisoTareas=v;});
@@ -1657,7 +1670,7 @@ window.ingresarRol=function(rol){
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
       var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
-      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof renderInduccionList==='function')renderInduccionList();
+      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();initPesosRanking();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
       if(p)p.scrollIntoView({behavior:'smooth'});
     },600);
@@ -4453,7 +4466,7 @@ function nombresConTurnoSemanaFiltrado(soloInternos){
 // 2° Puntaje de desempeño = 50% evaluación + 50% supervisión (solo desempata entre iguales días)
 // 3° Menos fallos  ·  4° Menor tiempo promedio
 // No se usa "Precisión" como componente: es redundante con Evaluación (los puntos ya castigan el fallo).
-var RANK_PESOS={conocimiento:0.50,supervision:0.50};
+var RANK_PESOS={cumplimiento:0.35,conocimiento:0.40,supervision:0.25};
 var RANK_LABELS={conocimiento:'Evaluación',supervision:'Supervisión'};
 
 // Días hábiles (Lun-Vie, sin feriados) transcurridos de la semana activa hasta hoy
@@ -4487,6 +4500,10 @@ function calcScorePonderado(p,diasHabiles,promSupEquipo){
   } else {
     comp.supervision=null; // nadie del grupo tiene supervisión → solo evaluación
   }
+
+  // Cumplimiento de tareas: si la persona tiene tareas medibles asignadas, se usa su %.
+  // Si no tiene tareas medibles, el componente queda null (no la penaliza, se reparte el peso).
+  comp.cumplimiento=(p.cumplimientoProm!==null&&p.cumplimientoProm!==undefined)?p.cumplimientoProm:null;
 
   var pesoDisp=0;
   Object.keys(RANK_PESOS).forEach(function(k){if(comp[k]!==null)pesoDisp+=RANK_PESOS[k];});
@@ -4587,7 +4604,31 @@ function agregarRankingPorPersona(soloInternos){
   // Promedio de supervisión del grupo (solo con quienes SÍ tienen dato) → base de imputación
   var conSup=lista.filter(function(p){return p.supervisionProm!==null&&p.supervisionProm!==undefined;});
   var promSupEquipo=conSup.length?(conSup.reduce(function(a,p){return a+p.supervisionProm;},0)/conSup.length)/100:null;
+  // Calcular cumplimiento de tareas de la semana para cada persona (0-1)
+  lista.forEach(function(p){p.cumplimientoProm=calcCumplimientoSemanaPersona(p.nombre);});
   return lista.map(function(p){return calcScorePonderado(p,diasHab,promSupEquipo);});
+}
+
+// % de cumplimiento de tareas medibles de una persona en la semana activa (0-1)
+function calcCumplimientoSemanaPersona(nombre){
+  var semActual=semanas[W]||{};
+  var semIni=semActual.ini||'';var semFin=semActual.fin||'';
+  if(!semIni||!semFin)return null;
+  var asig=0,cumpl=0;
+  var d0=new Date(semIni+'T12:00:00');var d1=new Date(semFin+'T12:00:00');
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  for(var d=new Date(d0);d<=d1&&d<=hoy;d.setDate(d.getDate()+1)){
+    var fechaD=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    var diaSem=diaDeDate(fechaD);
+    if(esFeriado(diaSem))continue;
+    Object.values(tareas||{}).forEach(function(t){
+      if(t.nombre!==nombre||t.dia!==diaSem)return;
+      if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo])return;
+      asig++;
+      if(verificarCumplimiento(t.tipo,fechaD).cumplido)cumpl++;
+    });
+  }
+  return asig>0?(cumpl/asig):null; // null si no tiene tareas medibles asignadas
 }
 
 function nombresConTurnoSemana(){
@@ -4708,9 +4749,11 @@ function renderRanking(){
         var desglose='';
         if(adminUnlocked){
           var supTxt=r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%';
+          var cumplTxt=r.comp.cumplimiento===null||r.comp.cumplimiento===undefined?'—':Math.round(r.comp.cumplimiento*100)+'%';
           desglose='<div style="margin-left:32px;margin-top:3px;font-size:10px;color:rgba(255,255,255,.4);display:flex;flex-wrap:wrap;gap:8px">'
             +'<span style="color:#7ec8f7">1° '+r.veces+'/'+r.diasHabiles+' días</span>'
-            +'<span>2° 🧠 Eval '+Math.round(r.comp.conocimiento*100)+'%</span>'
+            +'<span style="color:#6ee7b7">✅ Cumpl '+cumplTxt+'</span>'
+            +'<span>🧠 Eval '+Math.round(r.comp.conocimiento*100)+'%</span>'
             +'<span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁 Superv '+supTxt+(r.supImputada?' (imputado)':'')+'</span>'
             +'</div>';
         }
@@ -5893,7 +5936,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();renderInduccionList();var _bpPin=document.getElementById('abrirBorradoresBtn');if(_bpPin)_bpPin.onclick=abrirPanelBorradores;var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();initPesosRanking();renderInduccionList();var _bpPin=document.getElementById('abrirBorradoresBtn');if(_bpPin)_bpPin.onclick=abrirPanelBorradores;var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -6917,6 +6960,30 @@ function initHoraAvisoSelect(){
   var opts='';
   for(var h=7;h<=20;h++){opts+='<option value="'+h+'"'+(h===horaAvisoTareas?' selected':'')+'>'+('0'+h).slice(-2)+':00</option>';}
   sel.innerHTML=opts;
+}
+
+// Configuración de pesos del ranking
+function initPesosRanking(){
+  var pc=document.getElementById('pesoCumpl'),pk=document.getElementById('pesoConoc'),ps=document.getElementById('pesoSuperv');
+  if(!pc||!pk||!ps)return;
+  pc.value=Math.round((RANK_PESOS.cumplimiento||0)*100);
+  pk.value=Math.round((RANK_PESOS.conocimiento||0)*100);
+  ps.value=Math.round((RANK_PESOS.supervision||0)*100);
+  function actualizarSuma(){
+    var suma=(Number(pc.value)||0)+(Number(pk.value)||0)+(Number(ps.value)||0);
+    var el=document.getElementById('pesoSuma');
+    if(el){el.textContent='Suma: '+suma+'%';el.style.color=(suma===100)?'#6ee7b7':'#fca5a5';}
+  }
+  [pc,pk,ps].forEach(function(inp){inp.oninput=actualizarSuma;});
+  actualizarSuma();
+  var btn=document.getElementById('guardarPesosBtn');
+  if(btn)btn.onclick=function(){
+    var c=Number(pc.value)||0,k=Number(pk.value)||0,s=Number(ps.value)||0;
+    if(c+k+s!==100){alert('Los pesos deben sumar exactamente 100%. Ahora suman '+(c+k+s)+'%.');return;}
+    var nuevos={cumplimiento:c/100,conocimiento:k/100,supervision:s/100};
+    RANK_PESOS=nuevos;
+    sedeRef('rankPesos').set(nuevos).then(function(){showSaved('pesosSaved');renderRanking();});
+  };
 }
 
 window.guardarSnapshotMes=function(mes){
