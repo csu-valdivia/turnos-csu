@@ -1606,7 +1606,7 @@ function attach(){
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
-  on('borradores',function(v){borradoresData=v||{};if(curNombre&&document.getElementById('tc-mis-turnos')&&document.getElementById('tc-mis-turnos').classList.contains('active'))renderMisTurnos(curNombre);});
+  on('borradores',function(v){borradoresData=v||{};});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horaAvisoTareas',function(v){if(typeof v==='number'&&v>=0&&v<=23)horaAvisoTareas=v;});
@@ -7511,6 +7511,9 @@ function guardarBorrador(tipo,campos,silencioso){
     hora:('0'+new Date().getHours()).slice(-2)+':'+('0'+new Date().getMinutes()).slice(-2),
     ts:Date.now()};
   var key=borradorKey(tipo);
+  // Actualizar la variable local INMEDIATAMENTE (no esperar a Firebase) para que el botón aparezca al instante
+  if(!borradoresData)borradoresData={};
+  borradoresData[key]=registro;
   sedeRef('borradores/'+key).set(registro).then(function(){
     if(!silencioso){
       var ind=document.getElementById('borradorEstado');
@@ -8144,7 +8147,12 @@ window.guardarBorradorAutoclave=function(){
   var campos=['autoTipo','autoFecha','autoEquipo','autoCarga','autoCantidad','autoHoraInicio','autoHoraTemp','autoHoraPresion','autoHoraTermino','autoTemp','autoPresion','autoObs'];
   guardarBorrador('autoclave',campos,false);
   var ind=document.getElementById('borradorEstado');
-  if(ind)ind.innerHTML='<span style="color:#6ee7b7">✓ Guardado. Puedes cerrar y retomarlo desde "Mis registros de hoy" → 📝 Retomar borradores.</span>';
+  if(ind)ind.innerHTML='<span style="color:#6ee7b7">✓ Borrador guardado. Ciérralo y lo verás en "Mis registros de hoy" para retomarlo.</span>';
+  // Cerrar el formulario y refrescar la vista tras un momento, para que aparezca el botón de retomar
+  setTimeout(function(){
+    var o=document.getElementById('regAutoOv');if(o)o.remove();
+    if(curNombre&&typeof renderMisTurnos==='function')renderMisTurnos(curNombre);
+  },1400);
 };
 window.retomarBorrador_autoclave=function(){
   var campos=['autoTipo','autoFecha','autoEquipo','autoCarga','autoCantidad','autoHoraInicio','autoHoraTemp','autoHoraPresion','autoHoraTermino','autoTemp','autoPresion','autoObs'];
