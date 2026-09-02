@@ -7483,7 +7483,12 @@ var AUTOCLAVE_PARAMS={
 // Permite guardar un registro a medio llenar y retomarlo después, incluso desde otro dispositivo.
 var borradoresData={};
 
-function borradorKey(tipo){return tipo+'__'+((curNombre||'anon').replace(/[.#$/\[\]]/g,'_'));}
+function borradorKey(tipo){
+  var quien=(curNombre||'anon');
+  // Sanitizar para Firebase: sin espacios ni caracteres prohibidos (. # $ / [ ])
+  var quienSafe=quien.replace(/[.#$/\[\]\s]/g,'_');
+  return tipo+'__'+quienSafe;
+}
 
 // Recolecta los valores actuales de un formulario (por ids) y los guarda como borrador
 function guardarBorrador(tipo,campos,silencioso){
@@ -7516,8 +7521,7 @@ function guardarBorrador(tipo,campos,silencioso){
 
 // Restaura un borrador en el formulario
 function restaurarBorrador(tipo,campos){
-  var key=borradorKey(tipo);
-  var b=borradoresData[key];
+  var b=hayBorrador(tipo);
   if(!b||!b.campos)return false;
   campos.forEach(function(id){
     var el=document.getElementById(id);
@@ -7528,17 +7532,35 @@ function restaurarBorrador(tipo,campos){
   return true;
 }
 
-// ¿Hay borrador guardado para este tipo?
+// ¿Hay borrador guardado para este tipo? Busca por clave exacta O por (tipo + quien)
 function hayBorrador(tipo){
+  // 1. Intento directo por clave
   var b=borradoresData[borradorKey(tipo)];
-  return b&&b.campos?b:null;
+  if(b&&b.campos)return b;
+  // 2. Búsqueda robusta: cualquier borrador de este tipo que sea mío (o sin dueño)
+  var encontrado=null;
+  Object.keys(borradoresData||{}).forEach(function(key){
+    var bb=borradoresData[key];
+    if(!bb||!bb.campos||bb.tipo!==tipo)return;
+    var esMio=(bb.quien===curNombre)||(!bb.quien||bb.quien==='—');
+    if(esMio&&!encontrado)encontrado=bb;
+  });
+  return encontrado;
 }
 
 // Borra el borrador (al completar el registro o al descartar)
 function limpiarBorrador(tipo){
+  // Borra por clave exacta
   var key=borradorKey(tipo);
   sedeRef('borradores/'+key).remove();
   delete borradoresData[key];
+  // Y también cualquier otro borrador de este tipo que sea mío (por si la clave difiere)
+  Object.keys(borradoresData||{}).forEach(function(k){
+    var bb=borradoresData[k];
+    if(!bb||bb.tipo!==tipo)return;
+    var esMio=(bb.quien===curNombre)||(!bb.quien||bb.quien==='—');
+    if(esMio){sedeRef('borradores/'+k).remove();delete borradoresData[k];}
+  });
 }
 
 // Banner que muestra dónde quedó el borrador y permite retomar/descartar
