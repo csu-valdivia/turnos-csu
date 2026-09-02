@@ -1606,7 +1606,7 @@ function attach(){
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
-  on('borradores',function(v){borradoresData=v||{};});
+  on('borradores',function(v){borradoresData=v||{};if(curNombre&&document.getElementById('tc-mis-turnos')&&document.getElementById('tc-mis-turnos').classList.contains('active'))renderMisTurnos(curNombre);});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horaAvisoTareas',function(v){if(typeof v==='number'&&v>=0&&v<=23)horaAvisoTareas=v;});
@@ -8143,6 +8143,8 @@ window.abrirRegAutoclave=function(){
 window.guardarBorradorAutoclave=function(){
   var campos=['autoTipo','autoFecha','autoEquipo','autoCarga','autoCantidad','autoHoraInicio','autoHoraTemp','autoHoraPresion','autoHoraTermino','autoTemp','autoPresion','autoObs'];
   guardarBorrador('autoclave',campos,false);
+  var ind=document.getElementById('borradorEstado');
+  if(ind)ind.innerHTML='<span style="color:#6ee7b7">✓ Guardado. Puedes cerrar y retomarlo desde "Mis registros de hoy" → 📝 Retomar borradores.</span>';
 };
 window.retomarBorrador_autoclave=function(){
   var campos=['autoTipo','autoFecha','autoEquipo','autoCarga','autoCantidad','autoHoraInicio','autoHoraTemp','autoHoraPresion','autoHoraTermino','autoTemp','autoPresion','autoObs'];
