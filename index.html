@@ -958,7 +958,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario">💊 Atenciones dispensario</option><option value="inst_recibido">📥 Instrumental recibido</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="entrega_esteril">📤 Entrega material estéril</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Instrumental recibido</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="entrega_esteril">📤 Entrega material estéril</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
@@ -1351,7 +1351,7 @@ function jornadaLabel(j){
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario:{e:'💊',l:'Atenciones dispensario'},inst_recibido:{e:'📥',l:'Instrumental recibido'},inst_lavado:{e:'🧼',l:'Instrumental lavado'},inst_empaque:{e:'📦',l:'Instrumental empaquetado'},inst_secado:{e:'💨',l:'Instrumental secado'},entrega_esteril:{e:'📤',l:'Entrega material estéril'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Instrumental recibido'},inst_lavado:{e:'🧼',l:'Instrumental lavado'},inst_empaque:{e:'📦',l:'Instrumental empaquetado'},inst_secado:{e:'💨',l:'Instrumental secado'},entrega_esteril:{e:'📤',l:'Entrega material estéril'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Catálogo de roles técnicos: cada uno abre una funcionalidad de registro en Mis Turnos.
 // tipo = valor de la tarea; fn = función que abre el registro. Ampliable por el admin vía rolesTecnicos.
 var ROLES_TECNICOS_BASE={
@@ -1361,7 +1361,8 @@ var ROLES_TECNICOS_BASE={
   temp_box:{emoji:'🚪',label:'Temp. Box',desc:'Temperatura de boxes (diario AM)',fn:'abrirRegTemp'},
   temp_refri:{emoji:'🧊',label:'Temp. Refrigeradores',desc:'Temperatura de refrigeradores 2–8°C (AM y PM)',fn:'abrirRegTemp'},
   radiografias:{emoji:'🩻',label:'Radiografías',desc:'Cantidad de radiografías tomadas (diario)',fn:'abrirRegProduccion'},
-  dispensario:{emoji:'💊',label:'Atenciones dispensario',desc:'N° de atenciones en dispensario (diario)',fn:'abrirRegProduccion'},
+  dispensario_2:{emoji:'💊',label:'Dispensario 2° piso',desc:'N° de atenciones dispensario 2° piso (diario)',fn:'abrirRegProduccion'},
+  dispensario_3:{emoji:'💊',label:'Dispensario 3° piso',desc:'N° de atenciones dispensario 3° piso (diario)',fn:'abrirRegProduccion'},
   inst_recibido:{emoji:'📥',label:'Instrumental recibido',desc:'Cantidad de instrumental recibido (diario)',fn:'abrirRegProduccion'},
   inst_lavado:{emoji:'🧼',label:'Instrumental lavado',desc:'Cantidad de instrumental lavado (diario)',fn:'abrirRegProduccion'},
   inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',desc:'Cantidad de instrumental empaquetado (diario)',fn:'abrirRegProduccion'},
@@ -1372,7 +1373,8 @@ var ROLES_TECNICOS_BASE={
 // Config de los registros de producción simple (solo cantidad diaria)
 var PRODUCCION_TIPOS={
   radiografias:{emoji:'🩻',label:'Radiografías',unidad:'radiografías',color:'#a78bfa'},
-  dispensario:{emoji:'💊',label:'Atenciones dispensario',unidad:'atenciones',color:'#f472b6'},
+  dispensario_2:{emoji:'💊',label:'Dispensario 2° piso',unidad:'atenciones',color:'#f472b6'},
+  dispensario_3:{emoji:'💊',label:'Dispensario 3° piso',unidad:'atenciones',color:'#fb7185'},
   inst_recibido:{emoji:'📥',label:'Instrumental recibido',unidad:'piezas',color:'#60a5fa'},
   inst_lavado:{emoji:'🧼',label:'Instrumental lavado',unidad:'piezas',color:'#22d3ee'},
   inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',unidad:'paquetes',color:'#34d399'},
@@ -6747,6 +6749,207 @@ document.getElementById('addInternoBtn').addEventListener('click',function(){
 // ══════════ DASHBOARD DE GESTIÓN PARA GERENCIA ══════════
 // ══════════════ DASHBOARD MAESTRO ══════════════
 // Reúne todas las métricas de la plataforma con navegación a cada dashboard específico.
+// ══════════════ GENERADOR DE REPORTE PDF PARA GERENCIA ══════════════
+window.abrirGeneradorPDF=function(){
+  var ov=document.getElementById('genPDFOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='genPDFOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.96);z-index:9600;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  var mesActual=hoyStr().slice(0,7);
+  var pm=new Date(hoy.getFullYear(),hoy.getMonth()-1,1);
+  var mesAnterior=pm.getFullYear()+'-'+('0'+(pm.getMonth()+1)).slice(-2);
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:22px;max-width:480px;width:100%;margin-top:20px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:16px;font-weight:800;color:#fbbf24">📑 Exportar reporte PDF</span>'+
+      '<button onclick="document.getElementById(\'genPDFOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">Elige el período y las secciones a incluir. Se genera un PDF con los datos en vivo.</div>'+
+    // Período
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">📅 Período</div>'+
+    '<select id="pdfPeriodo" onchange="togglePdfFechas()" style="width:100%;font-size:14px;padding:9px;margin-bottom:8px">'+
+      '<option value="'+mesActual+'">Mes actual ('+mesActual+')</option>'+
+      '<option value="'+mesAnterior+'">Mes anterior ('+mesAnterior+')</option>'+
+      '<option value="rango">Rango de fechas personalizado</option>'+
+    '</select>'+
+    '<div id="pdfFechasRango" style="display:none;gap:8px;margin-bottom:8px">'+
+      '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.5)">Desde</label><input type="date" id="pdfDesde" value="'+mesActual+'-01" style="width:100%;font-size:13px;padding:7px"></div>'+
+      '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.5)">Hasta</label><input type="date" id="pdfHasta" value="'+hoyStr()+'" style="width:100%;font-size:13px;padding:7px"></div>'+
+    '</div>'+
+    // Secciones
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin:14px 0 6px">📋 Secciones a incluir</div>'+
+    '<div style="background:#0f1a30;border-radius:10px;padding:12px">'+
+      pdfCheck('sec_resumen','📊 Resumen ejecutivo (nivel de producción, KPIs)',true)+
+      pdfCheck('sec_produccion','🏭 Producción del servicio (autoclave, instrumental, etc.)',true)+
+      pdfCheck('sec_cumplimiento','✅ Cumplimiento del equipo',true)+
+      pdfCheck('sec_temperaturas','🌡️ Control de temperaturas',false)+
+      pdfCheck('sec_supervision','👁 Supervisiones realizadas',false)+
+      pdfCheck('sec_personal','👥 Dotación y personal',false)+
+    '</div>'+
+    '<button onclick="generarPDFGerencia()" class="btn-add" style="margin-top:16px;background:linear-gradient(135deg,#b45309,#f59e0b)">📥 Generar y descargar PDF</button>'+
+    '<div id="pdfEstado" style="font-size:12px;text-align:center;margin-top:8px;min-height:16px"></div>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+
+function pdfCheck(id,label,checked){
+  return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:12px;color:rgba(255,255,255,.85)">'+
+    '<input type="checkbox" id="'+id+'"'+(checked?' checked':'')+' style="width:16px;height:16px;accent-color:#f59e0b">'+label+'</label>';
+}
+window.togglePdfFechas=function(){
+  var sel=document.getElementById('pdfPeriodo');
+  var div=document.getElementById('pdfFechasRango');
+  if(div)div.style.display=(sel.value==='rango')?'flex':'none';
+};
+
+window.generarPDFGerencia=function(){
+  var est=document.getElementById('pdfEstado');
+  if(typeof jspdf==='undefined'&&typeof window.jspdf==='undefined'){est.innerHTML='<span style="color:#fca5a5">No se pudo cargar el generador de PDF.</span>';return;}
+  est.innerHTML='<span style="color:#93c5fd">Generando PDF...</span>';
+  // Determinar período
+  var sel=document.getElementById('pdfPeriodo').value;
+  var desde,hasta,etiqueta;
+  if(sel==='rango'){
+    desde=document.getElementById('pdfDesde').value;
+    hasta=document.getElementById('pdfHasta').value;
+    etiqueta='Período '+desde+' a '+hasta;
+  } else {
+    desde=sel+'-01';
+    var y=parseInt(sel.slice(0,4)),m=parseInt(sel.slice(5,7));
+    var ultimo=new Date(y,m,0).getDate();
+    hasta=sel+'-'+('0'+ultimo).slice(-2);
+    etiqueta='Mes '+sel;
+  }
+  // Recolectar secciones elegidas
+  var secs={
+    resumen:document.getElementById('sec_resumen').checked,
+    produccion:document.getElementById('sec_produccion').checked,
+    cumplimiento:document.getElementById('sec_cumplimiento').checked,
+    temperaturas:document.getElementById('sec_temperaturas').checked,
+    supervision:document.getElementById('sec_supervision').checked,
+    personal:document.getElementById('sec_personal').checked
+  };
+  setTimeout(function(){construirPDF(desde,hasta,etiqueta,secs,est);},100);
+};
+
+function construirPDF(desde,hasta,etiqueta,secs,est){
+  try{
+    var jsPDFlib=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
+    var doc=new jsPDFlib({unit:'pt',format:'a4'});
+    var W=doc.internal.pageSize.getWidth();
+    var margin=40;var y=margin;
+    var mes=desde.slice(0,7);
+
+    // Helpers
+    function nuevaPaginaSiHaceFalta(alto){if(y+alto>doc.internal.pageSize.getHeight()-margin){doc.addPage();y=margin;}}
+    function titulo(txt){nuevaPaginaSiHaceFalta(30);doc.setFontSize(13);doc.setTextColor(31,78,121);doc.setFont(undefined,'bold');doc.text(txt,margin,y);y+=6;doc.setDrawColor(200,200,200);doc.line(margin,y,W-margin,y);y+=16;doc.setFont(undefined,'normal');doc.setTextColor(40,40,40);}
+    function linea(label,valor){nuevaPaginaSiHaceFalta(18);doc.setFontSize(10);doc.setTextColor(90,90,90);doc.text(label,margin,y);doc.setTextColor(20,20,20);doc.setFont(undefined,'bold');doc.text(String(valor),W-margin,y,{align:'right'});doc.setFont(undefined,'normal');y+=16;}
+    function parrafo(txt){nuevaPaginaSiHaceFalta(16);doc.setFontSize(9);doc.setTextColor(70,70,70);var lines=doc.splitTextToSize(txt,W-2*margin);lines.forEach(function(l){nuevaPaginaSiHaceFalta(13);doc.text(l,margin,y);y+=13;});y+=4;}
+
+    // ENCABEZADO
+    doc.setFillColor(31,78,121);doc.rect(0,0,W,70,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(16);doc.setFont(undefined,'bold');
+    doc.text('Centro de Salud Universitario',margin,34);
+    doc.setFontSize(10);doc.setFont(undefined,'normal');
+    doc.text('Reporte de Gestión — Servicio de Esterilización',margin,52);
+    doc.setFontSize(9);doc.text(etiqueta+'  ·  Generado '+new Date().toLocaleDateString('es-CL'),margin,64);
+    y=95;
+
+    // Métricas del período
+    var m=calcularMetricasRango(desde,hasta);
+
+    if(secs.resumen){
+      titulo('Resumen ejecutivo');
+      // Nivel de producción
+      doc.setFontSize(11);doc.setFont(undefined,'bold');
+      doc.setTextColor(31,78,121);
+      doc.text('Nivel de producción del equipo: '+m.nivel.label+' ('+m.nivel.score+'/100)',margin,y);
+      y+=18;doc.setFont(undefined,'normal');doc.setTextColor(40,40,40);
+      linea('Cargas de autoclave',m.cargasAuto+'  ('+m.cargasOK+' cumplieron)');
+      linea('Instrumental esterilizado',m.instrumental+' piezas');
+      linea('Cumplimiento del equipo',m.cumplimiento+'%');
+      linea('Personal en dotación',m.personal);
+      linea('Supervisiones oficiales',m.supervisiones);
+      y+=6;
+    }
+
+    if(secs.produccion){
+      titulo('Producción del servicio');
+      var hayProd=false;
+      Object.keys(PRODUCCION_TIPOS).forEach(function(tp){
+        if(m.produccion[tp]>0){linea(PRODUCCION_TIPOS[tp].label,m.produccion[tp]+' '+PRODUCCION_TIPOS[tp].unidad);hayProd=true;}
+      });
+      linea('Cargas de autoclave procesadas',m.cargasAuto);
+      if(!hayProd)parrafo('Sin registros de producción en el período.');
+      y+=6;
+    }
+
+    if(secs.cumplimiento){
+      titulo('Cumplimiento del equipo');
+      parrafo('El cumplimiento refleja el porcentaje de tareas medibles asignadas que fueron efectivamente registradas en el período.');
+      linea('Cumplimiento promedio del equipo',m.cumplimiento+'%');
+      y+=6;
+    }
+
+    if(secs.temperaturas){
+      titulo('Control de temperaturas');
+      var nTemp=Object.values(regTemperatura||{}).filter(function(r){return r.fecha&&r.fecha>=desde&&r.fecha<=hasta;}).length;
+      linea('Registros de temperatura',nTemp);
+      parrafo('Controles de cadena de frío y temperatura de espacios realizados en el período.');
+      y+=6;
+    }
+
+    if(secs.supervision){
+      titulo('Supervisiones realizadas');
+      var sups=Object.values(supervisionData||{}).filter(function(r){return r.fecha&&r.fecha>=desde&&r.fecha<=hasta;});
+      linea('Total de supervisiones',sups.length);
+      linea('Supervisiones oficiales (ponderadas)',sups.filter(function(r){return r.pondera===true;}).length);
+      y+=6;
+    }
+
+    if(secs.personal){
+      titulo('Dotación y personal');
+      linea('Personal total en dotación',(nombres||[]).length);
+      var enInduccion=(nombres||[]).filter(function(n){return typeof estaEnInduccion==='function'&&estaEnInduccion(n);}).length;
+      if(enInduccion>0)linea('En proceso de inducción',enInduccion);
+      y+=6;
+    }
+
+    // Pie
+    doc.setFontSize(8);doc.setTextColor(150,150,150);
+    var totalP=doc.internal.getNumberOfPages();
+    for(var i=1;i<=totalP;i++){
+      doc.setPage(i);
+      doc.text('GESTHOR · CSU USS Valdivia · Página '+i+' de '+totalP,W/2,doc.internal.pageSize.getHeight()-20,{align:'center'});
+    }
+
+    doc.save('Reporte_Gerencia_'+mes+'.pdf');
+    est.innerHTML='<span style="color:#6ee7b7">✓ PDF generado y descargado.</span>';
+  }catch(err){
+    est.innerHTML='<span style="color:#fca5a5">Error: '+err.message+'</span>';
+  }
+}
+
+// Calcula métricas para un rango de fechas (desde-hasta)
+function calcularMetricasRango(desde,hasta){
+  var prod={};var totalProd=0;
+  Object.keys(PRODUCCION_TIPOS).forEach(function(tp){
+    var suma=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tp&&r.fecha&&r.fecha>=desde&&r.fecha<=hasta;}).reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+    prod[tp]=suma;totalProd+=suma;
+  });
+  var cargasAuto=Object.values(regAutoclave||{}).filter(function(r){return r.fecha&&r.fecha>=desde&&r.fecha<=hasta;});
+  var cargasOK=cargasAuto.filter(function(r){return r.cumple;}).length;
+  var instrumental=cargasAuto.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+  var mes=desde.slice(0,7);
+  return {
+    nivel:(typeof calcNivelProduccion==='function'?calcNivelProduccion(mes):{label:'—',score:0}),
+    cumplimiento:(typeof calcCumplimientoEquipoMes==='function'?calcCumplimientoEquipoMes(mes):0),
+    cargasAuto:cargasAuto.length,cargasOK:cargasOK,instrumental:instrumental,
+    personal:(nombres||[]).length,
+    supervisiones:Object.values(supervisionData||{}).filter(function(r){return r.fecha&&r.fecha>=desde&&r.fecha<=hasta&&r.pondera===true;}).length,
+    produccion:prod,totalProduccion:totalProd
+  };
+}
+
 window.abrirDashMaestro=function(){
   var ov=document.getElementById('dashMaestroOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='dashMaestroOv';
@@ -6782,6 +6985,7 @@ window.abrirDashMaestro=function(){
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
       '<span style="font-size:19px;font-weight:800;color:#c4b5fd">🎯 Dashboard maestro</span>'+
       '<div style="display:flex;gap:6px">'+
+        '<button onclick="abrirGeneradorPDF()" style="background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer;font-weight:600">📑 Exportar PDF gerencia</button>'+
         '<button onclick="generarReporteMensual()" style="background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer;font-weight:600">📄 Reporte mensual</button>'+
         '<button onclick="document.getElementById(\'dashMaestroOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
       '</div>'+
@@ -9272,7 +9476,7 @@ function nombreRol(tipo){
 }
 
 // Tipos que son "medibles" (tienen registro verificable)
-var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1};
+var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario_2:1,dispensario_3:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1};
 var TIPOS_SEMANALES={aseo:1}; // tareas que se controlan 1 vez por semana, no diariamente
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
