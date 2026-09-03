@@ -6894,7 +6894,8 @@ window.generarPDFGerencia=function(){
 function horasProcesoRegistro(tipo,cantidad){
   var t=(typeof TIEMPOS_PROCESO!=='undefined')?TIEMPOS_PROCESO[tipo]:null;
   if(!t)return 0.1; // proceso breve por defecto
-  return t.modo==='unidad'?t.h*(Number(cantidad)||0):t.h;
+  var h=t.modo==='unidad'?t.h*(Number(cantidad)||0):t.h;
+  return (isNaN(h)||h<0)?0:h;
 }
 
 // Productividad por ÁREA (según áreas de la planilla de dotación cruzadas con quién registró)
@@ -6939,6 +6940,7 @@ function productividadPorDia(desde,hasta){
 
 // Interpola un color de mapa de calor (azul frío → rojo caliente) según valor 0-1
 function colorCalor(t){
+  t=Number(t);if(isNaN(t))t=0;
   t=Math.max(0,Math.min(1,t));
   // Azul (59,130,246) → Amarillo (251,191,36) → Rojo (239,68,68)
   var r,g,b;
@@ -7049,7 +7051,7 @@ function construirPDF(desde,hasta,etiqueta,secs,est){
     doc.setFont(undefined,'normal');
     var hallazgos=[];
     hallazgos.push('El centro realizo '+totalRegistros+' procesos registrados, equivalentes a '+Math.round(totalHoras)+' horas de trabajo productivo directo en el periodo.');
-    if(areaTop)hallazgos.push('El area de mayor carga fue '+areaTop.n+', concentrando '+Math.round(areaTop.h)+' horas ('+Math.round(areaTop.h/totalHoras*100)+'% del total).');
+    if(areaTop&&totalHoras>0)hallazgos.push('El area de mayor carga fue '+areaTop.n+', concentrando '+Math.round(areaTop.h)+' horas ('+Math.round(areaTop.h/totalHoras*100)+'% del total).');
     if(m.cargasAuto>0)hallazgos.push('Se procesaron '+m.cargasAuto+' cargas de esterilizacion, con un '+Math.round(m.cargasOK/m.cargasAuto*100)+'% de cumplimiento de parametros.');
     hallazgos.push('El cumplimiento de tareas asignadas del equipo alcanzo el '+m.cumplimiento+'%.');
     hallazgos.forEach(function(h){
@@ -7065,7 +7067,6 @@ function construirPDF(desde,hasta,etiqueta,secs,est){
     // ═══ RESUMEN GLOBAL DEL CENTRO ═══
     if(secs.resumen){
       titulo('Nivel de produccion del centro');
-      doc.setFillColor(m.nivel.score>=55?[46,125,50]:m.nivel.score>=35?[217,160,20]:[192,57,43]);
       var nc=m.nivel.score>=55?[46,125,50]:m.nivel.score>=35?[217,160,20]:[192,57,43];
       doc.setFillColor(nc[0],nc[1],nc[2]);
       doc.roundedRect(margin,y,W-2*margin,40,5,5,'F');
