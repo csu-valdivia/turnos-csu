@@ -1680,7 +1680,7 @@ window.ingresarRol=function(rol){
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
       var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
-      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderInduccionList==='function')renderInduccionList();
+      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
       if(p)p.scrollIntoView({behavior:'smooth'});
     },600);
@@ -7424,7 +7424,7 @@ window.abrirDashMaestro=function(){
     dashMaestroKPI('📦','Instrumental procesado',instrumentalTotal,'piezas/mes','#60a5fa','tecnico')+
     dashMaestroKPI('🌡️','Registros temp.',tempRegs,'este mes','#22d3ee','tecnico')+
     dashMaestroKPI('✅','Cumplimiento equipo',cumplEquipo+'%','promedio','#34d399','cumplimiento')+
-    dashMaestroKPI('👥','Personal',totalPersonas,'en dotación','#a78bfa','asignaciones')+
+    dashMaestroKPI('👥','Personal',totalPersonas,personalInternas().length>0?('+'+personalInternas().length+' internas'):'en dotación','#a78bfa','asignaciones')+
     dashMaestroKPI('👁','Supervisiones',supMes,'oficiales/mes','#c4b5fd','tecnico')+
   '</div>';
 
