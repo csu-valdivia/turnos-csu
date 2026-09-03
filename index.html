@@ -1108,6 +1108,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div id="clasifPersonalList" style="background:#16233d;border-radius:10px;overflow:hidden"></div>
           </div>
 
+          <div class="asec" style="border-color:rgba(96,165,250,.3)">
+            <p class="asec-title" style="color:#7ec8f7">📚 Plan de estudio dirigido</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Dirige protocolos y grupos de preguntas a una persona o grupo. Útil para que un colaborador nuevo o interna estudie por partes, no todo de golpe.</p>
+            <select id="planEstudioTarget" onchange="renderPlanEstudio()" style="width:100%;font-size:13px;padding:9px;margin-bottom:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px"></select>
+            <div id="planEstudioList"></div>
+          </div>
+
           <div class="asec" style="border-color:rgba(139,92,246,.3)">
             <p class="asec-title" style="color:#a78bfa">👁 Ronda de supervisión</p>
             <div id="ponderaIndicador" style="margin-bottom:12px"></div>
@@ -1551,7 +1558,7 @@ var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var bancoActivo={}; // banco activo por sede (nuevo sistema)
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={},induccion={},rolPersona={};
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={},induccion={},rolPersona={},planEstudio={};
 var anunIdx=0,anunTimer=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1629,6 +1636,7 @@ function attach(){
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
   on('borradores',function(v){borradoresData=v||{};});
   on('rolPersona',function(v){rolPersona=v||{};if(document.getElementById('clasifPersonalList'))renderClasifPersonal();});
+  on('planEstudio',function(v){planEstudio=v||{};if(document.getElementById('planEstudioList'))renderPlanEstudio();});
   on('rankPesos',function(v){if(v&&typeof v==='object'&&typeof v.conocimiento==='number'){RANK_PESOS={cumplimiento:(v.cumplimiento||0),conocimiento:(v.conocimiento||0),supervision:(v.supervision||0)};renderRanking();}});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
@@ -1680,7 +1688,7 @@ window.ingresarRol=function(rol){
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
       var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
-      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderInduccionList==='function')renderInduccionList();
+      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderPlanEstudio==='function')renderPlanEstudio();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
       if(p)p.scrollIntoView({behavior:'smooth'});
     },600);
@@ -3700,9 +3708,28 @@ function estaEnInduccion(nombre){
 }
 // ¿Una ficha específica está activada para esta persona?
 function fichaActivaParaPersona(nombre,docId){
+  // 1. Plan de estudio dirigido (si existe para la persona o su grupo)
+  var plan=planPersona(nombre);
+  if(plan&&plan.protocolos&&Object.keys(plan.protocolos).length>0){
+    // Si hay un plan definido, solo ve los protocolos activados en el plan
+    if(plan.protocolos[docId]===false)return false;
+    if(plan.protocolos[docId]===true)return true;
+    // Protocolo no mencionado en el plan → sigue la regla de inducción
+  }
+  // 2. Inducción (regla existente)
   var e=estadoInduccion(nombre);
   if(!e||!e.enInduccion)return true; // no está en inducción → todas activas
   return !!(e.fichasActivas&&e.fichasActivas[docId]); // en inducción → solo las activadas
+}
+
+// Devuelve el plan de estudio aplicable a una persona (individual o de su grupo)
+function planPersona(nombre){
+  var k=(nombre||'').replace(/[.#$/\[\]]/g,'_');
+  // Prioridad: plan individual > plan del grupo
+  if(planEstudio&&planEstudio['persona_'+k])return planEstudio['persona_'+k];
+  var grupo=rolDe(nombre); // 'clinico' | 'interna' | 'direccion'
+  if(planEstudio&&planEstudio['grupo_'+grupo])return planEstudio['grupo_'+grupo];
+  return null;
 }
 // ¿La supervisión en terreno está activa para esta persona?
 function supervisionActivaParaPersona(nombre){
@@ -3888,8 +3915,17 @@ function temaVisibleFor(doc,tema,nombre){
 
 // Preguntas de un documento que corresponden a la persona indicada
 function preguntasParaPersona(doc,nombre){
+  var plan=planPersona(nombre);
+  var docId=Object.keys(biblioteca||{}).find(function(id){return biblioteca[id]===doc;});
+  var temasPlan=(plan&&plan.temas&&docId&&plan.temas[docId])?plan.temas[docId]:null;
+  // ¿Hay al menos un tema marcado en el plan? (si no, ignora el filtro de temas)
+  var hayTemasMarcados=temasPlan&&Object.values(temasPlan).some(function(v){return v===true;});
   return Object.values(doc.preguntas||{}).filter(function(p){
-    return temaVisibleFor(doc,p.tema||'General',nombre);
+    var tema=p.tema||'General';
+    if(hayTemasMarcados){
+      return temasPlan[temaKey(tema)]===true;
+    }
+    return temaVisibleFor(doc,tema,nombre);
   });
 }
 
@@ -5946,7 +5982,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();renderInduccionList();var _bpPin=document.getElementById('abrirBorradoresBtn');if(_bpPin)_bpPin.onclick=abrirPanelBorradores;var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderPlanEstudio==='function')renderPlanEstudio();renderInduccionList();var _bpPin=document.getElementById('abrirBorradoresBtn');if(_bpPin)_bpPin.onclick=abrirPanelBorradores;var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -6839,6 +6875,66 @@ window.setRolPersona=function(nombre,rol){
   rolPersona[k]=rol;
   sedeRef('rolPersona/'+k).set(rol);
   renderClasifPersonal();
+};
+
+// ══════════════ PLAN DE ESTUDIO DIRIGIDO ══════════════
+window.renderPlanEstudio=function(){
+  var sel=document.getElementById('planEstudioTarget');
+  var cont=document.getElementById('planEstudioList');
+  if(!sel||!cont)return;
+  // Llenar el selector si está vacío
+  if(!sel.options.length){
+    var opts='<optgroup label="Grupos"><option value="grupo_clinico">👥 Todos los clínicos</option><option value="grupo_interna">🎓 Todas las internas</option></optgroup>';
+    var lista=(nombres||[]).map(function(n){return n.nombre||n;});
+    opts+='<optgroup label="Personas">'+lista.map(function(n){return '<option value="persona_'+esc(n).replace(/'/g,"").replace(/[.#$/\[\]]/g,'_')+'">'+esc(n)+'</option>';}).join('')+'</optgroup>';
+    sel.innerHTML=opts;
+  }
+  var targetKey=sel.value;
+  var plan=planEstudio[targetKey]||{protocolos:{},temas:{}};
+  var obligatorias=Object.entries(biblioteca||{}).filter(function(e){return e[1].obligatoria;});
+  if(!obligatorias.length){cont.innerHTML='<p style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Sin protocolos obligatorios configurados.</p>';return;}
+  var html='<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">Marca los protocolos y, dentro de cada uno, los grupos de preguntas (temas) que esta selección debe estudiar. Si no marcas nada, ve todo lo estándar.</div>';
+  obligatorias.forEach(function(e){
+    var docId=e[0],doc=e[1];
+    var activo=(plan.protocolos&&plan.protocolos[docId]===true);
+    html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:8px">'+
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#fff;font-weight:600">'+
+        '<input type="checkbox" '+(activo?'checked':'')+' onchange="togglePlanProtocolo(\''+targetKey+'\',\''+docId+'\',this.checked)" style="width:16px;height:16px;accent-color:#60a5fa">'+
+        esc(doc.titulo)+'</label>';
+    // Temas del protocolo
+    var temas=temasDeDoc(doc);
+    if(temas.length&&activo){
+      var temasPlan=(plan.temas&&plan.temas[docId])||{};
+      html+='<div style="margin-left:24px;margin-top:8px;display:flex;flex-direction:column;gap:5px">';
+      html+='<div style="font-size:10px;color:rgba(255,255,255,.4)">Grupos de preguntas:</div>';
+      temas.forEach(function(tema){
+        var tActivo=temasPlan[temaKey(tema)]===true;
+        html+='<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.8)">'+
+          '<input type="checkbox" '+(tActivo?'checked':'')+' onchange="togglePlanTema(\''+targetKey+'\',\''+docId+'\',\''+esc(tema).replace(/'/g,"")+'\',this.checked)" style="width:14px;height:14px;accent-color:#a78bfa">'+
+          esc(tema)+'</label>';
+      });
+      html+='<div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:2px">Si no marcas ningún tema, verá todas las preguntas del protocolo.</div>';
+      html+='</div>';
+    }
+    html+='</div>';
+  });
+  cont.innerHTML=html;
+};
+window.togglePlanProtocolo=function(target,docId,activo){
+  if(!planEstudio[target])planEstudio[target]={protocolos:{},temas:{}};
+  if(!planEstudio[target].protocolos)planEstudio[target].protocolos={};
+  planEstudio[target].protocolos[docId]=activo;
+  sedeRef('planEstudio/'+target+'/protocolos/'+docId).set(activo);
+  renderPlanEstudio();
+};
+window.togglePlanTema=function(target,docId,tema,activo){
+  if(!planEstudio[target])planEstudio[target]={protocolos:{},temas:{}};
+  if(!planEstudio[target].temas)planEstudio[target].temas={};
+  if(!planEstudio[target].temas[docId])planEstudio[target].temas[docId]={};
+  var tk=temaKey(tema);
+  planEstudio[target].temas[docId][tk]=activo;
+  sedeRef('planEstudio/'+target+'/temas/'+docId+'/'+tk).set(activo);
+  renderPlanEstudio();
 };
 
 // ══════════════ GENERADOR DE REPORTE PDF PARA GERENCIA ══════════════
