@@ -6785,6 +6785,13 @@ window.abrirGeneradorPDF=function(){
       pdfCheck('sec_supervision','👁 Supervisiones realizadas',false)+
       pdfCheck('sec_personal','👥 Dotación y personal',false)+
     '</div>'+
+    // Gráficos de impacto visual
+    '<div style="font-size:12px;font-weight:700;color:#f59e0b;margin:14px 0 6px">📊 Gráficos de impacto (visual)</div>'+
+    '<div style="background:#0f1a30;border-radius:10px;padding:12px">'+
+      pdfCheck('graf_areas','🔥 Mapa de calor: áreas más productivas',true)+
+      pdfCheck('graf_colab','🏅 Colaborador más y menos productivo',false)+
+      pdfCheck('graf_dias','📅 Mapa de calor por día de la semana',false)+
+    '</div>'+
     '<button onclick="generarPDFGerencia()" class="btn-add" style="margin-top:16px;background:linear-gradient(135deg,#b45309,#f59e0b)">📥 Generar y descargar PDF</button>'+
     '<div id="pdfEstado" style="font-size:12px;text-align:center;margin-top:8px;min-height:16px"></div>'+
     '</div>';
@@ -6826,10 +6833,70 @@ window.generarPDFGerencia=function(){
     cumplimiento:document.getElementById('sec_cumplimiento').checked,
     temperaturas:document.getElementById('sec_temperaturas').checked,
     supervision:document.getElementById('sec_supervision').checked,
-    personal:document.getElementById('sec_personal').checked
+    personal:document.getElementById('sec_personal').checked,
+    graf_areas:document.getElementById('graf_areas').checked,
+    graf_colab:document.getElementById('graf_colab').checked,
+    graf_dias:document.getElementById('graf_dias').checked
   };
   setTimeout(function(){construirPDF(desde,hasta,etiqueta,secs,est);},100);
 };
+
+// Productividad ponderada por tiempo real de cada proceso (horas), la medida más justa
+function horasProcesoRegistro(tipo,cantidad){
+  var t=(typeof TIEMPOS_PROCESO!=='undefined')?TIEMPOS_PROCESO[tipo]:null;
+  if(!t)return 0.1; // proceso breve por defecto
+  return t.modo==='unidad'?t.h*(Number(cantidad)||0):t.h;
+}
+
+// Productividad por ÁREA (según áreas de la planilla de dotación cruzadas con quién registró)
+function productividadPorArea(desde,hasta){
+  var areas={};
+  // Necesita dotacionData para saber áreas de cada persona
+  function areasDe(nombre){
+    var d=dotacionData&&dotacionData[nombre];
+    return (d&&d.areas&&d.areas.length)?d.areas:['Sin área asignada'];
+  }
+  function sumar(nombre,horas){
+    areasDe(nombre).forEach(function(a){
+      var n=areasDe(nombre).length||1;
+      areas[a]=(areas[a]||0)+horas/n;
+    });
+  }
+  Object.values(regAutoclave||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta&&r.quien)sumar(r.quien,horasProcesoRegistro('autoclave',r.cantidad));});
+  Object.values(regProduccion||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta&&r.quien)sumar(r.quien,horasProcesoRegistro(r.tipo,r.cantidad));});
+  Object.values(regTemperatura||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta&&r.quien)sumar(r.quien,horasProcesoRegistro(r.tipo,1));});
+  return areas;
+}
+
+// Productividad por COLABORADOR (horas de trabajo ponderadas)
+function productividadPorColaborador(desde,hasta){
+  var pers={};
+  function sumar(nombre,horas){if(nombre)pers[nombre]=(pers[nombre]||0)+horas;}
+  Object.values(regAutoclave||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar(r.quien,horasProcesoRegistro('autoclave',r.cantidad));});
+  Object.values(regProduccion||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar(r.quien,horasProcesoRegistro(r.tipo,r.cantidad));});
+  Object.values(regTemperatura||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar(r.quien,horasProcesoRegistro(r.tipo,1));});
+  return pers;
+}
+
+// Productividad por DÍA DE LA SEMANA
+function productividadPorDia(desde,hasta){
+  var dias={'Lunes':0,'Martes':0,'Miércoles':0,'Jueves':0,'Viernes':0,'Sábado':0,'Domingo':0};
+  function sumar(fecha,horas){var d=diaDeDate(fecha);if(dias[d]!==undefined)dias[d]+=horas;}
+  Object.values(regAutoclave||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar(r.fecha,horasProcesoRegistro('autoclave',r.cantidad));});
+  Object.values(regProduccion||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar(r.fecha,horasProcesoRegistro(r.tipo,r.cantidad));});
+  Object.values(regTemperatura||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar(r.fecha,horasProcesoRegistro(r.tipo,1));});
+  return dias;
+}
+
+// Interpola un color de mapa de calor (azul frío → rojo caliente) según valor 0-1
+function colorCalor(t){
+  t=Math.max(0,Math.min(1,t));
+  // Azul (59,130,246) → Amarillo (251,191,36) → Rojo (239,68,68)
+  var r,g,b;
+  if(t<0.5){var k=t/0.5;r=Math.round(59+(251-59)*k);g=Math.round(130+(191-130)*k);b=Math.round(246+(36-246)*k);}
+  else{var k2=(t-0.5)/0.5;r=Math.round(251+(239-251)*k2);g=Math.round(191+(68-191)*k2);b=Math.round(36+(68-36)*k2);}
+  return [r,g,b];
+}
 
 function construirPDF(desde,hasta,etiqueta,secs,est){
   try{
@@ -6911,6 +6978,82 @@ function construirPDF(desde,hasta,etiqueta,secs,est){
       linea('Personal total en dotación',(nombres||[]).length);
       var enInduccion=(nombres||[]).filter(function(n){return typeof estaEnInduccion==='function'&&estaEnInduccion(n);}).length;
       if(enInduccion>0)linea('En proceso de inducción',enInduccion);
+      y+=6;
+    }
+
+    // ══════ GRÁFICOS DE IMPACTO ══════
+    // Mapa de calor de áreas más productivas
+    if(secs.graf_areas){
+      var areas=productividadPorArea(desde,hasta);
+      var arr=Object.keys(areas).map(function(a){return {nombre:a,horas:areas[a]};}).sort(function(a,b){return b.horas-a.horas;});
+      if(arr.length){
+        nuevaPaginaSiHaceFalta(40+arr.length*30);
+        titulo('Mapa de calor — Áreas más productivas');
+        parrafo('Intensidad según horas de trabajo real (procesos ponderados por su duración). Más rojo = mayor carga productiva.');
+        var maxH=arr[0].horas||1;
+        arr.forEach(function(a){
+          nuevaPaginaSiHaceFalta(26);
+          var t=a.horas/maxH;var col=colorCalor(t);
+          var barW=(W-2*margin-140)*t;
+          doc.setFillColor(col[0],col[1],col[2]);
+          doc.roundedRect(margin+140,y-9,Math.max(barW,3),14,2,2,'F');
+          doc.setFontSize(9);doc.setTextColor(40,40,40);
+          doc.text(a.nombre,margin,y);
+          doc.setTextColor(90,90,90);doc.setFontSize(8);
+          doc.text(Math.round(a.horas)+' h',W-margin,y,{align:'right'});
+          y+=24;
+        });
+        y+=6;
+      }
+    }
+
+    // Colaborador más y menos productivo (nombre solo del más productivo)
+    if(secs.graf_colab){
+      var pers=productividadPorColaborador(desde,hasta);
+      var parr=Object.keys(pers).filter(function(n){return n&&n!=='—';}).map(function(n){return {nombre:n,horas:pers[n]};}).sort(function(a,b){return b.horas-a.horas;});
+      if(parr.length){
+        nuevaPaginaSiHaceFalta(120);
+        titulo('Productividad del equipo');
+        var top=parr[0];
+        var prom=parr.reduce(function(a,p){return a+p.horas;},0)/parr.length;
+        // Tarjeta destacada del más productivo (CON nombre)
+        doc.setFillColor(232,245,233);doc.roundedRect(margin,y-4,W-2*margin,46,4,4,'F');
+        doc.setFontSize(9);doc.setTextColor(46,125,50);doc.setFont(undefined,'bold');
+        doc.text('🏅 Colaborador más productivo del período',margin+12,y+12);
+        doc.setFontSize(13);doc.setTextColor(27,94,32);
+        doc.text(top.nombre+'  ('+Math.round(top.horas)+' h)',margin+12,y+32);
+        doc.setFont(undefined,'normal');
+        y+=58;
+        // Datos agregados del resto (SIN nombres)
+        linea('Promedio de horas productivas por colaborador',Math.round(prom)+' h');
+        linea('Total de colaboradores con producción registrada',parr.length);
+        var menos=parr[parr.length-1];
+        linea('Menor carga registrada en el período',Math.round(menos.horas)+' h  (sin identificar)');
+        parrafo('Por confidencialidad, solo se identifica al colaborador destacado. El resto se presenta de forma agregada.');
+        y+=6;
+      }
+    }
+
+    // Mapa de calor por día de la semana
+    if(secs.graf_dias){
+      var dias=productividadPorDia(desde,hasta);
+      var ordenDias=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+      var maxD=Math.max.apply(null,ordenDias.map(function(d){return dias[d];}).concat([1]));
+      nuevaPaginaSiHaceFalta(60+7*24);
+      titulo('Mapa de calor — Producción por día de la semana');
+      parrafo('Identifica los días de mayor y menor carga productiva del servicio.');
+      ordenDias.forEach(function(d){
+        nuevaPaginaSiHaceFalta(24);
+        var t=dias[d]/maxD;var col=colorCalor(t);
+        var barW=(W-2*margin-140)*t;
+        doc.setFillColor(col[0],col[1],col[2]);
+        doc.roundedRect(margin+140,y-9,Math.max(barW,3),14,2,2,'F');
+        doc.setFontSize(9);doc.setTextColor(40,40,40);
+        doc.text(d,margin,y);
+        doc.setTextColor(90,90,90);doc.setFontSize(8);
+        doc.text(Math.round(dias[d])+' h',W-margin,y,{align:'right'});
+        y+=22;
+      });
       y+=6;
     }
 
