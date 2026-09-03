@@ -1102,6 +1102,12 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="ilist" id="induccionList"></div>
           </div>
 
+          <div class="asec" style="border-color:rgba(124,58,237,.3)">
+            <p class="asec-title" style="color:#c4b5fd">👥 Clasificación del personal</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Marca el rol de cada persona. Solo los clínicos cuentan como <b>dotación</b> en reportes y costos. Las internas aportan carga pero no costo. La dirección queda fuera del conteo.</p>
+            <div id="clasifPersonalList" style="background:#16233d;border-radius:10px;overflow:hidden"></div>
+          </div>
+
           <div class="asec" style="border-color:rgba(139,92,246,.3)">
             <p class="asec-title" style="color:#a78bfa">👁 Ronda de supervisión</p>
             <div id="ponderaIndicador" style="margin-bottom:12px"></div>
@@ -1545,7 +1551,7 @@ var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var bancoActivo={}; // banco activo por sede (nuevo sistema)
-var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={},induccion={};
+var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={},induccion={},rolPersona={};
 var anunIdx=0,anunTimer=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1622,6 +1628,7 @@ function attach(){
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
   on('borradores',function(v){borradoresData=v||{};});
+  on('rolPersona',function(v){rolPersona=v||{};if(document.getElementById('clasifPersonalList'))renderClasifPersonal();});
   on('rankPesos',function(v){if(v&&typeof v==='object'&&typeof v.conocimiento==='number'){RANK_PESOS={cumplimiento:(v.cumplimiento||0),conocimiento:(v.conocimiento||0),supervision:(v.supervision||0)};renderRanking();}});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
@@ -1673,7 +1680,7 @@ window.ingresarRol=function(rol){
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
       var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
-      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();initPesosRanking();if(typeof renderInduccionList==='function')renderInduccionList();
+      if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
       if(p)p.scrollIntoView({behavior:'smooth'});
     },600);
@@ -5939,7 +5946,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
   row.appendChild(oBtn('Cancelar',function(){m.remove();}));
   var ok=pBtn('Entrar',function(){
-    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();initPesosRanking();renderInduccionList();var _bpPin=document.getElementById('abrirBorradoresBtn');if(_bpPin)_bpPin.onclick=abrirPanelBorradores;var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
+    if(pinIn.value===PIN){m.remove();p.classList.add('open');adminUnlocked=true;supervisorActivo='';supervisorAreas=[];renderPendientes();renderPendList();renderCambiosAdmin();renderAusenciasAdmin();renderLlList();renderEncList();renderCobList();renderClaveActual();renderCumpAdmin();renderHeatMap();updateQkSelects();initSupervisionAdmin();renderAnunciosAdmin();initHoraAvisoSelect();initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();renderInduccionList();var _bpPin=document.getElementById('abrirBorradoresBtn');if(_bpPin)_bpPin.onclick=abrirPanelBorradores;var _db=document.getElementById('abrirDashboardBtn');if(_db)_db.onclick=abrirDashboardGestion;initKpiAdmin();var _di=document.getElementById('abrirDashInvBtn');if(_di)_di.onclick=abrirDashboardInventario;var _dt=document.getElementById('abrirDashTecBtn');if(_dt)_dt.onclick=abrirDashboardTecnico;var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       renderSupEstadoHoy();
       updateInternoNombreSelect();
       renderInternosList();
@@ -6796,6 +6803,44 @@ window.exportarDashboardImagen=function(){
   }).catch(function(err){aviso.textContent='Error al capturar';setTimeout(function(){aviso.remove();},3000);});
 };
 
+// ══════════════ CLASIFICACIÓN DE PERSONAL ══════════════
+// rolPersona[nombre] = 'clinico' | 'interna' | 'direccion'. Por defecto: clinico.
+function rolDe(nombre){
+  var k=(nombre||'').replace(/[.#$/\[\]]/g,'_');
+  return (rolPersona&&rolPersona[k])||'clinico';
+}
+function personalDotacion(){
+  return (nombres||[]).map(function(n){return n.nombre||n;}).filter(function(n){return rolDe(n)==='clinico';});
+}
+function personalInternas(){
+  return (nombres||[]).map(function(n){return n.nombre||n;}).filter(function(n){return rolDe(n)==='interna';});
+}
+function nDotacion(){return personalDotacion().length;}
+
+window.renderClasifPersonal=function(){
+  var cont=document.getElementById('clasifPersonalList');if(!cont)return;
+  var lista=(nombres||[]).map(function(n){return n.nombre||n;});
+  var roles={clinico:'Clinico (dotacion)',interna:'Interna',direccion:'Direccion'};
+  cont.innerHTML=lista.map(function(n){
+    var r=rolDe(n);
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<span style="font-size:13px;color:#fff">'+esc(n)+'</span>'+
+      '<select onchange="setRolPersona(\''+esc(n).replace(/'/g,"\\'")+'\',this.value)" style="font-size:12px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+        Object.keys(roles).map(function(k){return '<option value="'+k+'"'+(r===k?' selected':'')+'>'+roles[k]+'</option>';}).join('')+
+      '</select>'+
+    '</div>';
+  }).join('');
+  var d=nDotacion(),i=personalInternas().length,dir=lista.length-d-i;
+  cont.innerHTML+='<div style="margin-top:10px;padding:10px;background:rgba(124,58,237,.1);border-radius:8px;font-size:12px;color:rgba(255,255,255,.8)">'+
+    '<b style="color:#c4b5fd">Dotacion (clinicos): '+d+'</b> · Internas: '+i+' · Direccion: '+dir+'</div>';
+};
+window.setRolPersona=function(nombre,rol){
+  var k=nombre.replace(/[.#$/\[\]]/g,'_');
+  rolPersona[k]=rol;
+  sedeRef('rolPersona/'+k).set(rol);
+  renderClasifPersonal();
+};
+
 // ══════════════ GENERADOR DE REPORTE PDF PARA GERENCIA ══════════════
 window.abrirGeneradorPDF=function(){
   var ov=document.getElementById('genPDFOv');if(ov)ov.remove();
@@ -7039,7 +7084,7 @@ function construirPDF(desde,hasta,etiqueta,secs,est){
     kpiGrande(margin,anchoKPI,totalRegistros,'Procesos realizados',[37,99,235]);
     kpiGrande(margin+(anchoKPI+gap),anchoKPI,Math.round(totalHoras)+'h','Horas de trabajo productivo',[180,83,9]);
     kpiGrande(margin+2*(anchoKPI+gap),anchoKPI,m.cumplimiento+'%','Cumplimiento del equipo',[5,150,105]);
-    kpiGrande(margin+3*(anchoKPI+gap),anchoKPI,(nombres||[]).length,'Personal en dotacion',[124,58,237]);
+    kpiGrande(margin+3*(anchoKPI+gap),anchoKPI,nDotacion(),'Personal en dotacion',[124,58,237]);
     y+=80;
 
     // ═══ HALLAZGOS DESTACADOS ═══
@@ -7139,7 +7184,7 @@ function construirPDF(desde,hasta,etiqueta,secs,est){
 
     if(secs.personal){
       titulo('Dotación y personal');
-      linea('Personal total en dotación',(nombres||[]).length);
+      linea('Personal en dotacion (clinicos)',nDotacion());linea('Internas de enfermeria',personalInternas().length);
       var enInduccion=(nombres||[]).filter(function(n){return typeof estaEnInduccion==='function'&&estaEnInduccion(n);}).length;
       if(enInduccion>0)linea('En proceso de inducción',enInduccion);
       y+=6;
@@ -7306,7 +7351,7 @@ function calcularMetricasRango(desde,hasta){
     nivel:(typeof calcNivelProduccion==='function'?calcNivelProduccion(mes):{label:'—',score:0}),
     cumplimiento:(typeof calcCumplimientoEquipoMes==='function'?calcCumplimientoEquipoMes(mes):0),
     cargasAuto:cargasAuto.length,cargasOK:cargasOK,instrumental:instrumental,
-    personal:(nombres||[]).length,
+    personal:nDotacion(),
     supervisiones:Object.values(supervisionData||{}).filter(function(r){return r.fecha&&r.fecha>=desde&&r.fecha<=hasta&&r.pondera===true;}).length,
     produccion:prod,totalProduccion:totalProd
   };
@@ -7336,7 +7381,7 @@ window.abrirDashMaestro=function(){
   // Cumplimiento del equipo (promedio)
   var cumplEquipo=calcCumplimientoEquipoMes(mes);
   // Personal
-  var totalPersonas=(nombres||[]).length;
+  var totalPersonas=nDotacion();
   // Supervisiones ponderadas del mes
   var supMes=Object.values(supervisionData||{}).filter(function(r){return r.fecha&&r.fecha.slice(0,7)===mes&&r.pondera===true;}).length;
 
@@ -7435,7 +7480,7 @@ function calcularMetricasMes(mes){
     cumplimiento:calcCumplimientoEquipoMes(mes),
     cargasAuto:cargasAuto.length,cargasOK:cargasOK,
     instrumental:instrumental,tempRegs:tempRegs,
-    personal:(nombres||[]).length,supervisiones:supMes,
+    personal:nDotacion(),supervisiones:supMes,
     produccion:prod,totalProduccion:totalProd,
     generado:Date.now()
   };
@@ -9887,6 +9932,8 @@ function renderRendimiento(){
       var d=dotacionData[nombre];
       // Carga operacional del mes: procesos técnicos que registró esta persona
       var procesos=contarProcesosPersona(nombre,mes);
+      // HORAS de carga real (procesos ponderados por su tiempo calibrado)
+      var horasCargaPersona=(typeof calcHorasPersonaMes==='function')?calcHorasPersonaMes(nombre,mes):0;
       // Cobertura: N° de áreas que cubre
       var nAreas=(d.areas||[]).length;
       // Cumplimiento: % de tareas cumplidas
@@ -9897,7 +9944,7 @@ function renderRendimiento(){
       var costoHora=d.horas>0?Math.round(d.sueldo/(d.horas*4.33)):null;
       return {nombre:nombre,cargo:d.cargo,sueldo:d.sueldo,horas:d.horas,turno:d.turno,
         areas:d.areas||[],contrato:d.contrato,procesos:procesos,nAreas:nAreas,cumpl:cumpl,
-        costoProc:costoProc,costoHora:costoHora};
+        costoProc:costoProc,costoHora:costoHora,horasCarga:horasCargaPersona};
     });
 
     // Resumen global
@@ -10119,6 +10166,7 @@ function renderRendimiento(){
             '<div style="font-size:9px;color:rgba(255,255,255,.35)">bruto/mes</div></div>'+
         '</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+
+          '<span style="font-size:10px;background:rgba(180,83,9,.18);color:#fbbf24;padding:2px 8px;border-radius:5px">⏱ '+Math.round(f.horasCarga||0)+' h de carga/mes</span>'+
           '<span style="font-size:10px;background:rgba(96,165,250,.15);color:#93c5fd;padding:2px 8px;border-radius:5px">🔧 '+f.procesos+' procesos/mes</span>'+
           '<span style="font-size:10px;background:rgba(167,139,250,.15);color:#c4b5fd;padding:2px 8px;border-radius:5px">📍 '+f.nAreas+' área'+(f.nAreas!==1?'s':'')+'</span>'+
           '<span style="font-size:10px;background:rgba(16,185,129,.12);color:'+cumplColor+';padding:2px 8px;border-radius:5px">✓ '+f.cumpl+'% cumplimiento</span>'+
@@ -10128,7 +10176,14 @@ function renderRendimiento(){
       '</div>';
     });
     html+='</div>';
-    html+='<p style="font-size:10px;color:rgba(255,255,255,.35);margin-top:10px">Procesos técnicos = ciclos de autoclave, controles de temperatura, conductividad y REAS que registró la persona este mes. Los datos de carga vienen de GESTHOR; los de costo, de tu planilla.</p>';
+    html+='<div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px;margin-top:10px">'+
+      '<p style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:4px">📐 Cómo se calcula la carga (horas/mes)</p>'+
+      '<p style="font-size:10px;color:rgba(255,255,255,.6);line-height:1.5">Cada proceso registrado se multiplica por su tiempo real calibrado y se suman las horas del mes:</p>'+
+      '<p style="font-size:10px;color:rgba(255,255,255,.7);line-height:1.6;margin-top:4px">• Autoclave: 1,25 h por carga · Lavado/Secado: 1,5 h por lote · Recepción: 1 h<br>'+
+      '• Empaque: 0,04 h × pieza · Radiografía: 0,21 h × imagen · Dispensario: 0,083 h × atención<br>'+
+      '• Controles (temp., conductividad): 0,1–0,15 h cada uno</p>'+
+      '<p style="font-size:10px;color:rgba(255,255,255,.6);line-height:1.5;margin-top:6px"><b style="color:#fcd34d">Por eso las diferencias son grandes:</b> quien hizo 3 controles de temperatura acumula ~0,3 h, mientras quien procesó 40 cargas de autoclave + empaque acumula 100+ h. La carga refleja el <b>tiempo real de trabajo</b>, no el número de registros. Solo cuenta lo registrado en GESTHOR.</p>'+
+    '</div>';
     html+='<button onclick="borrarDotacion()" style="margin-top:12px;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;cursor:pointer">🗑 Borrar datos de dotación</button>';
   } else {
     html+='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Aún no has cargado la planilla de dotación. Súbela arriba para ver el análisis de rendimiento.</div>';
