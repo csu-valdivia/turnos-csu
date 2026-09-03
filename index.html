@@ -7040,22 +7040,27 @@ function horasProcesoRegistro(tipo,cantidad){
 }
 
 // Productividad por ÁREA (según áreas de la planilla de dotación cruzadas con quién registró)
+// Mapeo de cada tipo de registro a su ÁREA del centro (usado por productividad y reportes)
+var TIPO_AREA={
+  autoclave:'Esterilización', inst_recibido:'Esterilización', inst_lavado:'Esterilización',
+  inst_empaque:'Esterilización', inst_secado:'Esterilización', conductividad:'Esterilización',
+  reas:'Esterilización', temp_ester:'Esterilización', temp_refri:'Esterilización', entrega_esteril:'Esterilización',
+  radiografias:'Rayos',
+  dispensario_2:'Dispensario 2° piso', dispensario_3:'Dispensario 3° piso',
+  temp_pabellon:'Pabellón', temp_box:'Pabellón', pabellon:'Pabellón'
+};
 function productividadPorArea(desde,hasta){
   var areas={};
-  // Necesita dotacionData para saber áreas de cada persona
-  function areasDe(nombre){
-    var d=dotacionData&&dotacionData[nombre];
-    return (d&&d.areas&&d.areas.length)?d.areas:['Sin área asignada'];
+  // El área sale del TIPO de registro (no de la planilla), así siempre está bien clasificado
+  function sumar(tipo,horas){
+    var a=TIPO_AREA[tipo];
+    if(!a)return; // tipo sin área definida → no se cuenta (evita "sin área asignada")
+    areas[a]=(areas[a]||0)+horas;
   }
-  function sumar(nombre,horas){
-    areasDe(nombre).forEach(function(a){
-      var n=areasDe(nombre).length||1;
-      areas[a]=(areas[a]||0)+horas/n;
-    });
-  }
-  Object.values(regAutoclave||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta&&r.quien)sumar(r.quien,horasProcesoRegistro('autoclave',r.cantidad));});
-  Object.values(regProduccion||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta&&r.quien)sumar(r.quien,horasProcesoRegistro(r.tipo,r.cantidad));});
-  Object.values(regTemperatura||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta&&r.quien)sumar(r.quien,horasProcesoRegistro(r.tipo,1));});
+  Object.values(regAutoclave||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar('autoclave',horasProcesoRegistro('autoclave',r.cantidad));});
+  Object.values(regProduccion||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar(r.tipo,horasProcesoRegistro(r.tipo,r.cantidad));});
+  Object.values(regTemperatura||{}).forEach(function(r){if(r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar(r.tipo,horasProcesoRegistro(r.tipo,1));});
+  Object.keys(conductividad||{}).forEach(function(k){var r=conductividad[k];if(r&&r.fecha&&r.fecha>=desde&&r.fecha<=hasta)sumar('conductividad',horasProcesoRegistro('conductividad',1));});
   return areas;
 }
 
@@ -7091,15 +7096,6 @@ function colorCalor(t){
 }
 
 // Mapeo de cada tipo de registro a su ÁREA del centro
-var TIPO_AREA={
-  autoclave:'Esterilización', inst_recibido:'Esterilización', inst_lavado:'Esterilización',
-  inst_empaque:'Esterilización', inst_secado:'Esterilización', conductividad:'Esterilización',
-  reas:'Esterilización', temp_ester:'Esterilización', temp_refri:'Esterilización', entrega_esteril:'Esterilización',
-  radiografias:'Rayos',
-  dispensario_2:'Dispensario 2° piso', dispensario_3:'Dispensario 3° piso',
-  temp_pabellon:'Pabellón', temp_box:'Pabellón', pabellon:'Pabellón'
-};
-
 // Métricas agrupadas por ÁREA del centro (para el reporte completo)
 function calcularMetricasPorArea(desde,hasta){
   var areas={};
