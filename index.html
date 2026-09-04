@@ -444,8 +444,24 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <span class="rol-txt"><span class="rol-label">Enfermero Jefe</span><span class="rol-sub">Requiere PIN</span></span>
           </button>
           <button class="rol-btn" onclick="ingresarRol('operaciones')">
-            <span class="rol-emoji">👷</span>
-            <span class="rol-txt"><span class="rol-label">Operaciones</span><span class="rol-sub">Requiere PIN</span></span>
+            <span class="rol-emoji">📦</span>
+            <span class="rol-txt"><span class="rol-label">Bodega / Mantención</span><span class="rol-sub">Requiere PIN</span></span>
+          </button>
+          <button class="rol-btn" onclick="ingresarRol('administrativo')">
+            <span class="rol-emoji">🗂️</span>
+            <span class="rol-txt"><span class="rol-label">Administrativo</span><span class="rol-sub">Acceso libre</span></span>
+          </button>
+          <button class="rol-btn" onclick="ingresarRol('jefaOperaciones')">
+            <span class="rol-emoji">📋</span>
+            <span class="rol-txt"><span class="rol-label">Jefa de Operaciones</span><span class="rol-sub">Requiere PIN</span></span>
+          </button>
+          <button class="rol-btn" onclick="ingresarRol('docente')">
+            <span class="rol-emoji">🎓</span>
+            <span class="rol-txt"><span class="rol-label">Docente</span><span class="rol-sub">Acceso libre</span></span>
+          </button>
+          <button class="rol-btn" onclick="ingresarRol('gerencia')">
+            <span class="rol-emoji">💼</span>
+            <span class="rol-txt"><span class="rol-label">Gerencia</span><span class="rol-sub">Acceso libre</span></span>
           </button>
         </div>
       </div>
@@ -1550,7 +1566,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1697,19 +1713,73 @@ window.ingresarRol=function(rol){
     return;
   }
   if(rol==='operaciones'){
-    var pinB=prompt('PIN de Operaciones (Bodega):');
+    var pinB=prompt('PIN de Bodega / Mantención:');
     if(pinB===null)return;
     if(pinB!==(pinSede+'B')){alert('PIN incorrecto.');return;}
     setSede('Valdivia');
-    // Entrar directo a Bodega en modo exclusivo (no puede salir a otras partes)
     modoOperaciones=true;
+    // Etapa 3: selector Bodega/Mantención. Por ahora entra a Bodega (comportamiento actual).
     setTimeout(function(){
-      abrirBodega(true); // true = ya autenticado
+      if(typeof abrirSelectorBodegaMantencion==='function'){abrirSelectorBodegaMantencion();}
+      else{abrirBodega(true);}
     },700);
+    return;
+  }
+  // ── ROLES NUEVOS (Etapa 1: puerta de entrada; módulos internos en etapas siguientes) ──
+  if(rol==='administrativo'){
+    setSede('Valdivia');
+    modoRol='administrativo';
+    setTimeout(function(){entrarRolSimple('administrativo');},500);
+    return;
+  }
+  if(rol==='jefaOperaciones'){
+    var pinJO=prompt('PIN de Jefa de Operaciones:');
+    if(pinJO===null)return;
+    if(pinJO!==PIN_JEFA_OPERACIONES){alert('PIN incorrecto.');return;}
+    setSede('Valdivia');
+    modoRol='jefaOperaciones';
+    setTimeout(function(){entrarRolSimple('jefaOperaciones');},500);
+    return;
+  }
+  if(rol==='docente'){
+    setSede('Valdivia');
+    modoRol='docente';
+    setTimeout(function(){entrarRolSimple('docente');},500);
+    return;
+  }
+  if(rol==='gerencia'){
+    setSede('Valdivia');
+    modoRol='gerencia';
+    setTimeout(function(){entrarRolSimple('gerencia');},500);
     return;
   }
 };
 var modoOperaciones=false;
+var modoRol=''; // '' | 'administrativo' | 'jefaOperaciones' | 'docente' | 'gerencia'
+// PIN de Jefa de Operaciones (distinto de Enfermero Jefe 2715 y Bodega 2715B)
+var PIN_JEFA_OPERACIONES='3300';
+
+// Etapa 1: entrada provisional de los roles nuevos (los módulos se construyen en etapas siguientes)
+window.entrarRolSimple=function(rol){
+  var labels={administrativo:'🗂️ Administrativo',jefaOperaciones:'📋 Jefa de Operaciones',docente:'🎓 Docente',gerencia:'💼 Gerencia'};
+  var descripciones={
+    administrativo:'Aquí responderás las preguntas de protocolo administrativo (lunes a viernes).',
+    jefaOperaciones:'Aquí ingresarás la producción diaria de las secretarias y verás la sección de Operaciones del dashboard.',
+    docente:'Aquí verás la biblioteca y responderás las preguntas de protocolo asignadas a tu carrera.',
+    gerencia:'Aquí responderás las preguntas de protocolo. Los reportes se habilitan cuando el Enfermero Jefe lo autorice.'
+  };
+  var ov=document.getElementById('rolSimpleOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='rolSimpleOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center';
+  ov.innerHTML='<div style="max-width:420px">'+
+    '<div style="font-size:44px;margin-bottom:12px">'+labels[rol].split(' ')[0]+'</div>'+
+    '<div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px">'+labels[rol].substring(labels[rol].indexOf(' ')+1)+'</div>'+
+    '<div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:24px">'+descripciones[rol]+'</div>'+
+    '<div style="background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:14px;font-size:12px;color:#93c5fd;margin-bottom:20px">🚧 Este módulo se está habilitando por etapas. La puerta de acceso ya funciona; el contenido se activará próximamente.</div>'+
+    '<button onclick="location.reload()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:inherit;font-size:14px;cursor:pointer">← Volver al inicio</button>'+
+  '</div>';
+  document.body.appendChild(ov);
+};
 
 window.setSede=function(sede){
   S=sede;W='';alertaMostrada=false;adminUnlocked=false;
