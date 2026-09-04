@@ -12330,6 +12330,20 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
   var x=document.getElementById('tTxt').value.trim();
   var jornada=document.getElementById('tJornada').value||'dia';
   if(!n||!dias.length||!t||!x){alert('Selecciona persona, al menos un día, tipo y descripción.');return;}
+  // ── VALIDACIÓN DE EXCLUSIVIDAD POR JORNADA ──
+  // Solo aplica a tipos medibles (los que son "puestos" únicos). Las tareas genéricas no se bloquean.
+  if(TIPOS_MEDIBLES[t]){
+    var choques=[];
+    dias.forEach(function(dia){
+      var conflicto=tareaYaAsignada(t,dia,jornada,n);
+      if(conflicto)choques.push(dia+' ('+jornadaLabel(conflicto.jornada).trim()+' · '+conflicto.nombre+')');
+    });
+    if(choques.length){
+      var cfgT=TIPOS[t]||{l:t};
+      alert('⛔ "'+cfgT.l+'" ya está asignada en:\n\n'+choques.join('\n')+'\n\nUna misma tarea no puede asignarse a dos personas en la misma jornada. Elige otra jornada, otro día, u otra persona.');
+      return;
+    }
+  }
   // Horario programado (solo para pabellón)
   var pabIni=(t==='pabellon')?document.getElementById('tPabInicio').value:'';
   var pabTer=(t==='pabellon')?document.getElementById('tPabTermino').value:'';
@@ -12350,6 +12364,23 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
     showSaved('tareaSaved');
   });
 });
+
+// ¿La tarea (tipo) ya está asignada ese día en una jornada que choca? Devuelve la tarea en conflicto o null.
+// Regla: 'dia' (todo el día) choca con cualquier jornada. AM solo con AM o dia. PM solo con PM o dia.
+function tareaYaAsignada(tipo,dia,jornadaNueva,excluirNombre){
+  var conflicto=null;
+  Object.values(tareas||{}).forEach(function(t){
+    if(conflicto)return;
+    if(t.tipo!==tipo||t.dia!==dia)return;
+    if(excluirNombre&&t.nombre===excluirNombre)return; // no choca consigo mismo
+    var jExist=t.jornada||'dia';
+    // Chocan si alguna es 'dia', o si son la misma jornada
+    if(jExist==='dia'||jornadaNueva==='dia'||jExist===jornadaNueva){
+      conflicto=t;
+    }
+  });
+  return conflicto;
+}
 // Mostrar campos de horario solo cuando el tipo es pabellón
 document.getElementById('tTip').addEventListener('change',function(){
   var box=document.getElementById('tPabHorario');
