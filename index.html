@@ -1566,7 +1566,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1780,7 +1780,7 @@ window.abrirPanelJefaOperaciones=function(){
     '</div>'+
     '<div style="display:flex;gap:8px;margin-bottom:16px">'+
       '<button onclick="tabJefaOp(\'produccion\')" id="tabJO_prod" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(34,211,238,.3);color:#fff">📊 Producción</button>'+
-      '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Secretarias</button>'+
+      '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Equipo</button>'+
       '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
     '</div>'+
     '<div id="jefaOpContenido"></div></div>';
@@ -1798,31 +1798,38 @@ window.tabJefaOp=function(tab){
   else renderRankingAdmin('jefaOpContenido');
 };
 
-// ── Gestión de secretarias ──
+// ── Gestión del equipo administrativo (secretarias + bodega + mantención) ──
 function renderSecretariasAdmin(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
-  var lista=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:secretarias[k]};});
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
   var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
-    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Agregar secretaria</div>'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Agregar al equipo administrativo</div>'+
+    '<input type="text" id="nuevaSecretaria" placeholder="Nombre completo" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
     '<div style="display:flex;gap:8px">'+
-      '<input type="text" id="nuevaSecretaria" placeholder="Nombre completo" style="flex:1;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+      '<select id="nuevoCargo" style="flex:1;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+        '<option value="Secretaria">Secretaria</option>'+
+        '<option value="Bodega">Bodega</option>'+
+        '<option value="Mantención">Mantención</option>'+
+      '</select>'+
       '<button onclick="agregarSecretaria()" class="btn-add" style="width:auto;padding:9px 18px">Agregar</button>'+
     '</div></div>';
   html+='<div style="background:#16233d;border-radius:12px;padding:16px">'+
-    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Secretarias registradas ('+lista.length+')</div>';
-  if(!lista.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no hay secretarias. Agrégalas arriba.</div>';}
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Equipo registrado ('+lista.length+')</div>';
+  if(!lista.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no hay personas. Agrégalas arriba.</div>';}
   else{
-    html+=lista.map(function(s){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:13px;color:#fff">'+esc(s.nombre)+'</span><button onclick="quitarSecretaria(\''+s.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>';}).join('');
+    var emoji={Secretaria:'🗂️',Bodega:'📦',Mantención:'🔧'};
+    html+=lista.map(function(s){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:13px;color:#fff">'+(emoji[s.cargo]||'👤')+' '+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+esc(s.cargo)+'</span></span><button onclick="quitarSecretaria(\''+s.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>';}).join('');
   }
   html+='</div>';
   cont.innerHTML=html;
 }
 window.agregarSecretaria=function(){
   var n=document.getElementById('nuevaSecretaria').value.trim();
+  var cargo=document.getElementById('nuevoCargo').value||'Secretaria';
   if(!n)return;
   var key='sec_'+Date.now();
-  secretarias[key]=n;
-  sedeRef('secretarias/'+key).set(n).then(function(){renderSecretariasAdmin();});
+  secretarias[key]={nombre:n,cargo:cargo};
+  sedeRef('secretarias/'+key).set({nombre:n,cargo:cargo}).then(function(){renderSecretariasAdmin();});
 };
 window.quitarSecretaria=function(key){
   if(!confirm('¿Quitar esta secretaria?'))return;
@@ -1833,7 +1840,7 @@ window.quitarSecretaria=function(key){
 // ── Ingreso diario de producción ──
 window.renderProduccionAdmin=function(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
-  var lista=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:secretarias[k]};});
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
   var hoy=hoyStr();var diaHoy=diaDeDate(hoy);
   var esFinde=(diaHoy==='Sábado'||diaHoy==='Domingo');
   // Selector de fecha (permite retroactivo hasta 7 días hábiles)
@@ -1857,7 +1864,7 @@ window.renderProduccionAdmin=function(){
 
 window.renderFilasProdAdmin=function(){
   var cont=document.getElementById('prodAdminFilas');if(!cont)return;
-  var lista=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:secretarias[k]};});
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
   if(!lista.length){cont.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Agrega secretarias primero (pestaña Secretarias).</div>';return;}
   var fecha=document.getElementById('prodAdminFecha').value||hoyStr();
   var html='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:600"><span>Secretaria</span><span style="text-align:center">Agendados</span><span style="text-align:center">Contactados</span><span style="text-align:center">Inasist.</span></div>';
@@ -1974,43 +1981,80 @@ function puntajeFinalAdmin(key,mes){
 }
 
 // Render del ranking admin. contId = id del contenedor donde pintar.
+window._rankAdminPeriodo='semana';
 window.renderRankingAdmin=function(contId){
   var cont=document.getElementById(contId);if(!cont)return;
-  var mes=hoyStr().slice(0,7);
-  // Participantes: secretarias + bodega + mantención (todos los del módulo admin/operacional)
-  var participantes=[];
-  Object.keys(secretarias||{}).forEach(function(k){participantes.push({key:k,nombre:secretarias[k],rol:'Secretaria'});});
-  // Bodega y Mantención: se identifican por sus registros de capacitación (se agregan cuando existan)
-  Object.keys((rankingAdmin.capacitacion)||{}).forEach(function(k){
-    if(!participantes.some(function(p){return p.key===k;})){
-      var etq=(rankingAdmin.roles&&rankingAdmin.roles[k])||'Operaciones';
-      participantes.push({key:k,nombre:(rankingAdmin.nombres&&rankingAdmin.nombres[k])||k,rol:etq});
-    }
-  });
-  var filas=participantes.map(function(p){
-    var pf=puntajeFinalAdmin(p.key,mes);
-    return {nombre:p.nombre,rol:p.rol,final:pf.final,prod:pf.prod,cap:pf.cap};
-  }).filter(function(f){return f.final!==null;}).sort(function(a,b){return b.final-a.final;});
-  var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
-    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:4px">🏆 Ranking administrativo · '+mes+'</div>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">Secretarias, Bodega y Mantención. Combina producción ('+(pesosAdmin.produccion||60)+'%) y capacitación ('+(pesosAdmin.capacitacion||40)+'%). Indicador de desempeño, sin premios asociados.</div>';
-  if(!filas.length){
-    html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Aún no hay datos suficientes este mes. Se necesita producción cargada o capacitación respondida.</div>';
+  var periodo=window._rankAdminPeriodo||'semana';
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  var desde,hasta,etiqueta;
+  function f(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  if(periodo==='semana'){
+    var lun=new Date(hoy);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
+    var dom=new Date(lun);dom.setDate(dom.getDate()+6);
+    desde=f(lun);hasta=f(dom);etiqueta='Semana '+desde.slice(5)+' al '+hasta.slice(5);
   } else {
-    filas.forEach(function(f,i){
+    var mesN=hoyStr().slice(0,7);desde=mesN+'-01';hasta=mesN+'-31';etiqueta='Mes '+mesN;
+  }
+  var participantes=[];
+  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];participantes.push({key:k,nombre:(typeof v==='object'?v.nombre:v),rol:(typeof v==='object'?v.cargo:'Secretaria')});});
+  var filas=participantes.map(function(p){
+    var pf=puntajeFinalAdminRango(p.key,desde,hasta);
+    return {nombre:p.nombre,rol:p.rol,final:pf.final,prod:pf.prod,cap:pf.cap};
+  }).filter(function(x){return x.final!==null;}).sort(function(a,b){return b.final-a.final;});
+  function btnP(val,lab){return '<button onclick="window._rankAdminPeriodo=\''+val+'\';renderRankingAdmin(\''+contId+'\')" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;background:'+(periodo===val?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
+  var emoji={Secretaria:'🗂️',Bodega:'📦',Mantención:'🔧'};
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">🏆 Ranking equipo administrativo</div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:10px">'+btnP('semana','Semana actual')+btnP('mes','Mes actual')+'</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+etiqueta+' · Secretarias, Bodega y Mantención. Producción ('+(pesosAdmin.produccion||60)+'%) + capacitación ('+(pesosAdmin.capacitacion||40)+'%). Sin premios asociados.</div>';
+  if(!filas.length){
+    html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Aún no hay datos suficientes en este período.</div>';
+  } else {
+    filas.forEach(function(x,i){
       var medalla=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'°';
-      var color=f.final>=80?'#6ee7b7':f.final>=60?'#fcd34d':'#fca5a5';
+      var color=x.final>=80?'#6ee7b7':x.final>=60?'#fcd34d':'#fca5a5';
       html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.05)">'+
         '<span style="font-size:15px;min-width:28px;text-align:center">'+medalla+'</span>'+
-        '<div style="flex:1"><div style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+'</div>'+
-          '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+f.rol+' · '+(f.prod!=null?'Prod '+f.prod+'%':'sin prod')+' · '+(f.cap!=null?'Capac '+f.cap+'%':'sin capac')+'</div></div>'+
-        '<span style="font-size:16px;font-weight:800;color:'+color+'">'+f.final+'</span>'+
+        '<div style="flex:1"><div style="font-size:13px;color:#fff;font-weight:600">'+(emoji[x.rol]||'👤')+' '+esc(x.nombre)+'</div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+x.rol+' · '+(x.prod!=null?'Prod '+x.prod+'%':'sin prod')+' · '+(x.cap!=null?'Capac '+x.cap+'%':'sin capac')+'</div></div>'+
+        '<span style="font-size:16px;font-weight:800;color:'+color+'">'+x.final+'</span>'+
       '</div>';
     });
+    if(periodo==='semana'){
+      html+='<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px;margin-top:10px;font-size:12px;color:#6ee7b7;text-align:center">🏅 Líder de la semana: <b>'+esc(filas[0].nombre)+'</b> ('+filas[0].final+' pts)</div>';
+    }
   }
   html+='</div>';
   cont.innerHTML=html;
 };
+function puntajeFinalAdminRango(key,desde,hasta){
+  var prod=puntajeProduccionRango(key,desde,hasta);
+  var cap=puntajeCapacitacionRango(key,desde,hasta);
+  var pP=(pesosAdmin.produccion||60)/100,pC=(pesosAdmin.capacitacion||40)/100;
+  if(prod===null&&cap===null)return {final:null,prod:null,cap:null};
+  if(prod===null)return {final:cap,prod:null,cap:cap};
+  if(cap===null)return {final:prod,prod:prod,cap:null};
+  return {final:Math.round(prod*pP+cap*pC),prod:prod,cap:cap};
+}
+function puntajeProduccionRango(key,desde,hasta){
+  var dias=produccionAdmin[key]||{};
+  var registros=Object.keys(dias).filter(function(ff){return ff>=desde&&ff<=hasta;}).map(function(ff){return dias[ff];});
+  if(!registros.length)return null;
+  var totAg=0,totCo=0,totIn=0,n=0;
+  registros.forEach(function(r){if(r.agendados!=null){totAg+=r.agendados;n++;}if(r.contactados!=null)totCo+=r.contactados;if(r.inasistencias!=null)totIn+=r.inasistencias;});
+  if(!n)return null;
+  var tc=totAg>0?Math.min(totCo/totAg,1):0;
+  var ta=totAg>0?Math.max(0,1-totIn/totAg):0;
+  return Math.round((tc*0.6+ta*0.4)*100);
+}
+function puntajeCapacitacionRango(key,desde,hasta){
+  var todosMeses=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[key])||{};
+  var pcts=[];
+  Object.values(todosMeses).forEach(function(mesData){Object.values(mesData).forEach(function(reg){if(reg.fecha>=desde&&reg.fecha<=hasta)pcts.push(reg.pct);});});
+  if(!pcts.length)return null;
+  return Math.round(pcts.reduce(function(a,b){return a+b;},0)/pcts.length);
+}
+
 
 // ══════════════ MÓDULO ADMINISTRATIVO (secretarias — preguntas de protocolo) ══════════════
 window.abrirModuloAdministrativo=function(){
@@ -2042,7 +2086,7 @@ window.abrirModuloAdministrativo=function(){
 function renderAdminNombreSel(){
   var cont=document.getElementById('adminNombreSel');if(!cont)return;
   // Lista de secretarias (guardadas en 'secretarias')
-  var lista=Object.keys(secretarias||{}).map(function(k){return secretarias[k];}).filter(Boolean);
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v);}).filter(Boolean);
   if(!lista.length){
     cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no hay secretarias registradas. El Enfermero Jefe o la Jefa de Operaciones debe agregarlas primero.</div>';
     return;
