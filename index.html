@@ -1779,8 +1779,9 @@ window.abrirPanelJefaOperaciones=function(){
       '<button onclick="location.reload()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">← Salir</button>'+
     '</div>'+
     '<div style="display:flex;gap:8px;margin-bottom:16px">'+
-      '<button onclick="tabJefaOp(\'produccion\')" id="tabJO_prod" class="jo-tab" style="flex:1;font-size:13px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(34,211,238,.3);color:#fff">📊 Producción diaria</button>'+
-      '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;font-size:13px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Secretarias</button>'+
+      '<button onclick="tabJefaOp(\'produccion\')" id="tabJO_prod" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(34,211,238,.3);color:#fff">📊 Producción</button>'+
+      '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Secretarias</button>'+
+      '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
     '</div>'+
     '<div id="jefaOpContenido"></div></div>';
   document.body.appendChild(ov);
@@ -1788,10 +1789,13 @@ window.abrirPanelJefaOperaciones=function(){
 };
 
 window.tabJefaOp=function(tab){
-  ['prod','sec'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
-  var activo=document.getElementById(tab==='produccion'?'tabJO_prod':'tabJO_sec');
+  ['prod','sec','rank'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank'};
+  var activo=document.getElementById(map[tab]);
   if(activo){activo.style.background='rgba(34,211,238,.3)';activo.style.color='#fff';}
-  if(tab==='produccion')renderProduccionAdmin();else renderSecretariasAdmin();
+  if(tab==='produccion')renderProduccionAdmin();
+  else if(tab==='secretarias')renderSecretariasAdmin();
+  else renderRankingAdmin('jefaOpContenido');
 };
 
 // ── Gestión de secretarias ──
@@ -1841,7 +1845,11 @@ window.renderProduccionAdmin=function(){
     '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Ingresa por cada secretaria: pacientes agendados, contactados/seguidos e inasistencias. Se puede completar retroactivo hasta 7 días hábiles.</div>'+
     (esFinde?'<div style="background:rgba(96,165,250,.1);border-radius:8px;padding:10px;font-size:11px;color:#93c5fd;margin-bottom:10px">📅 Hoy es fin de semana. El módulo opera lunes a viernes, pero puedes cargar días hábiles anteriores con el selector de fecha.</div>':'')+
     '<div id="prodAdminFilas"></div>'+
-    (lista.length?'<button onclick="guardarProduccionAdmin()" class="btn-add" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:12px">💾 Guardar día</button><div class="saved" id="prodAdminSaved">✓ Guardado</div>':'')+
+    ((borradoresData&&borradoresData.prodAdmin&&borradoresData.prodAdmin.datos)?'<div id="prodAdminBorrBanner" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:10px;margin-top:10px"><div style="font-size:11px;color:#fcd34d;margin-bottom:6px">📝 Tienes un borrador sin terminar del '+(borradoresData.prodAdmin.fecha||'')+'</div><button onclick="retomarBorradorProdAdmin()" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);border-radius:8px;padding:6px 14px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">↩ Retomar</button></div>':'')+
+    (lista.length?'<button onclick="guardarProduccionAdmin()" class="btn-add" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:12px">💾 Guardar día</button>'+
+      '<button onclick="guardarBorradorProdAdmin()" style="width:100%;margin-top:6px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">📝 Guardar borrador (seguir después)</button>'+
+      '<div id="prodAdminBorrEstado" style="font-size:11px;text-align:center;margin-top:6px;min-height:14px"></div>'+
+      '<div class="saved" id="prodAdminSaved">✓ Guardado</div>':'')+
   '</div>';
   cont.innerHTML='<div id="prodAdminPanel">'+html+'</div>';
   renderFilasProdAdmin();
@@ -1886,8 +1894,122 @@ window.guardarProduccionAdmin=function(){
   });
   if(!algo){alert('Ingresa al menos un dato antes de guardar.');return;}
   db.ref('sedes/'+S).update(updates).then(function(){
+    // Al guardar el día completo, limpiar el borrador
+    sedeRef('borradores/prodAdmin').remove();
     showSaved('prodAdminSaved');
   });
+};
+
+// Guardar borrador del panel de producción (estado de todos los campos)
+window.guardarBorradorProdAdmin=function(){
+  var fecha=document.getElementById('prodAdminFecha').value||hoyStr();
+  var datos={};
+  Object.keys(secretarias||{}).forEach(function(key){
+    var ag=document.getElementById('pa_'+key+'_ag');
+    var co=document.getElementById('pa_'+key+'_co');
+    var inas=document.getElementById('pa_'+key+'_in');
+    if(ag&&co&&inas)datos[key]={ag:ag.value,co:co.value,in:inas.value};
+  });
+  var reg={fecha:fecha,datos:datos,hora:('0'+new Date().getHours()).slice(-2)+':'+('0'+new Date().getMinutes()).slice(-2),ts:Date.now()};
+  sedeRef('borradores/prodAdmin').set(reg).then(function(){
+    var ind=document.getElementById('prodAdminBorrEstado');
+    if(ind)ind.innerHTML='<span style="color:#6ee7b7">✓ Borrador guardado '+reg.hora+' — puedes retomarlo luego</span>';
+  });
+};
+
+// Al renderizar las filas, si hay borrador para esa fecha, ofrecer retomarlo
+window.retomarBorradorProdAdmin=function(){
+  var b=(borradoresData&&borradoresData.prodAdmin);
+  if(!b||!b.datos)return;
+  var fechaSel=document.getElementById('prodAdminFecha');
+  if(fechaSel&&b.fecha)fechaSel.value=b.fecha;
+  renderFilasProdAdmin();
+  setTimeout(function(){
+    Object.keys(b.datos).forEach(function(key){
+      var d=b.datos[key];
+      var ag=document.getElementById('pa_'+key+'_ag');if(ag&&d.ag!=='')ag.value=d.ag;
+      var co=document.getElementById('pa_'+key+'_co');if(co&&d.co!=='')co.value=d.co;
+      var inas=document.getElementById('pa_'+key+'_in');if(inas&&d.in!=='')inas.value=d.in;
+    });
+    var banner=document.getElementById('prodAdminBorrBanner');if(banner)banner.remove();
+  },100);
+};
+
+// ══════════════ RANKING ADMINISTRATIVO (secretarias + bodega + mantención) ══════════════
+// Namespace SEPARADO del ranking clínico. Combina producción + capacitación.
+function puntajeProduccionSecretaria(key,mes){
+  // Normaliza las 3 métricas del mes en un 0-100. Solo días con dato.
+  var dias=produccionAdmin[key]||{};
+  var registros=Object.keys(dias).filter(function(f){return f.slice(0,7)===mes;}).map(function(f){return dias[f];});
+  if(!registros.length)return null; // sin datos → no puntúa producción
+  var totAg=0,totCo=0,totIn=0,n=0;
+  registros.forEach(function(r){
+    if(r.agendados!=null){totAg+=r.agendados;n++;}
+    if(r.contactados!=null)totCo+=r.contactados;
+    if(r.inasistencias!=null)totIn+=r.inasistencias;
+  });
+  if(!n)return null;
+  // Tasa de contacto (contactados/agendados) y tasa de asistencia (1 - inas/agendados)
+  var tasaContacto=totAg>0?Math.min(totCo/totAg,1):0;
+  var tasaAsistencia=totAg>0?Math.max(0,1-totIn/totAg):0;
+  // Puntaje: 60% contacto + 40% asistencia (ambos son buenos indicadores de gestión)
+  return Math.round((tasaContacto*0.6+tasaAsistencia*0.4)*100);
+}
+function puntajeCapacitacionAdmin(key,mes){
+  var cap=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[key]&&rankingAdmin.capacitacion[key][mes])||null;
+  if(!cap)return null;
+  var pcts=Object.values(cap).map(function(x){return x.pct;});
+  if(!pcts.length)return null;
+  return Math.round(pcts.reduce(function(a,b){return a+b;},0)/pcts.length);
+}
+function puntajeFinalAdmin(key,mes){
+  var prod=puntajeProduccionSecretaria(key,mes);
+  var cap=puntajeCapacitacionAdmin(key,mes);
+  var pP=(pesosAdmin.produccion||60)/100, pC=(pesosAdmin.capacitacion||40)/100;
+  // Si falta un componente, se reparte el peso al otro (imputación justa)
+  if(prod===null&&cap===null)return {final:null,prod:null,cap:null};
+  if(prod===null)return {final:cap,prod:null,cap:cap};
+  if(cap===null)return {final:prod,prod:prod,cap:null};
+  return {final:Math.round(prod*pP+cap*pC),prod:prod,cap:cap};
+}
+
+// Render del ranking admin. contId = id del contenedor donde pintar.
+window.renderRankingAdmin=function(contId){
+  var cont=document.getElementById(contId);if(!cont)return;
+  var mes=hoyStr().slice(0,7);
+  // Participantes: secretarias + bodega + mantención (todos los del módulo admin/operacional)
+  var participantes=[];
+  Object.keys(secretarias||{}).forEach(function(k){participantes.push({key:k,nombre:secretarias[k],rol:'Secretaria'});});
+  // Bodega y Mantención: se identifican por sus registros de capacitación (se agregan cuando existan)
+  Object.keys((rankingAdmin.capacitacion)||{}).forEach(function(k){
+    if(!participantes.some(function(p){return p.key===k;})){
+      var etq=(rankingAdmin.roles&&rankingAdmin.roles[k])||'Operaciones';
+      participantes.push({key:k,nombre:(rankingAdmin.nombres&&rankingAdmin.nombres[k])||k,rol:etq});
+    }
+  });
+  var filas=participantes.map(function(p){
+    var pf=puntajeFinalAdmin(p.key,mes);
+    return {nombre:p.nombre,rol:p.rol,final:pf.final,prod:pf.prod,cap:pf.cap};
+  }).filter(function(f){return f.final!==null;}).sort(function(a,b){return b.final-a.final;});
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:4px">🏆 Ranking administrativo · '+mes+'</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">Secretarias, Bodega y Mantención. Combina producción ('+(pesosAdmin.produccion||60)+'%) y capacitación ('+(pesosAdmin.capacitacion||40)+'%). Indicador de desempeño, sin premios asociados.</div>';
+  if(!filas.length){
+    html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Aún no hay datos suficientes este mes. Se necesita producción cargada o capacitación respondida.</div>';
+  } else {
+    filas.forEach(function(f,i){
+      var medalla=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'°';
+      var color=f.final>=80?'#6ee7b7':f.final>=60?'#fcd34d':'#fca5a5';
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.05)">'+
+        '<span style="font-size:15px;min-width:28px;text-align:center">'+medalla+'</span>'+
+        '<div style="flex:1"><div style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+'</div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+f.rol+' · '+(f.prod!=null?'Prod '+f.prod+'%':'sin prod')+' · '+(f.cap!=null?'Capac '+f.cap+'%':'sin capac')+'</div></div>'+
+        '<span style="font-size:16px;font-weight:800;color:'+color+'">'+f.final+'</span>'+
+      '</div>';
+    });
+  }
+  html+='</div>';
+  cont.innerHTML=html;
 };
 
 // ══════════════ MÓDULO ADMINISTRATIVO (secretarias — preguntas de protocolo) ══════════════
@@ -1905,7 +2027,13 @@ window.abrirModuloAdministrativo=function(){
     '</div>'+
     (esFinde
       ? '<div style="background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:20px;text-align:center;color:#93c5fd;font-size:14px">📅 El módulo administrativo opera de lunes a viernes. Hoy es '+diaHoy+', no hay preguntas asignadas. ¡Buen fin de semana!</div>'
-      : '<div id="adminNombreSel"></div><div id="adminPreguntasView"></div>')+
+      : '<div id="adminNombreSel"></div>'+
+        '<div id="adminTabs" style="display:none;gap:8px;margin-bottom:14px">'+
+          '<button onclick="tabAdmin(\'material\')" id="tabAD_mat" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(251,191,36,.3);color:#fff">📚 Material</button>'+
+          '<button onclick="tabAdmin(\'preguntas\')" id="tabAD_preg" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📝 Preguntas</button>'+
+          '<button onclick="tabAdmin(\'ranking\')" id="tabAD_rank" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
+        '</div>'+
+        '<div id="adminContenido"></div>')+
     '</div>';
   document.body.appendChild(ov);
   if(!esFinde)renderAdminNombreSel();
@@ -1929,30 +2057,56 @@ function renderAdminNombreSel(){
 
 window.cargarPreguntasAdmin=function(){
   var nombre=document.getElementById('adminNombre').value;
-  var view=document.getElementById('adminPreguntasView');
-  if(!nombre||!view)return;
+  if(!nombre)return;
   window._adminNombre=nombre;
-  // Protocolos administrativos obligatorios con preguntas
-  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].obligatoria&&e[1].preguntas&&Object.keys(e[1].preguntas).length>=2;});
-  if(!protocolos.length){
-    view.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No hay protocolos administrativos con preguntas configurados aún.</div>';
-    return;
-  }
-  // ¿Ya respondió hoy?
-  var hoy=hoyStr();var key=nombre.replace(/[.#$/\[\]\s]/g,'_');
-  var progHoy=(fichaProgresoAdmin[key]&&fichaProgresoAdmin[key].fecha===hoy);
-  if(progHoy&&fichaProgresoAdmin[key].aprobadoHoy){
-    view.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;margin-bottom:6px">¡Ya completaste hoy!</div><div style="font-size:13px;color:rgba(255,255,255,.6)">Respondiste tus preguntas de protocolo administrativo. Nos vemos mañana.</div></div>';
-    return;
-  }
-  // Sortear un protocolo al azar y mostrar sus preguntas
-  var elegido=protocolos[Math.floor(Math.random()*protocolos.length)];
-  window._adminProtocolo={id:elegido[0],doc:elegido[1]};
-  mostrarPreguntasAdmin();
+  document.getElementById('adminTabs').style.display='flex';
+  tabAdmin('material');
 };
 
-function mostrarPreguntasAdmin(){
-  var view=document.getElementById('adminPreguntasView');if(!view)return;
+window.tabAdmin=function(tab){
+  ['mat','preg','rank'].forEach(function(t){var b=document.getElementById('tabAD_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={material:'tabAD_mat',preguntas:'tabAD_preg',ranking:'tabAD_rank'};
+  var activo=document.getElementById(map[tab]);
+  if(activo){activo.style.background='rgba(251,191,36,.3)';activo.style.color='#fff';}
+  var cont=document.getElementById('adminContenido');
+  if(tab==='material')renderMaterialAdmin(cont);
+  else if(tab==='preguntas')renderPreguntasAdminTab(cont);
+  else renderRankingAdmin('adminContenido');
+};
+
+function renderMaterialAdmin(cont){
+  if(!cont)return;
+  var protocolos=Object.entries(bibliotecaAdmin||{});
+  if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no hay material de estudio cargado. El Enfermero Jefe debe agregar los protocolos administrativos.</div>';return;}
+  var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Lee los protocolos antes de responder las preguntas.</div>';
+  protocolos.forEach(function(e){
+    var doc=e[1];
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:10px">'+
+      '<div style="font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:6px">📄 '+esc(doc.titulo)+'</div>'+
+      (doc.categoria?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">'+esc(doc.categoria)+'</div>':'')+
+      '<div style="font-size:13px;color:rgba(255,255,255,.8);line-height:1.6;white-space:pre-wrap">'+esc(doc.contenido||doc.texto||'(Sin contenido de lectura)')+'</div>'+
+    '</div>';
+  });
+  cont.innerHTML=html;
+}
+
+function renderPreguntasAdminTab(cont){
+  if(!cont)return;
+  var nombre=window._adminNombre;
+  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].obligatoria&&e[1].preguntas&&Object.keys(e[1].preguntas).length>=2;});
+  if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No hay protocolos con preguntas configurados aún.</div>';return;}
+  var hoy=hoyStr();var key=nombre.replace(/[.#$/\[\]\s]/g,'_');
+  if(fichaProgresoAdmin[key]&&fichaProgresoAdmin[key].fecha===hoy&&fichaProgresoAdmin[key].aprobadoHoy){
+    cont.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;margin-bottom:6px">¡Ya completaste hoy!</div><div style="font-size:13px;color:rgba(255,255,255,.6)">Nos vemos mañana.</div></div>';
+    return;
+  }
+  var elegido=protocolos[Math.floor(Math.random()*protocolos.length)];
+  window._adminProtocolo={id:elegido[0],doc:elegido[1]};
+  mostrarPreguntasAdmin(cont);
+}
+
+function mostrarPreguntasAdmin(cont){
+  var view=cont||document.getElementById('adminContenido');if(!view)return;
   var doc=window._adminProtocolo.doc;
   var preguntas=Object.values(doc.preguntas||{});
   // Máximo 4 preguntas al azar
@@ -1994,7 +2148,7 @@ window.enviarPreguntasAdmin=function(){
   // También acumular en ranking mensual admin
   var mesKey=hoy.slice(0,7);
   sedeRef('rankingAdmin/capacitacion/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy});
-  var view=document.getElementById('adminPreguntasView');
+  var view=document.getElementById('adminContenido');
   view.innerHTML='<div style="background:'+(pct>=60?'rgba(16,185,129,.1)':'rgba(251,191,36,.1)')+';border:1px solid '+(pct>=60?'rgba(16,185,129,.3)':'rgba(251,191,36,.3)')+';border-radius:12px;padding:24px;text-align:center">'+
     '<div style="font-size:40px;margin-bottom:8px">'+(pct>=60?'✅':'📚')+'</div>'+
     '<div style="font-size:18px;font-weight:800;color:'+(pct>=60?'#6ee7b7':'#fcd34d')+';margin-bottom:6px">'+correctas+' de '+total+' correctas ('+pct+'%)</div>'+
