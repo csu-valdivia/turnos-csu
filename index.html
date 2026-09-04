@@ -1577,6 +1577,8 @@ var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var bancoActivo={}; // banco activo por sede (nuevo sistema)
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={},induccion={},rolPersona={},planEstudio={};
+// ── MÓDULO ADMINISTRATIVO/OPERACIONES (namespaces separados, no tocan lo clínico) ──
+var bibliotecaAdmin={},fichaProgresoAdmin={},produccionAdmin={},rankingAdmin={},pesosAdmin={produccion:60,capacitacion:40},secretarias={};
 var anunIdx=0,anunTimer=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1661,6 +1663,12 @@ function attach(){
   on('horaAvisoTareas',function(v){if(typeof v==='number'&&v>=0&&v<=23)horaAvisoTareas=v;});
   on('tiemposCalibrados',function(v){if(v&&typeof v==='object'){Object.keys(v).forEach(function(tp){if(TIEMPOS_PROCESO[tp]&&typeof v[tp]==='number')TIEMPOS_PROCESO[tp].h=v[tp];});}});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
+  // ── Listeners módulo administrativo (separados de lo clínico) ──
+  on('bibliotecaAdmin',function(v){bibliotecaAdmin=v||{};});
+  on('fichaProgresoAdmin',function(v){fichaProgresoAdmin=v||{};});
+  on('produccionAdmin',function(v){produccionAdmin=v||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();});
+  on('pesosAdmin',function(v){if(v&&typeof v==='object'&&typeof v.produccion==='number')pesosAdmin=v;});
+  on('secretarias',function(v){secretarias=v||{};});
 }
 
 // ── SEDE Y SEMANAS ──
@@ -1729,7 +1737,7 @@ window.ingresarRol=function(rol){
   if(rol==='administrativo'){
     setSede('Valdivia');
     modoRol='administrativo';
-    setTimeout(function(){entrarRolSimple('administrativo');},500);
+    setTimeout(function(){abrirModuloAdministrativo();},500);
     return;
   }
   if(rol==='jefaOperaciones'){
@@ -1738,7 +1746,7 @@ window.ingresarRol=function(rol){
     if(pinJO!==PIN_JEFA_OPERACIONES){alert('PIN incorrecto.');return;}
     setSede('Valdivia');
     modoRol='jefaOperaciones';
-    setTimeout(function(){entrarRolSimple('jefaOperaciones');},500);
+    setTimeout(function(){abrirPanelJefaOperaciones();},500);
     return;
   }
   if(rol==='docente'){
@@ -1757,9 +1765,243 @@ window.ingresarRol=function(rol){
 var modoOperaciones=false;
 var modoRol=''; // '' | 'administrativo' | 'jefaOperaciones' | 'docente' | 'gerencia'
 // PIN de Jefa de Operaciones (distinto de Enfermero Jefe 2715 y Bodega 2715B)
-var PIN_JEFA_OPERACIONES='3300';
+var PIN_JEFA_OPERACIONES='1234c';
 
 // Etapa 1: entrada provisional de los roles nuevos (los módulos se construyen en etapas siguientes)
+// ══════════════ PANEL JEFA DE OPERACIONES ══════════════
+window.abrirPanelJefaOperaciones=function(){
+  var ov=document.getElementById('jefaOpOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='jefaOpOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9000;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:720px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+      '<span style="font-size:18px;font-weight:800;color:#22d3ee">📋 Jefa de Operaciones</span>'+
+      '<button onclick="location.reload()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">← Salir</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:16px">'+
+      '<button onclick="tabJefaOp(\'produccion\')" id="tabJO_prod" class="jo-tab" style="flex:1;font-size:13px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(34,211,238,.3);color:#fff">📊 Producción diaria</button>'+
+      '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;font-size:13px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Secretarias</button>'+
+    '</div>'+
+    '<div id="jefaOpContenido"></div></div>';
+  document.body.appendChild(ov);
+  tabJefaOp('produccion');
+};
+
+window.tabJefaOp=function(tab){
+  ['prod','sec'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var activo=document.getElementById(tab==='produccion'?'tabJO_prod':'tabJO_sec');
+  if(activo){activo.style.background='rgba(34,211,238,.3)';activo.style.color='#fff';}
+  if(tab==='produccion')renderProduccionAdmin();else renderSecretariasAdmin();
+};
+
+// ── Gestión de secretarias ──
+function renderSecretariasAdmin(){
+  var cont=document.getElementById('jefaOpContenido');if(!cont)return;
+  var lista=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:secretarias[k]};});
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Agregar secretaria</div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<input type="text" id="nuevaSecretaria" placeholder="Nombre completo" style="flex:1;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+      '<button onclick="agregarSecretaria()" class="btn-add" style="width:auto;padding:9px 18px">Agregar</button>'+
+    '</div></div>';
+  html+='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Secretarias registradas ('+lista.length+')</div>';
+  if(!lista.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no hay secretarias. Agrégalas arriba.</div>';}
+  else{
+    html+=lista.map(function(s){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:13px;color:#fff">'+esc(s.nombre)+'</span><button onclick="quitarSecretaria(\''+s.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>';}).join('');
+  }
+  html+='</div>';
+  cont.innerHTML=html;
+}
+window.agregarSecretaria=function(){
+  var n=document.getElementById('nuevaSecretaria').value.trim();
+  if(!n)return;
+  var key='sec_'+Date.now();
+  secretarias[key]=n;
+  sedeRef('secretarias/'+key).set(n).then(function(){renderSecretariasAdmin();});
+};
+window.quitarSecretaria=function(key){
+  if(!confirm('¿Quitar esta secretaria?'))return;
+  delete secretarias[key];
+  sedeRef('secretarias/'+key).remove().then(function(){renderSecretariasAdmin();});
+};
+
+// ── Ingreso diario de producción ──
+window.renderProduccionAdmin=function(){
+  var cont=document.getElementById('jefaOpContenido');if(!cont)return;
+  var lista=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:secretarias[k]};});
+  var hoy=hoyStr();var diaHoy=diaDeDate(hoy);
+  var esFinde=(diaHoy==='Sábado'||diaHoy==='Domingo');
+  // Selector de fecha (permite retroactivo hasta 7 días hábiles)
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<span style="font-size:13px;font-weight:700;color:#93c5fd">📊 Producción del día</span>'+
+      '<input type="date" id="prodAdminFecha" value="'+hoy+'" max="'+hoy+'" onchange="renderFilasProdAdmin()" style="font-size:12px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Ingresa por cada secretaria: pacientes agendados, contactados/seguidos e inasistencias. Se puede completar retroactivo hasta 7 días hábiles.</div>'+
+    (esFinde?'<div style="background:rgba(96,165,250,.1);border-radius:8px;padding:10px;font-size:11px;color:#93c5fd;margin-bottom:10px">📅 Hoy es fin de semana. El módulo opera lunes a viernes, pero puedes cargar días hábiles anteriores con el selector de fecha.</div>':'')+
+    '<div id="prodAdminFilas"></div>'+
+    (lista.length?'<button onclick="guardarProduccionAdmin()" class="btn-add" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:12px">💾 Guardar día</button><div class="saved" id="prodAdminSaved">✓ Guardado</div>':'')+
+  '</div>';
+  cont.innerHTML='<div id="prodAdminPanel">'+html+'</div>';
+  renderFilasProdAdmin();
+};
+
+window.renderFilasProdAdmin=function(){
+  var cont=document.getElementById('prodAdminFilas');if(!cont)return;
+  var lista=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:secretarias[k]};});
+  if(!lista.length){cont.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Agrega secretarias primero (pestaña Secretarias).</div>';return;}
+  var fecha=document.getElementById('prodAdminFecha').value||hoyStr();
+  var html='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:600"><span>Secretaria</span><span style="text-align:center">Agendados</span><span style="text-align:center">Contactados</span><span style="text-align:center">Inasist.</span></div>';
+  lista.forEach(function(s){
+    var reg=(produccionAdmin[s.key]&&produccionAdmin[s.key][fecha])||{};
+    html+='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;margin-bottom:6px;align-items:center">'+
+      '<span style="font-size:12px;color:#fff">'+esc(s.nombre)+'</span>'+
+      '<input type="number" min="0" id="pa_'+s.key+'_ag" value="'+(reg.agendados!=null?reg.agendados:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+      '<input type="number" min="0" id="pa_'+s.key+'_co" value="'+(reg.contactados!=null?reg.contactados:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+      '<input type="number" min="0" id="pa_'+s.key+'_in" value="'+(reg.inasistencias!=null?reg.inasistencias:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+    '</div>';
+  });
+  cont.innerHTML=html;
+};
+
+window.guardarProduccionAdmin=function(){
+  var fecha=document.getElementById('prodAdminFecha').value||hoyStr();
+  var lista=Object.keys(secretarias||{});
+  var updates={};var algo=false;
+  lista.forEach(function(key){
+    var ag=document.getElementById('pa_'+key+'_ag').value;
+    var co=document.getElementById('pa_'+key+'_co').value;
+    var inas=document.getElementById('pa_'+key+'_in').value;
+    // Solo guardar si al menos un campo tiene dato (días sin dato = pendientes, no 0)
+    if(ag!==''||co!==''||inas!==''){
+      updates['produccionAdmin/'+key+'/'+fecha]={
+        agendados:ag!==''?Number(ag):null,
+        contactados:co!==''?Number(co):null,
+        inasistencias:inas!==''?Number(inas):null,
+        fecha:fecha,ts:Date.now()
+      };
+      algo=true;
+    }
+  });
+  if(!algo){alert('Ingresa al menos un dato antes de guardar.');return;}
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('prodAdminSaved');
+  });
+};
+
+// ══════════════ MÓDULO ADMINISTRATIVO (secretarias — preguntas de protocolo) ══════════════
+window.abrirModuloAdministrativo=function(){
+  var ov=document.getElementById('moduloAdminOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='moduloAdminOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9000;overflow-y:auto;padding:20px';
+  // ¿Es fin de semana? El rol admin no opera sábado/domingo
+  var diaHoy=diaDeDate(hoyStr());
+  var esFinde=(diaHoy==='Sábado'||diaHoy==='Domingo');
+  ov.innerHTML='<div style="max-width:480px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+      '<span style="font-size:18px;font-weight:800;color:#fbbf24">🗂️ Administrativo</span>'+
+      '<button onclick="location.reload()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">← Salir</button>'+
+    '</div>'+
+    (esFinde
+      ? '<div style="background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:20px;text-align:center;color:#93c5fd;font-size:14px">📅 El módulo administrativo opera de lunes a viernes. Hoy es '+diaHoy+', no hay preguntas asignadas. ¡Buen fin de semana!</div>'
+      : '<div id="adminNombreSel"></div><div id="adminPreguntasView"></div>')+
+    '</div>';
+  document.body.appendChild(ov);
+  if(!esFinde)renderAdminNombreSel();
+};
+
+function renderAdminNombreSel(){
+  var cont=document.getElementById('adminNombreSel');if(!cont)return;
+  // Lista de secretarias (guardadas en 'secretarias')
+  var lista=Object.keys(secretarias||{}).map(function(k){return secretarias[k];}).filter(Boolean);
+  if(!lista.length){
+    cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no hay secretarias registradas. El Enfermero Jefe o la Jefa de Operaciones debe agregarlas primero.</div>';
+    return;
+  }
+  cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:6px">¿Quién eres?</label>'+
+    '<select id="adminNombre" onchange="cargarPreguntasAdmin()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+      '<option value="">Selecciona tu nombre</option>'+
+      lista.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('')+
+    '</select></div>';
+}
+
+window.cargarPreguntasAdmin=function(){
+  var nombre=document.getElementById('adminNombre').value;
+  var view=document.getElementById('adminPreguntasView');
+  if(!nombre||!view)return;
+  window._adminNombre=nombre;
+  // Protocolos administrativos obligatorios con preguntas
+  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].obligatoria&&e[1].preguntas&&Object.keys(e[1].preguntas).length>=2;});
+  if(!protocolos.length){
+    view.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No hay protocolos administrativos con preguntas configurados aún.</div>';
+    return;
+  }
+  // ¿Ya respondió hoy?
+  var hoy=hoyStr();var key=nombre.replace(/[.#$/\[\]\s]/g,'_');
+  var progHoy=(fichaProgresoAdmin[key]&&fichaProgresoAdmin[key].fecha===hoy);
+  if(progHoy&&fichaProgresoAdmin[key].aprobadoHoy){
+    view.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;margin-bottom:6px">¡Ya completaste hoy!</div><div style="font-size:13px;color:rgba(255,255,255,.6)">Respondiste tus preguntas de protocolo administrativo. Nos vemos mañana.</div></div>';
+    return;
+  }
+  // Sortear un protocolo al azar y mostrar sus preguntas
+  var elegido=protocolos[Math.floor(Math.random()*protocolos.length)];
+  window._adminProtocolo={id:elegido[0],doc:elegido[1]};
+  mostrarPreguntasAdmin();
+};
+
+function mostrarPreguntasAdmin(){
+  var view=document.getElementById('adminPreguntasView');if(!view)return;
+  var doc=window._adminProtocolo.doc;
+  var preguntas=Object.values(doc.preguntas||{});
+  // Máximo 4 preguntas al azar
+  var shuffled=preguntas.slice().sort(function(){return Math.random()-0.5;}).slice(0,4);
+  window._adminPreguntas=shuffled;
+  window._adminRespuestas={};
+  var html='<div style="background:#16233d;border-radius:12px;padding:18px">'+
+    '<div style="font-size:11px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📋 '+esc(doc.titulo)+'</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px">Responde las siguientes preguntas:</div>';
+  shuffled.forEach(function(p,i){
+    html+='<div style="margin-bottom:16px"><div style="font-size:14px;color:#fff;font-weight:600;margin-bottom:8px">'+(i+1)+'. '+esc(p.pregunta)+'</div>';
+    (p.opciones||[]).forEach(function(op,j){
+      html+='<button class="admin-opcion" data-preg="'+i+'" data-op="'+j+'" data-correcta="'+(j===Number(p.correcta)?'1':'0')+'" onclick="selAdminOpcion('+i+','+j+')" style="display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+esc(op)+'</button>';
+    });
+    html+='</div>';
+  });
+  html+='<button onclick="enviarPreguntasAdmin()" class="btn-add" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:8px">Enviar respuestas</button>';
+  html+='</div>';
+  view.innerHTML=html;
+}
+
+window.selAdminOpcion=function(preg,op){
+  document.querySelectorAll('.admin-opcion[data-preg="'+preg+'"]').forEach(function(b){b.style.background='rgba(255,255,255,.05)';b.style.borderColor='rgba(255,255,255,.12)';});
+  var btn=document.querySelector('.admin-opcion[data-preg="'+preg+'"][data-op="'+op+'"]');
+  if(btn){btn.style.background='rgba(96,165,250,.25)';btn.style.borderColor='#60a5fa';}
+  window._adminRespuestas[preg]=(btn.dataset.correcta==='1');
+};
+
+window.enviarPreguntasAdmin=function(){
+  var total=window._adminPreguntas.length;
+  var respondidas=Object.keys(window._adminRespuestas).length;
+  if(respondidas<total){alert('Responde todas las preguntas antes de enviar.');return;}
+  var correctas=Object.values(window._adminRespuestas).filter(function(v){return v===true;}).length;
+  var pct=Math.round(correctas/total*100);
+  var nombre=window._adminNombre;var key=nombre.replace(/[.#$/\[\]\s]/g,'_');var hoy=hoyStr();
+  // Guardar progreso en namespace SEPARADO (fichaProgresoAdmin)
+  var registro={fecha:hoy,correctas:correctas,total:total,pct:pct,aprobadoHoy:(pct>=60),ts:Date.now(),protocolo:window._adminProtocolo.doc.titulo};
+  sedeRef('fichaProgresoAdmin/'+key).set(registro);
+  // También acumular en ranking mensual admin
+  var mesKey=hoy.slice(0,7);
+  sedeRef('rankingAdmin/capacitacion/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy});
+  var view=document.getElementById('adminPreguntasView');
+  view.innerHTML='<div style="background:'+(pct>=60?'rgba(16,185,129,.1)':'rgba(251,191,36,.1)')+';border:1px solid '+(pct>=60?'rgba(16,185,129,.3)':'rgba(251,191,36,.3)')+';border-radius:12px;padding:24px;text-align:center">'+
+    '<div style="font-size:40px;margin-bottom:8px">'+(pct>=60?'✅':'📚')+'</div>'+
+    '<div style="font-size:18px;font-weight:800;color:'+(pct>=60?'#6ee7b7':'#fcd34d')+';margin-bottom:6px">'+correctas+' de '+total+' correctas ('+pct+'%)</div>'+
+    '<div style="font-size:13px;color:rgba(255,255,255,.6)">'+(pct>=60?'¡Bien hecho! Completaste tu capacitación de hoy.':'Sigue repasando el protocolo. Vuelve a intentarlo mañana.')+'</div>'+
+  '</div>';
+};
+
 window.entrarRolSimple=function(rol){
   var labels={administrativo:'🗂️ Administrativo',jefaOperaciones:'📋 Jefa de Operaciones',docente:'🎓 Docente',gerencia:'💼 Gerencia'};
   var descripciones={
