@@ -1837,7 +1837,10 @@ function renderSecretariasAdmin(){
       '<button onclick="agregarSecretaria()" class="btn-add" style="width:auto;padding:9px 18px">Agregar</button>'+
     '</div></div>';
   html+='<div style="background:#16233d;border-radius:12px;padding:16px">'+
-    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Equipo registrado ('+lista.length+')</div>';
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<span style="font-size:13px;font-weight:700;color:#93c5fd">Equipo registrado ('+lista.length+')</span>'+
+      '<button onclick="limpiarDuplicadosEquipo()" style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🧹 Limpiar duplicados</button>'+
+    '</div>';
   if(!lista.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no hay personas. Agrégalas arriba.</div>';}
   else{
     var emoji={Secretaria:'🗂️',Bodega:'📦',Mantención:'🔧'};
@@ -1850,9 +1853,33 @@ window.agregarSecretaria=function(){
   var n=document.getElementById('nuevaSecretaria').value.trim();
   var cargo=document.getElementById('nuevoCargo').value||'Secretaria';
   if(!n)return;
+  // Prevenir duplicados: ¿ya existe alguien con ese nombre?
+  var yaExiste=Object.values(secretarias||{}).some(function(v){var nom=(typeof v==='object'?v.nombre:v);return nom&&nom.trim().toLowerCase()===n.toLowerCase();});
+  if(yaExiste){alert('"'+n+'" ya está en el equipo. No se agregó de nuevo.');return;}
   var key='sec_'+Date.now();
   secretarias[key]={nombre:n,cargo:cargo};
-  sedeRef('secretarias/'+key).set({nombre:n,cargo:cargo}).then(function(){renderSecretariasAdmin();});
+  sedeRef('secretarias/'+key).set({nombre:n,cargo:cargo}).then(function(){
+    document.getElementById('nuevaSecretaria').value='';
+    renderSecretariasAdmin();
+  });
+};
+
+// Limpiar duplicados: conserva una sola entrada por nombre
+window.limpiarDuplicadosEquipo=function(){
+  var vistos={};var aBorrar=[];
+  Object.keys(secretarias||{}).forEach(function(k){
+    var v=secretarias[k];var nom=((typeof v==='object'?v.nombre:v)||'').trim().toLowerCase();
+    if(!nom)return;
+    if(vistos[nom]){aBorrar.push(k);}else{vistos[nom]=k;}
+  });
+  if(!aBorrar.length){alert('No hay duplicados que limpiar.');return;}
+  if(!confirm('Se encontraron '+aBorrar.length+' entradas duplicadas. ¿Eliminarlas? Se conservará una de cada persona.'))return;
+  var updates={};
+  aBorrar.forEach(function(k){updates['secretarias/'+k]=null;delete secretarias[k];});
+  db.ref('sedes/'+S).update(updates).then(function(){
+    alert('✓ Se eliminaron '+aBorrar.length+' duplicados.');
+    renderSecretariasAdmin();
+  });
 };
 window.quitarSecretaria=function(key){
   if(!confirm('¿Quitar esta secretaria?'))return;
@@ -1890,11 +1917,11 @@ window.renderFilasProdAdmin=function(){
   var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
   if(!lista.length){cont.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Agrega secretarias primero (pestaña Secretarias).</div>';return;}
   var fecha=document.getElementById('prodAdminFecha').value||hoyStr();
-  var html='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:600"><span>Secretaria</span><span style="text-align:center">Agendados</span><span style="text-align:center">Contactados</span><span style="text-align:center">Inasist.</span></div>';
+  var html='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:600"><span>Nombre</span><span style="text-align:center">Agendados</span><span style="text-align:center">Contactados</span><span style="text-align:center">Inasist.</span></div>';
   lista.forEach(function(s){
     var reg=(produccionAdmin[s.key]&&produccionAdmin[s.key][fecha])||{};
     html+='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;margin-bottom:6px;align-items:center">'+
-      '<span style="font-size:12px;color:#fff">'+esc(s.nombre)+'</span>'+
+      '<span style="font-size:12px;color:#fff">'+esc(s.nombre)+'<span style="font-size:9px;color:rgba(255,255,255,.35);display:block">'+esc(s.cargo||'')+'</span></span>'+
       '<input type="number" min="0" id="pa_'+s.key+'_ag" value="'+(reg.agendados!=null?reg.agendados:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
       '<input type="number" min="0" id="pa_'+s.key+'_co" value="'+(reg.contactados!=null?reg.contactados:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
       '<input type="number" min="0" id="pa_'+s.key+'_in" value="'+(reg.inasistencias!=null?reg.inasistencias:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
