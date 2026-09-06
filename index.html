@@ -1773,6 +1773,30 @@ window.abrirPanelJefaOperaciones=function(){
   var ov=document.getElementById('jefaOpOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='jefaOpOv';
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9000;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:720px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  // Cargar los datos del módulo admin DIRECTAMENTE (no depender de listeners globales)
+  Promise.all([
+    sedeRef('secretarias').once('value'),
+    sedeRef('produccionAdmin').once('value'),
+    sedeRef('rankingAdmin').once('value'),
+    sedeRef('pesosAdmin').once('value'),
+    sedeRef('borradores').once('value')
+  ]).then(function(snaps){
+    secretarias=snaps[0].val()||{};
+    produccionAdmin=snaps[1].val()||{};
+    rankingAdmin=snaps[2].val()||{};
+    var pa=snaps[3].val();if(pa&&typeof pa==='object')pesosAdmin=pa;
+    borradoresData=snaps[4].val()||{};
+    // Activar listener en vivo para reflejar cambios
+    sedeRef('secretarias').on('value',function(s){secretarias=s.val()||{};});
+    sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};});
+    renderPanelJefaOperaciones();
+  });
+};
+
+function renderPanelJefaOperaciones(){
+  var ov=document.getElementById('jefaOpOv');if(!ov)return;
   ov.innerHTML='<div style="max-width:720px;margin:0 auto">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
       '<span style="font-size:18px;font-weight:800;color:#22d3ee">📋 Jefa de Operaciones</span>'+
@@ -1784,9 +1808,8 @@ window.abrirPanelJefaOperaciones=function(){
       '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
     '</div>'+
     '<div id="jefaOpContenido"></div></div>';
-  document.body.appendChild(ov);
   tabJefaOp('produccion');
-};
+}
 
 window.tabJefaOp=function(tab){
   ['prod','sec','rank'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
@@ -2061,7 +2084,29 @@ window.abrirModuloAdministrativo=function(){
   var ov=document.getElementById('moduloAdminOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='moduloAdminOv';
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9000;overflow-y:auto;padding:20px';
-  // ¿Es fin de semana? El rol admin no opera sábado/domingo
+  ov.innerHTML='<div style="max-width:480px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  // Cargar datos del módulo directamente
+  Promise.all([
+    sedeRef('secretarias').once('value'),
+    sedeRef('bibliotecaAdmin').once('value'),
+    sedeRef('fichaProgresoAdmin').once('value'),
+    sedeRef('rankingAdmin').once('value'),
+    sedeRef('produccionAdmin').once('value'),
+    sedeRef('pesosAdmin').once('value')
+  ]).then(function(snaps){
+    secretarias=snaps[0].val()||{};
+    bibliotecaAdmin=snaps[1].val()||{};
+    fichaProgresoAdmin=snaps[2].val()||{};
+    rankingAdmin=snaps[3].val()||{};
+    produccionAdmin=snaps[4].val()||{};
+    var pa=snaps[5].val();if(pa&&typeof pa==='object')pesosAdmin=pa;
+    renderModuloAdministrativo();
+  });
+};
+
+function renderModuloAdministrativo(){
+  var ov=document.getElementById('moduloAdminOv');if(!ov)return;
   var diaHoy=diaDeDate(hoyStr());
   var esFinde=(diaHoy==='Sábado'||diaHoy==='Domingo');
   ov.innerHTML='<div style="max-width:480px;margin:0 auto">'+
@@ -2079,9 +2124,8 @@ window.abrirModuloAdministrativo=function(){
         '</div>'+
         '<div id="adminContenido"></div>')+
     '</div>';
-  document.body.appendChild(ov);
   if(!esFinde)renderAdminNombreSel();
-};
+}
 
 function renderAdminNombreSel(){
   var cont=document.getElementById('adminNombreSel');if(!cont)return;
