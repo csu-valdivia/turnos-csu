@@ -9182,9 +9182,99 @@ window.calibrarTiempoReal=function(tipo,promDurMin,promUnidadMin){
   });
 };
 
+// ══════════════ PIZARRA DIGITAL (registro rápido con contador) ══════════════
+// Para lavado, secado, empaque: contar durante la jornada con un toque, total editable al cerrar.
+window.abrirPizarraDigital=function(tipo){
+  var cfg=PRODUCCION_TIPOS[tipo];
+  var ov=document.getElementById('pizarraOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='pizarraOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9250;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;overflow-y:auto';
+  var hoy=hoyStr();
+  // ¿Ya hay un conteo en curso hoy? (guardado como borrador de pizarra)
+  var borrKey='pizarra_'+tipo;
+  var enCurso=(borradoresData&&borradoresData[borrKey]&&borradoresData[borrKey].fecha===hoy)?borradoresData[borrKey].cantidad:0;
+  window._pizarraCount=enCurso||0;
+  window._pizarraTipo=tipo;
+  // Total ya registrado hoy (para mostrar contexto)
+  var yaHoy=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tipo&&r.fecha===hoy;}).reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+  ov.innerHTML='<div style="max-width:420px;width:100%;text-align:center">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
+      '<span style="font-size:16px;font-weight:800;color:#fff">'+cfg.emoji+' '+cfg.label+'</span>'+
+      '<button onclick="cerrarPizarra()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px">Toca para ir contando durante la jornada</div>'+
+    (yaHoy?'<div style="font-size:11px;color:#6ee7b7;margin-bottom:12px">Ya registrado hoy: '+yaHoy+' '+cfg.unidad+'</div>':'<div style="margin-bottom:12px"></div>')+
+    // Contador grande
+    '<div id="pizarraDisplay" style="font-size:80px;font-weight:900;color:'+cfg.color+';line-height:1;margin:10px 0">'+window._pizarraCount+'</div>'+
+    '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px">'+cfg.unidad+'</div>'+
+    // Botón grande +1
+    '<button onclick="pizarraSuma(1)" style="width:100%;font-size:32px;font-weight:800;background:linear-gradient(135deg,'+cfg.color+'cc,'+cfg.color+');color:#0b1220;border:none;border-radius:20px;padding:28px;font-family:inherit;cursor:pointer;margin-bottom:12px;box-shadow:0 6px 20px '+cfg.color+'44">+1</button>'+
+    // Botones +5 +10 y -1
+    '<div style="display:flex;gap:8px;margin-bottom:20px">'+
+      '<button onclick="pizarraSuma(5)" style="flex:1;font-size:20px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:14px;padding:18px;font-family:inherit;cursor:pointer">+5</button>'+
+      '<button onclick="pizarraSuma(10)" style="flex:1;font-size:20px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:14px;padding:18px;font-family:inherit;cursor:pointer">+10</button>'+
+      '<button onclick="pizarraSuma(-1)" style="flex:1;font-size:20px;font-weight:700;background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:14px;padding:18px;font-family:inherit;cursor:pointer">−1</button>'+
+    '</div>'+
+    // Total editable
+    '<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">¿El total no cuadra? Edítalo directamente:</div>'+
+      '<input type="number" id="pizarraTotal" value="'+window._pizarraCount+'" min="0" oninput="pizarraEditar(this.value)" style="width:100%;font-size:22px;font-weight:700;text-align:center;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:10px">'+
+    '</div>'+
+    // Guardar y cerrar jornada
+    '<button onclick="guardarPizarra()" style="width:100%;font-size:16px;font-weight:800;background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;border-radius:14px;padding:18px;font-family:inherit;cursor:pointer;margin-bottom:10px">✓ Cerrar jornada y registrar</button>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);line-height:1.5">El conteo se guarda solo mientras cuentas. Al cerrar jornada, se registra el total y podrás retomarlo si sales antes.</div>'+
+    '<button onclick="cerrarPizarra()" style="width:100%;margin-top:10px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;cursor:pointer">Salir sin cerrar (guarda el conteo)</button>'+
+  '</div>';
+  document.body.appendChild(ov);
+};
+
+function actualizarPizarraDisplay(){
+  var d=document.getElementById('pizarraDisplay');
+  if(d)d.textContent=window._pizarraCount;
+  var inp=document.getElementById('pizarraTotal');
+  if(inp)inp.value=window._pizarraCount;
+}
+window.pizarraSuma=function(n){
+  window._pizarraCount=Math.max(0,(window._pizarraCount||0)+n);
+  actualizarPizarraDisplay();
+  guardarConteoPizarra(); // autoguardar el conteo en curso
+  // Feedback táctil visual
+  var d=document.getElementById('pizarraDisplay');
+  if(d){d.style.transform='scale(1.15)';setTimeout(function(){d.style.transform='scale(1)';},120);}
+};
+window.pizarraEditar=function(v){
+  window._pizarraCount=Math.max(0,Number(v)||0);
+  var d=document.getElementById('pizarraDisplay');if(d)d.textContent=window._pizarraCount;
+  guardarConteoPizarra();
+};
+function guardarConteoPizarra(){
+  var tipo=window._pizarraTipo;
+  sedeRef('borradores/pizarra_'+tipo).set({tipo:tipo,cantidad:window._pizarraCount,fecha:hoyStr(),quien:curNombre||'—',ts:Date.now()});
+}
+window.guardarPizarra=function(){
+  var tipo=window._pizarraTipo;
+  var cant=window._pizarraCount||0;
+  if(cant<=0){alert('El conteo está en 0. Cuenta al menos una unidad antes de cerrar.');return;}
+  var ahora=new Date();
+  var reg={tipo:tipo,cantidad:cant,obs:'',quien:curNombre||'—',
+    hora:('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2),
+    fecha:hoyStr(),ts:Date.now(),viaPizarra:true};
+  sedeRef('regProduccion/'+reg.ts).set(reg).then(function(){
+    // Limpiar el conteo en curso
+    sedeRef('borradores/pizarra_'+tipo).remove();
+    var cfg=PRODUCCION_TIPOS[tipo];
+    var ov=document.getElementById('pizarraOv');
+    if(ov)ov.innerHTML='<div style="max-width:420px;width:100%;text-align:center;padding-top:60px"><div style="font-size:60px;margin-bottom:12px">✅</div><div style="font-size:22px;font-weight:800;color:#6ee7b7;margin-bottom:8px">¡'+cant+' '+cfg.unidad+' registradas!</div><div style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:24px">Jornada de '+cfg.label.toLowerCase()+' cerrada correctamente.</div><button onclick="cerrarPizarra()" style="background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;border-radius:12px;padding:14px 32px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer">Listo</button></div>';
+  });
+};
+window.cerrarPizarra=function(){var ov=document.getElementById('pizarraOv');if(ov)ov.remove();};
+
 window.abrirRegProduccion=function(tipo){
   var cfg=PRODUCCION_TIPOS[tipo];
   if(!cfg){alert('Tipo de registro no reconocido.');return;}
+  // Lavado, secado y empaque usan la PIZARRA DIGITAL (contador rápido)
+  var TIPOS_PIZARRA={inst_lavado:1,inst_secado:1,inst_empaque:1};
+  if(TIPOS_PIZARRA[tipo]){abrirPizarraDigital(tipo);return;}
   var ov=document.getElementById('regProdOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regProdOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
