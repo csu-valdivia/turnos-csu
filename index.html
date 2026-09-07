@@ -1427,6 +1427,27 @@ var TIEMPOS_PROCESO={
   temp_box:{h:0.1,modo:'lote'},temp_refri:{h:0.1,modo:'lote'},
   conductividad:{h:0.15,modo:'lote'},reas:{h:0.25,modo:'lote'}
 };
+// TIEMPO DE TRABAJO HUMANO REAL (lo que UNA persona hace en su turno, NO el total del servicio ni el ciclo de máquina).
+// h = horas de trabajo por vez. vecesDia = cuántas veces al día lo hace ESA persona (estimación conservadora).
+var TIEMPOS_TRABAJO={
+  // Autoclave: cargar (6min) + registrar (2.5min) = 8.5min/carga. Una persona maneja ~5-6 cargas de un equipo.
+  autoclave:{h:0.142,modo:'unidad',vecesDia:5},    // 8.5min × ~5 cargas que hace la persona
+  // Lavado: trabajo MANUAL real. Una persona lava en 1 ciclo (no ambos).
+  inst_lavado:{h:1.25,modo:'lote',vecesDia:1},     // 1.25h manual, su ciclo asignado
+  inst_secado:{h:0.067,modo:'unidad',vecesDia:15}, // 4min/caja × ~15 cajas que seca
+  inst_empaque:{h:0.05,modo:'unidad',vecesDia:15}, // provisional 3min/bandeja × ~15
+  entrega_esteril:{h:0.05,modo:'unidad',vecesDia:1},
+  inst_recibido:{h:1.25,modo:'lote',vecesDia:1},   // ~1.25h su turno de recepción
+  radiografias:{h:0.083,modo:'unidad',vecesDia:6}, // 5min × ~6 tomas
+  dispensario_2:{h:0.05,modo:'lote',vecesDia:1},   // registro único al final
+  dispensario_3:{h:0.05,modo:'lote',vecesDia:1},
+  temp_ester:{h:0.15,modo:'lote',vecesDia:2},
+  temp_refri:{h:0.15,modo:'lote',vecesDia:2},
+  temp_pabellon:{h:0.1,modo:'lote',vecesDia:1},
+  temp_box:{h:0.1,modo:'lote',vecesDia:1},
+  conductividad:{h:0.083,modo:'lote',vecesDia:1},
+  reas:{h:0.15,modo:'lote',vecesDia:1}
+};
 var COSTO_TERCERIZAR_CARGA=200000; // $ por carga de autoclave (150 lts) tercerizada
 var factorIndirecto=0.40; // se recalcula desde horasIndirectasDia; 40% es el valor inicial de referencia
 var horasIndirectasDia=0; // horas indirectas totales del área por día (0 = usar factor 40% por defecto)
@@ -11056,13 +11077,16 @@ function cargaDePersona(nombre){
   // Tareas medibles asignadas a la persona (todas las de la semana)
   var tareasP=Object.values(tareas||{}).filter(function(t){return t.nombre===nombre;});
   var nTareas=tareasP.length;
-  // Horas estimadas por semana: cada tarea diaria se cuenta por sus días de la semana
+  // Horas de TRABAJO HUMANO estimadas por semana (NO el tiempo de proceso/máquina)
   var horasSemana=0;
   tareasP.forEach(function(t){
-    var tiempo=(typeof TIEMPOS_PROCESO!=='undefined'&&TIEMPOS_PROCESO[t.tipo])?TIEMPOS_PROCESO[t.tipo].h:0.15;
-    // Semanales (aseo) cuentan 1 vez; diarias cuentan por día asignado (asumimos 1 registro/día)
-    if(TIPOS_SEMANALES[t.tipo]){horasSemana+=tiempo;}
-    else{horasSemana+=tiempo*5;} // ~5 días hábiles
+    var tt=(typeof TIEMPOS_TRABAJO!=='undefined'&&TIEMPOS_TRABAJO[t.tipo])?TIEMPOS_TRABAJO[t.tipo]:null;
+    if(!tt){horasSemana+=0.05*5;return;} // tipo sin tiempo definido: ~3min breve
+    var vecesDia=tt.vecesDia||1;
+    // horas de trabajo por día = tiempo × veces que se hace al día
+    var horasDia=tt.h*vecesDia;
+    if(TIPOS_SEMANALES[t.tipo]){horasSemana+=tt.h;} // semanales (aseo) 1 vez
+    else{horasSemana+=horasDia*5;} // diarias × 5 días hábiles
   });
   return {nombre:nombre,nTareas:nTareas,horasSemana:horasSemana,tareas:tareasP};
 }
