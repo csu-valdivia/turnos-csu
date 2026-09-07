@@ -1587,7 +1587,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1600,6 +1600,23 @@ var bancoActivo={}; // banco activo por sede (nuevo sistema)
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={},induccion={},rolPersona={},planEstudio={};
 // ── MÓDULO ADMINISTRATIVO/OPERACIONES (namespaces separados, no tocan lo clínico) ──
 var bibliotecaAdmin={},fichaProgresoAdmin={},produccionAdmin={},rankingAdmin={},pesosAdmin={produccion:60,capacitacion:40},secretarias={};
+// Catálogo de métricas administrativas. ambito: 'individual'|'grupal'|'persona'. dir: 'mas'(más=mejor)|'menos'(menos=mejor).
+// asignada: nombre exacto si ambito='persona'. cadencia: 'diaria'|'quincenal'.
+var METRICAS_ADMIN_DEFAULT={
+  m1:{nombre:'Agendar pacientes todas las carreras',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m2:{nombre:'Agendar pacientes clínicas privadas',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m3:{nombre:'Confirmación de pacientes',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m4:{nombre:'Respuestas por WhatsApp',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m5:{nombre:'Pacientes contactados para reagendar',ambito:'grupal',dir:'mas',cadencia:'diaria'},
+  m6:{nombre:'Transacciones en caja (recaudación)',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m7:{nombre:'Laboratorio (entregados y recepcionados)',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m8:{nombre:'Usuarios atendidos (incluye consultas)',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m9:{nombre:'Gratuidades ingresadas',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m10:{nombre:'Tasa de ausentismo',ambito:'persona',asignada:'Ainhoa Olazaran',dir:'menos',cadencia:'diaria'},
+  m11:{nombre:'Bonos Fonasa ingresados',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m12:{nombre:'Revisión cuentas / adeudos',ambito:'persona',asignada:'Fabiola Oyarzo',dir:'menos',cadencia:'quincenal'}
+};
+var metricasAdmin={}; // se carga de Firebase; si está vacío, usa el default
 var anunIdx=0,anunTimer=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1802,14 +1819,15 @@ window.abrirPanelJefaOperaciones=function(){
     sedeRef('produccionAdmin').once('value'),
     sedeRef('rankingAdmin').once('value'),
     sedeRef('pesosAdmin').once('value'),
-    sedeRef('borradores').once('value')
+    sedeRef('borradores').once('value'),
+    sedeRef('metricasAdmin').once('value')
   ]).then(function(snaps){
     secretarias=snaps[0].val()||{};
     produccionAdmin=snaps[1].val()||{};
     rankingAdmin=snaps[2].val()||{};
     var pa=snaps[3].val();if(pa&&typeof pa==='object')pesosAdmin=pa;
     borradoresData=snaps[4].val()||{};
-    // Activar listener en vivo para reflejar cambios
+    metricasAdmin=snaps[5].val()||{};
     sedeRef('secretarias').on('value',function(s){secretarias=s.val()||{};});
     sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};});
     renderPanelJefaOperaciones();
@@ -1909,25 +1927,29 @@ window.quitarSecretaria=function(key){
 };
 
 // ── Ingreso diario de producción ──
+// Métricas activas (las guardadas o el default)
+function metricasActivas(){
+  var m=(metricasAdmin&&Object.keys(metricasAdmin).length)?metricasAdmin:METRICAS_ADMIN_DEFAULT;
+  return m;
+}
+window._metricaSel='m1';
 window.renderProduccionAdmin=function(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
-  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
   var hoy=hoyStr();var diaHoy=diaDeDate(hoy);
   var esFinde=(diaHoy==='Sábado'||diaHoy==='Domingo');
-  // Selector de fecha (permite retroactivo hasta 7 días hábiles)
+  var METRICAS=metricasActivas();
+  var opts=Object.keys(METRICAS).map(function(id){var m=METRICAS[id];var etq=m.ambito==='grupal'?' (grupal)':m.ambito==='persona'?' ('+(m.asignada||'')+')':'';return '<option value="'+id+'"'+(id===window._metricaSel?' selected':'')+'>'+esc(m.nombre)+etq+(m.cadencia==='quincenal'?' · quincenal':'')+'</option>';}).join('');
   var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-      '<span style="font-size:13px;font-weight:700;color:#93c5fd">📊 Producción del día</span>'+
+      '<span style="font-size:13px;font-weight:700;color:#93c5fd">📊 Producción</span>'+
       '<input type="date" id="prodAdminFecha" value="'+hoy+'" max="'+hoy+'" onchange="renderFilasProdAdmin()" style="font-size:12px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
     '</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Ingresa por cada secretaria: pacientes agendados, contactados/seguidos e inasistencias. Se puede completar retroactivo hasta 7 días hábiles.</div>'+
-    (esFinde?'<div style="background:rgba(96,165,250,.1);border-radius:8px;padding:10px;font-size:11px;color:#93c5fd;margin-bottom:10px">📅 Hoy es fin de semana. El módulo opera lunes a viernes, pero puedes cargar días hábiles anteriores con el selector de fecha.</div>':'')+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6);display:block;margin-bottom:4px">Métrica a ingresar</label>'+
+    '<select id="metricaSelector" onchange="window._metricaSel=this.value;renderFilasProdAdmin()" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:12px">'+opts+'</select>'+
+    (esFinde?'<div style="background:rgba(96,165,250,.1);border-radius:8px;padding:10px;font-size:11px;color:#93c5fd;margin-bottom:10px">📅 Fin de semana. Puedes cargar días hábiles anteriores con el selector de fecha.</div>':'')+
     '<div id="prodAdminFilas"></div>'+
-    ((borradoresData&&borradoresData.prodAdmin&&borradoresData.prodAdmin.datos)?'<div id="prodAdminBorrBanner" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:10px;margin-top:10px"><div style="font-size:11px;color:#fcd34d;margin-bottom:6px">📝 Tienes un borrador sin terminar del '+(borradoresData.prodAdmin.fecha||'')+'</div><button onclick="retomarBorradorProdAdmin()" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);border-radius:8px;padding:6px 14px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">↩ Retomar</button></div>':'')+
-    (lista.length?'<button onclick="guardarProduccionAdmin()" class="btn-add" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:12px">💾 Guardar día</button>'+
-      '<button onclick="guardarBorradorProdAdmin()" style="width:100%;margin-top:6px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">📝 Guardar borrador (seguir después)</button>'+
-      '<div id="prodAdminBorrEstado" style="font-size:11px;text-align:center;margin-top:6px;min-height:14px"></div>'+
-      '<div class="saved" id="prodAdminSaved">✓ Guardado</div>':'')+
+    '<button onclick="guardarProduccionAdmin()" class="btn-add" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:12px">💾 Guardar esta métrica</button>'+
+    '<div class="saved" id="prodAdminSaved">✓ Guardado</div>'+
   '</div>';
   cont.innerHTML='<div id="prodAdminPanel">'+html+'</div>';
   renderFilasProdAdmin();
@@ -1935,17 +1957,35 @@ window.renderProduccionAdmin=function(){
 
 window.renderFilasProdAdmin=function(){
   var cont=document.getElementById('prodAdminFilas');if(!cont)return;
-  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
-  if(!lista.length){cont.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Agrega secretarias primero (pestaña Secretarias).</div>';return;}
+  var METRICAS=metricasActivas();
+  var mid=window._metricaSel;var m=METRICAS[mid];
+  if(!m){cont.innerHTML='';return;}
   var fecha=document.getElementById('prodAdminFecha').value||hoyStr();
-  var html='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:600"><span>Nombre</span><span style="text-align:center">Agendados</span><span style="text-align:center">Contactados</span><span style="text-align:center">Inasist.</span></div>';
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
+  if(!lista.length){cont.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Agrega personas primero (pestaña Equipo).</div>';return;}
+  var dirTxt=m.dir==='menos'?'📉 Menos es mejor':'📈 Más es mejor';
+  var html='<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">'+dirTxt+' · '+(m.ambito==='grupal'?'Valor único del equipo':m.ambito==='persona'?'Solo '+esc(m.asignada||''):'Por cada persona')+'</div>';
+  // Grupal: un solo campo
+  if(m.ambito==='grupal'){
+    var regG=(produccionAdmin['_grupal']&&produccionAdmin['_grupal'][fecha]&&produccionAdmin['_grupal'][fecha][mid]);
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,.03);border-radius:8px">'+
+      '<span style="font-size:13px;color:#fff;flex:1">👥 Equipo completo</span>'+
+      '<input type="number" min="0" id="pa_grupal_'+mid+'" value="'+(regG!=null?regG:'')+'" placeholder="0" style="width:90px;font-size:14px;padding:8px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+    '</div>';
+    cont.innerHTML=html;return;
+  }
+  // Persona específica: solo esa persona
+  if(m.ambito==='persona'){
+    var objetivo=lista.filter(function(s){return s.nombre===m.asignada;});
+    if(!objetivo.length){html+='<div style="font-size:12px;color:#fca5a5;padding:10px">⚠ "'+esc(m.asignada||'')+'" no está en el equipo. Agrégala o cambia la asignación en Configurar métricas.</div>';cont.innerHTML=html;return;}
+    lista=objetivo;
+  }
+  // Individual (o persona filtrada)
   lista.forEach(function(s){
-    var reg=(produccionAdmin[s.key]&&produccionAdmin[s.key][fecha])||{};
-    html+='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;margin-bottom:6px;align-items:center">'+
-      '<span style="font-size:12px;color:#fff">'+esc(s.nombre)+'<span style="font-size:9px;color:rgba(255,255,255,.35);display:block">'+esc(s.cargo||'')+'</span></span>'+
-      '<input type="number" min="0" id="pa_'+s.key+'_ag" value="'+(reg.agendados!=null?reg.agendados:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
-      '<input type="number" min="0" id="pa_'+s.key+'_co" value="'+(reg.contactados!=null?reg.contactados:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
-      '<input type="number" min="0" id="pa_'+s.key+'_in" value="'+(reg.inasistencias!=null?reg.inasistencias:'')+'" placeholder="0" style="font-size:13px;padding:6px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+    var reg=(produccionAdmin[s.key]&&produccionAdmin[s.key][fecha]&&produccionAdmin[s.key][fecha][mid]);
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.05)">'+
+      '<span style="font-size:12px;color:#fff;flex:1">'+esc(s.nombre)+'<span style="font-size:9px;color:rgba(255,255,255,.35);display:block">'+esc(s.cargo||'')+'</span></span>'+
+      '<input type="number" min="0" id="pa_'+s.key+'_'+mid+'" value="'+(reg!=null?reg:'')+'" placeholder="0" style="width:80px;font-size:14px;padding:7px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
     '</div>';
   });
   cont.innerHTML=html;
@@ -1953,29 +1993,30 @@ window.renderFilasProdAdmin=function(){
 
 window.guardarProduccionAdmin=function(){
   var fecha=document.getElementById('prodAdminFecha').value||hoyStr();
-  var lista=Object.keys(secretarias||{});
+  var METRICAS=metricasActivas();
+  var mid=window._metricaSel;var m=METRICAS[mid];
+  if(!m)return;
   var updates={};var algo=false;
-  lista.forEach(function(key){
-    var ag=document.getElementById('pa_'+key+'_ag').value;
-    var co=document.getElementById('pa_'+key+'_co').value;
-    var inas=document.getElementById('pa_'+key+'_in').value;
-    // Solo guardar si al menos un campo tiene dato (días sin dato = pendientes, no 0)
-    if(ag!==''||co!==''||inas!==''){
-      updates['produccionAdmin/'+key+'/'+fecha]={
-        agendados:ag!==''?Number(ag):null,
-        contactados:co!==''?Number(co):null,
-        inasistencias:inas!==''?Number(inas):null,
-        fecha:fecha,ts:Date.now()
-      };
-      algo=true;
+  if(m.ambito==='grupal'){
+    var el=document.getElementById('pa_grupal_'+mid);
+    if(el&&el.value!==''){updates['produccionAdmin/_grupal/'+fecha+'/'+mid]=Number(el.value);algo=true;}
+  } else {
+    var lista=Object.keys(secretarias||{});
+    if(m.ambito==='persona'){
+      lista=lista.filter(function(k){var v=secretarias[k];var nom=(typeof v==='object'?v.nombre:v);return nom===m.asignada;});
     }
-  });
-  if(!algo){alert('Ingresa al menos un dato antes de guardar.');return;}
-  db.ref('sedes/'+S).update(updates).then(function(){
-    // Al guardar el día completo, limpiar el borrador
-    sedeRef('borradores/prodAdmin').remove();
-    showSaved('prodAdminSaved');
-  });
+    lista.forEach(function(key){
+      var el=document.getElementById('pa_'+key+'_'+mid);
+      if(el&&el.value!==''){
+        updates['produccionAdmin/'+key+'/'+fecha+'/'+mid]=Number(el.value);
+        // marcar fecha para poder filtrar
+        updates['produccionAdmin/'+key+'/'+fecha+'/_fecha']=fecha;
+        algo=true;
+      }
+    });
+  }
+  if(!algo){alert('Ingresa al menos un valor antes de guardar.');return;}
+  db.ref('sedes/'+S).update(updates).then(function(){showSaved('prodAdminSaved');});
 };
 
 // Guardar borrador del panel de producción (estado de todos los campos)
@@ -9210,11 +9251,13 @@ window.abrirPizarraDigital=function(tipo){
     // Botón grande +1
     '<button onclick="pizarraSuma(1)" style="width:100%;font-size:32px;font-weight:800;background:linear-gradient(135deg,'+cfg.color+'cc,'+cfg.color+');color:#0b1220;border:none;border-radius:20px;padding:28px;font-family:inherit;cursor:pointer;margin-bottom:12px;box-shadow:0 6px 20px '+cfg.color+'44">+1</button>'+
     // Botones +5 +10 y -1
-    '<div style="display:flex;gap:8px;margin-bottom:20px">'+
+    '<div style="display:flex;gap:8px;margin-bottom:14px">'+
       '<button onclick="pizarraSuma(5)" style="flex:1;font-size:20px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:14px;padding:18px;font-family:inherit;cursor:pointer">+5</button>'+
       '<button onclick="pizarraSuma(10)" style="flex:1;font-size:20px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:14px;padding:18px;font-family:inherit;cursor:pointer">+10</button>'+
       '<button onclick="pizarraSuma(-1)" style="flex:1;font-size:20px;font-weight:700;background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:14px;padding:18px;font-family:inherit;cursor:pointer">−1</button>'+
     '</div>'+
+    // Botón de voz
+    '<button onclick="pizarraVoz()" id="btnVozPizarra" style="width:100%;font-size:15px;font-weight:700;background:rgba(167,139,250,.15);color:#c4b5fd;border:1px solid rgba(167,139,250,.3);border-radius:14px;padding:14px;font-family:inherit;cursor:pointer;margin-bottom:20px">🎤 Dictar cantidad por voz</button>'+
     // Total editable
     '<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
       '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">¿El total no cuadra? Edítalo directamente:</div>'+
@@ -9269,11 +9312,59 @@ window.guardarPizarra=function(){
 };
 window.cerrarPizarra=function(){var ov=document.getElementById('pizarraOv');if(ov)ov.remove();};
 
+// Reconocimiento de voz: "veinticinco" fija el total, "más cinco" suma 5
+window.pizarraVoz=function(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  var btn=document.getElementById('btnVozPizarra');
+  if(!SR){if(btn)btn.textContent='🎤 Tu navegador no soporta voz';return;}
+  var rec=new SR();
+  rec.lang='es-CL';rec.interimResults=false;rec.maxAlternatives=3;
+  if(btn){btn.textContent='🔴 Escuchando... di un número';btn.style.background='rgba(239,68,68,.2)';}
+  rec.start();
+  rec.onresult=function(e){
+    var texto='';
+    for(var i=0;i<e.results.length;i++)texto+=e.results[i][0].transcript;
+    texto=texto.toLowerCase().trim();
+    var num=parseNumeroEspanol(texto);
+    if(num!==null){
+      // ¿Dijo "más X" o "sumar X"? → suma. Si no, fija el total.
+      if(/m[aá]s|sum|agrega/.test(texto)){
+        window._pizarraCount=Math.max(0,(window._pizarraCount||0)+num);
+      } else {
+        window._pizarraCount=num;
+      }
+      actualizarPizarraDisplay();guardarConteoPizarra();
+      if(btn){btn.textContent='✓ Registrado: '+num;setTimeout(function(){resetBtnVoz(btn);},1500);}
+    } else {
+      if(btn){btn.textContent='No entendí, intenta de nuevo';setTimeout(function(){resetBtnVoz(btn);},1500);}
+    }
+  };
+  rec.onerror=function(){if(btn){btn.textContent='🎤 Error, toca para reintentar';resetBtnVoz(btn);}};
+  rec.onend=function(){if(btn&&btn.textContent.indexOf('Escuchando')>-1)resetBtnVoz(btn);};
+};
+function resetBtnVoz(btn){setTimeout(function(){btn.textContent='🎤 Dictar cantidad por voz';btn.style.background='rgba(167,139,250,.15)';},300);}
+
+// Convierte números en palabras españolas a dígitos (0-999)
+function parseNumeroEspanol(texto){
+  // Primero, ¿hay un dígito directo?
+  var mDig=texto.match(/\d+/);
+  if(mDig)return parseInt(mDig[0]);
+  var unidades={cero:0,un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,'dieciséis':16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,'veintiún':21,veintidos:22,'veintidós':22,veintitres:23,'veintitrés':23,veinticuatro:24,veinticinco:25,veintiseis:26,'veintiséis':26,veintisiete:27,veintiocho:28,veintinueve:29,treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90,cien:100,ciento:100};
+  var palabras=texto.split(/\s+/);
+  var total=0,encontrado=false;
+  for(var i=0;i<palabras.length;i++){
+    var p=palabras[i];
+    if(unidades[p]!==undefined){total+=unidades[p];encontrado=true;}
+    else if(p==='y'){continue;}
+  }
+  return encontrado?total:null;
+}
+
 window.abrirRegProduccion=function(tipo){
   var cfg=PRODUCCION_TIPOS[tipo];
   if(!cfg){alert('Tipo de registro no reconocido.');return;}
   // Lavado, secado y empaque usan la PIZARRA DIGITAL (contador rápido)
-  var TIPOS_PIZARRA={inst_lavado:1,inst_secado:1,inst_empaque:1};
+  var TIPOS_PIZARRA={inst_lavado:1,inst_secado:1,inst_empaque:1,inst_recibido:1,entrega_esteril:1};
   if(TIPOS_PIZARRA[tipo]){abrirPizarraDigital(tipo);return;}
   var ov=document.getElementById('regProdOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regProdOv';
