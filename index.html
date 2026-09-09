@@ -9360,11 +9360,43 @@ function parseNumeroEspanol(texto){
   return encontrado?total:null;
 }
 
+// Pantalla de elección: contador (pizarra) o formato normal, para dispensarios
+window.mostrarEleccionModo=function(tipo){
+  var cfg=PRODUCCION_TIPOS[tipo];
+  var ov=document.getElementById('eleccionModoOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='eleccionModoOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9260;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center';
+  ov.innerHTML='<div style="max-width:400px;width:100%">'+
+    '<div style="font-size:44px;margin-bottom:12px">'+cfg.emoji+'</div>'+
+    '<div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:8px">'+cfg.label+'</div>'+
+    '<div style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:28px">¿Cómo quieres registrar hoy?</div>'+
+    '<button onclick="elegirModoProd(\''+tipo+'\',\'pizarra\')" style="width:100%;background:linear-gradient(135deg,'+cfg.color+'cc,'+cfg.color+');color:#0b1220;border:none;border-radius:16px;padding:20px;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:12px">🧮 Contador (ir sumando durante el día)</button>'+
+    '<button onclick="elegirModoProd(\''+tipo+'\',\'formato\')" style="width:100%;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:16px;padding:20px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:20px">📝 Formato normal (escribir el total)</button>'+
+    '<button onclick="document.getElementById(\'eleccionModoOv\').remove()" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:10px;padding:12px 24px;font-family:inherit;cursor:pointer">Cancelar</button>'+
+  '</div>';
+  document.body.appendChild(ov);
+};
+window.elegirModoProd=function(tipo,modo){
+  var ov=document.getElementById('eleccionModoOv');if(ov)ov.remove();
+  if(modo==='pizarra'){
+    abrirPizarraDigital(tipo);
+  } else {
+    window._prodModoElegido=true;
+    abrirRegProduccion(tipo);
+  }
+};
+
 window.abrirRegProduccion=function(tipo){
   var cfg=PRODUCCION_TIPOS[tipo];
   if(!cfg){alert('Tipo de registro no reconocido.');return;}
   // Lavado, secado y empaque usan la PIZARRA DIGITAL (contador rápido)
   var TIPOS_PIZARRA={inst_lavado:1,inst_secado:1,inst_empaque:1,inst_recibido:1,entrega_esteril:1};
+  // Dispensarios: el trabajador ELIGE entre contador (pizarra) o formato normal
+  var TIPOS_PIZARRA_OPCIONAL={dispensario_2:1,dispensario_3:1};
+  if(TIPOS_PIZARRA_OPCIONAL[tipo]&&!window._prodModoElegido){
+    mostrarEleccionModo(tipo);return;
+  }
+  window._prodModoElegido=false; // reset para la próxima
   if(TIPOS_PIZARRA[tipo]){abrirPizarraDigital(tipo);return;}
   var ov=document.getElementById('regProdOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regProdOv';
