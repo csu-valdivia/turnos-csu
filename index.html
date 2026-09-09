@@ -1845,19 +1845,76 @@ function renderPanelJefaOperaciones(){
       '<button onclick="tabJefaOp(\'produccion\')" id="tabJO_prod" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(34,211,238,.3);color:#fff">📊 Producción</button>'+
       '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Equipo</button>'+
       '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
+      '<button onclick="tabJefaOp(\'metricas\')" id="tabJO_met" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">⚙️ Métricas</button>'+
     '</div>'+
     '<div id="jefaOpContenido"></div></div>';
   tabJefaOp('produccion');
 }
 
 window.tabJefaOp=function(tab){
-  ['prod','sec','rank'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
-  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank'};
+  ['prod','sec','rank','met'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',metricas:'tabJO_met'};
   var activo=document.getElementById(map[tab]);
   if(activo){activo.style.background='rgba(34,211,238,.3)';activo.style.color='#fff';}
   if(tab==='produccion')renderProduccionAdmin();
   else if(tab==='secretarias')renderSecretariasAdmin();
-  else renderRankingAdmin('jefaOpContenido');
+  else if(tab==='ranking')renderRankingAdmin('jefaOpContenido');
+  else renderEditorMetricas();
+};
+
+// ── Editor de métricas administrativas ──
+window.renderEditorMetricas=function(){
+  var cont=document.getElementById('jefaOpContenido');if(!cont)return;
+  // Inicializar con el default si está vacío
+  if(!metricasAdmin||!Object.keys(metricasAdmin).length){
+    metricasAdmin=JSON.parse(JSON.stringify(METRICAS_ADMIN_DEFAULT));
+  }
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v);});
+  var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Configura las métricas: qué se mide, si es individual/grupal/de una persona, y si más o menos es mejor.</div>';
+  Object.keys(metricasAdmin).forEach(function(id){
+    var m=metricasAdmin[id];
+    html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:8px">'+
+      '<input type="text" value="'+esc(m.nombre)+'" onchange="editMetrica(\''+id+'\',\'nombre\',this.value)" style="width:100%;font-size:13px;font-weight:600;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;margin-bottom:8px">'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        '<select onchange="editMetrica(\''+id+'\',\'ambito\',this.value)" style="flex:1;min-width:110px;font-size:11px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+          '<option value="individual"'+(m.ambito==='individual'?' selected':'')+'>Individual</option>'+
+          '<option value="grupal"'+(m.ambito==='grupal'?' selected':'')+'>Grupal</option>'+
+          '<option value="persona"'+(m.ambito==='persona'?' selected':'')+'>Una persona</option>'+
+        '</select>'+
+        '<select onchange="editMetrica(\''+id+'\',\'dir\',this.value)" style="flex:1;min-width:110px;font-size:11px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+          '<option value="mas"'+(m.dir==='mas'?' selected':'')+'>📈 Más es mejor</option>'+
+          '<option value="menos"'+(m.dir==='menos'?' selected':'')+'>📉 Menos es mejor</option>'+
+        '</select>'+
+        '<select onchange="editMetrica(\''+id+'\',\'cadencia\',this.value)" style="flex:1;min-width:90px;font-size:11px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+          '<option value="diaria"'+(m.cadencia==='diaria'?' selected':'')+'>Diaria</option>'+
+          '<option value="quincenal"'+(m.cadencia==='quincenal'?' selected':'')+'>Quincenal</option>'+
+        '</select>'+
+      '</div>'+
+      (m.ambito==='persona'?'<select onchange="editMetrica(\''+id+'\',\'asignada\',this.value)" style="width:100%;margin-top:6px;font-size:11px;padding:6px;background:rgba(96,165,250,.1);color:#fff;border:1px solid rgba(96,165,250,.3);border-radius:6px"><option value="">— ¿Quién la mide? —</option>'+lista.map(function(n){return '<option value="'+esc(n)+'"'+(m.asignada===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select>':'')+
+      '<button onclick="quitarMetrica(\''+id+'\')" style="margin-top:6px;background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:10px;cursor:pointer">🗑 Quitar</button>'+
+    '</div>';
+  });
+  html+='<button onclick="agregarMetrica()" class="btn-add" style="margin-top:8px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">+ Agregar métrica</button>';
+  html+='<div class="saved" id="metricasSaved" style="margin-top:8px">✓ Guardado</div>';
+  cont.innerHTML=html;
+};
+window.editMetrica=function(id,campo,valor){
+  if(!metricasAdmin[id])return;
+  metricasAdmin[id][campo]=valor;
+  sedeRef('metricasAdmin/'+id+'/'+campo).set(valor).then(function(){
+    showSaved('metricasSaved');
+    if(campo==='ambito')renderEditorMetricas(); // re-render si cambia ámbito (para mostrar selector persona)
+  });
+};
+window.agregarMetrica=function(){
+  var id='m'+Date.now();
+  metricasAdmin[id]={nombre:'Nueva métrica',ambito:'individual',dir:'mas',cadencia:'diaria'};
+  sedeRef('metricasAdmin/'+id).set(metricasAdmin[id]).then(function(){renderEditorMetricas();});
+};
+window.quitarMetrica=function(id){
+  if(!confirm('¿Quitar esta métrica? Los datos ya registrados se conservan.'))return;
+  delete metricasAdmin[id];
+  sedeRef('metricasAdmin/'+id).remove().then(function(){renderEditorMetricas();});
 };
 
 // ── Gestión del equipo administrativo (secretarias + bodega + mantención) ──
@@ -2149,15 +2206,36 @@ function puntajeFinalAdminRango(key,desde,hasta){
   return {final:Math.round(prod*pP+cap*pC),prod:prod,cap:cap};
 }
 function puntajeProduccionRango(key,desde,hasta){
-  var dias=produccionAdmin[key]||{};
-  var registros=Object.keys(dias).filter(function(ff){return ff>=desde&&ff<=hasta;}).map(function(ff){return dias[ff];});
-  if(!registros.length)return null;
-  var totAg=0,totCo=0,totIn=0,n=0;
-  registros.forEach(function(r){if(r.agendados!=null){totAg+=r.agendados;n++;}if(r.contactados!=null)totCo+=r.contactados;if(r.inasistencias!=null)totIn+=r.inasistencias;});
-  if(!n)return null;
-  var tc=totAg>0?Math.min(totCo/totAg,1):0;
-  var ta=totAg>0?Math.max(0,1-totIn/totAg):0;
-  return Math.round((tc*0.6+ta*0.4)*100);
+  var METRICAS=(metricasAdmin&&Object.keys(metricasAdmin).length)?metricasAdmin:METRICAS_ADMIN_DEFAULT;
+  // Para cada métrica individual, sumar los valores de esta persona en el rango
+  var puntos=[];
+  Object.keys(METRICAS).forEach(function(mid){
+    var m=METRICAS[mid];
+    if(m.ambito==='grupal')return; // grupal no puntúa a individuos
+    // Si es 'persona', solo puntúa a la asignada
+    var dias=produccionAdmin[key]||{};
+    var miTotal=0,tieneDato=false;
+    Object.keys(dias).forEach(function(ff){
+      if(ff<desde||ff>hasta)return;
+      var val=dias[ff]&&dias[ff][mid];
+      if(val!=null){miTotal+=Number(val);tieneDato=true;}
+    });
+    if(!tieneDato)return;
+    // Normalizar contra el MÁXIMO del equipo en esa métrica (relativo al mejor)
+    var maxEquipo=0;
+    Object.keys(secretarias||{}).forEach(function(k2){
+      var d2=produccionAdmin[k2]||{};var t2=0;
+      Object.keys(d2).forEach(function(ff){if(ff>=desde&&ff<=hasta&&d2[ff]&&d2[ff][mid]!=null)t2+=Number(d2[ff][mid]);});
+      if(t2>maxEquipo)maxEquipo=t2;
+    });
+    if(maxEquipo<=0){puntos.push(50);return;} // si nadie tiene, neutro
+    var norm=miTotal/maxEquipo; // 0-1
+    // Dirección: 'menos' es mejor → invertir
+    if(m.dir==='menos')norm=1-norm;
+    puntos.push(Math.round(Math.max(0,Math.min(1,norm))*100));
+  });
+  if(!puntos.length)return null;
+  return Math.round(puntos.reduce(function(a,b){return a+b;},0)/puntos.length);
 }
 function puntajeCapacitacionRango(key,desde,hasta){
   var todosMeses=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[key])||{};
