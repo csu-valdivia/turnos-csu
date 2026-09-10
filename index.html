@@ -643,6 +643,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirSinAsignarBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">👥 Quién no tiene asignaciones</button>
             <button class="btn-add" id="abrirCargaTrabajoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">⚖️ Carga de trabajo del equipo</button>
             <button class="btn-add" id="abrirBorradoresBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">📝 Borradores del equipo sin terminar</button>
+            <button class="btn-add" id="abrirCentroProtocolosBtn" style="background:linear-gradient(135deg,#7c3aed,#c4b5fd);margin-top:6px">📚 Centro de protocolos (otros roles)</button>
             <button class="btn-add" id="abrirRendimientoBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">💼 Rendimiento de dotación (confidencial)</button>
           </div>
 
@@ -1587,7 +1588,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1617,6 +1618,10 @@ var METRICAS_ADMIN_DEFAULT={
   m12:{nombre:'Revisión cuentas / adeudos',ambito:'persona',asignada:'Fabiola Oyarzo',dir:'menos',cadencia:'quincenal'}
 };
 var metricasAdmin={}; // se carga de Firebase; si está vacío, usa el default
+// Grupos flexibles para dirigir protocolos (los crea el Enfermero Jefe). gruposModulo[id]={nombre, miembros:[nombres], modulo}
+var gruposModulo={};
+// Etiquetas de módulo para los protocolos
+var MODULOS_PROTOCOLO={administrativo:'🗂️ Administrativo',bodega:'📦 Bodega',mantencion:'🔧 Mantención',docente:'🎓 Docente',clinico:'⚕️ Clínico'};
 var anunIdx=0,anunTimer=null;
 var semanas={};
 var curNombre='',alertaMostrada=false,panIdx=0,chartH=null,chartE=null,adminUnlocked=false;
@@ -1703,6 +1708,8 @@ function attach(){
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
   // ── Listeners módulo administrativo (separados de lo clínico) ──
   on('bibliotecaAdmin',function(v){bibliotecaAdmin=v||{};});
+  on('gruposModulo',function(v){gruposModulo=v||{};});
+  on('metricasAdmin',function(v){metricasAdmin=v||{};});
   on('fichaProgresoAdmin',function(v){fichaProgresoAdmin=v||{};});
   on('produccionAdmin',function(v){produccionAdmin=v||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();});
   on('pesosAdmin',function(v){if(v&&typeof v==='object'&&typeof v.produccion==='number')pesosAdmin=v;});
@@ -1750,7 +1757,7 @@ window.ingresarRol=function(rol){
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _ct=document.getElementById('abrirCargaTrabajoBtn');if(_ct)_ct.onclick=abrirCargaTrabajo;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
-      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;
+      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderPlanEstudio==='function')renderPlanEstudio();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
@@ -2260,7 +2267,8 @@ window.abrirModuloAdministrativo=function(){
     sedeRef('fichaProgresoAdmin').once('value'),
     sedeRef('rankingAdmin').once('value'),
     sedeRef('produccionAdmin').once('value'),
-    sedeRef('pesosAdmin').once('value')
+    sedeRef('pesosAdmin').once('value'),
+    sedeRef('gruposModulo').once('value')
   ]).then(function(snaps){
     secretarias=snaps[0].val()||{};
     bibliotecaAdmin=snaps[1].val()||{};
@@ -2268,6 +2276,7 @@ window.abrirModuloAdministrativo=function(){
     rankingAdmin=snaps[3].val()||{};
     produccionAdmin=snaps[4].val()||{};
     var pa=snaps[5].val();if(pa&&typeof pa==='object')pesosAdmin=pa;
+    gruposModulo=snaps[6].val()||{};
     renderModuloAdministrativo();
   });
 };
@@ -2329,10 +2338,22 @@ window.tabAdmin=function(tab){
   else renderRankingAdmin('adminContenido');
 };
 
+// ¿Este protocolo está dirigido a esta persona? (según grupos dirigidos)
+function protocoloVisiblePara(doc,nombre){
+  // Si no tiene dirigidoA o está vacío → lo ven todos los del módulo
+  if(!doc.dirigidoA||!doc.dirigidoA.length)return true;
+  // Si tiene grupos dirigidos, la persona debe ser miembro de al menos uno
+  return doc.dirigidoA.some(function(gid){
+    var g=gruposModulo[gid];
+    return g&&g.miembros&&g.miembros.indexOf(nombre)>-1;
+  });
+}
+
 function renderMaterialAdmin(cont){
   if(!cont)return;
-  var protocolos=Object.entries(bibliotecaAdmin||{});
-  if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no hay material de estudio cargado. El Enfermero Jefe debe agregar los protocolos administrativos.</div>';return;}
+  var nombre=window._adminNombre;
+  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return protocoloVisiblePara(e[1],nombre);});
+  if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no tienes material de estudio asignado.</div>';return;}
   var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Lee los protocolos antes de responder las preguntas.</div>';
   protocolos.forEach(function(e){
     var doc=e[1];
@@ -2348,8 +2369,8 @@ function renderMaterialAdmin(cont){
 function renderPreguntasAdminTab(cont){
   if(!cont)return;
   var nombre=window._adminNombre;
-  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].obligatoria&&e[1].preguntas&&Object.keys(e[1].preguntas).length>=2;});
-  if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No hay protocolos con preguntas configurados aún.</div>';return;}
+  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].obligatoria&&e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&protocoloVisiblePara(e[1],nombre);});
+  if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
   var hoy=hoyStr();var key=nombre.replace(/[.#$/\[\]\s]/g,'_');
   if(fichaProgresoAdmin[key]&&fichaProgresoAdmin[key].fecha===hoy&&fichaProgresoAdmin[key].aprobadoHoy){
     cont.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;margin-bottom:6px">¡Ya completaste hoy!</div><div style="font-size:13px;color:rgba(255,255,255,.6)">Nos vemos mañana.</div></div>';
@@ -4468,7 +4489,14 @@ function verificarFichasPendientes(){
   // Si está en inducción, verificar la bienvenida y no evaluar
   if(estaEnInduccion(curNombre)){
     verificarBienvenidaInduccion();
-    return false; // no se le muestran preguntas
+    // En inducción se muestran SOLO los protocolos activados (fichasObligatoriasPendientes ya filtra por activación)
+    var pendInd=fichasObligatoriasPendientes(curNombre);
+    if(!pendInd.length)return false; // sin protocolos activados aún
+    var keyInd=curNombre.replace(/\s/g,'_');
+    var bloqInd=pendInd.find(function(e){var prog=fichaProgreso[e[0]]&&fichaProgreso[e[0]][keyInd];return prog&&prog.bloqueadoFecha===hoyStr();});
+    if(bloqInd){mostrarFichaObligatoria(bloqInd[0],bloqInd[1]);return true;}
+    mostrarEvaluacionCombinada(pendInd);
+    return true;
   }
   var pend=fichasObligatoriasPendientes(curNombre);
   if(!pend.length)return false;
@@ -7575,6 +7603,164 @@ function personalInternas(){
   return (nombres||[]).map(function(n){return n.nombre||n;}).filter(function(n){return rolDe(n)==='interna';});
 }
 function nDotacion(){return personalDotacion().length;}
+
+// ══════════════ CENTRO DE PROTOCOLOS (para roles no clínicos) ══════════════
+window.abrirCentroProtocolos=function(){
+  var ov=document.getElementById('centroProtOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='centroProtOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  Promise.all([sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('secretarias').once('value')]).then(function(s){
+    bibliotecaAdmin=s[0].val()||{};gruposModulo=s[1].val()||{};secretarias=s[2].val()||{};
+    renderCentroProtocolos('protocolos');
+  });
+};
+window.renderCentroProtocolos=function(tab){
+  var ov=document.getElementById('centroProtOv');if(!ov)return;
+  function tb(id,lab){return '<button onclick="renderCentroProtocolos(\''+id+'\')" style="flex:1;font-size:13px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:'+(tab===id?'rgba(124,58,237,.4);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+      '<span style="font-size:18px;font-weight:800;color:#c4b5fd">📚 Centro de protocolos</span>'+
+      '<button onclick="document.getElementById(\'centroProtOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:16px">'+tb('protocolos','📄 Protocolos')+tb('grupos','👥 Grupos')+'</div>'+
+    '<div id="centroProtContenido"></div></div>';
+  if(tab==='protocolos')renderProtocolosList();else renderGruposList();
+};
+function renderProtocolosList(){
+  var cont=document.getElementById('centroProtContenido');if(!cont)return;
+  var protos=Object.entries(bibliotecaAdmin||{});
+  var html='<button onclick="nuevoProtocoloAdmin()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-bottom:12px">+ Nuevo protocolo</button>';
+  if(!protos.length){html+='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Aún no hay protocolos. Crea el primero arriba.</div>';}
+  else{
+    protos.forEach(function(e){
+      var id=e[0],doc=e[1];
+      var mod=MODULOS_PROTOCOLO[doc.modulo]||'Sin módulo';
+      var nPreg=doc.preguntas?Object.keys(doc.preguntas).length:0;
+      var dirigido=doc.dirigidoA&&doc.dirigidoA.length?doc.dirigidoA.map(function(g){return (gruposModulo[g]&&gruposModulo[g].nombre)||g;}).join(', '):'Todos del módulo';
+      html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:8px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:start">'+
+          '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:#fff">'+esc(doc.titulo||'(sin título)')+'</div>'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">'+mod+' · '+nPreg+' preguntas · Dirigido a: '+esc(dirigido)+'</div></div>'+
+          '<div style="display:flex;gap:4px">'+
+            '<button onclick="editarProtocoloAdmin(\''+id+'\')" style="background:rgba(96,165,250,.15);color:#93c5fd;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">✏️</button>'+
+            '<button onclick="borrarProtocoloAdmin(\''+id+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button>'+
+          '</div>'+
+        '</div></div>';
+    });
+  }
+  cont.innerHTML=html;
+}
+window.nuevoProtocoloAdmin=function(){editarProtocoloAdmin(null);};
+window.editarProtocoloAdmin=function(id){
+  var doc=id?bibliotecaAdmin[id]:{titulo:'',contenido:'',modulo:'administrativo',obligatoria:true,preguntas:{},dirigidoA:[]};
+  var cont=document.getElementById('centroProtContenido');
+  var gruposOpts=Object.keys(gruposModulo||{}).map(function(g){var checked=(doc.dirigidoA||[]).indexOf(g)>-1;return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.8);padding:4px 0"><input type="checkbox" class="protGrupo" value="'+g+'"'+(checked?' checked':'')+' style="width:15px;height:15px;accent-color:#a78bfa">'+esc(gruposModulo[g].nombre)+' <span style="font-size:9px;color:rgba(255,255,255,.4)">('+(MODULOS_PROTOCOLO[gruposModulo[g].modulo]||'')+')</span></label>';}).join('');
+  var modOpts=Object.keys(MODULOS_PROTOCOLO).map(function(m){return '<option value="'+m+'"'+(doc.modulo===m?' selected':'')+'>'+MODULOS_PROTOCOLO[m]+'</option>';}).join('');
+  cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:14px;font-weight:700;color:#c4b5fd;margin-bottom:12px">'+(id?'Editar':'Nuevo')+' protocolo</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Título</label>'+
+    '<input type="text" id="protTitulo" value="'+esc(doc.titulo||'')+'" placeholder="Ej: Protocolo de agendamiento" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Módulo</label>'+
+    '<select id="protModulo" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+modOpts+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Contenido (material de estudio)</label>'+
+    '<textarea id="protContenido" rows="5" placeholder="Escribe aquí el protocolo que deben leer..." style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+esc(doc.contenido||'')+'</textarea>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6);display:block;margin-bottom:4px">Dirigir a grupos (si no marcas ninguno, lo ven todos los del módulo):</label>'+
+    '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:12px">'+(gruposOpts||'<span style="font-size:11px;color:rgba(255,255,255,.4)">No hay grupos creados. Créalos en la pestaña Grupos.</span>')+'</div>'+
+    '<div id="protPreguntasEditor"></div>'+
+    '<button onclick="guardarProtocoloAdmin(\''+(id||'')+'\')" class="btn-add" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:12px">💾 Guardar protocolo</button>'+
+    '<button onclick="renderCentroProtocolos(\'protocolos\')" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:10px;font-family:inherit;cursor:pointer">Cancelar</button>'+
+  '</div>';
+  window._protPreguntas=doc.preguntas?JSON.parse(JSON.stringify(doc.preguntas)):{};
+  renderPreguntasEditorAdmin();
+};
+function renderPreguntasEditorAdmin(){
+  var cont=document.getElementById('protPreguntasEditor');if(!cont)return;
+  var pregs=window._protPreguntas||{};
+  var html='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin:10px 0 8px">Preguntas ('+Object.keys(pregs).length+')</div>';
+  Object.keys(pregs).forEach(function(pid){
+    var p=pregs[pid];
+    html+='<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:8px">'+
+      '<div style="font-size:12px;color:#fff;margin-bottom:4px">'+esc(p.pregunta||'(sin texto)')+'</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+((p.opciones||[]).length)+' opciones · correcta: '+esc((p.opciones&&p.opciones[p.correcta])||'?')+'</div>'+
+      '<button onclick="quitarPreguntaAdmin(\''+pid+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:5px;padding:3px 8px;font-family:inherit;font-size:10px;cursor:pointer;margin-top:4px">Quitar</button>'+
+    '</div>';
+  });
+  html+='<button onclick="agregarPreguntaAdmin()" style="background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;cursor:pointer">+ Agregar pregunta</button>';
+  cont.innerHTML=html;
+}
+window.agregarPreguntaAdmin=function(){
+  var preg=prompt('Escribe la pregunta:');if(!preg)return;
+  var ops=[];
+  for(var i=1;i<=4;i++){var op=prompt('Opción '+i+(i>2?' (deja vacío para terminar)':'')+':');if(!op){if(i>2)break;else{alert('Mínimo 2 opciones.');return;}}ops.push(op);}
+  var correctaTxt=prompt('¿Cuál es la correcta? Escribe el número (1-'+ops.length+'):');
+  var correcta=parseInt(correctaTxt)-1;
+  if(isNaN(correcta)||correcta<0||correcta>=ops.length){alert('Número inválido.');return;}
+  window._protPreguntas['p'+Date.now()]={pregunta:preg,opciones:ops,correcta:correcta,tema:'General'};
+  renderPreguntasEditorAdmin();
+};
+window.quitarPreguntaAdmin=function(pid){delete window._protPreguntas[pid];renderPreguntasEditorAdmin();};
+window.guardarProtocoloAdmin=function(id){
+  var titulo=document.getElementById('protTitulo').value.trim();
+  if(!titulo){alert('Ponle un título.');return;}
+  var dirigidoA=Array.from(document.querySelectorAll('.protGrupo:checked')).map(function(cb){return cb.value;});
+  var doc={titulo:titulo,modulo:document.getElementById('protModulo').value,contenido:document.getElementById('protContenido').value,obligatoria:true,bancoCerrado:true,visible:true,preguntas:window._protPreguntas||{},dirigidoA:dirigidoA};
+  var pid=id||('protA_'+Date.now());
+  bibliotecaAdmin[pid]=doc;
+  sedeRef('bibliotecaAdmin/'+pid).set(doc).then(function(){renderCentroProtocolos('protocolos');});
+};
+window.borrarProtocoloAdmin=function(id){
+  if(!confirm('¿Borrar este protocolo?'))return;
+  delete bibliotecaAdmin[id];
+  sedeRef('bibliotecaAdmin/'+id).remove().then(function(){renderProtocolosList();});
+};
+function renderGruposList(){
+  var cont=document.getElementById('centroProtContenido');if(!cont)return;
+  var lista=(nombres||[]).map(function(n){return n.nombre||n;});
+  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];lista.push(typeof v==='object'?v.nombre:v);});
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:12px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">Crear grupo</div>'+
+    '<input type="text" id="nuevoGrupoNombre" placeholder="Nombre (ej: Secretarias, Carrera Enfermería)" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
+    '<select id="nuevoGrupoModulo" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+Object.keys(MODULOS_PROTOCOLO).map(function(m){return '<option value="'+m+'">'+MODULOS_PROTOCOLO[m]+'</option>';}).join('')+'</select>'+
+    '<button onclick="crearGrupoModulo()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">+ Crear grupo</button></div>';
+  var grupos=Object.entries(gruposModulo||{});
+  if(grupos.length){
+    grupos.forEach(function(e){
+      var gid=e[0],g=e[1];
+      html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:8px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+          '<span style="font-size:13px;font-weight:700;color:#fff">'+esc(g.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">'+(MODULOS_PROTOCOLO[g.modulo]||'')+'</span></span>'+
+          '<button onclick="borrarGrupoModulo(\''+gid+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button>'+
+        '</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">Miembros ('+((g.miembros||[]).length)+') · toca para agregar/quitar:</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:4px">'+
+          lista.map(function(n){var enG=(g.miembros||[]).indexOf(n)>-1;return '<button onclick="toggleMiembroGrupo(\''+gid+'\',\''+esc(n).replace(/'/g,"")+'\')" style="font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid '+(enG?'#a78bfa;background:rgba(167,139,250,.25);color:#fff':'rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5)')+';font-family:inherit;cursor:pointer">'+(enG?'✓ ':'')+esc(n)+'</button>';}).join('')+
+        '</div></div>';
+    });
+  } else { html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px;text-align:center">No hay grupos aún.</div>'; }
+  cont.innerHTML=html;
+}
+window.crearGrupoModulo=function(){
+  var n=document.getElementById('nuevoGrupoNombre').value.trim();
+  var mod=document.getElementById('nuevoGrupoModulo').value;
+  if(!n)return;
+  var gid='grp_'+Date.now();
+  gruposModulo[gid]={nombre:n,modulo:mod,miembros:[]};
+  sedeRef('gruposModulo/'+gid).set(gruposModulo[gid]).then(function(){renderGruposList();});
+};
+window.borrarGrupoModulo=function(gid){
+  if(!confirm('¿Borrar este grupo?'))return;
+  delete gruposModulo[gid];
+  sedeRef('gruposModulo/'+gid).remove().then(function(){renderGruposList();});
+};
+window.toggleMiembroGrupo=function(gid,nombre){
+  var g=gruposModulo[gid];if(!g)return;
+  if(!g.miembros)g.miembros=[];
+  var idx=g.miembros.indexOf(nombre);
+  if(idx>-1)g.miembros.splice(idx,1);else g.miembros.push(nombre);
+  sedeRef('gruposModulo/'+gid+'/miembros').set(g.miembros).then(function(){renderGruposList();});
+};
 
 window.renderClasifPersonal=function(){
   var cont=document.getElementById('clasifPersonalList');if(!cont)return;
