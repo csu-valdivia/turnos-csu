@@ -2359,8 +2359,8 @@ function renderMaterialAdmin(cont){
     var doc=e[1];
     html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:10px">'+
       '<div style="font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:6px">📄 '+esc(doc.titulo)+'</div>'+
-      (doc.categoria?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">'+esc(doc.categoria)+'</div>':'')+
-      '<div style="font-size:13px;color:rgba(255,255,255,.8);line-height:1.6;white-space:pre-wrap">'+esc(doc.contenido||doc.texto||'(Sin contenido de lectura)')+'</div>'+
+      (doc.link?'<a href="'+esc(doc.link)+'" target="_blank" rel="noopener" style="display:inline-block;background:rgba(96,165,250,.15);color:#93c5fd;text-decoration:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;margin-bottom:8px">📎 Abrir material de estudio →</a>':'')+
+      (doc.contenido?'<div style="font-size:13px;color:rgba(255,255,255,.8);line-height:1.6;white-space:pre-wrap;margin-top:6px">'+esc(doc.contenido)+'</div>':(doc.link?'':'<div style="font-size:12px;color:rgba(255,255,255,.4)">(Sin contenido)</div>'))+
     '</div>';
   });
   cont.innerHTML=html;
@@ -7654,7 +7654,7 @@ function renderProtocolosList(){
 }
 window.nuevoProtocoloAdmin=function(){editarProtocoloAdmin(null);};
 window.editarProtocoloAdmin=function(id){
-  var doc=id?bibliotecaAdmin[id]:{titulo:'',contenido:'',modulo:'administrativo',obligatoria:true,preguntas:{},dirigidoA:[]};
+  var doc=id?bibliotecaAdmin[id]:{titulo:'',contenido:'',link:'',modulo:'administrativo',obligatoria:true,preguntas:{},dirigidoA:[]};
   var cont=document.getElementById('centroProtContenido');
   var gruposOpts=Object.keys(gruposModulo||{}).map(function(g){var checked=(doc.dirigidoA||[]).indexOf(g)>-1;return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.8);padding:4px 0"><input type="checkbox" class="protGrupo" value="'+g+'"'+(checked?' checked':'')+' style="width:15px;height:15px;accent-color:#a78bfa">'+esc(gruposModulo[g].nombre)+' <span style="font-size:9px;color:rgba(255,255,255,.4)">('+(MODULOS_PROTOCOLO[gruposModulo[g].modulo]||'')+')</span></label>';}).join('');
   var modOpts=Object.keys(MODULOS_PROTOCOLO).map(function(m){return '<option value="'+m+'"'+(doc.modulo===m?' selected':'')+'>'+MODULOS_PROTOCOLO[m]+'</option>';}).join('');
@@ -7664,8 +7664,10 @@ window.editarProtocoloAdmin=function(id){
     '<input type="text" id="protTitulo" value="'+esc(doc.titulo||'')+'" placeholder="Ej: Protocolo de agendamiento" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Módulo</label>'+
     '<select id="protModulo" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+modOpts+'</select>'+
-    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Contenido (material de estudio)</label>'+
-    '<textarea id="protContenido" rows="5" placeholder="Escribe aquí el protocolo que deben leer..." style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+esc(doc.contenido||'')+'</textarea>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">📎 Enlace del material (Google Drive, PDF, etc.) — opcional</label>'+
+    '<input type="text" id="protLink" value="'+esc(doc.link||'')+'" placeholder="Pega el link aquí (Cualquiera con el link puede ver)" style="width:100%;font-size:12px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Contenido escrito (opcional, si no usas enlace)</label>'+
+    '<textarea id="protContenido" rows="4" placeholder="O escribe aquí el protocolo directamente..." style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+esc(doc.contenido||'')+'</textarea>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6);display:block;margin-bottom:4px">Dirigir a grupos (si no marcas ninguno, lo ven todos los del módulo):</label>'+
     '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:12px">'+(gruposOpts||'<span style="font-size:11px;color:rgba(255,255,255,.4)">No hay grupos creados. Créalos en la pestaña Grupos.</span>')+'</div>'+
     '<div id="protPreguntasEditor"></div>'+
@@ -7687,17 +7689,28 @@ function renderPreguntasEditorAdmin(){
       '<button onclick="quitarPreguntaAdmin(\''+pid+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:5px;padding:3px 8px;font-family:inherit;font-size:10px;cursor:pointer;margin-top:4px">Quitar</button>'+
     '</div>';
   });
-  html+='<button onclick="agregarPreguntaAdmin()" style="background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;cursor:pointer">+ Agregar pregunta</button>';
+  // Formulario visual para agregar pregunta (SIN prompts)
+  html+='<div id="formNuevaPregAdmin" style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:12px;margin-top:8px">'+
+    '<input type="text" id="npPregunta" placeholder="Escribe la pregunta" style="width:100%;font-size:13px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;margin-bottom:8px">'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px">Opciones (marca la correcta):</div>'+
+    [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><input type="radio" name="npCorrecta" value="'+i+'"'+(i===0?' checked':'')+' style="width:16px;height:16px;accent-color:#34d399"><input type="text" id="npOp'+i+'" placeholder="Opción '+(i+1)+(i>1?' (opcional)':'')+'" style="flex:1;font-size:12px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px"></div>';}).join('')+
+    '<button onclick="agregarPreguntaAdmin()" style="width:100%;margin-top:6px;background:rgba(96,165,250,.2);color:#93c5fd;border:none;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">+ Agregar esta pregunta</button>'+
+  '</div>';
   cont.innerHTML=html;
 }
 window.agregarPreguntaAdmin=function(){
-  var preg=prompt('Escribe la pregunta:');if(!preg)return;
+  var preg=document.getElementById('npPregunta').value.trim();
+  if(!preg){alert('Escribe la pregunta.');return;}
   var ops=[];
-  for(var i=1;i<=4;i++){var op=prompt('Opción '+i+(i>2?' (deja vacío para terminar)':'')+':');if(!op){if(i>2)break;else{alert('Mínimo 2 opciones.');return;}}ops.push(op);}
-  var correctaTxt=prompt('¿Cuál es la correcta? Escribe el número (1-'+ops.length+'):');
-  var correcta=parseInt(correctaTxt)-1;
-  if(isNaN(correcta)||correcta<0||correcta>=ops.length){alert('Número inválido.');return;}
-  window._protPreguntas['p'+Date.now()]={pregunta:preg,opciones:ops,correcta:correcta,tema:'General'};
+  [0,1,2,3].forEach(function(i){var v=document.getElementById('npOp'+i).value.trim();if(v)ops.push({txt:v,idx:i});});
+  if(ops.length<2){alert('Necesitas al menos 2 opciones.');return;}
+  var correctaRadio=document.querySelector('input[name="npCorrecta"]:checked');
+  var correctaIdx=correctaRadio?Number(correctaRadio.value):0;
+  // Mapear la correcta a su posición en el array final
+  var opcionesFinal=ops.map(function(o){return o.txt;});
+  var correctaFinal=ops.findIndex(function(o){return o.idx===correctaIdx;});
+  if(correctaFinal<0)correctaFinal=0;
+  window._protPreguntas['p'+Date.now()]={pregunta:preg,opciones:opcionesFinal,correcta:correctaFinal,tema:'General'};
   renderPreguntasEditorAdmin();
 };
 window.quitarPreguntaAdmin=function(pid){delete window._protPreguntas[pid];renderPreguntasEditorAdmin();};
@@ -7705,7 +7718,7 @@ window.guardarProtocoloAdmin=function(id){
   var titulo=document.getElementById('protTitulo').value.trim();
   if(!titulo){alert('Ponle un título.');return;}
   var dirigidoA=Array.from(document.querySelectorAll('.protGrupo:checked')).map(function(cb){return cb.value;});
-  var doc={titulo:titulo,modulo:document.getElementById('protModulo').value,contenido:document.getElementById('protContenido').value,obligatoria:true,bancoCerrado:true,visible:true,preguntas:window._protPreguntas||{},dirigidoA:dirigidoA};
+  var doc={titulo:titulo,modulo:document.getElementById('protModulo').value,link:document.getElementById('protLink').value.trim(),contenido:document.getElementById('protContenido').value,obligatoria:true,bancoCerrado:true,visible:true,preguntas:window._protPreguntas||{},dirigidoA:dirigidoA};
   var pid=id||('protA_'+Date.now());
   bibliotecaAdmin[pid]=doc;
   sedeRef('bibliotecaAdmin/'+pid).set(doc).then(function(){renderCentroProtocolos('protocolos');});
