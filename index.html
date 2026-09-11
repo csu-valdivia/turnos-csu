@@ -644,6 +644,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirCargaTrabajoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">⚖️ Carga de trabajo del equipo</button>
             <button class="btn-add" id="abrirBorradoresBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">📝 Borradores del equipo sin terminar</button>
             <button class="btn-add" id="abrirCentroProtocolosBtn" style="background:linear-gradient(135deg,#7c3aed,#c4b5fd);margin-top:6px">📚 Centro de protocolos (otros roles)</button>
+            <button class="btn-add" id="abrirGestionDocentesBtn" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">🎓 Docentes y carreras</button>
             <button class="btn-add" id="abrirRendimientoBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">💼 Rendimiento de dotación (confidencial)</button>
           </div>
 
@@ -1588,7 +1589,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1620,6 +1621,8 @@ var METRICAS_ADMIN_DEFAULT={
 var metricasAdmin={}; // se carga de Firebase; si está vacío, usa el default
 // Grupos flexibles para dirigir protocolos (los crea el Enfermero Jefe). gruposModulo[id]={nombre, miembros:[nombres], modulo}
 var gruposModulo={};
+// ── MÓDULO DOCENTE (namespaces separados) ──
+var docentes={},fichaProgresoDocente={},rankingDocente={};
 // Etiquetas de módulo para los protocolos
 var MODULOS_PROTOCOLO={administrativo:'🗂️ Administrativo',bodega:'📦 Bodega',mantencion:'🔧 Mantención',docente:'🎓 Docente',clinico:'⚕️ Clínico'};
 var anunIdx=0,anunTimer=null;
@@ -1709,6 +1712,9 @@ function attach(){
   // ── Listeners módulo administrativo (separados de lo clínico) ──
   on('bibliotecaAdmin',function(v){bibliotecaAdmin=v||{};});
   on('gruposModulo',function(v){gruposModulo=v||{};});
+  on('docentes',function(v){docentes=v||{};});
+  on('fichaProgresoDocente',function(v){fichaProgresoDocente=v||{};});
+  on('rankingDocente',function(v){rankingDocente=v||{};});
   on('metricasAdmin',function(v){metricasAdmin=v||{};});
   on('fichaProgresoAdmin',function(v){fichaProgresoAdmin=v||{};});
   on('produccionAdmin',function(v){produccionAdmin=v||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();});
@@ -1757,7 +1763,7 @@ window.ingresarRol=function(rol){
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _ct=document.getElementById('abrirCargaTrabajoBtn');if(_ct)_ct.onclick=abrirCargaTrabajo;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
-      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;
+      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;var _gd=document.getElementById('abrirGestionDocentesBtn');if(_gd)_gd.onclick=abrirGestionDocentes;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderPlanEstudio==='function')renderPlanEstudio();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
@@ -1797,7 +1803,7 @@ window.ingresarRol=function(rol){
   if(rol==='docente'){
     setSede('Valdivia');
     modoRol='docente';
-    setTimeout(function(){entrarRolSimple('docente');},500);
+    setTimeout(function(){abrirModuloDocente();},500);
     return;
   }
   if(rol==='gerencia'){
@@ -7603,6 +7609,343 @@ function personalInternas(){
   return (nombres||[]).map(function(n){return n.nombre||n;}).filter(function(n){return rolDe(n)==='interna';});
 }
 function nDotacion(){return personalDotacion().length;}
+
+// ══════════════ GESTIÓN DE DOCENTES Y CARRERAS (panel del Jefe) ══════════════
+window.abrirGestionDocentes=function(){
+  var ov=document.getElementById('gestDocOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='gestDocOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  Promise.all([sedeRef('docentes').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('fichaProgresoDocente').once('value'),sedeRef('rankingDocente').once('value')]).then(function(s){
+    docentes=s[0].val()||{};gruposModulo=s[1].val()||{};fichaProgresoDocente=s[2].val()||{};rankingDocente=s[3].val()||{};
+    renderGestionDocentes('inscribir');
+  });
+};
+window.renderGestionDocentes=function(tab){
+  var ov=document.getElementById('gestDocOv');if(!ov)return;
+  function tb(id,lab){return '<button onclick="renderGestionDocentes(\''+id+'\')" style="flex:1;font-size:13px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:'+(tab===id?'rgba(52,211,153,.4);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+      '<span style="font-size:18px;font-weight:800;color:#34d399">🎓 Docentes y carreras</span>'+
+      '<button onclick="document.getElementById(\'gestDocOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:16px">'+tb('inscribir','➕ Inscribir')+tb('reporte','📊 Reporte')+'</div>'+
+    '<div id="gestDocContenido"></div></div>';
+  if(tab==='inscribir')renderInscribirDocentes();else renderReporteDocentes();
+};
+function renderInscribirDocentes(){
+  var cont=document.getElementById('gestDocContenido');if(!cont)return;
+  // Carreras existentes (de los grupos módulo 'docente')
+  var carreras=Object.keys(gruposModulo||{}).filter(function(g){return gruposModulo[g].modulo==='docente';}).map(function(g){return gruposModulo[g].nombre;});
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:12px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Inscribir docente</div>'+
+    '<input type="text" id="docNuevoNombre" placeholder="Nombre completo del docente" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
+    '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+      '<input type="text" id="docNuevaCarrera" list="carrerasList" placeholder="Carrera (ej: Enfermería)" style="flex:1;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+      '<datalist id="carrerasList">'+carreras.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist>'+
+    '</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">La carrera se crea automáticamente como grupo. Puedes reutilizar una existente.</div>'+
+    '<button onclick="inscribirDocente()" class="btn-add" style="background:linear-gradient(135deg,#059669,#34d399)">+ Inscribir docente</button>'+
+  '</div>';
+  // Lista de docentes agrupados por carrera
+  var porCarrera={};
+  Object.keys(docentes||{}).forEach(function(k){var d=docentes[k];if(!porCarrera[d.carrera])porCarrera[d.carrera]=[];porCarrera[d.carrera].push({key:k,nombre:d.nombre});});
+  Object.keys(porCarrera).sort().forEach(function(car){
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:8px">'+
+      '<div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:8px">🎓 '+esc(car)+' ('+porCarrera[car].length+')</div>';
+    porCarrera[car].forEach(function(d){
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:13px;color:#fff">'+esc(d.nombre)+'</span><button onclick="quitarDocente(\''+d.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>';
+    });
+    html+='</div>';
+  });
+  cont.innerHTML=html;
+}
+window.inscribirDocente=function(){
+  var nombre=document.getElementById('docNuevoNombre').value.trim();
+  var carrera=document.getElementById('docNuevaCarrera').value.trim();
+  if(!nombre||!carrera){alert('Ingresa nombre y carrera.');return;}
+  // ¿Existe grupo para esta carrera? Si no, crearlo
+  var gid=Object.keys(gruposModulo||{}).find(function(g){return gruposModulo[g].modulo==='docente'&&gruposModulo[g].nombre.toLowerCase()===carrera.toLowerCase();});
+  var seq=[];
+  if(!gid){
+    gid='grp_'+Date.now();
+    gruposModulo[gid]={nombre:carrera,modulo:'docente',miembros:[nombre]};
+    seq.push(sedeRef('gruposModulo/'+gid).set(gruposModulo[gid]));
+  } else {
+    if(!gruposModulo[gid].miembros)gruposModulo[gid].miembros=[];
+    if(gruposModulo[gid].miembros.indexOf(nombre)<0){gruposModulo[gid].miembros.push(nombre);seq.push(sedeRef('gruposModulo/'+gid+'/miembros').set(gruposModulo[gid].miembros));}
+  }
+  // Guardar el docente
+  var dkey='doc_'+Date.now();
+  docentes[dkey]={nombre:nombre,carrera:carrera,grupo:gid,ts:Date.now()};
+  seq.push(sedeRef('docentes/'+dkey).set(docentes[dkey]));
+  Promise.all(seq).then(function(){
+    document.getElementById('docNuevoNombre').value='';
+    renderInscribirDocentes();
+  });
+};
+window.quitarDocente=function(key){
+  if(!confirm('¿Quitar este docente?'))return;
+  delete docentes[key];
+  sedeRef('docentes/'+key).remove().then(function(){renderInscribirDocentes();});
+};
+function renderReporteDocentes(){
+  var cont=document.getElementById('gestDocContenido');if(!cont)return;
+  var mes=hoyStr().slice(0,7);
+  // Agrupar por carrera
+  var carreras={};
+  Object.keys(rankingDocente||{}).forEach(function(k){
+    var data=rankingDocente[k]&&rankingDocente[k][mes];if(!data)return;
+    var regs=Object.values(data);if(!regs.length)return;
+    var car=regs[0].carrera;var nom=regs[0].nombre;
+    if(!carreras[car])carreras[car]={docentes:{},total:0};
+    var prom=Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length);
+    carreras[car].docentes[nom]={pct:prom,evals:regs.length};
+  });
+  // Total de docentes inscritos por carrera (para cumplimiento)
+  var inscritosPorCarrera={};
+  Object.values(docentes||{}).forEach(function(d){inscritosPorCarrera[d.carrera]=(inscritosPorCarrera[d.carrera]||0)+1;});
+  var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Cumplimiento y rendimiento por carrera · '+mes+'</div>';
+  html+='<button onclick="exportarReporteDocentesPDF()" class="btn-add" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-bottom:14px">📄 Exportar reporte PDF</button>';
+  if(!Object.keys(carreras).length){html+='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Aún no hay datos de docentes este mes.</div>';cont.innerHTML=html;return;}
+  Object.keys(carreras).sort().forEach(function(car){
+    var c=carreras[car];
+    var nDoc=Object.keys(c.docentes).length;
+    var inscritos=inscritosPorCarrera[car]||nDoc;
+    var cumplimiento=Math.round(nDoc/inscritos*100);
+    var promCarrera=Math.round(Object.values(c.docentes).reduce(function(a,d){return a+d.pct;},0)/nDoc);
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<span style="font-size:14px;font-weight:700;color:#34d399">🎓 '+esc(car)+'</span>'+
+        '<span style="font-size:11px;color:rgba(255,255,255,.5)">'+nDoc+'/'+inscritos+' participaron</span>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:10px">'+
+        '<div style="flex:1;background:rgba(255,255,255,.03);border-radius:8px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:'+(cumplimiento>=70?'#6ee7b7':'#fcd34d')+'">'+cumplimiento+'%</div><div style="font-size:9px;color:rgba(255,255,255,.4)">Cumplimiento</div></div>'+
+        '<div style="flex:1;background:rgba(255,255,255,.03);border-radius:8px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:'+(promCarrera>=60?'#6ee7b7':'#fca5a5')+'">'+promCarrera+'%</div><div style="font-size:9px;color:rgba(255,255,255,.4)">Rendimiento</div></div>'+
+      '</div>';
+    Object.keys(c.docentes).sort(function(a,b){return c.docentes[b].pct-c.docentes[a].pct;}).forEach(function(nom){
+      var d=c.docentes[nom];var col=d.pct>=80?'#6ee7b7':d.pct>=60?'#fcd34d':'#fca5a5';
+      html+='<div style="display:flex;justify-content:space-between;padding:5px 8px;font-size:12px"><span style="color:rgba(255,255,255,.8)">'+esc(nom)+'</span><span style="color:'+col+';font-weight:700">'+d.pct+'% ('+d.evals+' ev.)</span></div>';
+    });
+    html+='</div>';
+  });
+  cont.innerHTML=html;
+};
+window.exportarReporteDocentesPDF=function(){
+  var jsPDFlib=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
+  if(!jsPDFlib){alert('No se pudo cargar el generador de PDF.');return;}
+  var doc=new jsPDFlib({unit:'pt',format:'a4'});
+  var W=doc.internal.pageSize.getWidth();var y=40;var mes=hoyStr().slice(0,7);
+  doc.setFillColor(5,150,105);doc.rect(0,0,W,60,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(15);doc.setFont(undefined,'bold');
+  doc.text('Reporte de Docentes por Carrera',40,34);
+  doc.setFontSize(9);doc.setFont(undefined,'normal');doc.text('Mes '+mes+' · '+new Date().toLocaleDateString('es-CL'),40,50);
+  y=85;
+  var carreras={};
+  Object.keys(rankingDocente||{}).forEach(function(k){var data=rankingDocente[k]&&rankingDocente[k][mes];if(!data)return;var regs=Object.values(data);if(!regs.length)return;var car=regs[0].carrera,nom=regs[0].nombre;if(!carreras[car])carreras[car]={};carreras[car][nom]=Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length);});
+  var inscr={};Object.values(docentes||{}).forEach(function(d){inscr[d.carrera]=(inscr[d.carrera]||0)+1;});
+  Object.keys(carreras).sort().forEach(function(car){
+    if(y>760){doc.addPage();y=40;}
+    doc.setFontSize(13);doc.setTextColor(5,150,105);doc.setFont(undefined,'bold');doc.text(car,40,y);y+=6;doc.setDrawColor(200,200,200);doc.line(40,y,W-40,y);y+=16;
+    var nDoc=Object.keys(carreras[car]).length;var totInsc=inscr[car]||nDoc;
+    var cumpl=Math.round(nDoc/totInsc*100);
+    var prom=Math.round(Object.values(carreras[car]).reduce(function(a,b){return a+b;},0)/nDoc);
+    doc.setFontSize(10);doc.setTextColor(60,60,60);doc.setFont(undefined,'normal');
+    doc.text('Cumplimiento: '+cumpl+'% ('+nDoc+'/'+totInsc+' participaron)  ·  Rendimiento promedio: '+prom+'%',40,y);y+=18;
+    Object.keys(carreras[car]).sort(function(a,b){return carreras[car][b]-carreras[car][a];}).forEach(function(nom){
+      if(y>780){doc.addPage();y=40;}
+      doc.setTextColor(90,90,90);doc.text(nom,50,y);doc.setTextColor(20,20,20);doc.setFont(undefined,'bold');doc.text(carreras[car][nom]+'%',W-40,y,{align:'right'});doc.setFont(undefined,'normal');y+=15;
+    });
+    y+=12;
+  });
+  doc.save('Reporte_Docentes_'+mes+'.pdf');
+};
+
+
+// ══════════════ MÓDULO DOCENTE ══════════════
+window.abrirModuloDocente=function(){
+  var ov=document.getElementById('moduloDocenteOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='moduloDocenteOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9000;overflow-y:auto;padding:20px';
+  ov.innerHTML='<div style="max-width:480px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  Promise.all([sedeRef('docentes').once('value'),sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('fichaProgresoDocente').once('value'),sedeRef('rankingDocente').once('value')]).then(function(s){
+    docentes=s[0].val()||{};bibliotecaAdmin=s[1].val()||{};gruposModulo=s[2].val()||{};fichaProgresoDocente=s[3].val()||{};rankingDocente=s[4].val()||{};
+    renderModuloDocente();
+  });
+};
+function renderModuloDocente(){
+  var ov=document.getElementById('moduloDocenteOv');if(!ov)return;
+  var diaHoy=diaDeDate(hoyStr());
+  var esFinde=(diaHoy==='Sábado'||diaHoy==='Domingo');
+  ov.innerHTML='<div style="max-width:480px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+      '<span style="font-size:18px;font-weight:800;color:#34d399">🎓 Docente</span>'+
+      '<button onclick="location.reload()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">← Salir</button>'+
+    '</div>'+
+    (esFinde
+      ? '<div style="background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:20px;text-align:center;color:#93c5fd;font-size:14px">📅 El módulo docente opera de lunes a viernes. Hoy es '+diaHoy+'. ¡Buen fin de semana!</div>'
+      : '<div id="docNombreSel"></div>'+
+        '<div id="docTabs" style="display:none;gap:8px;margin-bottom:14px">'+
+          '<button onclick="tabDoc(\'material\')" id="tabDOC_mat" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(52,211,153,.3);color:#fff">📚 Material</button>'+
+          '<button onclick="tabDoc(\'preguntas\')" id="tabDOC_preg" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📝 Preguntas</button>'+
+          '<button onclick="tabDoc(\'ranking\')" id="tabDOC_rank" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Mi carrera</button>'+
+        '</div>'+
+        '<div id="docContenido"></div>')+
+    '</div>';
+  if(!esFinde)renderDocNombreSel();
+}
+function renderDocNombreSel(){
+  var cont=document.getElementById('docNombreSel');if(!cont)return;
+  var lista=Object.keys(docentes||{}).map(function(k){return {key:k,nombre:docentes[k].nombre,carrera:docentes[k].carrera};});
+  if(!lista.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no hay docentes inscritos. El Enfermero Jefe debe inscribirte primero.</div>';return;}
+  cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:6px">¿Quién eres?</label>'+
+    '<select id="docNombre" onchange="cargarDocente()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+      '<option value="">Selecciona tu nombre</option>'+
+      lista.map(function(d){return '<option value="'+d.key+'">'+esc(d.nombre)+' — '+esc(d.carrera)+'</option>';}).join('')+
+    '</select></div>';
+}
+window.cargarDocente=function(){
+  var key=document.getElementById('docNombre').value;
+  if(!key)return;
+  window._docKey=key;
+  window._docActual=docentes[key];
+  document.getElementById('docTabs').style.display='flex';
+  tabDoc('material');
+};
+window.tabDoc=function(tab){
+  ['mat','preg','rank'].forEach(function(t){var b=document.getElementById('tabDOC_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={material:'tabDOC_mat',preguntas:'tabDOC_preg',ranking:'tabDOC_rank'};
+  var activo=document.getElementById(map[tab]);
+  if(activo){activo.style.background='rgba(52,211,153,.3)';activo.style.color='#fff';}
+  var cont=document.getElementById('docContenido');
+  if(tab==='material')renderMaterialDocente(cont);
+  else if(tab==='preguntas')renderPreguntasDocente(cont);
+  else renderRankingDocente(cont);
+};
+// Protocolos visibles para este docente (módulo docente + dirigidos a su carrera/grupo)
+function protocolosDocente(nombre){
+  return Object.entries(bibliotecaAdmin||{}).filter(function(e){
+    var doc=e[1];
+    if(doc.modulo!=='docente')return false;
+    return protocoloVisiblePara(doc,nombre);
+  });
+}
+function renderMaterialDocente(cont){
+  if(!cont)return;
+  var d=window._docActual;
+  var protos=protocolosDocente(d.nombre);
+  if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no tienes material asignado para tu carrera.</div>';return;}
+  var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Lee los protocolos antes de responder.</div>';
+  protos.forEach(function(e){
+    var doc=e[1];
+    html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:10px">'+
+      '<div style="font-size:14px;font-weight:700;color:#34d399;margin-bottom:6px">📄 '+esc(doc.titulo)+'</div>'+
+      (doc.link?'<a href="'+esc(doc.link)+'" target="_blank" rel="noopener" style="display:inline-block;background:rgba(96,165,250,.15);color:#93c5fd;text-decoration:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;margin-bottom:8px">📎 Abrir material →</a>':'')+
+      (doc.contenido?'<div style="font-size:13px;color:rgba(255,255,255,.8);line-height:1.6;white-space:pre-wrap;margin-top:6px">'+esc(doc.contenido)+'</div>':'')+
+    '</div>';
+  });
+  cont.innerHTML=html;
+}
+function renderPreguntasDocente(cont){
+  if(!cont)return;
+  var d=window._docActual;var key=window._docKey;
+  var protos=protocolosDocente(d.nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2;});
+  if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
+  var hoy=hoyStr();
+  if(fichaProgresoDocente[key]&&fichaProgresoDocente[key].fecha===hoy){
+    cont.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;margin-bottom:6px">¡Ya completaste hoy!</div><div style="font-size:13px;color:rgba(255,255,255,.6)">Nos vemos la próxima semana.</div></div>';
+    return;
+  }
+  var elegido=protos[Math.floor(Math.random()*protos.length)];
+  window._docProtocolo={id:elegido[0],doc:elegido[1]};
+  var doc=elegido[1];
+  var preguntas=Object.values(doc.preguntas||{}).sort(function(){return Math.random()-0.5;}).slice(0,4);
+  window._docPreguntas=preguntas;window._docRespuestas={};
+  var html='<div style="background:#16233d;border-radius:12px;padding:18px">'+
+    '<div style="font-size:11px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">📋 '+esc(doc.titulo)+'</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px">Responde las siguientes preguntas:</div>';
+  preguntas.forEach(function(p,i){
+    html+='<div style="margin-bottom:16px"><div style="font-size:14px;color:#fff;font-weight:600;margin-bottom:8px">'+(i+1)+'. '+esc(p.pregunta)+'</div>';
+    (p.opciones||[]).forEach(function(op,j){
+      html+='<button class="doc-opcion" data-preg="'+i+'" data-op="'+j+'" data-correcta="'+(j===Number(p.correcta)?'1':'0')+'" data-tema="'+esc(p.tema||'General')+'" onclick="selDocOpcion('+i+','+j+')" style="display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+esc(op)+'</button>';
+    });
+    html+='</div>';
+  });
+  html+='<button onclick="enviarPreguntasDocente()" class="btn-add" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:8px">Enviar respuestas</button></div>';
+  cont.innerHTML=html;
+}
+window.selDocOpcion=function(preg,op){
+  document.querySelectorAll('.doc-opcion[data-preg="'+preg+'"]').forEach(function(b){b.style.background='rgba(255,255,255,.05)';b.style.borderColor='rgba(255,255,255,.12)';});
+  var btn=document.querySelector('.doc-opcion[data-preg="'+preg+'"][data-op="'+op+'"]');
+  if(btn){btn.style.background='rgba(52,211,153,.25)';btn.style.borderColor='#34d399';}
+  window._docRespuestas[preg]={correcta:(btn.dataset.correcta==='1'),tema:btn.dataset.tema};
+};
+window.enviarPreguntasDocente=function(){
+  var total=window._docPreguntas.length;
+  if(Object.keys(window._docRespuestas).length<total){alert('Responde todas las preguntas.');return;}
+  var correctas=0;var fallosPorTema={};
+  Object.values(window._docRespuestas).forEach(function(r){
+    if(r.correcta)correctas++;
+    else fallosPorTema[r.tema]=(fallosPorTema[r.tema]||0)+1;
+  });
+  var pct=Math.round(correctas/total*100);
+  var key=window._docKey;var d=window._docActual;var hoy=hoyStr();
+  var reg={fecha:hoy,correctas:correctas,total:total,pct:pct,ts:Date.now(),protocolo:window._docProtocolo.doc.titulo,carrera:d.carrera,nombre:d.nombre,fallosPorTema:fallosPorTema};
+  sedeRef('fichaProgresoDocente/'+key).set(reg);
+  var mesKey=hoy.slice(0,7);
+  sedeRef('rankingDocente/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy,carrera:d.carrera,nombre:d.nombre});
+  // Retroalimentación de áreas débiles
+  var areasDebiles=Object.keys(fallosPorTema);
+  var retro='';
+  if(areasDebiles.length){
+    retro='<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:12px;margin-top:12px;text-align:left"><div style="font-size:12px;font-weight:700;color:#fcd34d;margin-bottom:6px">📚 Áreas para reforzar:</div>'+areasDebiles.map(function(t){return '<div style="font-size:12px;color:rgba(255,255,255,.8)">• '+esc(t)+'</div>';}).join('')+'</div>';
+  }
+  var cont=document.getElementById('docContenido');
+  cont.innerHTML='<div style="background:'+(pct>=60?'rgba(16,185,129,.1)':'rgba(251,191,36,.1)')+';border:1px solid '+(pct>=60?'rgba(16,185,129,.3)':'rgba(251,191,36,.3)')+';border-radius:12px;padding:24px;text-align:center">'+
+    '<div style="font-size:40px;margin-bottom:8px">'+(pct>=60?'✅':'📚')+'</div>'+
+    '<div style="font-size:18px;font-weight:800;color:'+(pct>=60?'#6ee7b7':'#fcd34d')+';margin-bottom:6px">'+correctas+' de '+total+' correctas ('+pct+'%)</div>'+
+    '<div style="font-size:13px;color:rgba(255,255,255,.6)">'+(pct>=60?'¡Bien hecho!':'Sigue repasando el protocolo.')+'</div>'+
+    retro+
+  '</div>';
+};
+function renderRankingDocente(cont){
+  if(!cont)return;
+  var d=window._docActual;var miCarrera=d.carrera;
+  var mes=hoyStr().slice(0,7);
+  // Solo docentes de la MISMA carrera
+  var filas=[];
+  Object.keys(rankingDocente||{}).forEach(function(k){
+    var data=rankingDocente[k]&&rankingDocente[k][mes];if(!data)return;
+    var regs=Object.values(data);if(!regs.length)return;
+    var carrera=regs[0].carrera;var nombre=regs[0].nombre;
+    if(carrera!==miCarrera)return; // solo su carrera
+    var prom=Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length);
+    filas.push({nombre:nombre,pct:prom,dias:regs.length});
+  });
+  filas.sort(function(a,b){return b.pct-a.pct;});
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:4px">🏆 Ranking · '+esc(miCarrera)+'</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+mes+' · Solo docentes de tu carrera. Cumplimiento de capacitación.</div>';
+  if(!filas.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Aún no hay datos este mes.</div>';}
+  else{
+    filas.forEach(function(f,i){
+      var medalla=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'°';
+      var color=f.pct>=80?'#6ee7b7':f.pct>=60?'#fcd34d':'#fca5a5';
+      var esYo=(f.nombre===d.nombre);
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.05)'+(esYo?';background:rgba(52,211,153,.08);border-radius:8px':'')+'">'+
+        '<span style="font-size:15px;min-width:28px;text-align:center">'+medalla+'</span>'+
+        '<div style="flex:1"><div style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+(esYo?' <span style="font-size:9px;color:#34d399">(tú)</span>':'')+'</div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+f.dias+' evaluaciones</div></div>'+
+        '<span style="font-size:16px;font-weight:800;color:'+color+'">'+f.pct+'%</span>'+
+      '</div>';
+    });
+  }
+  html+='</div>';
+  cont.innerHTML=html;
+}
 
 // ══════════════ CENTRO DE PROTOCOLOS (para roles no clínicos) ══════════════
 window.abrirCentroProtocolos=function(){
