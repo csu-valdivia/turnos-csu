@@ -1101,6 +1101,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               </div>
               <div class="saved" id="horaAvisoSaved">✓ Hora guardada</div>
             </div>
+            <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:10px;margin-bottom:10px">
+              <div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:4px">🕐 Ventanas horarias de cumplimiento</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:10px">Horario para registrar cada jornada. El aviso aparece 5 min antes del cierre. El reloj muestra la ventana activa.</div>
+              <div id="ventanasConfig"></div>
+              <button class="btn-sec" id="guardarVentanasBtn" style="font-size:11px;color:#34d399;border-color:rgba(52,211,153,.4);width:100%;margin-top:8px">Guardar horarios</button>
+              <div class="saved" id="ventanasSaved">✓ Horarios guardados</div>
+            </div>
             <div style="background:rgba(126,200,247,.06);border:1px solid rgba(126,200,247,.2);border-radius:8px;padding:10px;margin-bottom:10px">
               <div style="font-size:12px;font-weight:700;color:#7ec8f7;margin-bottom:4px">🏆 Ponderación del ranking</div>
               <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:8px">Define cuánto pesa cada componente en el puntaje del ranking. Deben sumar 100%.</div>
@@ -1454,6 +1461,72 @@ var COSTO_TERCERIZAR_CARGA=200000; // $ por carga de autoclave (150 lts) terceri
 var factorIndirecto=0.40; // se recalcula desde horasIndirectasDia; 40% es el valor inicial de referencia
 var horasIndirectasDia=0; // horas indirectas totales del área por día (0 = usar factor 40% por defecto)
 var horaAvisoTareas=12; // hora (0-23) desde la cual aparece el aviso de tareas pendientes
+// Ventanas horarias de cumplimiento por jornada. Formato "HH:MM". Configurable.
+var VENTANAS_HORARIAS_DEFAULT={
+  lv:{am:{ini:'07:00',fin:'14:00'},pm:{ini:'10:00',fin:'20:00'},dia:{ini:'07:00',fin:'20:00'}},
+  sab:{am:{ini:'08:00',fin:'14:00'},pm:{ini:'08:00',fin:'14:00'},dia:{ini:'08:00',fin:'14:00'}}
+};
+var ventanasHorarias={}; // se carga de Firebase; si vacío usa el default
+
+// Devuelve la ventana horaria {ini,fin} para una jornada hoy, según día de semana
+function ventanaDeJornada(jornada){
+  var vh=(ventanasHorarias&&Object.keys(ventanasHorarias).length)?ventanasHorarias:VENTANAS_HORARIAS_DEFAULT;
+  var d=new Date(hoyStr()+'T12:00:00').getDay(); // 0=dom,6=sab
+  var grupo=(d===6)?'sab':'lv';
+  if(d===0)return null; // domingo no opera
+  var jorn=jornada||'dia';
+  return (vh[grupo]&&vh[grupo][jorn])||VENTANAS_HORARIAS_DEFAULT[grupo][jorn];
+}
+// Minutos desde medianoche de una hora "HH:MM"
+function hhmmAMin(hhmm){var p=(hhmm||'0:0').split(':');return parseInt(p[0])*60+parseInt(p[1]||0);}
+// Minutos actuales
+function minAhora(){var n=new Date();return n.getHours()*60+n.getMinutes();}
+// ¿En qué ventana está la persona ahora? Devuelve {jornada, ventana, estado} o null
+function ventanaActivaAhora(){
+  var d=new Date().getDay();if(d===0)return null;
+  var m=minAhora();
+  var jornadas=['am','pm','dia'];
+  for(var i=0;i<jornadas.length;i++){
+    var v=ventanaDeJornada(jornadas[i]);if(!v)continue;
+    var ini=hhmmAMin(v.ini),fin=hhmmAMin(v.fin);
+    if(m>=ini&&m<=fin)return {jornada:jornadas[i],ventana:v,minRestantes:fin-m};
+  }
+  return null;
+}
+
+// ══════════════ RELOJ DIGITAL FLOTANTE (módulos de trabajo) ══════════════
+var _relojInterval=null;
+function montarReloj(){
+  if(document.getElementById('relojFlotante'))return;
+  var r=document.createElement('div');
+  r.id='relojFlotante';
+  r.style.cssText='position:fixed;top:8px;right:8px;z-index:9998;background:rgba(11,18,32,.92);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:8px 14px;font-family:-apple-system,system-ui,monospace;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+  document.body.appendChild(r);
+  actualizarReloj();
+  if(_relojInterval)clearInterval(_relojInterval);
+  _relojInterval=setInterval(actualizarReloj,1000);
+}
+function actualizarReloj(){
+  var r=document.getElementById('relojFlotante');if(!r)return;
+  var n=new Date();
+  var hh=('0'+n.getHours()).slice(-2),mm=('0'+n.getMinutes()).slice(-2),ss=('0'+n.getSeconds()).slice(-2);
+  var va=ventanaActivaAhora();
+  var indicador='';
+  if(va){
+    var jLabel={am:'AM',pm:'PM',dia:'Todo el día'}[va.jornada];
+    var color=va.minRestantes<=30?'#fca5a5':va.minRestantes<=60?'#fcd34d':'#6ee7b7';
+    var hRest=Math.floor(va.minRestantes/60),mRest=va.minRestantes%60;
+    indicador='<div style="font-size:9px;color:'+color+';margin-top:2px;font-weight:700">🕐 '+jLabel+' · cierra en '+(hRest>0?hRest+'h ':'')+mRest+'min</div>';
+  } else {
+    var d=new Date().getDay();
+    indicador='<div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px">'+(d===0?'Domingo · sin turno':'Fuera de horario')+'</div>';
+  }
+  r.innerHTML='<div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:1px">'+hh+':'+mm+'<span style="font-size:11px;color:rgba(255,255,255,.5)">:'+ss+'</span></div>'+indicador;
+}
+function desmontarReloj(){
+  if(_relojInterval){clearInterval(_relojInterval);_relojInterval=null;}
+  var r=document.getElementById('relojFlotante');if(r)r.remove();
+}
 
 var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
@@ -1589,7 +1662,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1707,6 +1780,7 @@ function attach(){
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horaAvisoTareas',function(v){if(typeof v==='number'&&v>=0&&v<=23)horaAvisoTareas=v;});
+  on('ventanasHorarias',function(v){if(v&&typeof v==='object')ventanasHorarias=v;});
   on('tiemposCalibrados',function(v){if(v&&typeof v==='object'){Object.keys(v).forEach(function(tp){if(TIEMPOS_PROCESO[tp]&&typeof v[tp]==='number')TIEMPOS_PROCESO[tp].h=v[tp];});}});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
   // ── Listeners módulo administrativo (separados de lo clínico) ──
@@ -2307,6 +2381,7 @@ function renderModuloAdministrativo(){
         '<div id="adminContenido"></div>')+
     '</div>';
   if(!esFinde)renderAdminNombreSel();
+  montarReloj();
 }
 
 function renderAdminNombreSel(){
@@ -2716,6 +2791,70 @@ function showApp(){
   setTimeout(verificarBienvenidaInduccion,800);
   // 6. Aviso de borradores pendientes sin terminar
   setTimeout(verificarBorradoresPendientes,2200);
+  // 7. Reloj digital flotante (módulo de trabajo del colaborador)
+  montarReloj();
+  // 8. Avisos de ventana horaria (advertencia 5 min antes del cierre / misión cumplida)
+  iniciarChequeoVentana();
+}
+
+// Chequeo periódico de la ventana horaria: avisa 5 min antes del cierre si hay pendientes, o "misión cumplida"
+var _ventanaChequeoInterval=null;
+function iniciarChequeoVentana(){
+  if(_ventanaChequeoInterval)clearInterval(_ventanaChequeoInterval);
+  chequearVentanaHoraria();
+  _ventanaChequeoInterval=setInterval(chequearVentanaHoraria,60*1000); // cada minuto
+}
+function chequearVentanaHoraria(){
+  if(!curNombre)return;
+  if(curNombre.trim().toLowerCase()==='patricio baeza')return;
+  var va=ventanaActivaAhora();
+  if(!va)return;
+  var hoy=hoyStr();var diaHoy=diaDeFecha(hoy);
+  // Tareas medibles de esta persona para hoy en la jornada de la ventana activa (o todo el día)
+  var misTareas=Object.values(tareas||{}).filter(function(t){
+    if(t.nombre!==curNombre||t.dia!==diaHoy)return false;
+    if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo])return false;
+    var jt=t.jornada||'dia';
+    // La tarea aplica si su jornada coincide con la ventana activa, o si es 'dia'
+    return jt===va.jornada||jt==='dia'||va.jornada==='dia';
+  });
+  if(!misTareas.length)return;
+  var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy).cumplido;});
+  var lsBase='tcsu_vent_'+S+'_'+hoy+'_'+va.jornada+'_'+curNombre.replace(/\s/g,'_');
+  // MISIÓN CUMPLIDA: completó todo
+  if(!pendientes.length){
+    if(!sessionStorage.getItem(lsBase+'_ok')){
+      sessionStorage.setItem(lsBase+'_ok','1');
+      mostrarAvisoVentana(true,[],va);
+    }
+    return;
+  }
+  // ADVERTENCIA: faltan 5 min o menos para el cierre y hay pendientes
+  if(va.minRestantes<=5&&va.minRestantes>=0){
+    if(!sessionStorage.getItem(lsBase+'_warn')){
+      sessionStorage.setItem(lsBase+'_warn','1');
+      mostrarAvisoVentana(false,pendientes,va);
+    }
+  }
+}
+function mostrarAvisoVentana(cumplida,pendientes,va){
+  var m=document.createElement('div');
+  m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9700;display:flex;align-items:center;justify-content:center;padding:20px';
+  var jLabel={am:'AM',pm:'PM',dia:'Todo el día'}[va.jornada];
+  var contenido;
+  if(cumplida){
+    contenido='<div style="font-size:56px;margin-bottom:10px">🎯</div>'+
+      '<div style="font-size:20px;font-weight:900;color:#6ee7b7;margin-bottom:8px">¡Misión cumplida!</div>'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6">Completaste todas tus tareas de la jornada '+jLabel+' antes del cierre. Excelente trabajo. 💪</div>';
+  } else {
+    var lista=pendientes.map(function(t){return '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:13px;color:#fca5a5;text-align:left">⏳ '+nombreRol(t.tipo)+'</div>';}).join('');
+    contenido='<div style="font-size:56px;margin-bottom:10px">⚠️</div>'+
+      '<div style="font-size:20px;font-weight:900;color:#fca5a5;margin-bottom:6px">¡Cierre en 5 minutos!</div>'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:14px">La jornada '+jLabel+' cierra a las '+va.ventana.fin+'. Te faltan estas tareas por registrar:</div>'+lista;
+  }
+  m.innerHTML='<div style="background:#16233d;border-radius:18px;padding:26px;max-width:380px;width:100%;text-align:center">'+contenido+
+    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;margin-top:18px;background:linear-gradient(135deg,'+(cumplida?'#059669,#34d399':'#dc2626,#f87171')+');color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">'+(cumplida?'¡Genial! 🎉':'Ir a registrar ahora')+'</button></div>';
+  document.body.appendChild(m);
 }
 
 // Verifica si hay bienvenida pendiente para el colaborador y muestra el avatar
@@ -7795,6 +7934,7 @@ function renderModuloDocente(){
         '<div id="docContenido"></div>')+
     '</div>';
   if(!esFinde)renderDocNombreSel();
+  montarReloj();
 }
 function renderDocNombreSel(){
   var cont=document.getElementById('docNombreSel');if(!cont)return;
@@ -7954,8 +8094,8 @@ window.abrirCentroProtocolos=function(){
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
   ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
   document.body.appendChild(ov);
-  Promise.all([sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('secretarias').once('value')]).then(function(s){
-    bibliotecaAdmin=s[0].val()||{};gruposModulo=s[1].val()||{};secretarias=s[2].val()||{};
+  Promise.all([sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('secretarias').once('value'),sedeRef('docentes').once('value')]).then(function(s){
+    bibliotecaAdmin=s[0].val()||{};gruposModulo=s[1].val()||{};secretarias=s[2].val()||{};docentes=s[3].val()||{};
     renderCentroProtocolos('protocolos');
   });
 };
@@ -8075,6 +8215,7 @@ function renderGruposList(){
   var cont=document.getElementById('centroProtContenido');if(!cont)return;
   var lista=(nombres||[]).map(function(n){return n.nombre||n;});
   Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];lista.push(typeof v==='object'?v.nombre:v);});
+  Object.keys(docentes||{}).forEach(function(k){var d=docentes[k];if(d&&d.nombre&&lista.indexOf(d.nombre)<0)lista.push(d.nombre);});
   var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:12px">'+
     '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">Crear grupo</div>'+
     '<input type="text" id="nuevoGrupoNombre" placeholder="Nombre (ej: Secretarias, Carrera Enfermería)" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
@@ -8929,6 +9070,35 @@ function initHoraAvisoSelect(){
   var opts='';
   for(var h=7;h<=20;h++){opts+='<option value="'+h+'"'+(h===horaAvisoTareas?' selected':'')+'>'+('0'+h).slice(-2)+':00</option>';}
   sel.innerHTML=opts;
+  initVentanasConfig();
+}
+
+function initVentanasConfig(){
+  var cont=document.getElementById('ventanasConfig');if(!cont)return;
+  var vh=(ventanasHorarias&&Object.keys(ventanasHorarias).length)?ventanasHorarias:VENTANAS_HORARIAS_DEFAULT;
+  function fila(grupo,gLabel,jorn,jLabel){
+    var v=(vh[grupo]&&vh[grupo][jorn])||VENTANAS_HORARIAS_DEFAULT[grupo][jorn];
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.6);min-width:90px">'+gLabel+' '+jLabel+'</span>'+
+      '<input type="time" id="vh_'+grupo+'_'+jorn+'_ini" value="'+v.ini+'" style="font-size:11px;padding:4px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:5px">'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.4)">a</span>'+
+      '<input type="time" id="vh_'+grupo+'_'+jorn+'_fin" value="'+v.fin+'" style="font-size:11px;padding:4px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:5px">'+
+    '</div>';
+  }
+  cont.innerHTML=
+    '<div style="font-size:10px;font-weight:700;color:#93c5fd;margin:4px 0">Lunes a Viernes</div>'+
+    fila('lv','L-V','am','AM')+fila('lv','L-V','pm','PM')+fila('lv','L-V','dia','Todo el día')+
+    '<div style="font-size:10px;font-weight:700;color:#93c5fd;margin:8px 0 4px">Sábado</div>'+
+    fila('sab','Sáb','am','AM')+fila('sab','Sáb','pm','PM')+fila('sab','Sáb','dia','Todo el día');
+  var btn=document.getElementById('guardarVentanasBtn');
+  if(btn)btn.onclick=function(){
+    var nuevo={lv:{},sab:{}};
+    ['lv','sab'].forEach(function(g){['am','pm','dia'].forEach(function(j){
+      nuevo[g][j]={ini:document.getElementById('vh_'+g+'_'+j+'_ini').value,fin:document.getElementById('vh_'+g+'_'+j+'_fin').value};
+    });});
+    ventanasHorarias=nuevo;
+    sedeRef('ventanasHorarias').set(nuevo).then(function(){showSaved('ventanasSaved');});
+  };
 }
 
 // Configuración de pesos del ranking
