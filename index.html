@@ -645,6 +645,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirBorradoresBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">📝 Borradores del equipo sin terminar</button>
             <button class="btn-add" id="abrirCentroProtocolosBtn" style="background:linear-gradient(135deg,#7c3aed,#c4b5fd);margin-top:6px">📚 Centro de protocolos (otros roles)</button>
             <button class="btn-add" id="abrirGestionDocentesBtn" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">🎓 Docentes y carreras</button>
+            <button class="btn-add" id="abrirRecesoBtn" style="background:linear-gradient(135deg,#0369a1,#38bdf8);margin-top:6px">🏖️ Modo receso académico</button>
             <button class="btn-add" id="abrirRendimientoBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">💼 Rendimiento de dotación (confidencial)</button>
           </div>
 
@@ -1467,6 +1468,8 @@ var VENTANAS_HORARIAS_DEFAULT={
   sab:{am:{ini:'08:00',fin:'14:00'},pm:{ini:'08:00',fin:'14:00'},dia:{ini:'08:00',fin:'14:00'}}
 };
 var ventanasHorarias={}; // se carga de Firebase; si vacío usa el default
+// Modo receso académico: {activo, horaEntrada, horaSalida, tareas:[{id,nombre}]}
+var recesoAcademico={activo:false,horaEntrada:'09:00',horaSalida:'17:00',tareas:{}};
 
 // Devuelve la ventana horaria {ini,fin} para una jornada hoy, según día de semana
 function ventanaDeJornada(jornada){
@@ -1485,11 +1488,17 @@ function minAhora(){var n=new Date();return n.getHours()*60+n.getMinutes();}
 function ventanaActivaAhora(){
   var d=new Date().getDay();if(d===0)return null;
   var m=minAhora();
+  // Modo receso: horario único para todos
+  if(recesoAcademico&&recesoAcademico.activo===true){
+    var ini=hhmmAMin(recesoAcademico.horaEntrada||'09:00'),fin=hhmmAMin(recesoAcademico.horaSalida||'17:00');
+    if(m>=ini&&m<=fin)return {jornada:'receso',ventana:{ini:recesoAcademico.horaEntrada,fin:recesoAcademico.horaSalida},minRestantes:fin-m,receso:true};
+    return null;
+  }
   var jornadas=['am','pm','dia'];
   for(var i=0;i<jornadas.length;i++){
     var v=ventanaDeJornada(jornadas[i]);if(!v)continue;
-    var ini=hhmmAMin(v.ini),fin=hhmmAMin(v.fin);
-    if(m>=ini&&m<=fin)return {jornada:jornadas[i],ventana:v,minRestantes:fin-m};
+    var vini=hhmmAMin(v.ini),vfin=hhmmAMin(v.fin);
+    if(m>=vini&&m<=vfin)return {jornada:jornadas[i],ventana:v,minRestantes:vfin-m};
   }
   return null;
 }
@@ -1513,7 +1522,7 @@ function actualizarReloj(){
   var va=ventanaActivaAhora();
   var indicador='';
   if(va){
-    var jLabel={am:'AM',pm:'PM',dia:'Todo el día'}[va.jornada];
+    var jLabel={am:'AM',pm:'PM',dia:'Todo el día',receso:'🏖️ Receso'}[va.jornada];
     var color=va.minRestantes<=30?'#fca5a5':va.minRestantes<=60?'#fcd34d':'#6ee7b7';
     var hRest=Math.floor(va.minRestantes/60),mRest=va.minRestantes%60;
     indicador='<div style="font-size:9px;color:'+color+';margin-top:2px;font-weight:700">🕐 '+jLabel+' · cierra en '+(hRest>0?hRest+'h ':'')+mRest+'min</div>';
@@ -1662,7 +1671,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1781,6 +1790,7 @@ function attach(){
   on('horasIndirectasDia',function(v){if(typeof v==='number'&&v>=0)horasIndirectasDia=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
   on('horaAvisoTareas',function(v){if(typeof v==='number'&&v>=0&&v<=23)horaAvisoTareas=v;});
   on('ventanasHorarias',function(v){if(v&&typeof v==='object')ventanasHorarias=v;});
+  on('recesoAcademico',function(v){if(v&&typeof v==='object')recesoAcademico=v;if(document.getElementById('recesoPanel'))renderRecesoConfig();});
   on('tiemposCalibrados',function(v){if(v&&typeof v==='object'){Object.keys(v).forEach(function(tp){if(TIEMPOS_PROCESO[tp]&&typeof v[tp]==='number')TIEMPOS_PROCESO[tp].h=v[tp];});}});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
   // ── Listeners módulo administrativo (separados de lo clínico) ──
@@ -1837,7 +1847,7 @@ window.ingresarRol=function(rol){
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _ct=document.getElementById('abrirCargaTrabajoBtn');if(_ct)_ct.onclick=abrirCargaTrabajo;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
-      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;var _gd=document.getElementById('abrirGestionDocentesBtn');if(_gd)_gd.onclick=abrirGestionDocentes;
+      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;var _gd=document.getElementById('abrirGestionDocentesBtn');if(_gd)_gd.onclick=abrirGestionDocentes;var _rc=document.getElementById('abrirRecesoBtn');if(_rc)_rc.onclick=abrirReceso;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderPlanEstudio==='function')renderPlanEstudio();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
@@ -3476,6 +3486,26 @@ document.getElementById('nameSelect').addEventListener('change',function(e){curN
 function renderMisTurnos(nombre){
   var d=document.getElementById('results');if(!nombre){d.innerHTML='';return;}
   var html='',found=false;
+  // ── MODO RECESO ACADÉMICO: muestra tareas generales en vez de las clínicas ──
+  if(recesoAcademico&&recesoAcademico.activo===true){
+    var tareasR=recesoAcademico.tareas||{};
+    var keysR=Object.keys(tareasR);
+    html+='<div style="background:linear-gradient(135deg,rgba(3,105,161,.18),rgba(56,189,248,.06));border:1px solid rgba(56,189,248,.35);border-radius:12px;padding:16px;margin-bottom:12px">'+
+      '<div style="font-size:15px;font-weight:800;color:#38bdf8;margin-bottom:4px">🏖️ Receso académico</div>'+
+      '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px">Horario: '+(recesoAcademico.horaEntrada||'09:00')+' a '+(recesoAcademico.horaSalida||'17:00')+' · Todos entran a la misma hora</div>'+
+      '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px">📋 Tareas del receso:</div>';
+    if(keysR.length){
+      keysR.forEach(function(tid){
+        html+='<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13px;color:#fff">📌 '+esc(tareasR[tid])+'</div>';
+      });
+    } else {
+      html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no hay tareas de receso asignadas.</div>';
+    }
+    html+='</div>';
+    // En receso también puede ver bodega central y sus registros técnicos si los tiene
+    d.innerHTML=html+'<div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:10px">Durante el receso, las tareas clínicas normales están en pausa.</div>';
+    return;
+  }
   // Botón de gestión de subbodega (si es encargado de alguna)
   var misBodegas=Object.keys(invAsignaciones||{}).filter(function(b){return invAsignaciones[b]===nombre;});
   if(misBodegas.length){
@@ -7748,6 +7778,98 @@ function personalInternas(){
   return (nombres||[]).map(function(n){return n.nombre||n;}).filter(function(n){return rolDe(n)==='interna';});
 }
 function nDotacion(){return personalDotacion().length;}
+
+// ══════════════ MODO RECESO ACADÉMICO ══════════════
+window.abrirReceso=function(){
+  var ov=document.getElementById('recesoOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='recesoOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:560px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  sedeRef('recesoAcademico').once('value').then(function(s){
+    var v=s.val();if(v&&typeof v==='object')recesoAcademico=v;
+    if(!recesoAcademico.tareas)recesoAcademico.tareas={};
+    renderRecesoPanel();
+  });
+};
+function renderRecesoPanel(){
+  var ov=document.getElementById('recesoOv');if(!ov)return;
+  ov.innerHTML='<div style="max-width:560px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+      '<span style="font-size:18px;font-weight:800;color:#38bdf8">🏖️ Receso académico</span>'+
+      '<button onclick="document.getElementById(\'recesoOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div id="recesoPanel"></div></div>';
+  renderRecesoConfig();
+}
+window.renderRecesoConfig=function(){
+  var cont=document.getElementById('recesoPanel');if(!cont)return;
+  var activo=recesoAcademico.activo===true;
+  var html='<div style="background:'+(activo?'linear-gradient(135deg,rgba(3,105,161,.2),rgba(56,189,248,.08))':'#16233d')+';border:1px solid '+(activo?'rgba(56,189,248,.4)':'rgba(255,255,255,.1)')+';border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-size:14px;font-weight:800;color:'+(activo?'#38bdf8':'#fff')+'">'+(activo?'✓ Receso ACTIVO':'Receso desactivado')+'</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">'+(activo?'Todos entran a la misma hora, sin área asignada':'La operación funciona en modo normal')+'</div></div>'+
+      '<button onclick="toggleReceso()" style="background:'+(activo?'rgba(239,68,68,.2);color:#fca5a5':'linear-gradient(135deg,#0369a1,#38bdf8);color:#fff')+';border:none;border-radius:10px;padding:12px 20px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">'+(activo?'Desactivar':'Activar receso')+'</button>'+
+    '</div>'+
+  '</div>';
+  // Horario único
+  html+='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">🕐 Horario único (todos entran igual)</div>'+
+    '<div style="display:flex;align-items:center;gap:8px">'+
+      '<span style="font-size:12px;color:rgba(255,255,255,.6)">Entrada</span>'+
+      '<input type="time" id="recesoEntrada" value="'+(recesoAcademico.horaEntrada||'09:00')+'" style="font-size:14px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+      '<span style="font-size:12px;color:rgba(255,255,255,.6)">Salida</span>'+
+      '<input type="time" id="recesoSalida" value="'+(recesoAcademico.horaSalida||'17:00')+'" style="font-size:14px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+      '<button onclick="guardarHorarioReceso()" class="btn-add" style="width:auto;padding:7px 14px">Guardar</button>'+
+    '</div>'+
+    '<div class="saved" id="recesoHorarioSaved">✓ Guardado</div>'+
+  '</div>';
+  // Tareas generales de receso
+  html+='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">📋 Tareas generales del receso</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:10px">Estas tareas reemplazan las clínicas durante el receso (limpieza, inventario, capacitación, etc.). Se asignan a todos.</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:10px">'+
+      '<input type="text" id="nuevaTareaReceso" placeholder="Ej: Ordenar bodega, Inventario general, Capacitación" style="flex:1;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+      '<button onclick="agregarTareaReceso()" class="btn-add" style="width:auto;padding:9px 16px">+ Agregar</button>'+
+    '</div>';
+  var tareas=recesoAcademico.tareas||{};
+  var keys=Object.keys(tareas);
+  if(keys.length){
+    keys.forEach(function(tid){
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:13px;color:#fff">📌 '+esc(tareas[tid])+'</span><button onclick="quitarTareaReceso(\''+tid+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>';
+    });
+  } else {
+    html+='<div style="font-size:12px;color:rgba(255,255,255,.5);text-align:center;padding:10px">Aún no hay tareas de receso. Agrégalas arriba.</div>';
+  }
+  html+='</div>';
+  cont.innerHTML=html;
+};
+window.toggleReceso=function(){
+  var nuevoEstado=!(recesoAcademico.activo===true);
+  if(nuevoEstado&&!confirm('¿Activar modo receso académico? Los colaboradores verán las tareas generales de receso en vez de las clínicas.'))return;
+  if(!nuevoEstado&&!confirm('¿Desactivar el receso y volver a la operación normal?'))return;
+  recesoAcademico.activo=nuevoEstado;
+  sedeRef('recesoAcademico/activo').set(nuevoEstado).then(function(){renderRecesoConfig();});
+};
+window.guardarHorarioReceso=function(){
+  recesoAcademico.horaEntrada=document.getElementById('recesoEntrada').value;
+  recesoAcademico.horaSalida=document.getElementById('recesoSalida').value;
+  sedeRef('recesoAcademico/horaEntrada').set(recesoAcademico.horaEntrada);
+  sedeRef('recesoAcademico/horaSalida').set(recesoAcademico.horaSalida).then(function(){showSaved('recesoHorarioSaved');});
+};
+window.agregarTareaReceso=function(){
+  var n=document.getElementById('nuevaTareaReceso').value.trim();
+  if(!n)return;
+  var tid='tr_'+Date.now();
+  if(!recesoAcademico.tareas)recesoAcademico.tareas={};
+  recesoAcademico.tareas[tid]=n;
+  sedeRef('recesoAcademico/tareas/'+tid).set(n).then(function(){document.getElementById('nuevaTareaReceso').value='';renderRecesoConfig();});
+};
+window.quitarTareaReceso=function(tid){
+  delete recesoAcademico.tareas[tid];
+  sedeRef('recesoAcademico/tareas/'+tid).remove().then(function(){renderRecesoConfig();});
+};
+
 
 // ══════════════ GESTIÓN DE DOCENTES Y CARRERAS (panel del Jefe) ══════════════
 window.abrirGestionDocentes=function(){
