@@ -3501,7 +3501,14 @@ function renderMisTurnos(nombre){
     if(keysR.length){
       keysR.forEach(function(tid){
         var t=tareasR[tid];
-        html+='<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13px;color:#fff">📌 '+esc(typeof t==='object'?t.nombre:t)+'</div>';
+        var nom=(typeof t==='object'?t.nombre:t);
+        var completada=(typeof t==='object'&&t.completado&&t.completado===hoyStr());
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:8px;padding:10px 12px;margin-bottom:6px">'+
+          '<span style="font-size:13px;color:'+(completada?'#6ee7b7':'#fff')+'">'+(completada?'✅':'📌')+' '+esc(nom)+'</span>'+
+          (completada
+            ? '<span style="font-size:10px;color:#6ee7b7;font-weight:700">Completada</span>'
+            : '<button onclick="marcarTareaReceso(\''+tid+'\')" style="background:rgba(52,211,153,.2);color:#6ee7b7;border:1px solid rgba(52,211,153,.35);border-radius:8px;padding:5px 12px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer">Marcar hecha</button>')+
+        '</div>';
       });
     } else {
       html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">No tienes tareas de receso asignadas por ahora.</div>';
@@ -7889,6 +7896,18 @@ window.quitarTareaReceso=function(tid){
   sedeRef('recesoAcademico/tareas/'+tid).remove().then(function(){renderRecesoConfig();});
 };
 
+// El colaborador marca su tarea de receso como completada hoy
+window.marcarTareaReceso=function(tid){
+  var t=recesoAcademico.tareas&&recesoAcademico.tareas[tid];
+  if(!t)return;
+  if(typeof t!=='object')t={nombre:t,persona:curNombre};
+  t.completado=hoyStr();
+  recesoAcademico.tareas[tid]=t;
+  sedeRef('recesoAcademico/tareas/'+tid).set(t).then(function(){
+    if(typeof renderMisTurnos==='function')renderMisTurnos(curNombre);
+  });
+};
+
 
 // ══════════════ GESTIÓN DE DOCENTES Y CARRERAS (panel del Jefe) ══════════════
 window.abrirGestionDocentes=function(){
@@ -8248,9 +8267,11 @@ window.renderCentroProtocolos=function(tab){
       '<span style="font-size:18px;font-weight:800;color:#c4b5fd">📚 Centro de protocolos</span>'+
       '<button onclick="document.getElementById(\'centroProtOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
-    '<div style="display:flex;gap:8px;margin-bottom:16px">'+tb('protocolos','📄 Protocolos')+tb('grupos','👥 Grupos')+'</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:16px">'+tb('protocolos','📄 Protocolos')+tb('grupos','👥 Grupos')+tb('persona','🎯 Por persona')+'</div>'+
     '<div id="centroProtContenido"></div></div>';
-  if(tab==='protocolos')renderProtocolosList();else renderGruposList();
+  if(tab==='protocolos')renderProtocolosList();
+  else if(tab==='grupos')renderGruposList();
+  else renderActivacionPorPersona();
 };
 function renderProtocolosList(){
   var cont=document.getElementById('centroProtContenido');if(!cont)return;
@@ -8360,6 +8381,58 @@ window.borrarProtocoloAdmin=function(id){
   delete bibliotecaAdmin[id];
   sedeRef('bibliotecaAdmin/'+id).remove().then(function(){renderProtocolosList();});
 };
+// ── Activación de protocolos por persona (control individual gradual) ──
+window._persActivacion='';
+window.renderActivacionPorPersona=function(){
+  var cont=document.getElementById('centroProtContenido');if(!cont)return;
+  // Todas las personas
+  var personas=(nombres||[]).map(function(n){return n.nombre||n;});
+  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var nom=(typeof v==='object'?v.nombre:v);if(personas.indexOf(nom)<0)personas.push(nom);});
+  Object.keys(docentes||{}).forEach(function(k){var nom=docentes[k].nombre;if(nom&&personas.indexOf(nom)<0)personas.push(nom);});
+  personas.sort();
+  var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Activa o desactiva cada protocolo para una persona. Útil para quien recién ingresa: le activas de a poco.</div>'+
+    '<select id="persActivSelector" onchange="window._persActivacion=this.value;renderActivacionPorPersona()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:14px">'+
+      '<option value="">— Selecciona una persona —</option>'+
+      personas.map(function(p){return '<option value="'+esc(p).replace(/"/g,'')+'"'+(p===window._persActivacion?' selected':'')+'>'+esc(p)+'</option>';}).join('')+
+    '</select>';
+  var persona=window._persActivacion;
+  if(!persona){cont.innerHTML=html+'<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Selecciona una persona para ver y activar sus protocolos.</div>';return;}
+  var protos=Object.entries(bibliotecaAdmin||{});
+  if(!protos.length){cont.innerHTML=html+'<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">No hay protocolos creados aún.</div>';return;}
+  // Cuenta de activos
+  var nActivos=protos.filter(function(e){return protocoloVisiblePara(e[1],persona);}).length;
+  html+='<div style="background:rgba(52,211,153,.1);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#6ee7b7;text-align:center">'+persona+' tiene <b>'+nActivos+'</b> de '+protos.length+' protocolos activos</div>';
+  protos.forEach(function(e){
+    var id=e[0],doc=e[1];
+    var activo=protocoloVisiblePara(doc,persona);
+    // ¿Está activo por grupo o individual?
+    var porGrupo=doc.dirigidoA&&doc.dirigidoA.some(function(gid){var g=gruposModulo[gid];return g&&g.miembros&&g.miembros.indexOf(persona)>-1;});
+    var abierto=(!doc.dirigidoA||!doc.dirigidoA.length)&&(!doc.dirigidoPersonas||!doc.dirigidoPersonas.length);
+    var razon=abierto?'Abierto a todos':porGrupo?'Por su grupo':'Individual';
+    html+='<div style="background:#16233d;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'+
+      '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">'+esc(doc.titulo)+'</div>'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+(MODULOS_PROTOCOLO[doc.modulo]||'')+(activo?' · '+razon:'')+'</div></div>'+
+      '<button onclick="toggleProtocoloPersona(\''+id+'\')" style="background:'+(activo?'rgba(52,211,153,.25);color:#6ee7b7;border:1px solid rgba(52,211,153,.4)':'rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15)')+';border-radius:20px;padding:6px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">'+(activo?'✓ Activo':'Activar')+'</button>'+
+    '</div>';
+  });
+  cont.innerHTML=html;
+};
+window.toggleProtocoloPersona=function(protId){
+  var persona=window._persActivacion;if(!persona)return;
+  var doc=bibliotecaAdmin[protId];if(!doc)return;
+  if(!doc.dirigidoPersonas)doc.dirigidoPersonas=[];
+  // Si está abierto a todos (sin restricción), activarlo individual no cambia nada; desactivar requiere marcar exclusión
+  var idx=doc.dirigidoPersonas.indexOf(persona);
+  if(idx>-1){
+    // Quitar de individuales
+    doc.dirigidoPersonas.splice(idx,1);
+  } else {
+    doc.dirigidoPersonas.push(persona);
+  }
+  bibliotecaAdmin[protId]=doc;
+  sedeRef('bibliotecaAdmin/'+protId+'/dirigidoPersonas').set(doc.dirigidoPersonas).then(function(){renderActivacionPorPersona();});
+};
+
 function renderGruposList(){
   var cont=document.getElementById('centroProtContenido');if(!cont)return;
   var lista=(nombres||[]).map(function(n){return n.nombre||n;});
