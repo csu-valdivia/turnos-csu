@@ -2431,13 +2431,17 @@ window.tabAdmin=function(tab){
 
 // ¿Este protocolo está dirigido a esta persona? (según grupos dirigidos)
 function protocoloVisiblePara(doc,nombre){
-  // Si no tiene dirigidoA o está vacío → lo ven todos los del módulo
-  if(!doc.dirigidoA||!doc.dirigidoA.length)return true;
-  // Si tiene grupos dirigidos, la persona debe ser miembro de al menos uno
-  return doc.dirigidoA.some(function(gid){
-    var g=gruposModulo[gid];
-    return g&&g.miembros&&g.miembros.indexOf(nombre)>-1;
-  });
+  var tieneGrupos=doc.dirigidoA&&doc.dirigidoA.length;
+  var tienePersonas=doc.dirigidoPersonas&&doc.dirigidoPersonas.length;
+  // Si no tiene ninguna restricción → lo ven todos los del módulo
+  if(!tieneGrupos&&!tienePersonas)return true;
+  // Dirigido a esta persona individualmente
+  if(tienePersonas&&doc.dirigidoPersonas.indexOf(nombre)>-1)return true;
+  // Miembro de algún grupo dirigido
+  if(tieneGrupos){
+    return doc.dirigidoA.some(function(gid){var g=gruposModulo[gid];return g&&g.miembros&&g.miembros.indexOf(nombre)>-1;});
+  }
+  return false;
 }
 
 function renderMaterialAdmin(cont){
@@ -3489,17 +3493,18 @@ function renderMisTurnos(nombre){
   // ── MODO RECESO ACADÉMICO: muestra tareas generales en vez de las clínicas ──
   if(recesoAcademico&&recesoAcademico.activo===true){
     var tareasR=recesoAcademico.tareas||{};
-    var keysR=Object.keys(tareasR);
+    var keysR=Object.keys(tareasR).filter(function(tid){var t=tareasR[tid];return (typeof t==='object'?t.persona:'')===nombre;});
     html+='<div style="background:linear-gradient(135deg,rgba(3,105,161,.18),rgba(56,189,248,.06));border:1px solid rgba(56,189,248,.35);border-radius:12px;padding:16px;margin-bottom:12px">'+
       '<div style="font-size:15px;font-weight:800;color:#38bdf8;margin-bottom:4px">🏖️ Receso académico</div>'+
-      '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px">Horario: '+(recesoAcademico.horaEntrada||'09:00')+' a '+(recesoAcademico.horaSalida||'17:00')+' · Todos entran a la misma hora</div>'+
-      '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px">📋 Tareas del receso:</div>';
+      '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px">Horario: '+(recesoAcademico.horaEntrada||'09:00')+' a '+(recesoAcademico.horaSalida||'17:00')+'</div>'+
+      '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px">📋 Mis tareas del receso:</div>';
     if(keysR.length){
       keysR.forEach(function(tid){
-        html+='<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13px;color:#fff">📌 '+esc(tareasR[tid])+'</div>';
+        var t=tareasR[tid];
+        html+='<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13px;color:#fff">📌 '+esc(typeof t==='object'?t.nombre:t)+'</div>';
       });
     } else {
-      html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no hay tareas de receso asignadas.</div>';
+      html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">No tienes tareas de receso asignadas por ahora.</div>';
     }
     html+='</div>';
     // En receso también puede ver bodega central y sus registros técnicos si los tiene
@@ -7824,22 +7829,34 @@ window.renderRecesoConfig=function(){
     '</div>'+
     '<div class="saved" id="recesoHorarioSaved">✓ Guardado</div>'+
   '</div>';
-  // Tareas generales de receso
+  // Tareas generales de receso (INDIVIDUALES: cada una asignada a una persona)
+  var personas=(nombres||[]).map(function(n){return n.nombre||n;});
   html+='<div style="background:#16233d;border-radius:12px;padding:16px">'+
-    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">📋 Tareas generales del receso</div>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:10px">Estas tareas reemplazan las clínicas durante el receso (limpieza, inventario, capacitación, etc.). Se asignan a todos.</div>'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">📋 Tareas del receso (por persona)</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:10px">Asigna cada tarea a una persona específica. Cada colaborador verá solo las suyas.</div>'+
+    '<input type="text" id="nuevaTareaReceso" placeholder="Ej: Ordenar bodega, Inventario general" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
     '<div style="display:flex;gap:8px;margin-bottom:10px">'+
-      '<input type="text" id="nuevaTareaReceso" placeholder="Ej: Ordenar bodega, Inventario general, Capacitación" style="flex:1;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+      '<select id="tareaRecesoPersona" style="flex:1;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
+        '<option value="">— Asignar a —</option>'+
+        personas.map(function(p){return '<option value="'+esc(p)+'">'+esc(p)+'</option>';}).join('')+
+      '</select>'+
       '<button onclick="agregarTareaReceso()" class="btn-add" style="width:auto;padding:9px 16px">+ Agregar</button>'+
     '</div>';
   var tareas=recesoAcademico.tareas||{};
   var keys=Object.keys(tareas);
   if(keys.length){
-    keys.forEach(function(tid){
-      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:13px;color:#fff">📌 '+esc(tareas[tid])+'</span><button onclick="quitarTareaReceso(\''+tid+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>';
+    // Agrupar por persona
+    var porPersona={};
+    keys.forEach(function(tid){var t=tareas[tid];var asig=(typeof t==='object'?t.persona:'(sin asignar)')||'(sin asignar)';if(!porPersona[asig])porPersona[asig]=[];porPersona[asig].push({tid:tid,nombre:(typeof t==='object'?t.nombre:t)});});
+    Object.keys(porPersona).sort().forEach(function(per){
+      html+='<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:4px">👤 '+esc(per)+'</div>';
+      porPersona[per].forEach(function(t){
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px"><span style="font-size:13px;color:#fff">📌 '+esc(t.nombre)+'</span><button onclick="quitarTareaReceso(\''+t.tid+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>';
+      });
+      html+='</div>';
     });
   } else {
-    html+='<div style="font-size:12px;color:rgba(255,255,255,.5);text-align:center;padding:10px">Aún no hay tareas de receso. Agrégalas arriba.</div>';
+    html+='<div style="font-size:12px;color:rgba(255,255,255,.5);text-align:center;padding:10px">Aún no hay tareas de receso.</div>';
   }
   html+='</div>';
   cont.innerHTML=html;
@@ -7859,11 +7876,13 @@ window.guardarHorarioReceso=function(){
 };
 window.agregarTareaReceso=function(){
   var n=document.getElementById('nuevaTareaReceso').value.trim();
-  if(!n)return;
+  var persona=document.getElementById('tareaRecesoPersona').value;
+  if(!n){alert('Escribe la tarea.');return;}
+  if(!persona){alert('Selecciona a quién se la asignas.');return;}
   var tid='tr_'+Date.now();
   if(!recesoAcademico.tareas)recesoAcademico.tareas={};
-  recesoAcademico.tareas[tid]=n;
-  sedeRef('recesoAcademico/tareas/'+tid).set(n).then(function(){document.getElementById('nuevaTareaReceso').value='';renderRecesoConfig();});
+  recesoAcademico.tareas[tid]={nombre:n,persona:persona};
+  sedeRef('recesoAcademico/tareas/'+tid).set({nombre:n,persona:persona}).then(function(){document.getElementById('nuevaTareaReceso').value='';renderRecesoConfig();});
 };
 window.quitarTareaReceso=function(tid){
   delete recesoAcademico.tareas[tid];
@@ -8262,6 +8281,11 @@ window.editarProtocoloAdmin=function(id){
   var doc=id?bibliotecaAdmin[id]:{titulo:'',contenido:'',link:'',modulo:'administrativo',obligatoria:true,preguntas:{},dirigidoA:[]};
   var cont=document.getElementById('centroProtContenido');
   var gruposOpts=Object.keys(gruposModulo||{}).map(function(g){var checked=(doc.dirigidoA||[]).indexOf(g)>-1;return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.8);padding:4px 0"><input type="checkbox" class="protGrupo" value="'+g+'"'+(checked?' checked':'')+' style="width:15px;height:15px;accent-color:#a78bfa">'+esc(gruposModulo[g].nombre)+' <span style="font-size:9px;color:rgba(255,255,255,.4)">('+(MODULOS_PROTOCOLO[gruposModulo[g].modulo]||'')+')</span></label>';}).join('');
+  // Lista de todas las personas (clínicos + administrativos + docentes) para direccionamiento individual
+  var todasPersonas=(nombres||[]).map(function(n){return n.nombre||n;});
+  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var nom=(typeof v==='object'?v.nombre:v);if(todasPersonas.indexOf(nom)<0)todasPersonas.push(nom);});
+  Object.keys(docentes||{}).forEach(function(k){var nom=docentes[k].nombre;if(nom&&todasPersonas.indexOf(nom)<0)todasPersonas.push(nom);});
+  var personasOpts=todasPersonas.map(function(p){var checked=(doc.dirigidoPersonas||[]).indexOf(p)>-1;return '<label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:rgba(255,255,255,.8);padding:3px 8px;background:'+(checked?'rgba(52,211,153,.2)':'rgba(255,255,255,.04)')+';border-radius:12px;margin:2px;cursor:pointer"><input type="checkbox" class="protPersona" value="'+esc(p).replace(/"/g,'')+'"'+(checked?' checked':'')+' style="width:13px;height:13px;accent-color:#34d399">'+esc(p)+'</label>';}).join('');
   var modOpts=Object.keys(MODULOS_PROTOCOLO).map(function(m){return '<option value="'+m+'"'+(doc.modulo===m?' selected':'')+'>'+MODULOS_PROTOCOLO[m]+'</option>';}).join('');
   cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:16px">'+
     '<div style="font-size:14px;font-weight:700;color:#c4b5fd;margin-bottom:12px">'+(id?'Editar':'Nuevo')+' protocolo</div>'+
@@ -8275,6 +8299,8 @@ window.editarProtocoloAdmin=function(id){
     '<textarea id="protContenido" rows="4" placeholder="O escribe aquí el protocolo directamente..." style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+esc(doc.contenido||'')+'</textarea>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6);display:block;margin-bottom:4px">Dirigir a grupos (si no marcas ninguno, lo ven todos los del módulo):</label>'+
     '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:12px">'+(gruposOpts||'<span style="font-size:11px;color:rgba(255,255,255,.4)">No hay grupos creados. Créalos en la pestaña Grupos.</span>')+'</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6);display:block;margin-bottom:4px">➕ O dirigir a personas específicas (ajuste fino individual):</label>'+
+    '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:12px;max-height:160px;overflow-y:auto">'+(personasOpts||'<span style="font-size:11px;color:rgba(255,255,255,.4)">No hay personas.</span>')+'</div>'+
     '<div id="protPreguntasEditor"></div>'+
     '<button onclick="guardarProtocoloAdmin(\''+(id||'')+'\')" class="btn-add" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:12px">💾 Guardar protocolo</button>'+
     '<button onclick="renderCentroProtocolos(\'protocolos\')" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:10px;font-family:inherit;cursor:pointer">Cancelar</button>'+
@@ -8323,7 +8349,8 @@ window.guardarProtocoloAdmin=function(id){
   var titulo=document.getElementById('protTitulo').value.trim();
   if(!titulo){alert('Ponle un título.');return;}
   var dirigidoA=Array.from(document.querySelectorAll('.protGrupo:checked')).map(function(cb){return cb.value;});
-  var doc={titulo:titulo,modulo:document.getElementById('protModulo').value,link:document.getElementById('protLink').value.trim(),contenido:document.getElementById('protContenido').value,obligatoria:true,bancoCerrado:true,visible:true,preguntas:window._protPreguntas||{},dirigidoA:dirigidoA};
+  var dirigidoPersonas=Array.from(document.querySelectorAll('.protPersona:checked')).map(function(cb){return cb.value;});
+  var doc={titulo:titulo,modulo:document.getElementById('protModulo').value,link:document.getElementById('protLink').value.trim(),contenido:document.getElementById('protContenido').value,obligatoria:true,bancoCerrado:true,visible:true,preguntas:window._protPreguntas||{},dirigidoA:dirigidoA,dirigidoPersonas:dirigidoPersonas};
   var pid=id||('protA_'+Date.now());
   bibliotecaAdmin[pid]=doc;
   sedeRef('bibliotecaAdmin/'+pid).set(doc).then(function(){renderCentroProtocolos('protocolos');});
