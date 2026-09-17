@@ -2509,7 +2509,8 @@ function renderPreguntasAdminTab(cont){
     if(e[1].visible===false)return;
     if(!e[1].preguntas||Object.keys(e[1].preguntas).length<2)return;
     var grupos=e[1].visibleGrupos||(Array.isArray(e[1].visibilidad)?e[1].visibilidad:[e[1].visibilidad||'todos']);
-    if(grupos.indexOf('administrativos')>-1||grupos.indexOf('todos')>-1)protocolos.push(e);
+    var visible=(grupos.indexOf('administrativos')>-1||grupos.indexOf('todos')>-1);
+    if(visible&&preguntasActivasPara(e[1],nombre))protocolos.push(e);
   });
   if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
   var hoy=hoyStr();var key=nombre.replace(/[.#$/\[\]\s]/g,'_');
@@ -4277,12 +4278,92 @@ function renderBibAdminList(){
       '<button onclick="toggleVisibilidadDoc(\''+k+'\','+(visible?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+toggleColor+';font-family:inherit;font-size:11px;cursor:pointer;text-align:left">'+toggleTxt+'</button>'+
       (doc.obligatoria?'<button onclick="toggleBancoCerrado(\''+k+'\','+(doc.bancoCerrado?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+(doc.bancoCerrado?'rgba(16,185,129,.2)':'rgba(245,158,11,.15)')+';font-family:inherit;font-size:11px;cursor:pointer;text-align:center">'+(doc.bancoCerrado?'<span style="color:#6ee7b7">✅ Banco cerrado</span>':'<span style="color:#fcd34d">⚠ Banco abierto</span>')+'</button>':'')+
       '</div>'+
+      (doc.preguntas&&Object.keys(doc.preguntas).length>=2?'<button onclick="abrirActivacionPreguntas(\''+k+'\')" style="width:100%;margin-top:6px;padding:6px 10px;border-radius:6px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);font-family:inherit;font-size:11px;cursor:pointer;color:#6ee7b7">🎯 Activar preguntas por grupo / persona</button>':'')+
       '</div>';
   }).join('');
 }
 
-document.getElementById('bibCatSel').addEventListener('change',function(){
-  document.getElementById('bibCatNueva').style.display=this.value==='__nueva__'?'block':'none';
+// ══════════════ ACTIVACIÓN DE PREGUNTAS POR GRUPO/PERSONA ══════════════
+// preguntasActivas[docId] = {grupos:{administrativos:true,docentes:false,...}, personas:{nombre:true}}
+window.abrirActivacionPreguntas=function(docId){
+  var doc=biblioteca[docId];if(!doc)return;
+  var ov=document.getElementById('activPregOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='activPregOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9400;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var pa=doc.preguntasActivas||{grupos:{},personas:{}};
+  if(!pa.grupos)pa.grupos={};if(!pa.personas)pa.personas={};
+  // Grupos disponibles (los mismos de visibilidad)
+  var grupos=[['clinicos','🩺 Clínicos'],['internos','🎓 Internos'],['docentes','👨‍🏫 Docentes'],['administrativos','🗂️ Administrativos']];
+  var gruposHtml=grupos.map(function(g){
+    var on=pa.grupos[g[0]]===true;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:6px">'+
+      '<span style="font-size:13px;color:#fff">'+g[1]+'</span>'+
+      '<button onclick="togglePregGrupo(\''+docId+'\',\''+g[0]+'\')" style="background:'+(on?'rgba(52,211,153,.25);color:#6ee7b7;border:1px solid rgba(52,211,153,.4)':'rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15)')+';border-radius:20px;padding:6px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">'+(on?'✓ Preguntas ON':'OFF')+'</button>'+
+    '</div>';
+  }).join('');
+  // Personas individuales
+  var personas=(nombres||[]).map(function(n){return n.nombre||n;});
+  Object.keys(secretarias||{}).forEach(function(kk){var v=secretarias[kk];var nom=(typeof v==='object'?v.nombre:v);if(personas.indexOf(nom)<0)personas.push(nom);});
+  Object.keys(docentes||{}).forEach(function(kk){var nom=docentes[kk].nombre;if(nom&&personas.indexOf(nom)<0)personas.push(nom);});
+  var personasHtml=personas.map(function(p){
+    var on=pa.personas[p.replace(/[.#$/\[\]]/g,'_')]===true;
+    return '<button onclick="togglePregPersona(\''+docId+'\',\''+esc(p).replace(/'/g,"")+'\')" style="font-size:11px;padding:5px 10px;border-radius:12px;margin:2px;border:1px solid '+(on?'#34d399;background:rgba(52,211,153,.2);color:#fff':'rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.55)')+';font-family:inherit;cursor:pointer">'+(on?'✓ ':'')+esc(p)+'</button>';
+  }).join('');
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:440px;width:100%;margin-top:20px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+      '<span style="font-size:15px;font-weight:800;color:#6ee7b7">🎯 Activar preguntas</span>'+
+      '<button onclick="document.getElementById(\'activPregOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px">'+esc(doc.titulo)+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">El material siempre es visible. Aquí enciendes las preguntas de forma gradual. Si un grupo está ON, todos sus miembros reciben preguntas; también puedes encender personas sueltas.</div>'+
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">Por grupo</div>'+gruposHtml+
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin:12px 0 6px">Por persona (ajuste fino)</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:2px;max-height:180px;overflow-y:auto;background:rgba(255,255,255,.02);border-radius:8px;padding:8px">'+personasHtml+'</div>'+
+  '</div>';
+  document.body.appendChild(ov);
+};
+window.togglePregGrupo=function(docId,grupo){
+  var doc=biblioteca[docId];if(!doc)return;
+  if(!doc.preguntasActivas)doc.preguntasActivas={grupos:{},personas:{}};
+  if(!doc.preguntasActivas.grupos)doc.preguntasActivas.grupos={};
+  doc.preguntasActivas.grupos[grupo]=!(doc.preguntasActivas.grupos[grupo]===true);
+  biblioteca[docId].preguntasActivas=doc.preguntasActivas;
+  sedeRef('biblioteca/'+docId+'/preguntasActivas/grupos/'+grupo).set(doc.preguntasActivas.grupos[grupo]).then(function(){abrirActivacionPreguntas(docId);});
+};
+window.togglePregPersona=function(docId,nombre){
+  var doc=biblioteca[docId];if(!doc)return;
+  if(!doc.preguntasActivas)doc.preguntasActivas={grupos:{},personas:{}};
+  if(!doc.preguntasActivas.personas)doc.preguntasActivas.personas={};
+  var k=nombre.replace(/[.#$/\[\]]/g,'_');
+  doc.preguntasActivas.personas[k]=!(doc.preguntasActivas.personas[k]===true);
+  biblioteca[docId].preguntasActivas=doc.preguntasActivas;
+  sedeRef('biblioteca/'+docId+'/preguntasActivas/personas/'+k).set(doc.preguntasActivas.personas[k]).then(function(){abrirActivacionPreguntas(docId);});
+};
+
+// ¿Las preguntas de este protocolo están activas para esta persona?
+function preguntasActivasPara(doc,nombre){
+  var pa=doc.preguntasActivas;
+  // Si no hay config de activación → preguntas activas por defecto (compatibilidad con lo clínico existente)
+  if(!pa)return true;
+  var k=(nombre||'').replace(/[.#$/\[\]]/g,'_');
+  // Activa individualmente
+  if(pa.personas&&pa.personas[k]===true)return true;
+  // Activa por su grupo
+  if(pa.grupos){
+    var esInt=esInterno(nombre);
+    var esDoc=Object.values(docentes||{}).some(function(d){return d.nombre===nombre;});
+    var esAdmin=Object.values(secretarias||{}).some(function(v){return (typeof v==='object'?v.nombre:v)===nombre;});
+    if(pa.grupos.internos&&esInt)return true;
+    if(pa.grupos.docentes&&esDoc)return true;
+    if(pa.grupos.administrativos&&esAdmin)return true;
+    if(pa.grupos.clinicos&&!esInt&&!esDoc&&!esAdmin)return true;
+  }
+  // Si hay config pero esta persona no está activada → OFF
+  var hayAlgo=(pa.grupos&&Object.values(pa.grupos).some(function(x){return x;}))||(pa.personas&&Object.values(pa.personas).some(function(x){return x;}));
+  // Si NO hay nada activado aún y el protocolo es clínico sin config → mantener comportamiento previo (activo)
+  return hayAlgo?false:true;
+}
+
 });
 
 document.getElementById('bibObligatoria').addEventListener('change',function(){
@@ -8286,7 +8367,7 @@ function renderMaterialDocente(cont){
 function renderPreguntasDocente(cont){
   if(!cont)return;
   var d=window._docActual;var key=window._docKey;
-  var protos=protocolosDocente(d.nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2;});
+  var protos=protocolosDocente(d.nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&preguntasActivasPara(e[1],d.nombre);});
   if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
   var hoy=hoyStr();
   if(fichaProgresoDocente[key]&&fichaProgresoDocente[key].fecha===hoy){
