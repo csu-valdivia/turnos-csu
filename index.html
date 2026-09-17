@@ -4364,6 +4364,8 @@ function preguntasActivasPara(doc,nombre){
   return hayAlgo?false:true;
 }
 
+document.getElementById('bibCatSel').addEventListener('change',function(){
+  document.getElementById('bibCatNueva').style.display=this.value==='__nueva__'?'block':'none';
 });
 
 document.getElementById('bibObligatoria').addEventListener('change',function(){
