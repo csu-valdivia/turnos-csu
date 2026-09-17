@@ -8254,8 +8254,8 @@ window.abrirCentroProtocolos=function(){
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
   ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
   document.body.appendChild(ov);
-  Promise.all([sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('secretarias').once('value'),sedeRef('docentes').once('value')]).then(function(s){
-    bibliotecaAdmin=s[0].val()||{};gruposModulo=s[1].val()||{};secretarias=s[2].val()||{};docentes=s[3].val()||{};
+  Promise.all([sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('secretarias').once('value'),sedeRef('docentes').once('value'),sedeRef('biblioteca').once('value')]).then(function(s){
+    bibliotecaAdmin=s[0].val()||{};gruposModulo=s[1].val()||{};secretarias=s[2].val()||{};docentes=s[3].val()||{};biblioteca=s[4].val()||{};
     renderCentroProtocolos('protocolos');
   });
 };
@@ -8275,25 +8275,42 @@ window.renderCentroProtocolos=function(tab){
 };
 function renderProtocolosList(){
   var cont=document.getElementById('centroProtContenido');if(!cont)return;
-  var protos=Object.entries(bibliotecaAdmin||{});
+  var protosAdmin=Object.entries(bibliotecaAdmin||{}).map(function(e){return {id:e[0],doc:e[1],origen:'admin'};});
+  var protosClinicos=Object.entries(biblioteca||{}).map(function(e){return {id:e[0],doc:e[1],origen:'clinico'};});
+  var todos=protosAdmin.concat(protosClinicos);
   var html='<button onclick="nuevoProtocoloAdmin()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-bottom:12px">+ Nuevo protocolo</button>';
-  if(!protos.length){html+='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Aún no hay protocolos. Crea el primero arriba.</div>';}
+  if(!todos.length){html+='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Aún no hay protocolos. Crea el primero arriba.</div>';}
   else{
-    protos.forEach(function(e){
-      var id=e[0],doc=e[1];
-      var mod=MODULOS_PROTOCOLO[doc.modulo]||'Sin módulo';
-      var nPreg=doc.preguntas?Object.keys(doc.preguntas).length:0;
-      var dirigido=doc.dirigidoA&&doc.dirigidoA.length?doc.dirigidoA.map(function(g){return (gruposModulo[g]&&gruposModulo[g].nombre)||g;}).join(', '):'Todos del módulo';
-      html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:8px">'+
-        '<div style="display:flex;justify-content:space-between;align-items:start">'+
-          '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:#fff">'+esc(doc.titulo||'(sin título)')+'</div>'+
-            '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">'+mod+' · '+nPreg+' preguntas · Dirigido a: '+esc(dirigido)+'</div></div>'+
-          '<div style="display:flex;gap:4px">'+
-            '<button onclick="editarProtocoloAdmin(\''+id+'\')" style="background:rgba(96,165,250,.15);color:#93c5fd;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">✏️</button>'+
-            '<button onclick="borrarProtocoloAdmin(\''+id+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button>'+
-          '</div>'+
-        '</div></div>';
-    });
+    // Protocolos clínicos existentes (solo lectura desde aquí)
+    if(protosClinicos.length){
+      html+='<div style="font-size:11px;font-weight:700;color:#7ec8f7;margin:8px 0 6px">⚕️ Protocolos clínicos existentes ('+protosClinicos.length+')</div>';
+      protosClinicos.forEach(function(e){
+        var doc=e.doc;var nPreg=doc.preguntas?Object.keys(doc.preguntas).length:0;
+        html+='<div style="background:#16233d;border-radius:10px;padding:12px 14px;margin-bottom:6px;opacity:.85">'+
+          '<div style="font-size:13px;font-weight:600;color:#fff">'+esc(doc.titulo||'(sin título)')+' <span style="font-size:9px;color:#7ec8f7">CLÍNICO</span></div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">'+nPreg+' preguntas · Se administra desde la Biblioteca clínica</div>'+
+        '</div>';
+      });
+    }
+    // Protocolos de módulos nuevos (editables aquí)
+    if(protosAdmin.length){
+      html+='<div style="font-size:11px;font-weight:700;color:#c4b5fd;margin:12px 0 6px">📄 Protocolos de otros roles ('+protosAdmin.length+')</div>';
+      protosAdmin.forEach(function(e){
+        var id=e.id,doc=e.doc;
+        var mod=MODULOS_PROTOCOLO[doc.modulo]||'Sin módulo';
+        var nPreg=doc.preguntas?Object.keys(doc.preguntas).length:0;
+        var dirigido=doc.dirigidoA&&doc.dirigidoA.length?doc.dirigidoA.map(function(g){return (gruposModulo[g]&&gruposModulo[g].nombre)||g;}).join(', '):'Todos del módulo';
+        html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:8px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:start">'+
+            '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:#fff">'+esc(doc.titulo||'(sin título)')+'</div>'+
+              '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">'+mod+' · '+nPreg+' preguntas · Dirigido a: '+esc(dirigido)+'</div></div>'+
+            '<div style="display:flex;gap:4px">'+
+              '<button onclick="editarProtocoloAdmin(\''+id+'\')" style="background:rgba(96,165,250,.15);color:#93c5fd;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">✏️</button>'+
+              '<button onclick="borrarProtocoloAdmin(\''+id+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button>'+
+            '</div>'+
+          '</div></div>';
+      });
+    }
   }
   cont.innerHTML=html;
 }
@@ -8397,7 +8414,7 @@ window.renderActivacionPorPersona=function(){
     '</select>';
   var persona=window._persActivacion;
   if(!persona){cont.innerHTML=html+'<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Selecciona una persona para ver y activar sus protocolos.</div>';return;}
-  var protos=Object.entries(bibliotecaAdmin||{});
+  var protos=Object.entries(bibliotecaAdmin||{}).concat(Object.entries(biblioteca||{}));
   if(!protos.length){cont.innerHTML=html+'<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">No hay protocolos creados aún.</div>';return;}
   // Cuenta de activos
   var nActivos=protos.filter(function(e){return protocoloVisiblePara(e[1],persona);}).length;
