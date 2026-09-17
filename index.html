@@ -776,11 +776,13 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <textarea class="atxt" id="bibDesc" placeholder="Descripción breve (opcional)"></textarea>
             <div class="frow" style="margin-bottom:6px">
               <label style="font-size:11px;color:rgba(255,255,255,.4);align-self:center">👁 Visible para:</label>
-              <select id="bibVisibilidad" style="flex:1">
-                <option value="todos">Todos</option>
-                <option value="colaboradores">Solo colaboradores</option>
-                <option value="internos">Solo internos</option>
-              </select>
+              <div id="bibVisibilidadBox" style="flex:1;display:flex;flex-wrap:wrap;gap:6px">
+                <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#fff;background:rgba(96,165,250,.2);border-radius:12px;padding:4px 10px;cursor:pointer"><input type="checkbox" class="bibVis" value="todos" checked style="width:14px;height:14px;accent-color:#60a5fa">Todos</label>
+                <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.05);border-radius:12px;padding:4px 10px;cursor:pointer"><input type="checkbox" class="bibVis" value="clinicos" style="width:14px;height:14px;accent-color:#60a5fa">🩺 Clínicos</label>
+                <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.05);border-radius:12px;padding:4px 10px;cursor:pointer"><input type="checkbox" class="bibVis" value="internos" style="width:14px;height:14px;accent-color:#60a5fa">🎓 Internos</label>
+                <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.05);border-radius:12px;padding:4px 10px;cursor:pointer"><input type="checkbox" class="bibVis" value="docentes" style="width:14px;height:14px;accent-color:#60a5fa">👨‍🏫 Docentes</label>
+                <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.05);border-radius:12px;padding:4px 10px;cursor:pointer"><input type="checkbox" class="bibVis" value="administrativos" style="width:14px;height:14px;accent-color:#60a5fa">🗂️ Administrativos</label>
+              </div>
             </div>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.7);margin:10px 0;cursor:pointer">
               <input type="checkbox" id="bibObligatoria" style="width:16px;height:16px;accent-color:var(--accent2)">
@@ -2396,19 +2398,48 @@ function renderModuloAdministrativo(){
 
 function renderAdminNombreSel(){
   var cont=document.getElementById('adminNombreSel');if(!cont)return;
-  // Lista de secretarias (guardadas en 'secretarias')
   var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v);}).filter(Boolean);
-  if(!lista.length){
-    cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no hay secretarias registradas. El Enfermero Jefe o la Jefa de Operaciones debe agregarlas primero.</div>';
-    return;
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">';
+  if(lista.length){
+    html+='<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:6px">¿Quién eres?</label>'+
+      '<select id="adminNombre" onchange="cargarPreguntasAdmin()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+
+        '<option value="">Selecciona tu nombre</option>'+
+        lista.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('')+
+      '</select>'+
+      '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4);margin:8px 0">— o si es tu primera vez —</div>';
+  } else {
+    html+='<div style="font-size:13px;color:rgba(255,255,255,.7);text-align:center;margin-bottom:12px">👋 ¡Bienvenido/a! Regístrate para comenzar:</div>';
   }
-  cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
-    '<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:6px">¿Quién eres?</label>'+
-    '<select id="adminNombre" onchange="cargarPreguntasAdmin()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
-      '<option value="">Selecciona tu nombre</option>'+
-      lista.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('')+
-    '</select></div>';
+  // Formulario de auto-registro
+  html+='<div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:12px">'+
+    '<div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:8px">📝 Registrarme por primera vez</div>'+
+    '<input type="text" id="adminAutoNombre" placeholder="Tu nombre completo" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
+    '<select id="adminAutoCargo" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
+      '<option value="Secretaria">🗂️ Secretaria</option>'+
+      '<option value="Bodega">📦 Bodega</option>'+
+      '<option value="Mantención">🔧 Mantención</option>'+
+    '</select>'+
+    '<button onclick="autoRegistrarAdmin()" class="btn-add" style="background:linear-gradient(135deg,#d97706,#fbbf24)">Registrarme y entrar</button>'+
+  '</div></div>';
+  cont.innerHTML=html;
 }
+
+window.autoRegistrarAdmin=function(){
+  var nombre=document.getElementById('adminAutoNombre').value.trim();
+  var cargo=document.getElementById('adminAutoCargo').value;
+  if(!nombre){alert('Escribe tu nombre.');return;}
+  // ¿Ya existe?
+  var yaExiste=Object.values(secretarias||{}).some(function(v){var n=(typeof v==='object'?v.nombre:v);return n&&n.trim().toLowerCase()===nombre.toLowerCase();});
+  if(yaExiste){alert('Ya estás registrado/a. Selecciona tu nombre en la lista de arriba.');return;}
+  var key='sec_'+Date.now();
+  secretarias[key]={nombre:nombre,cargo:cargo};
+  sedeRef('secretarias/'+key).set({nombre:nombre,cargo:cargo}).then(function(){
+    window._adminNombre=nombre;
+    document.getElementById('adminTabs').style.display='flex';
+    tabAdmin('material');
+  });
+};
+
 
 window.cargarPreguntasAdmin=function(){
   var nombre=document.getElementById('adminNombre').value;
@@ -4145,6 +4176,20 @@ window.responderNovedad=function(gk,nid){
   m.appendChild(box);
 };
 
+// ¿El documento de biblioteca es visible para la persona según su rol y los grupos marcados?
+function docVisibleParaRol(doc,nombre){
+  var grupos=doc.visibleGrupos||(Array.isArray(doc.visibilidad)?doc.visibilidad:[doc.visibilidad||'todos']);
+  if(grupos.indexOf('todos')>-1)return true;
+  var esInt=esInterno(nombre);
+  var esDoc=(typeof docentes!=='undefined')&&Object.values(docentes||{}).some(function(d){return d.nombre===nombre;});
+  var esAdmin=(typeof secretarias!=='undefined')&&Object.values(secretarias||{}).some(function(v){return (typeof v==='object'?v.nombre:v)===nombre;});
+  if(grupos.indexOf('internos')>-1&&esInt)return true;
+  if(grupos.indexOf('docentes')>-1&&esDoc)return true;
+  if(grupos.indexOf('administrativos')>-1&&esAdmin)return true;
+  if((grupos.indexOf('clinicos')>-1||grupos.indexOf('colaboradores')>-1)&&!esInt&&!esDoc&&!esAdmin)return true;
+  return false;
+}
+
 function renderBiblioteca(){
   var d=document.getElementById('bibliotecaView');if(!d)return;
   var filtro=document.getElementById('bibFiltro')?document.getElementById('bibFiltro').value:'';
@@ -4152,13 +4197,8 @@ function renderBiblioteca(){
   // Filter by visibilidad based on user type
   en=en.filter(function(e){
     var doc=e[1];
-    // Check visible toggle (admin can hide docs from team)
     if(doc.visible===false)return false;
-    var vis=doc.visibilidad||'todos';
-    if(vis==='todos')return true;
-    if(vis==='internos')return esInterno(curNombre);
-    if(vis==='colaboradores')return !esInterno(curNombre);
-    return true;
+    return docVisibleParaRol(doc,curNombre);
   });
   if(filtro)en=en.filter(function(e){return e[1].categoria===filtro;});
   if(!en.length){d.innerHTML='<div class="no-result"><p style="font-size:32px;margin-bottom:8px">📚</p><p>'+(filtro?'Sin documentos en esta categoría.':'Aún no hay documentos disponibles.')+'</p></div>';return;}
@@ -4529,8 +4569,11 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
   if(!titulo||!cat||!link){alert('Completa título, categoría y link.');return;}
   if(!link.startsWith('http')){alert('El link debe empezar con http:// o https://');return;}
 
-  var visibilidad=document.getElementById('bibVisibilidad')?document.getElementById('bibVisibilidad').value:'todos';
-  var doc={titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now(),visibilidad:visibilidad};
+  var visMarcados=Array.from(document.querySelectorAll('.bibVis:checked')).map(function(cb){return cb.value;});
+  if(!visMarcados.length)visMarcados=['todos'];
+  // Compatibilidad: si solo "todos", guardar como string; si varios, array
+  var visibilidad=(visMarcados.length===1)?visMarcados[0]:visMarcados;
+  var doc={titulo:titulo,categoria:cat,link:link,descripcion:desc,ts:Date.now(),visibilidad:visibilidad,visibleGrupos:visMarcados};
 
   if(esObligatoria){
     var contenido=document.getElementById('bibContenido').value.trim();
@@ -8099,14 +8142,56 @@ function renderModuloDocente(){
 function renderDocNombreSel(){
   var cont=document.getElementById('docNombreSel');if(!cont)return;
   var lista=Object.keys(docentes||{}).map(function(k){return {key:k,nombre:docentes[k].nombre,carrera:docentes[k].carrera};});
-  if(!lista.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no hay docentes inscritos. El Enfermero Jefe debe inscribirte primero.</div>';return;}
-  cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
-    '<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:6px">¿Quién eres?</label>'+
-    '<select id="docNombre" onchange="cargarDocente()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
-      '<option value="">Selecciona tu nombre</option>'+
-      lista.map(function(d){return '<option value="'+d.key+'">'+esc(d.nombre)+' — '+esc(d.carrera)+'</option>';}).join('')+
-    '</select></div>';
+  // Carreras existentes (para el datalist)
+  var carreras=[];
+  Object.keys(gruposModulo||{}).forEach(function(g){if(gruposModulo[g].modulo==='docente'&&carreras.indexOf(gruposModulo[g].nombre)<0)carreras.push(gruposModulo[g].nombre);});
+  Object.values(docentes||{}).forEach(function(d){if(d.carrera&&carreras.indexOf(d.carrera)<0)carreras.push(d.carrera);});
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">';
+  if(lista.length){
+    html+='<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:6px">¿Quién eres?</label>'+
+      '<select id="docNombre" onchange="cargarDocente()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+
+        '<option value="">Selecciona tu nombre</option>'+
+        lista.map(function(d){return '<option value="'+d.key+'">'+esc(d.nombre)+' — '+esc(d.carrera)+'</option>';}).join('')+
+      '</select>'+
+      '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4);margin:8px 0">— o si es tu primera vez —</div>';
+  } else {
+    html+='<div style="font-size:13px;color:rgba(255,255,255,.7);text-align:center;margin-bottom:12px">👋 ¡Bienvenido/a! Regístrate para comenzar:</div>';
+  }
+  html+='<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:10px;padding:12px">'+
+    '<div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:8px">📝 Registrarme por primera vez</div>'+
+    '<input type="text" id="docAutoNombre" placeholder="Tu nombre completo" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
+    '<input type="text" id="docAutoCarrera" list="docCarrerasList" placeholder="Tu carrera (ej: Enfermería)" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
+    '<datalist id="docCarrerasList">'+carreras.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist>'+
+    '<button onclick="autoRegistrarDocente()" class="btn-add" style="background:linear-gradient(135deg,#059669,#34d399)">Registrarme y entrar</button>'+
+  '</div></div>';
+  cont.innerHTML=html;
 }
+window.autoRegistrarDocente=function(){
+  var nombre=document.getElementById('docAutoNombre').value.trim();
+  var carrera=document.getElementById('docAutoCarrera').value.trim();
+  if(!nombre||!carrera){alert('Completa tu nombre y carrera.');return;}
+  var yaExiste=Object.values(docentes||{}).some(function(d){return d.nombre&&d.nombre.trim().toLowerCase()===nombre.toLowerCase();});
+  if(yaExiste){alert('Ya estás registrado/a. Selecciona tu nombre en la lista de arriba.');return;}
+  // Crear grupo de carrera si no existe
+  var gid=Object.keys(gruposModulo||{}).find(function(g){return gruposModulo[g].modulo==='docente'&&gruposModulo[g].nombre.toLowerCase()===carrera.toLowerCase();});
+  var seq=[];
+  if(!gid){
+    gid='grp_'+Date.now();
+    gruposModulo[gid]={nombre:carrera,modulo:'docente',miembros:[nombre]};
+    seq.push(sedeRef('gruposModulo/'+gid).set(gruposModulo[gid]));
+  } else {
+    if(!gruposModulo[gid].miembros)gruposModulo[gid].miembros=[];
+    if(gruposModulo[gid].miembros.indexOf(nombre)<0){gruposModulo[gid].miembros.push(nombre);seq.push(sedeRef('gruposModulo/'+gid+'/miembros').set(gruposModulo[gid].miembros));}
+  }
+  var dkey='doc_'+Date.now();
+  docentes[dkey]={nombre:nombre,carrera:carrera,grupo:gid,ts:Date.now()};
+  seq.push(sedeRef('docentes/'+dkey).set(docentes[dkey]));
+  Promise.all(seq).then(function(){
+    window._docKey=dkey;window._docActual=docentes[dkey];
+    document.getElementById('docTabs').style.display='flex';
+    tabDoc('material');
+  });
+};
 window.cargarDocente=function(){
   var key=document.getElementById('docNombre').value;
   if(!key)return;
