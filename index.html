@@ -2360,7 +2360,8 @@ window.abrirModuloAdministrativo=function(){
     sedeRef('rankingAdmin').once('value'),
     sedeRef('produccionAdmin').once('value'),
     sedeRef('pesosAdmin').once('value'),
-    sedeRef('gruposModulo').once('value')
+    sedeRef('gruposModulo').once('value'),
+    sedeRef('biblioteca').once('value')
   ]).then(function(snaps){
     secretarias=snaps[0].val()||{};
     bibliotecaAdmin=snaps[1].val()||{};
@@ -2369,6 +2370,7 @@ window.abrirModuloAdministrativo=function(){
     produccionAdmin=snaps[4].val()||{};
     var pa=snaps[5].val();if(pa&&typeof pa==='object')pesosAdmin=pa;
     gruposModulo=snaps[6].val()||{};
+    biblioteca=snaps[7].val()||{};
     renderModuloAdministrativo();
   });
 };
@@ -2479,6 +2481,12 @@ function renderMaterialAdmin(cont){
   if(!cont)return;
   var nombre=window._adminNombre;
   var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return protocoloVisiblePara(e[1],nombre);});
+  // Sumar protocolos de la biblioteca clínica marcados para administrativos
+  Object.entries(biblioteca||{}).forEach(function(e){
+    if(e[1].visible===false)return;
+    var grupos=e[1].visibleGrupos||(Array.isArray(e[1].visibilidad)?e[1].visibilidad:[e[1].visibilidad||'todos']);
+    if(grupos.indexOf('administrativos')>-1||grupos.indexOf('todos')>-1)protocolos.push(e);
+  });
   if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no tienes material de estudio asignado.</div>';return;}
   var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Lee los protocolos antes de responder las preguntas.</div>';
   protocolos.forEach(function(e){
@@ -4251,13 +4259,11 @@ function renderBibAdminList(){
       '<button class="del-btn" style="color:#7ec8f7;font-size:12px" onclick="editarBancoPreguntas(\''+k+'\')" title="Editar preguntas">✏️</button>'+
       '<button class="del-btn" onclick="if(confirm(\'¿Eliminar este documento?\'))sedeRef(\'biblioteca/'+k+'\').remove()">🗑</button>'+
       '</div></div>'+
-      '<div style="display:flex;gap:6px;align-items:center">'+
-      '<label style="font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0">Material visible para:</label>'+
-      '<select onchange="cambiarVisibilidadDoc(\''+k+'\',this.value)" style="flex:1;font-size:11px;padding:4px 6px;height:auto">'+
-        '<option value="todos"'+(vis==='todos'?' selected':'')+'>👥 Todos</option>'+
-        '<option value="colaboradores"'+(vis==='colaboradores'?' selected':'')+'>🩺 Solo colaboradores</option>'+
-        '<option value="internos"'+(vis==='internos'?' selected':'')+'>🎓 Solo internos</option>'+
-      '</select>'+
+      '<div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap">'+
+      '<label style="font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0;align-self:center">Material visible para:</label>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;flex:1">'+
+        checkboxVisibilidadDoc(k,doc)+
+      '</div>'+
       '</div>'+
       (doc.obligatoria&&numPreg>0?'<button onclick="toggleTemasPanel(\''+k+'\')" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(126,200,247,.25);background:rgba(74,144,217,.08);font-family:inherit;font-size:11px;cursor:pointer;color:#7ec8f7;text-align:left">🎯 Asignar temas de preguntas por grupo</button><div id="temas-'+k+'" style="display:none"></div>':'')+
       '<div style="display:flex;gap:6px">'+
@@ -4445,6 +4451,35 @@ window.toggleBancoCerrado=function(docId,nuevoEstado){
 
 window.toggleVisibilidadDoc=function(docId,nuevoEstado){
   sedeRef('biblioteca/'+docId+'/visible').set(nuevoEstado);
+};
+
+// Genera las casillas de visibilidad múltiple para un documento ya subido
+function checkboxVisibilidadDoc(docId,doc){
+  var grupos=doc.visibleGrupos||(Array.isArray(doc.visibilidad)?doc.visibilidad:[doc.visibilidad||'todos']);
+  // Normalizar "colaboradores" viejo a "clinicos"
+  grupos=grupos.map(function(g){return g==='colaboradores'?'clinicos':g;});
+  var opciones=[['todos','👥 Todos'],['clinicos','🩺 Clínicos'],['internos','🎓 Internos'],['docentes','👨‍🏫 Docentes'],['administrativos','🗂️ Admin.']];
+  return opciones.map(function(o){
+    var marcado=grupos.indexOf(o[0])>-1;
+    return '<label style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:'+(marcado?'#fff':'rgba(255,255,255,.6)')+';background:'+(marcado?'rgba(96,165,250,.2)':'rgba(255,255,255,.04)')+';border-radius:10px;padding:3px 8px;cursor:pointer"><input type="checkbox" onchange="toggleVisibilidadDoc(\''+docId+'\',\''+o[0]+'\',this.checked)"'+(marcado?' checked':'')+' style="width:12px;height:12px;accent-color:#60a5fa">'+o[1]+'</label>';
+  }).join('');
+}
+window.toggleVisibilidadDoc=function(docId,grupo,marcado){
+  var doc=biblioteca[docId];if(!doc)return;
+  var grupos=doc.visibleGrupos||(Array.isArray(doc.visibilidad)?doc.visibilidad:[doc.visibilidad||'todos']);
+  grupos=grupos.map(function(g){return g==='colaboradores'?'clinicos':g;});
+  var idx=grupos.indexOf(grupo);
+  if(marcado&&idx<0)grupos.push(grupo);
+  else if(!marcado&&idx>-1)grupos.splice(idx,1);
+  if(!grupos.length)grupos=['todos'];
+  // Si marca "todos", limpiar los demás; si marca otro, quitar "todos"
+  if(grupo==='todos'&&marcado)grupos=['todos'];
+  else if(grupo!=='todos'&&marcado)grupos=grupos.filter(function(g){return g!=='todos';});
+  doc.visibleGrupos=grupos;
+  biblioteca[docId].visibleGrupos=grupos;
+  var visCompat=(grupos.length===1)?grupos[0]:grupos;
+  sedeRef('biblioteca/'+docId+'/visibleGrupos').set(grupos);
+  sedeRef('biblioteca/'+docId+'/visibilidad').set(visCompat).then(function(){renderBiblioteca();});
 };
 
 // Cambia el grupo al que se dirigen las preguntas de un documento ya creado
@@ -8112,8 +8147,8 @@ window.abrirModuloDocente=function(){
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9000;overflow-y:auto;padding:20px';
   ov.innerHTML='<div style="max-width:480px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
   document.body.appendChild(ov);
-  Promise.all([sedeRef('docentes').once('value'),sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('fichaProgresoDocente').once('value'),sedeRef('rankingDocente').once('value')]).then(function(s){
-    docentes=s[0].val()||{};bibliotecaAdmin=s[1].val()||{};gruposModulo=s[2].val()||{};fichaProgresoDocente=s[3].val()||{};rankingDocente=s[4].val()||{};
+  Promise.all([sedeRef('docentes').once('value'),sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('fichaProgresoDocente').once('value'),sedeRef('rankingDocente').once('value'),sedeRef('biblioteca').once('value')]).then(function(s){
+    docentes=s[0].val()||{};bibliotecaAdmin=s[1].val()||{};gruposModulo=s[2].val()||{};fichaProgresoDocente=s[3].val()||{};rankingDocente=s[4].val()||{};biblioteca=s[5].val()||{};
     renderModuloDocente();
   });
 };
@@ -8212,11 +8247,18 @@ window.tabDoc=function(tab){
 };
 // Protocolos visibles para este docente (módulo docente + dirigidos a su carrera/grupo)
 function protocolosDocente(nombre){
-  return Object.entries(bibliotecaAdmin||{}).filter(function(e){
-    var doc=e[1];
-    if(doc.modulo!=='docente')return false;
-    return protocoloVisiblePara(doc,nombre);
+  var res=[];
+  // Protocolos del Centro (bibliotecaAdmin) módulo docente
+  Object.entries(bibliotecaAdmin||{}).forEach(function(e){
+    if(e[1].modulo==='docente'&&protocoloVisiblePara(e[1],nombre))res.push(e);
   });
+  // Protocolos de la biblioteca clínica marcados visibles para docentes
+  Object.entries(biblioteca||{}).forEach(function(e){
+    if(e[1].visible===false)return;
+    var grupos=e[1].visibleGrupos||(Array.isArray(e[1].visibilidad)?e[1].visibilidad:[e[1].visibilidad||'todos']);
+    if(grupos.indexOf('docentes')>-1||grupos.indexOf('todos')>-1)res.push(e);
+  });
+  return res;
 }
 function renderMaterialDocente(cont){
   if(!cont)return;
