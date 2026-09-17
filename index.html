@@ -2503,7 +2503,14 @@ function renderMaterialAdmin(cont){
 function renderPreguntasAdminTab(cont){
   if(!cont)return;
   var nombre=window._adminNombre;
-  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].obligatoria&&e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&protocoloVisiblePara(e[1],nombre);});
+  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&protocoloVisiblePara(e[1],nombre);});
+  // Sumar protocolos de la biblioteca clínica marcados para administrativos que tengan preguntas
+  Object.entries(biblioteca||{}).forEach(function(e){
+    if(e[1].visible===false)return;
+    if(!e[1].preguntas||Object.keys(e[1].preguntas).length<2)return;
+    var grupos=e[1].visibleGrupos||(Array.isArray(e[1].visibilidad)?e[1].visibilidad:[e[1].visibilidad||'todos']);
+    if(grupos.indexOf('administrativos')>-1||grupos.indexOf('todos')>-1)protocolos.push(e);
+  });
   if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
   var hoy=hoyStr();var key=nombre.replace(/[.#$/\[\]\s]/g,'_');
   if(fichaProgresoAdmin[key]&&fichaProgresoAdmin[key].fecha===hoy&&fichaProgresoAdmin[key].aprobadoHoy){
