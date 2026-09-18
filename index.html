@@ -1542,8 +1542,8 @@ function desmontarReloj(){
   var r=document.getElementById('relojFlotante');if(r)r.remove();
 }
 
-var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
-var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','09:00–18:00','09:00–19:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
+var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–18:00','15:00–19:00','15:00–20:00','16:00–20:00','17:00–20:00'];
+var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','09:00–18:00','09:00–19:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–18:00','15:00–19:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 
 // Cobertura horarios cada 30 min 08:00-20:00
 var COB_HOR=[];
@@ -4281,7 +4281,7 @@ function renderBibAdminList(){
       '<button onclick="toggleVisibilidadDoc(\''+k+'\','+(visible?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+toggleColor+';font-family:inherit;font-size:11px;cursor:pointer;text-align:left">'+toggleTxt+'</button>'+
       (doc.obligatoria?'<button onclick="toggleBancoCerrado(\''+k+'\','+(doc.bancoCerrado?'false':'true')+')" style="flex:1;padding:5px 10px;border-radius:6px;border:none;background:'+(doc.bancoCerrado?'rgba(16,185,129,.2)':'rgba(245,158,11,.15)')+';font-family:inherit;font-size:11px;cursor:pointer;text-align:center">'+(doc.bancoCerrado?'<span style="color:#6ee7b7">✅ Banco cerrado</span>':'<span style="color:#fcd34d">⚠ Banco abierto</span>')+'</button>':'')+
       '</div>'+
-      (doc.preguntas&&Object.keys(doc.preguntas).length>=2?'<button onclick="abrirActivacionPreguntas(\''+k+'\')" style="width:100%;margin-top:6px;padding:6px 10px;border-radius:6px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);font-family:inherit;font-size:11px;cursor:pointer;color:#6ee7b7">🎯 Activar preguntas por grupo / persona</button>':'')+
+      (numPreg>=2?'<button onclick="abrirActivacionPreguntas(\''+k+'\')" style="width:100%;margin-top:6px;padding:6px 10px;border-radius:6px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);font-family:inherit;font-size:11px;cursor:pointer;color:#6ee7b7">🎯 Activar/apagar preguntas (gradual)</button>':'')+
       '</div>';
   }).join('');
 }
