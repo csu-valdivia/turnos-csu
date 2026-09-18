@@ -1372,6 +1372,30 @@ var SEDES={'Valdivia':'2715','Patagonia':'1234','Bellavista':'5678','Los Leones'
 var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var AREAS=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
 var COLACION={'07:45':'13:00–14:00','08:00':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
+// Colaciones manuales por persona/día (sobrescriben el cálculo automático). colacionManual[nombre_dia]='HH:MM–HH:MM'
+var colacionManual={};
+// Calcula la colación según los bloques del día. Regla: la hora de término del bloque de mañana define la colación (termina 13→13-14, 14→14-15).
+function colacionPorJornada(bloques){
+  if(!bloques||!bloques.length)return null;
+  // Buscar un bloque que termine entre las 12:00 y las 16:00 (el que "corta" para almuerzo)
+  var terminos=bloques.map(function(b){var p=b.horario.split('–');return p[1]?t2m(p[1].trim()):null;}).filter(function(x){return x!=null;});
+  if(!terminos.length)return null;
+  // El término relevante: el primero que caiga en rango de almuerzo (12:00-16:00)
+  var candidatos=terminos.filter(function(m){return m>=12*60&&m<=16*60;}).sort(function(a,b){return a-b;});
+  var corte=candidatos.length?candidatos[0]:null;
+  if(corte==null){
+    // Si no hay corte en rango de almuerzo, usar la regla vieja por hora de entrada
+    var entradas=bloques.map(function(b){return t2m(b.horario.split('–')[0].trim());});
+    var minE=Math.min.apply(null,entradas);
+    var minH=pad(Math.floor(minE/60))+':'+pad(minE%60);
+    return COLACION[minH]||null;
+  }
+  // Colación = desde el término hasta 1 hora después
+  var ini=pad(Math.floor(corte/60))+':'+pad(corte%60);
+  var finM=corte+60;
+  var fin=pad(Math.floor(finM/60))+':'+pad(finM%60);
+  return ini+'–'+fin;
+}
 var SUBAREAS={T1:'Empaque · Autoclave · Almacenamiento · Entrega',T2:'Recepción · Lavado · Secado'};
 // Inyecta los roles personalizados como opciones en el selector de tipo de tarea
 function actualizarTiposTarea(){
@@ -1676,7 +1700,7 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -1796,6 +1820,7 @@ function attach(){
   on('horaAvisoTareas',function(v){if(typeof v==='number'&&v>=0&&v<=23)horaAvisoTareas=v;});
   on('ventanasHorarias',function(v){if(v&&typeof v==='object')ventanasHorarias=v;});
   on('recesoAcademico',function(v){if(v&&typeof v==='object')recesoAcademico=v;if(document.getElementById('recesoPanel'))renderRecesoConfig();});
+  on('colacionManual',function(v){colacionManual=v||{};});
   on('tiemposCalibrados',function(v){if(v&&typeof v==='object'){Object.keys(v).forEach(function(tp){if(TIEMPOS_PROCESO[tp]&&typeof v[tp]==='number')TIEMPOS_PROCESO[tp].h=v[tp];});}});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
   // ── Listeners módulo administrativo (separados de lo clínico) ──
@@ -3635,18 +3660,19 @@ function renderMisTurnos(nombre){
     var libreB=Object.values(bloques).find(function(b){return b.dia===dia&&b.nombre===nombre&&b.libre;});
     if(libreB&&!ps.length){found=true;html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">🏖</span><span class="day-name">'+dia+' — Día libre</span></div></div>';return;}
     if(!ps.length)return;found=true;
-    // Colación única
-    var entradas=ps.map(function(b){return t2m(b.horario.split('–')[0].trim());});
-    var minE=Math.min.apply(null,entradas);
-    var minH=pad(Math.floor(minE/60))+':'+pad(minE%60);
-    var col=dia!=='Sábado'?(COLACION[minH]||null):null;
+    // Colación única: según la hora de TÉRMINO del bloque más temprano de la mañana.
+    // Regla: si el bloque termina a las 13 → colación 13-14; termina 14 → 14-15, etc.
+    var col=dia!=='Sábado'?colacionPorJornada(ps):null;
+    // Colación manual sobrescribe el cálculo automático
+    var colKey=nombre.replace(/\s/g,'_')+'_'+dia;
+    if(colacionManual[colKey])col=colacionManual[colKey];
     var tds=Object.values(tareas).filter(function(t){return t.dia===dia&&t.nombre===nombre;});
     var notaObj=notas[nombre.replace(/\s/g,'_')+'_'+dia];
     var notaLista=notaObj?Object.keys(notaObj).map(function(k){var o=notaObj[k];o.pushKey=k;return o;}).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
     var cobDia=cobP.find(function(cv){return cv.dia===dia;});
     html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">📅</span><span class="day-name">'+dia+'</span>'+(cobDia?'<span style="font-size:11px;background:rgba(239,68,68,.1);color:#991b1b;padding:2px 8px;border-radius:4px;margin-left:auto">Cubre '+cobDia.destino+'</span>':'')+'</div>';
     ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?SUBAREAS[b.turno]:null;var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,b.area,b.horario):null;var editBtn=claveB?'<button onclick="editarBloqueTurno(\''+claveB+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'';html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+editBtn+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
-    if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span></div></div>';
+    if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span>'+(adminUnlocked?'<button onclick="editarColacion(\''+colKey+'\',\''+col+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'')+'</div></div>';
     tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
     notaLista.forEach(function(nt){
       var respuestas=nt.respuestas?Object.values(nt.respuestas).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
@@ -14620,7 +14646,15 @@ function tareaYaAsignada(tipo,dia,jornadaNueva,excluirNombre){
     if(conflicto)return;
     if(t.tipo!==tipo||t.dia!==dia)return;
     if(excluirNombre&&t.nombre===excluirNombre)return; // no choca consigo mismo
-    var jExist=t.jornada||'dia';
+    // Si la tarea existente NO tiene jornada explícita, solo choca con otra "todo el día" nueva.
+    // Así las tareas antiguas (sin jornada) no bloquean AM/PM.
+    var jExist=t.jornada;
+    if(!jExist){
+      // Tarea vieja sin jornada: solo bloquea si la nueva es 'dia' Y la vieja se asume 'dia'.
+      // Para no bloquear de más, tratamos la vieja como 'dia' SOLO frente a una nueva 'dia'.
+      if(jornadaNueva==='dia')conflicto=t;
+      return;
+    }
     // Chocan si alguna es 'dia', o si son la misma jornada
     if(jExist==='dia'||jornadaNueva==='dia'||jExist===jornadaNueva){
       conflicto=t;
@@ -14628,6 +14662,17 @@ function tareaYaAsignada(tipo,dia,jornadaNueva,excluirNombre){
   });
   return conflicto;
 }
+// Editar manualmente la hora de colación de una persona en un día
+window.editarColacion=function(colKey,actual){
+  var nueva=prompt('Hora de colación (formato HH:MM–HH:MM):',actual);
+  if(nueva===null)return;
+  nueva=nueva.trim();
+  if(!/^\d{1,2}:\d{2}[–-]\d{1,2}:\d{2}$/.test(nueva)){alert('Formato inválido. Usa por ejemplo: 13:00–14:00');return;}
+  nueva=nueva.replace('-','–');
+  colacionManual[colKey]=nueva;
+  sedeRef('colacionManual/'+colKey).set(nueva).then(function(){if(typeof renderMisTurnos==='function'&&curNombre)renderMisTurnos(curNombre);if(typeof renderPanorama==='function')renderPanorama();});
+};
+
 // Mostrar campos de horario solo cuando el tipo es pabellón
 document.getElementById('tTip').addEventListener('change',function(){
   var box=document.getElementById('tPabHorario');
