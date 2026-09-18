@@ -980,7 +980,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Instrumental recibido</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="entrega_esteril">📤 Entrega material estéril</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Instrumental recibido</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="entrega_esteril">📤 Entrega material estéril</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
@@ -1394,7 +1394,7 @@ function jornadaLabel(j){
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Instrumental recibido'},inst_lavado:{e:'🧼',l:'Instrumental lavado'},inst_empaque:{e:'📦',l:'Instrumental empaquetado'},inst_secado:{e:'💨',l:'Instrumental secado'},entrega_esteril:{e:'📤',l:'Entrega material estéril'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pedido:{e:'🟠',l:'Pedido'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Instrumental recibido'},inst_lavado:{e:'🧼',l:'Instrumental lavado'},inst_empaque:{e:'📦',l:'Instrumental empaquetado'},inst_secado:{e:'💨',l:'Instrumental secado'},entrega_esteril:{e:'📤',l:'Entrega material estéril'},apoyo_clinico:{e:'🩺',l:'Apoyo clínico'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Catálogo de roles técnicos: cada uno abre una funcionalidad de registro en Mis Turnos.
 // tipo = valor de la tarea; fn = función que abre el registro. Ampliable por el admin vía rolesTecnicos.
 var ROLES_TECNICOS_BASE={
@@ -1422,7 +1422,8 @@ var PRODUCCION_TIPOS={
   inst_lavado:{emoji:'🧼',label:'Instrumental lavado',unidad:'piezas',color:'#22d3ee'},
   inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',unidad:'paquetes',color:'#34d399'},
   inst_secado:{emoji:'💨',label:'Instrumental secado',unidad:'piezas',color:'#fbbf24'},
-  entrega_esteril:{emoji:'📤',label:'Entrega material estéril',unidad:'estudiantes',color:'#f97316'}
+  entrega_esteril:{emoji:'📤',label:'Entrega material estéril',unidad:'estudiantes',color:'#f97316'},
+  apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',unidad:'pacientes',color:'#ec4899',max:4}
 };
 // Tiempos reales calibrados por proceso (horas). modo: 'lote' = fijo por registro; 'unidad' = tiempo × cantidad.
 var TIEMPOS_PROCESO={
@@ -1437,7 +1438,8 @@ var TIEMPOS_PROCESO={
   // Registros de control (tiempo breve fijo)
   temp_ester:{h:0.1,modo:'lote'},temp_pabellon:{h:0.1,modo:'lote'},
   temp_box:{h:0.1,modo:'lote'},temp_refri:{h:0.1,modo:'lote'},
-  conductividad:{h:0.15,modo:'lote'},reas:{h:0.25,modo:'lote'}
+  conductividad:{h:0.15,modo:'lote'},reas:{h:0.25,modo:'lote'},
+  apoyo_clinico:{h:0.5,modo:'unidad'}
 };
 // TIEMPO DE TRABAJO HUMANO REAL (lo que UNA persona hace en su turno, NO el total del servicio ni el ciclo de máquina).
 // h = horas de trabajo por vez. vecesDia = cuántas veces al día lo hace ESA persona (estimación conservadora).
@@ -1458,7 +1460,8 @@ var TIEMPOS_TRABAJO={
   temp_pabellon:{h:0.1,modo:'lote',vecesDia:1},
   temp_box:{h:0.1,modo:'lote',vecesDia:1},
   conductividad:{h:0.083,modo:'lote',vecesDia:1},
-  reas:{h:0.15,modo:'lote',vecesDia:1}
+  reas:{h:0.15,modo:'lote',vecesDia:1},
+  apoyo_clinico:{h:0.5,modo:'unidad',vecesDia:4}
 };
 var COSTO_TERCERIZAR_CARGA=200000; // $ por carga de autoclave (150 lts) tercerizada
 var factorIndirecto=0.40; // se recalcula desde horasIndirectasDia; 40% es el valor inicial de referencia
@@ -1540,7 +1543,7 @@ function desmontarReloj(){
 }
 
 var FRANJAS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
-var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
+var HORARIOS=['07:45–10:00','07:45–11:00','07:45–17:00','08:00–11:00','09:00–13:00','09:00–14:00','09:00–18:00','09:00–19:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 
 // Cobertura horarios cada 30 min 08:00-20:00
 var COB_HOR=[];
@@ -2264,9 +2267,9 @@ window.renderRankingAdmin=function(contId){
     var mesN=hoyStr().slice(0,7);desde=mesN+'-01';hasta=mesN+'-31';etiqueta='Mes '+mesN;
   }
   var participantes=[];
-  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];participantes.push({key:k,nombre:(typeof v==='object'?v.nombre:v),rol:(typeof v==='object'?v.cargo:'Secretaria')});});
+  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var nom=(typeof v==='object'?v.nombre:v);participantes.push({key:k,capKey:(nom||'').replace(/[.#$/\[\]\s]/g,'_'),nombre:nom,rol:(typeof v==='object'?v.cargo:'Secretaria')});});
   var filas=participantes.map(function(p){
-    var pf=puntajeFinalAdminRango(p.key,desde,hasta);
+    var pf=puntajeFinalAdminRango(p.key,desde,hasta,p.capKey);
     return {nombre:p.nombre,rol:p.rol,final:pf.final,prod:pf.prod,cap:pf.cap};
   }).filter(function(x){return x.final!==null;}).sort(function(a,b){return b.final-a.final;});
   function btnP(val,lab){return '<button onclick="window._rankAdminPeriodo=\''+val+'\';renderRankingAdmin(\''+contId+'\')" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;background:'+(periodo===val?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
@@ -2295,9 +2298,9 @@ window.renderRankingAdmin=function(contId){
   html+='</div>';
   cont.innerHTML=html;
 };
-function puntajeFinalAdminRango(key,desde,hasta){
+function puntajeFinalAdminRango(key,desde,hasta,capKey){
   var prod=puntajeProduccionRango(key,desde,hasta);
-  var cap=puntajeCapacitacionRango(key,desde,hasta);
+  var cap=puntajeCapacitacionRango(capKey||key,desde,hasta);
   var pP=(pesosAdmin.produccion||60)/100,pC=(pesosAdmin.capacitacion||40)/100;
   if(prod===null&&cap===null)return {final:null,prod:null,cap:null};
   if(prod===null)return {final:cap,prod:null,cap:cap};
@@ -10738,6 +10741,9 @@ function formatoDur(min){
 window.guardarRegProduccion=function(tipo){
   var cant=document.getElementById('prodCantidad').value;
   if(cant===''||Number(cant)<0){alert('Ingresa una cantidad válida.');return;}
+  // Máximo definido en el tipo (ej: apoyo clínico máx 4 pacientes)
+  var cfgT=PRODUCCION_TIPOS[tipo];
+  if(cfgT&&cfgT.max&&Number(cant)>cfgT.max){alert('El máximo permitido es '+cfgT.max+' '+cfgT.unidad+' por día.');return;}
   var ahora=new Date();
   var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
   var hIni=document.getElementById('prodInicio').value;
@@ -12039,7 +12045,7 @@ function nombreRol(tipo){
 }
 
 // Tipos que son "medibles" (tienen registro verificable)
-var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario_2:1,dispensario_3:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1};
+var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario_2:1,dispensario_3:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1,apoyo_clinico:1};
 var TIPOS_SEMANALES={aseo:1}; // tareas que se controlan 1 vez por semana, no diariamente
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
