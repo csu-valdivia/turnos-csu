@@ -2176,19 +2176,26 @@ window.borrarDatosPruebaAdmin=function(){
   // 1. Producción del día
   seq.push(sedeRef('produccionAdmin/'+key+'/'+fecha).remove());
   if(produccionAdmin[key])delete produccionAdmin[key][fecha];
-  // 2. Capacitación: buscar entradas de ese día dentro del mes y borrarlas
-  var mesData=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[capKey]&&rankingAdmin.capacitacion[capKey][mesN])||{};
-  Object.keys(mesData).forEach(function(ts){
-    if(mesData[ts].fecha===fecha){
-      seq.push(sedeRef('rankingAdmin/capacitacion/'+capKey+'/'+mesN+'/'+ts).remove());
-      delete rankingAdmin.capacitacion[capKey][mesN][ts];
+  // 2. Capacitación: leer FRESCO desde Firebase (no confiar en la copia local, puede no estar cargada)
+  seq.push(sedeRef('rankingAdmin/capacitacion/'+capKey+'/'+mesN).once('value').then(function(snap){
+    var mesData=snap.val()||{};
+    var sub=[];
+    Object.keys(mesData).forEach(function(ts){
+      if(mesData[ts].fecha===fecha){
+        sub.push(sedeRef('rankingAdmin/capacitacion/'+capKey+'/'+mesN+'/'+ts).remove());
+        if(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[capKey]&&rankingAdmin.capacitacion[capKey][mesN])delete rankingAdmin.capacitacion[capKey][mesN][ts];
+      }
+    });
+    return Promise.all(sub);
+  }));
+  // 3. Progreso del día — leer FRESCO desde Firebase (el panel de la Jefa no siempre lo tiene cargado localmente)
+  seq.push(sedeRef('fichaProgresoAdmin/'+capKey).once('value').then(function(snap){
+    var fp=snap.val();
+    if(fp&&fp.fecha===fecha){
+      delete fichaProgresoAdmin[capKey];
+      return sedeRef('fichaProgresoAdmin/'+capKey).remove();
     }
-  });
-  // 3. Progreso del día (para que pueda volver a responder si corresponde)
-  if(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===fecha){
-    seq.push(sedeRef('fichaProgresoAdmin/'+capKey).remove());
-    delete fichaProgresoAdmin[capKey];
-  }
+  }));
   Promise.all(seq).then(function(){
     showSaved('corrSaved');
     setTimeout(function(){renderCumplimientoAdmin();},1200);
@@ -2861,14 +2868,21 @@ window.renderRendimientoDiarioAdmin=function(cont){
   var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
     '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px">📈 Mi rendimiento — esta semana</div>';
   var capKey=(nombre||'').replace(/[.#$/\[\]\s]/g,'_');
+  // Historial real de capacitación (una entrada por respuesta, con su fecha) — más confiable que el snapshot único
+  var mesN=hoyStr().slice(0,7);
+  var mesData=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[capKey]&&rankingAdmin.capacitacion[capKey][mesN])||{};
+  function pctDelDia(fecha){
+    var valores=Object.values(mesData).filter(function(r){return r.fecha===fecha;}).map(function(r){return r.pct;});
+    return valores.length?Math.round(valores.reduce(function(a,b){return a+b;},0)/valores.length):null;
+  }
   var activo=dias.map(function(d){
     var prod=key&&produccionAdmin[key]&&produccionAdmin[key][d.fecha];
-    var cap=(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===d.fecha)?fichaProgresoAdmin[capKey].pct:null;
+    var cap=pctDelDia(d.fecha);
     return {tieneProd:!!prod,pctCap:cap};
   });
   html+='<div style="display:flex;align-items:flex-end;gap:8px;height:100px;margin-bottom:6px">';
   activo.forEach(function(a){
-    var v=a.pctCap!=null?a.pctCap:(a.tieneProd?70:null);
+    var v=a.pctCap; // solo % real de capacitación respondida ese día; sin inventar valores
     var h=v!=null?Math.max(4,(v/100)*85):2;
     var color=v==null?'rgba(255,255,255,.1)':(v>=80?'#6ee7b7':v>=60?'#fbbf24':'#fca5a5');
     html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'+
