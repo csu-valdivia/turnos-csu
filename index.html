@@ -2044,7 +2044,14 @@ window.abrirPanelJefaOperaciones=function(){
     borradoresData=snaps[4].val()||{};
     metricasAdmin=snaps[5].val()||{};
     sedeRef('secretarias').on('value',function(s){secretarias=s.val()||{};});
-    sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};});
+    sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();});
+    sedeRef('rankingAdmin').on('value',function(s){
+      rankingAdmin=s.val()||{};
+      var cont=document.getElementById('jefaOpContenido');
+      if(cont&&cont.querySelector('#ventanasConfig')===null){ /* evitar interrumpir otras pestañas */ }
+      if(document.getElementById('jefaOpContenido')&&(document.querySelector('#tabJO_rank')&&document.querySelector('#tabJO_rank').style.background.indexOf('34,211,238')>-1))renderRankingAdmin('jefaOpContenido');
+      if(document.getElementById('jefaOpContenido')&&(document.querySelector('#tabJO_cump')&&document.querySelector('#tabJO_cump').style.background.indexOf('34,211,238')>-1))renderCumplimientoAdmin();
+    });
     renderPanelJefaOperaciones();
   });
 };
@@ -2685,6 +2692,19 @@ window.abrirModuloAdministrativo=function(){
     gruposModulo=snaps[6].val()||{};
     biblioteca=snaps[7].val()||{};
     renderModuloAdministrativo();
+    // Listeners en vivo (esta ventana no pasa por attach(), hay que registrarlos aquí)
+    sedeRef('rankingAdmin').on('value',function(s){
+      rankingAdmin=s.val()||{};
+      if((window._adminTabActual==='rendimiento'||window._adminTabActual==='ranking')&&document.getElementById('adminContenido'))tabAdmin(window._adminTabActual);
+    });
+    sedeRef('fichaProgresoAdmin').on('value',function(s){
+      fichaProgresoAdmin=s.val()||{};
+      if(window._adminTabActual==='rendimiento'&&document.getElementById('adminContenido'))tabAdmin('rendimiento');
+    });
+    sedeRef('produccionAdmin').on('value',function(s){
+      produccionAdmin=s.val()||{};
+      if(window._adminTabActual==='rendimiento'&&document.getElementById('adminContenido'))tabAdmin('rendimiento');
+    });
   });
 };
 
@@ -8696,6 +8716,13 @@ window.abrirModuloDocente=function(){
   Promise.all([sedeRef('docentes').once('value'),sedeRef('bibliotecaAdmin').once('value'),sedeRef('gruposModulo').once('value'),sedeRef('fichaProgresoDocente').once('value'),sedeRef('rankingDocente').once('value'),sedeRef('biblioteca').once('value')]).then(function(s){
     docentes=s[0].val()||{};bibliotecaAdmin=s[1].val()||{};gruposModulo=s[2].val()||{};fichaProgresoDocente=s[3].val()||{};rankingDocente=s[4].val()||{};biblioteca=s[5].val()||{};
     renderModuloDocente();
+    sedeRef('rankingDocente').on('value',function(sn){
+      rankingDocente=sn.val()||{};
+      if(window._docTabActual==='ranking'&&document.getElementById('docContenido'))tabDoc('ranking');
+    });
+    sedeRef('fichaProgresoDocente').on('value',function(sn){
+      fichaProgresoDocente=sn.val()||{};
+    });
   });
 };
 function renderModuloDocente(){
@@ -8778,6 +8805,7 @@ window.cargarDocente=function(){
   tabDoc('material');
 };
 window.tabDoc=function(tab){
+  window._docTabActual=tab;
   ['mat','preg','rank'].forEach(function(t){var b=document.getElementById('tabDOC_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
   var map={material:'tabDOC_mat',preguntas:'tabDOC_preg',ranking:'tabDOC_rank'};
   var activo=document.getElementById(map[tab]);
