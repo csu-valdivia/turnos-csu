@@ -2769,6 +2769,12 @@ window.renderRendimientoDiarioAdmin=function(cont){
 function protocoloVisiblePara(doc,nombre){
   // Bloqueo explícito individual: SIEMPRE gana, sin importar si está "abierto a todos" o por grupo.
   if(doc.bloqueadoPersonas&&doc.bloqueadoPersonas.indexOf(nombre)>-1)return false;
+  // Si la persona está en modo inducción (aplica a CUALQUIER rol: clínico, admin, docente),
+  // la regla cambia a "todo cerrado salvo lo activado explícitamente" — evita tener que
+  // apagar uno por uno los protocolos que estaban "abiertos a todos".
+  if(typeof estaEnInduccion==='function'&&estaEnInduccion(nombre)){
+    return !!(doc.dirigidoPersonas&&doc.dirigidoPersonas.indexOf(nombre)>-1);
+  }
   var tieneGrupos=doc.dirigidoA&&doc.dirigidoA.length;
   var tienePersonas=doc.dirigidoPersonas&&doc.dirigidoPersonas.length;
   // Si no tiene ninguna restricción → lo ven todos los del módulo
@@ -5118,24 +5124,18 @@ function estaEnInduccion(nombre){
 // ¿Una ficha específica está activada para esta persona?
 function fichaActivaParaPersona(nombre,docId){
   var doc=biblioteca[docId];
-  // Bloqueo explícito individual (sistema unificado) siempre gana, en cualquier caso
-  if(doc&&doc.bloqueadoPersonas&&doc.bloqueadoPersonas.indexOf(nombre)>-1)return false;
+  if(!doc)return true;
   // 1. Plan de estudio dirigido (legado, se respeta si ya estaba configurado)
   var plan=planPersona(nombre);
   if(plan&&plan.protocolos&&Object.keys(plan.protocolos).length>0){
     if(plan.protocolos[docId]===false)return false;
     if(plan.protocolos[docId]===true)return true;
-    // Protocolo no mencionado en el plan → sigue a las reglas siguientes
   }
-  // 2. Inducción: mientras está en inducción, solo ve lo activado explícitamente (opt-in)
+  // 2. Compatibilidad con activaciones antiguas de inducción (formato legado)
   var e=estadoInduccion(nombre);
-  if(e&&e.enInduccion){
-    var activoIndividual=doc&&doc.dirigidoPersonas&&doc.dirigidoPersonas.indexOf(nombre)>-1;
-    var activoLegado=!!(e.fichasActivas&&e.fichasActivas[docId]); // compatibilidad con activaciones previas
-    return activoIndividual||activoLegado;
-  }
-  // 3. Fuera de inducción: reglas normales del panel unificado (abierto a todos / por grupo / individual / bloqueado)
-  return doc?protocoloVisiblePara(doc,nombre):true;
+  if(e&&e.enInduccion&&e.fichasActivas&&e.fichasActivas[docId])return true;
+  // 3. Sistema unificado (protocoloVisiblePara ya incluye la regla de inducción opt-in)
+  return protocoloVisiblePara(doc,nombre);
 }
 
 // Devuelve el plan de estudio aplicable a una persona (individual o de su grupo)
