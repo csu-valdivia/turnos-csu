@@ -1141,6 +1141,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           <div class="asec" style="border-color:rgba(96,165,250,.3)">
             <p class="asec-title" style="color:#7ec8f7">📚 Plan de estudio dirigido</p>
             <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Dirige protocolos y grupos de preguntas a una persona o grupo. Útil para que un colaborador nuevo o interna estudie por partes, no todo de golpe.</p>
+            <div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:10px;color:#93c5fd">💡 Para el control diario recomendamos usar <b>Centro de protocolos → Por persona</b> (cubre a todo el equipo, no solo clínicos, y evita duplicar configuraciones). Este panel sigue funcionando para grupos ya configurados.</div>
             <select id="planEstudioTarget" onchange="renderPlanEstudio()" style="width:100%;font-size:13px;padding:9px;margin-bottom:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px"></select>
             <div id="planEstudioList"></div>
           </div>
@@ -2766,6 +2767,8 @@ window.renderRendimientoDiarioAdmin=function(cont){
 
 // ¿Este protocolo está dirigido a esta persona? (según grupos dirigidos)
 function protocoloVisiblePara(doc,nombre){
+  // Bloqueo explícito individual: SIEMPRE gana, sin importar si está "abierto a todos" o por grupo.
+  if(doc.bloqueadoPersonas&&doc.bloqueadoPersonas.indexOf(nombre)>-1)return false;
   var tieneGrupos=doc.dirigidoA&&doc.dirigidoA.length;
   var tienePersonas=doc.dirigidoPersonas&&doc.dirigidoPersonas.length;
   // Si no tiene ninguna restricción → lo ven todos los del módulo
@@ -5114,18 +5117,25 @@ function estaEnInduccion(nombre){
 }
 // ¿Una ficha específica está activada para esta persona?
 function fichaActivaParaPersona(nombre,docId){
-  // 1. Plan de estudio dirigido (si existe para la persona o su grupo)
+  var doc=biblioteca[docId];
+  // Bloqueo explícito individual (sistema unificado) siempre gana, en cualquier caso
+  if(doc&&doc.bloqueadoPersonas&&doc.bloqueadoPersonas.indexOf(nombre)>-1)return false;
+  // 1. Plan de estudio dirigido (legado, se respeta si ya estaba configurado)
   var plan=planPersona(nombre);
   if(plan&&plan.protocolos&&Object.keys(plan.protocolos).length>0){
-    // Si hay un plan definido, solo ve los protocolos activados en el plan
     if(plan.protocolos[docId]===false)return false;
     if(plan.protocolos[docId]===true)return true;
-    // Protocolo no mencionado en el plan → sigue la regla de inducción
+    // Protocolo no mencionado en el plan → sigue a las reglas siguientes
   }
-  // 2. Inducción (regla existente)
+  // 2. Inducción: mientras está en inducción, solo ve lo activado explícitamente (opt-in)
   var e=estadoInduccion(nombre);
-  if(!e||!e.enInduccion)return true; // no está en inducción → todas activas
-  return !!(e.fichasActivas&&e.fichasActivas[docId]); // en inducción → solo las activadas
+  if(e&&e.enInduccion){
+    var activoIndividual=doc&&doc.dirigidoPersonas&&doc.dirigidoPersonas.indexOf(nombre)>-1;
+    var activoLegado=!!(e.fichasActivas&&e.fichasActivas[docId]); // compatibilidad con activaciones previas
+    return activoIndividual||activoLegado;
+  }
+  // 3. Fuera de inducción: reglas normales del panel unificado (abierto a todos / por grupo / individual / bloqueado)
+  return doc?protocoloVisiblePara(doc,nombre):true;
 }
 
 // Devuelve el plan de estudio aplicable a una persona (individual o de su grupo)
@@ -5328,13 +5338,17 @@ function temaVisibleFor(doc,tema,nombre){
 
 // Preguntas de un documento que corresponden a la persona indicada
 function preguntasParaPersona(doc,nombre){
+  // Sistema unificado: temas bloqueados explícitamente para esta persona (deny-list, igual que protocolos)
+  var kp=(nombre||'').replace(/[.#$/\[\]]/g,'_');
+  var temasBloq=doc.temasBloqueados&&doc.temasBloqueados[kp];
   var plan=planPersona(nombre);
   var docId=Object.keys(biblioteca||{}).find(function(id){return biblioteca[id]===doc;});
   var temasPlan=(plan&&plan.temas&&docId&&plan.temas[docId])?plan.temas[docId]:null;
-  // ¿Hay al menos un tema marcado en el plan? (si no, ignora el filtro de temas)
   var hayTemasMarcados=temasPlan&&Object.values(temasPlan).some(function(v){return v===true;});
   return Object.values(doc.preguntas||{}).filter(function(p){
     var tema=p.tema||'General';
+    // Sistema unificado: si este tema está bloqueado explícitamente para la persona, no se ve
+    if(temasBloq&&temasBloq.indexOf(temaKey(tema))>-1)return false;
     if(hayTemasMarcados){
       return temasPlan[temaKey(tema)]===true;
     }
@@ -6779,8 +6793,8 @@ function renderInduccionList(){
     enInd.forEach(function(n){
       var e=estadoInduccion(n)||{};
       var k=keyPersona(n);
-      var fichasActivas=e.fichasActivas||{};
-      var nActivas=Object.keys(fichasActivas).filter(function(fid){return fichasActivas[fid];}).length;
+      // Contar activos con el sistema UNIFICADO (fichaActivaParaPersona), no solo el legado fichasActivas
+      var nActivas=fichasOblig.filter(function(fe){return fichaActivaParaPersona(n,fe[0]);}).length;
       html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:10px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
           '<span style="font-size:14px;color:#fff;font-weight:700">🎓 '+esc(n)+'</span>'+
@@ -6791,27 +6805,29 @@ function renderInduccionList(){
         '<span style="font-size:12px;color:rgba(255,255,255,.7)">👁 Supervisión en terreno</span>'+
         '<button onclick="toggleSupervisionInduccion(\''+k+'\')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:none;font-family:inherit;cursor:pointer;background:'+(e.supervisionActiva?'rgba(52,211,153,.2);color:#6ee7b7':'rgba(255,255,255,.08);color:rgba(255,255,255,.5)')+'">'+(e.supervisionActiva?'✓ Activa':'Pausada')+'</button>'+
       '</div>';
-      // Fichas (protocolos) una por una
-      html+='<div style="padding:6px 0;border-top:1px solid rgba(255,255,255,.05)"><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">📋 Preguntas por protocolo ('+nActivas+'/'+fichasOblig.length+' activas):</div>';
-      fichasOblig.forEach(function(fe){
-        var docId=fe[0],doc=fe[1];
-        var activa=!!fichasActivas[docId];
-        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">'+
-          '<span style="font-size:11px;color:rgba(255,255,255,.7)">'+esc(doc.titulo)+'</span>'+
-          '<button onclick="toggleFichaInduccion(\''+k+'\',\''+docId+'\')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:none;font-family:inherit;cursor:pointer;background:'+(activa?'rgba(52,211,153,.2);color:#6ee7b7':'rgba(255,255,255,.08);color:rgba(255,255,255,.4)')+'">'+(activa?'✓ Activa':'Activar')+'</button>'+
-        '</div>';
-      });
-      html+='</div>';
-      // Botones generales
+      // Protocolos: contador + acceso directo al control unificado (por persona)
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.05)">'+
+        '<span style="font-size:12px;color:rgba(255,255,255,.7)">📋 Protocolos activos</span>'+
+        '<span style="font-size:12px;color:#93c5fd;font-weight:700">'+nActivas+'/'+fichasOblig.length+'</span>'+
+      '</div>';
       html+='<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'+
-        '<button onclick="activarTodasFichasInduccion(\''+k+'\')" style="flex:1;font-size:11px;padding:7px;border-radius:6px;border:none;font-family:inherit;cursor:pointer;background:rgba(96,165,250,.15);color:#93c5fd">Activar todas las preguntas</button>'+
-        '<button onclick="darBienvenidaEquipo(\''+k+'\',\''+esc(n).replace(/'/g,"")+'\')" style="flex:1;font-size:11px;padding:7px;border-radius:6px;border:none;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#059669,#34d399);color:#fff;font-weight:600">🎉 Activar al equipo</button>'+
+        '<button onclick="abrirControlPersona(\''+esc(n).replace(/'/g,"")+'\')" style="flex:1;font-size:11px;padding:8px;border-radius:6px;border:none;font-family:inherit;cursor:pointer;background:rgba(96,165,250,.15);color:#93c5fd;font-weight:600">🎯 Activar sus protocolos</button>'+
+        '<button onclick="darBienvenidaEquipo(\''+k+'\',\''+esc(n).replace(/'/g,"")+'\')" style="flex:1;font-size:11px;padding:8px;border-radius:6px;border:none;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#059669,#34d399);color:#fff;font-weight:600">🎉 Activar al equipo</button>'+
       '</div>';
       html+='</div>';
     });
   }
   d.innerHTML=html;
 }
+
+// Abre el Centro de protocolos directo en la pestaña "Por persona", con esta persona preseleccionada
+window.abrirControlPersona=function(nombre){
+  window._persActivacion=nombre;
+  if(typeof abrirCentroProtocolos==='function'){
+    abrirCentroProtocolos();
+    setTimeout(function(){renderCentroProtocolos('persona');},400);
+  }
+};
 
 window.ponerEnInduccion=function(){
   var sel=document.getElementById('nuevoInduccionSel');
@@ -8934,11 +8950,18 @@ window.renderActivacionPorPersona=function(){
     '</select>';
   var persona=window._persActivacion;
   if(!persona){cont.innerHTML=html+'<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Selecciona una persona para ver y activar sus protocolos.</div>';return;}
+  // Indicador de inducción (si aplica) con acceso directo a activar/desactivar el modo
+  var enInd=(typeof estaEnInduccion==='function')&&estaEnInduccion(persona);
+  html+='<div style="background:'+(enInd?'rgba(251,191,36,.12)':'rgba(255,255,255,.03)')+';border:1px solid '+(enInd?'rgba(251,191,36,.3)':'rgba(255,255,255,.08)')+';border-radius:8px;padding:10px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'+
+    '<span style="font-size:12px;color:'+(enInd?'#fcd34d':'rgba(255,255,255,.5)')+'">'+(enInd?'🌱 En inducción — solo ve lo activado explícitamente abajo':'No está en inducción')+'</span>'+
+    (typeof toggleInduccionRapido==='function'?'<button onclick="toggleInduccionRapido(\''+esc(persona).replace(/'/g,"")+'\')" style="background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;cursor:pointer">'+(enInd?'Sacar de inducción':'Poner en inducción')+'</button>':'')+
+  '</div>';
   var protos=Object.entries(bibliotecaAdmin||{}).concat(Object.entries(biblioteca||{}));
   if(!protos.length){cont.innerHTML=html+'<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">No hay protocolos creados aún.</div>';return;}
   // Cuenta de activos
   var nActivos=protos.filter(function(e){return protocoloVisiblePara(e[1],persona);}).length;
   html+='<div style="background:rgba(52,211,153,.1);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#6ee7b7;text-align:center">'+persona+' tiene <b>'+nActivos+'</b> de '+protos.length+' protocolos activos</div>';
+  var kp=persona.replace(/[.#$/\[\]]/g,'_');
   protos.forEach(function(e){
     var id=e[0],doc=e[1];
     var activo=protocoloVisiblePara(doc,persona);
@@ -8946,28 +8969,78 @@ window.renderActivacionPorPersona=function(){
     var porGrupo=doc.dirigidoA&&doc.dirigidoA.some(function(gid){var g=gruposModulo[gid];return g&&g.miembros&&g.miembros.indexOf(persona)>-1;});
     var abierto=(!doc.dirigidoA||!doc.dirigidoA.length)&&(!doc.dirigidoPersonas||!doc.dirigidoPersonas.length);
     var razon=abierto?'Abierto a todos':porGrupo?'Por su grupo':'Individual';
-    html+='<div style="background:#16233d;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'+
+    html+='<div style="background:#16233d;border-radius:10px;padding:12px 14px;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
       '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">'+esc(doc.titulo)+'</div>'+
         '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+(MODULOS_PROTOCOLO[doc.modulo]||'')+(activo?' · '+razon:'')+'</div></div>'+
-      '<button onclick="toggleProtocoloPersona(\''+id+'\')" style="background:'+(activo?'rgba(52,211,153,.25);color:#6ee7b7;border:1px solid rgba(52,211,153,.4)':'rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15)')+';border-radius:20px;padding:6px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">'+(activo?'✓ Activo':'Activar')+'</button>'+
-    '</div>';
+      '<button onclick="toggleProtocoloPersona(\''+id+'\')" style="background:'+(activo?'rgba(52,211,153,.25);color:#6ee7b7;border:1px solid rgba(52,211,153,.4)':'rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15)')+';border-radius:20px;padding:6px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;margin-left:10px">'+(activo?'✓ Activo':'Activar')+'</button>'+
+      '</div>';
+    // Temas del protocolo (solo si está activo y tiene más de un tema)
+    if(activo&&doc.preguntas){
+      var temas=temasDeDoc(doc);
+      if(temas.length>1){
+        var bloq=(doc.temasBloqueados&&doc.temasBloqueados[kp])||[];
+        html+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-wrap:wrap;gap:5px">';
+        temas.forEach(function(tema){
+          var tk=temaKey(tema);
+          var temaOn=bloq.indexOf(tk)<0;
+          html+='<button onclick="toggleTemaPersona(\''+id+'\',\''+esc(tema).replace(/'/g,"")+'\')" style="font-size:10px;padding:3px 9px;border-radius:10px;border:1px solid '+(temaOn?'rgba(167,139,250,.4)':'rgba(255,255,255,.12)')+';background:'+(temaOn?'rgba(167,139,250,.15)':'transparent')+';color:'+(temaOn?'#c4b5fd':'rgba(255,255,255,.35)')+';font-family:inherit;cursor:pointer">'+(temaOn?'✓ ':'')+esc(tema)+'</button>';
+        });
+        html+='</div>';
+      }
+    }
+    html+='</div>';
   });
   cont.innerHTML=html;
 };
+window.toggleTemaPersona=function(protId,tema){
+  var persona=window._persActivacion;if(!persona)return;
+  var origen=bibliotecaAdmin[protId]?'bibliotecaAdmin':(biblioteca[protId]?'biblioteca':null);
+  if(!origen)return;
+  var doc=(origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId];
+  var kp=persona.replace(/[.#$/\[\]]/g,'_');
+  var tk=temaKey(tema);
+  if(!doc.temasBloqueados)doc.temasBloqueados={};
+  if(!doc.temasBloqueados[kp])doc.temasBloqueados[kp]=[];
+  var idx=doc.temasBloqueados[kp].indexOf(tk);
+  if(idx>-1)doc.temasBloqueados[kp].splice(idx,1);else doc.temasBloqueados[kp].push(tk);
+  (origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId]=doc;
+  sedeRef(origen+'/'+protId+'/temasBloqueados/'+kp).set(doc.temasBloqueados[kp]).then(function(){renderActivacionPorPersona();});
+};
+window.toggleInduccionRapido=function(persona){
+  var k=keyPersona(persona);
+  var eraInd=estaEnInduccion(persona);
+  if(eraInd){
+    sedeRef('induccion/'+k+'/enInduccion').set(false).then(function(){renderActivacionPorPersona();});
+  } else {
+    sedeRef('induccion/'+k).set({enInduccion:true,fichasActivas:{},supervisionActiva:false,bienvenidaPendiente:false,desde:Date.now()}).then(function(){renderActivacionPorPersona();});
+  }
+};
 window.toggleProtocoloPersona=function(protId){
   var persona=window._persActivacion;if(!persona)return;
-  var doc=bibliotecaAdmin[protId];if(!doc)return;
+  // Buscar en ambas bibliotecas (admin/otros roles Y clínica)
+  var origen=bibliotecaAdmin[protId]?'bibliotecaAdmin':(biblioteca[protId]?'biblioteca':null);
+  if(!origen)return;
+  var doc=(origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId];
   if(!doc.dirigidoPersonas)doc.dirigidoPersonas=[];
-  // Si está abierto a todos (sin restricción), activarlo individual no cambia nada; desactivar requiere marcar exclusión
-  var idx=doc.dirigidoPersonas.indexOf(persona);
-  if(idx>-1){
-    // Quitar de individuales
-    doc.dirigidoPersonas.splice(idx,1);
+  if(!doc.bloqueadoPersonas)doc.bloqueadoPersonas=[];
+  var activoAhora=protocoloVisiblePara(doc,persona);
+  if(activoAhora){
+    // Apagar: si estaba individual, sacarlo de dirigidoPersonas. Si estaba por grupo o abierto, bloquearlo explícitamente.
+    var idxD=doc.dirigidoPersonas.indexOf(persona);
+    if(idxD>-1)doc.dirigidoPersonas.splice(idxD,1);
+    if(doc.bloqueadoPersonas.indexOf(persona)<0)doc.bloqueadoPersonas.push(persona);
   } else {
-    doc.dirigidoPersonas.push(persona);
+    // Encender: quitar del bloqueo y agregar a dirigidos individuales
+    var idxB=doc.bloqueadoPersonas.indexOf(persona);
+    if(idxB>-1)doc.bloqueadoPersonas.splice(idxB,1);
+    if(doc.dirigidoPersonas.indexOf(persona)<0)doc.dirigidoPersonas.push(persona);
   }
-  bibliotecaAdmin[protId]=doc;
-  sedeRef('bibliotecaAdmin/'+protId+'/dirigidoPersonas').set(doc.dirigidoPersonas).then(function(){renderActivacionPorPersona();});
+  (origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId]=doc;
+  Promise.all([
+    sedeRef(origen+'/'+protId+'/dirigidoPersonas').set(doc.dirigidoPersonas),
+    sedeRef(origen+'/'+protId+'/bloqueadoPersonas').set(doc.bloqueadoPersonas)
+  ]).then(function(){renderActivacionPorPersona();});
 };
 
 function renderGruposList(){
