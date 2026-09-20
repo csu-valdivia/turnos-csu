@@ -2094,12 +2094,18 @@ function calcCumplimientoDiaAdmin(fecha){
 }
 window.renderCumplimientoAdmin=function(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
+  var periodo=window._cumplAdminPeriodo||'semana';
+  var tabsHtml='<div style="display:flex;gap:6px;margin-bottom:12px">'+
+    '<button onclick="window._cumplAdminPeriodo=\'semana\';renderCumplimientoAdmin()" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;font-weight:600;background:'+(periodo==='semana'?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">Semana actual</button>'+
+    '<button onclick="window._cumplAdminPeriodo=\'mes\';renderCumplimientoAdmin()" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;font-weight:600;background:'+(periodo==='mes'?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">Mes (por semana)</button>'+
+  '</div>';
+  if(periodo==='mes'){renderCumplimientoAdminMes(cont,tabsHtml);return;}
   // Semana actual (lunes a sábado)
   var hoy=new Date(hoyStr()+'T12:00:00');
   var lun=new Date(hoy);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
   var dias=[];
   for(var i=0;i<6;i++){var d=new Date(lun);d.setDate(d.getDate()+i);dias.push({fecha:d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2),label:['Lun','Mar','Mié','Jue','Vie','Sáb'][i]});}
-  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+  var html=tabsHtml+'<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
       '<span style="font-size:13px;font-weight:700;color:#93c5fd">📈 Cumplimiento diario — esta semana</span>'+
       '<button onclick="exportarCumplimientoPDF()" style="background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:6px 12px;font-family:inherit;font-size:11px;cursor:pointer">📄 Exportar PDF</button>'+
@@ -2135,6 +2141,91 @@ window.renderCumplimientoAdmin=function(){
       '<div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+'"></div></div></div>';
   });
   html+='</div>';
+  // ── Herramienta de corrección: borrar registros de prueba/error ──
+  var listaCorreccion=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v)};});
+  html+='<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;margin-top:14px">'+
+    '<div style="font-size:12px;font-weight:700;color:#fca5a5;margin-bottom:6px">🗑 Corregir datos de prueba</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:10px">Si probaste el sistema con un perfil real y quedó un resultado falso, bórralo aquí para no contaminar los reportes. Esta acción no se puede deshacer.</div>'+
+    '<select id="corrPersona" style="width:100%;font-size:13px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
+      '<option value="">— Selecciona la persona —</option>'+
+      listaCorreccion.map(function(p){return '<option value="'+p.key+'">'+esc(p.nombre)+'</option>';}).join('')+
+    '</select>'+
+    '<input type="date" id="corrFecha" value="'+hoyStr()+'" max="'+hoyStr()+'" style="width:100%;font-size:13px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+
+    '<button onclick="borrarDatosPruebaAdmin()" style="width:100%;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.35);border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🗑 Borrar registros de esa fecha</button>'+
+    '<div class="saved" id="corrSaved">✓ Registros borrados</div>'+
+  '</div>';
+  cont.innerHTML=html;
+};
+window.borrarDatosPruebaAdmin=function(){
+  var key=document.getElementById('corrPersona').value;
+  var fecha=document.getElementById('corrFecha').value;
+  if(!key||!fecha){alert('Selecciona la persona y la fecha.');return;}
+  var v=secretarias[key];var nombre=(typeof v==='object'?v.nombre:v);
+  if(!confirm('¿Borrar TODOS los registros de '+nombre+' del '+fecha+' (producción y capacitación)?\n\nEsta acción no se puede deshacer.'))return;
+  var capKey=(nombre||'').replace(/[.#$/\[\]\s]/g,'_');
+  var mesN=fecha.slice(0,7);
+  var seq=[];
+  // 1. Producción del día
+  seq.push(sedeRef('produccionAdmin/'+key+'/'+fecha).remove());
+  // 2. Capacitación: buscar entradas de ese día dentro del mes y borrarlas
+  var mesData=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[capKey]&&rankingAdmin.capacitacion[capKey][mesN])||{};
+  Object.keys(mesData).forEach(function(ts){
+    if(mesData[ts].fecha===fecha){
+      seq.push(sedeRef('rankingAdmin/capacitacion/'+capKey+'/'+mesN+'/'+ts).remove());
+    }
+  });
+  // 3. Progreso del día (para que pueda volver a responder si corresponde)
+  if(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===fecha){
+    seq.push(sedeRef('fichaProgresoAdmin/'+capKey).remove());
+  }
+  Promise.all(seq).then(function(){
+    showSaved('corrSaved');
+    setTimeout(function(){renderCumplimientoAdmin();},1200);
+  });
+};
+// Vista mensual: desglose semana por semana + total del mes
+window.renderCumplimientoAdminMes=function(cont,tabsHtml){
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  var anio=hoy.getFullYear(),mesN=hoy.getMonth();
+  var mesLabel=hoy.toLocaleDateString('es-CL',{month:'long',year:'numeric'});
+  // Calcular las semanas del mes (lunes a sábado, recortadas al mes)
+  var primerDia=new Date(anio,mesN,1);
+  var ultimoDia=new Date(anio,mesN+1,0);
+  var semanas=[];
+  var cursor=new Date(primerDia);
+  while(cursor.getDay()!==1)cursor.setDate(cursor.getDate()-1); // retroceder al lunes
+  var numSemana=1;
+  while(cursor<=ultimoDia){
+    var diasSemana=[];
+    for(var i=0;i<6;i++){
+      var d=new Date(cursor);d.setDate(d.getDate()+i);
+      if(d.getMonth()===mesN)diasSemana.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2));
+    }
+    if(diasSemana.length)semanas.push({n:numSemana,dias:diasSemana});
+    numSemana++;
+    cursor.setDate(cursor.getDate()+7);
+  }
+  var html=tabsHtml+'<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      '<span style="font-size:13px;font-weight:700;color:#93c5fd;text-transform:capitalize">📅 '+mesLabel+'</span>'+
+      '<button onclick="exportarCumplimientoPDF()" style="background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:6px 12px;font-family:inherit;font-size:11px;cursor:pointer">📄 Exportar PDF</button>'+
+    '</div>';
+  var totalesMes=[];
+  semanas.forEach(function(s){
+    var valores=s.dias.map(function(f){return calcCumplimientoDiaAdmin(f);}).filter(function(v){return v!=null;});
+    var prom=valores.length?Math.round(valores.reduce(function(a,b){return a+b;},0)/valores.length):null;
+    if(prom!=null)totalesMes.push(prom);
+    var color=prom==null?'rgba(255,255,255,.3)':(prom>=80?'#6ee7b7':prom>=50?'#fbbf24':'#fca5a5');
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
+      '<span style="font-size:12px;color:#fff">Semana '+s.n+'</span>'+
+      '<span style="font-size:13px;font-weight:700;color:'+color+'">'+(prom!=null?prom+'%':'Sin datos')+'</span>'+
+    '</div>';
+  });
+  var promMes=totalesMes.length?Math.round(totalesMes.reduce(function(a,b){return a+b;},0)/totalesMes.length):null;
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:6px;border-top:2px solid rgba(255,255,255,.15)">'+
+    '<span style="font-size:13px;font-weight:800;color:#fff">Total del mes</span>'+
+    '<span style="font-size:18px;font-weight:800;color:'+(promMes>=80?'#6ee7b7':promMes>=50?'#fbbf24':'#fca5a5')+'">'+(promMes!=null?promMes+'%':'—')+'</span>'+
+  '</div></div>';
   cont.innerHTML=html;
 };
 window.exportarCumplimientoPDF=function(){
