@@ -2054,28 +2054,131 @@ function renderPanelJefaOperaciones(){
       '<span style="font-size:18px;font-weight:800;color:#22d3ee">📋 Jefa de Operaciones</span>'+
       '<button onclick="location.reload()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">← Salir</button>'+
     '</div>'+
-    '<div style="display:flex;gap:8px;margin-bottom:16px">'+
-      '<button onclick="tabJefaOp(\'produccion\')" id="tabJO_prod" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(34,211,238,.3);color:#fff">📊 Producción</button>'+
-      '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Equipo</button>'+
-      '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
-      '<button onclick="tabJefaOp(\'metricas\')" id="tabJO_met" class="jo-tab" style="flex:1;font-size:12px;padding:10px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">⚙️ Métricas</button>'+
+    '<div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">'+
+      '<button onclick="tabJefaOp(\'produccion\')" id="tabJO_prod" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(34,211,238,.3);color:#fff">📊 Producción</button>'+
+      '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Equipo</button>'+
+      '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
+      '<button onclick="tabJefaOp(\'cumplimiento\')" id="tabJO_cump" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📈 Cumplimiento</button>'+
+      '<button onclick="tabJefaOp(\'metricas\')" id="tabJO_met" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">⚙️ Métricas</button>'+
     '</div>'+
     '<div id="jefaOpContenido"></div></div>';
   tabJefaOp('produccion');
 }
 
 window.tabJefaOp=function(tab){
-  ['prod','sec','rank','met'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
-  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',metricas:'tabJO_met'};
+  ['prod','sec','rank','cump','met'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',cumplimiento:'tabJO_cump',metricas:'tabJO_met'};
   var activo=document.getElementById(map[tab]);
   if(activo){activo.style.background='rgba(34,211,238,.3)';activo.style.color='#fff';}
   if(tab==='produccion')renderProduccionAdmin();
   else if(tab==='secretarias')renderSecretariasAdmin();
   else if(tab==='ranking')renderRankingAdmin('jefaOpContenido');
+  else if(tab==='cumplimiento')renderCumplimientoAdmin();
   else renderEditorMetricas();
 };
 
-// ── Editor de métricas administrativas ──
+// ── Cumplimiento diario: gráfica por día y por persona + exportar PDF ──
+function calcCumplimientoDiaAdmin(fecha){
+  // % de personas del equipo que registraron al menos algo ese día (producción o capacitación)
+  var lista=Object.keys(secretarias||{});
+  if(!lista.length)return null;
+  var conActividad=lista.filter(function(k){
+    var prod=produccionAdmin[k]&&produccionAdmin[k][fecha];
+    var v=secretarias[k];var nom=(typeof v==='object'?v.nombre:v);
+    var capKey=(nom||'').replace(/[.#$/\[\]\s]/g,'_');
+    var capHoy=(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===fecha);
+    return prod||capHoy;
+  });
+  return Math.round(conActividad.length/lista.length*100);
+}
+window.renderCumplimientoAdmin=function(){
+  var cont=document.getElementById('jefaOpContenido');if(!cont)return;
+  // Semana actual (lunes a sábado)
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  var lun=new Date(hoy);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
+  var dias=[];
+  for(var i=0;i<6;i++){var d=new Date(lun);d.setDate(d.getDate()+i);dias.push({fecha:d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2),label:['Lun','Mar','Mié','Jue','Vie','Sáb'][i]});}
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      '<span style="font-size:13px;font-weight:700;color:#93c5fd">📈 Cumplimiento diario — esta semana</span>'+
+      '<button onclick="exportarCumplimientoPDF()" style="background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:6px 12px;font-family:inherit;font-size:11px;cursor:pointer">📄 Exportar PDF</button>'+
+    '</div>';
+  // Gráfica por día (barras)
+  var valores=dias.map(function(d){return calcCumplimientoDiaAdmin(d.fecha);});
+  var maxV=100;
+  html+='<div style="display:flex;align-items:flex-end;gap:8px;height:110px;margin-bottom:6px">';
+  dias.forEach(function(d,i){
+    var v=valores[i];
+    var h=v!=null?Math.max(4,(v/maxV)*90):2;
+    var color=v==null?'rgba(255,255,255,.1)':(v>=80?'#6ee7b7':v>=50?'#fbbf24':'#fca5a5');
+    html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'+
+      (v!=null?'<div style="font-size:9px;color:'+color+';font-weight:700;margin-bottom:2px">'+v+'%</div>':'')+
+      '<div style="width:100%;height:'+h+'px;background:'+color+';border-radius:4px 4px 0 0"></div>'+
+    '</div>';
+  });
+  html+='</div><div style="display:flex;gap:8px;margin-bottom:16px">'+dias.map(function(d){return '<div style="flex:1;text-align:center;font-size:9px;color:rgba(255,255,255,.4)">'+d.label+'</div>';}).join('')+'</div>';
+  // Gráfica por persona (detalle de la semana)
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'')};});
+  html+='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px">Por persona (días activos de la semana)</div>';
+  if(!lista.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Sin personas registradas.</div>';}
+  lista.forEach(function(p){
+    var diasActivo=dias.filter(function(d){
+      var prod=produccionAdmin[p.key]&&produccionAdmin[p.key][d.fecha];
+      var capKey=(p.nombre||'').replace(/[.#$/\[\]\s]/g,'_');
+      var capHoy=(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===d.fecha);
+      return prod||capHoy;
+    }).length;
+    var pct=Math.round(diasActivo/6*100);
+    var color=pct>=80?'#6ee7b7':pct>=50?'#fbbf24':'#fca5a5';
+    html+='<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#fff">'+esc(p.nombre)+'</span><span style="color:'+color+';font-weight:700">'+diasActivo+'/6 días · '+pct+'%</span></div>'+
+      '<div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+'"></div></div></div>';
+  });
+  html+='</div>';
+  cont.innerHTML=html;
+};
+window.exportarCumplimientoPDF=function(){
+  var jsPDFlib=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
+  if(!jsPDFlib){alert('No se pudo cargar el generador de PDF.');return;}
+  var doc=new jsPDFlib({unit:'pt',format:'a4'});
+  var W=doc.internal.pageSize.getWidth();var y=40;
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  var lun=new Date(hoy);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
+  var dias=[];
+  for(var i=0;i<6;i++){var d=new Date(lun);d.setDate(d.getDate()+i);dias.push({fecha:d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2),label:['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][i]});}
+  doc.setFillColor(8,145,178);doc.rect(0,0,W,55,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(15);doc.setFont(undefined,'bold');
+  doc.text('Rendimiento Semanal — Equipo Administrativo',40,32);
+  doc.setFontSize(9);doc.setFont(undefined,'normal');
+  doc.text('Semana del '+dias[0].fecha+' al '+dias[5].fecha,40,46);
+  y=80;
+  doc.setFontSize(12);doc.setTextColor(8,145,178);doc.setFont(undefined,'bold');
+  doc.text('Cumplimiento por día',40,y);y+=18;doc.setFont(undefined,'normal');doc.setTextColor(40,40,40);
+  dias.forEach(function(d){
+    var v=calcCumplimientoDiaAdmin(d.fecha);
+    doc.setFontSize(10);doc.setTextColor(90,90,90);doc.text(d.label,50,y);
+    doc.setTextColor(20,20,20);doc.setFont(undefined,'bold');doc.text(v!=null?v+'%':'Sin datos',W-40,y,{align:'right'});doc.setFont(undefined,'normal');
+    y+=16;
+  });
+  y+=14;
+  doc.setFontSize(12);doc.setTextColor(8,145,178);doc.setFont(undefined,'bold');
+  doc.text('Cumplimiento por persona',40,y);y+=18;doc.setFont(undefined,'normal');
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v)};});
+  lista.forEach(function(p){
+    var diasActivo=dias.filter(function(d){
+      var prod=produccionAdmin[p.key]&&produccionAdmin[p.key][d.fecha];
+      var capKey=(p.nombre||'').replace(/[.#$/\[\]\s]/g,'_');
+      var capHoy=(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===d.fecha);
+      return prod||capHoy;
+    }).length;
+    if(y>780){doc.addPage();y=40;}
+    doc.setFontSize(10);doc.setTextColor(90,90,90);doc.text(p.nombre,50,y);
+    doc.setTextColor(20,20,20);doc.setFont(undefined,'bold');doc.text(diasActivo+'/6 días',W-40,y,{align:'right'});doc.setFont(undefined,'normal');
+    y+=16;
+  });
+  doc.save('Cumplimiento_Semanal_Admin_'+dias[0].fecha+'.pdf');
+};
+
+
 window.renderEditorMetricas=function(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
   // Inicializar con el default si está vacío
@@ -2502,9 +2605,10 @@ function renderModuloAdministrativo(){
       ? '<div style="background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:20px;text-align:center;color:#93c5fd;font-size:14px">📅 El módulo administrativo opera de lunes a viernes. Hoy es '+diaHoy+', no hay preguntas asignadas. ¡Buen fin de semana!</div>'
       : '<div id="adminNombreSel"></div>'+
         '<div id="adminTabs" style="display:none;gap:8px;margin-bottom:14px">'+
-          '<button onclick="tabAdmin(\'material\')" id="tabAD_mat" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(251,191,36,.3);color:#fff">📚 Material</button>'+
-          '<button onclick="tabAdmin(\'preguntas\')" id="tabAD_preg" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📝 Preguntas</button>'+
-          '<button onclick="tabAdmin(\'ranking\')" id="tabAD_rank" style="flex:1;font-size:12px;padding:9px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
+          '<button onclick="tabAdmin(\'material\')" id="tabAD_mat" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(251,191,36,.3);color:#fff">📚 Material</button>'+
+          '<button onclick="tabAdmin(\'preguntas\')" id="tabAD_preg" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📝 Preguntas</button>'+
+          '<button onclick="tabAdmin(\'rendimiento\')" id="tabAD_rend" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📈 Rendimiento</button>'+
+          '<button onclick="tabAdmin(\'ranking\')" id="tabAD_rank" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
         '</div>'+
         '<div id="adminContenido"></div>')+
     '</div>';
@@ -2561,19 +2665,107 @@ window.cargarPreguntasAdmin=function(){
   var nombre=document.getElementById('adminNombre').value;
   if(!nombre)return;
   window._adminNombre=nombre;
+  window._adminKeyActual=Object.keys(secretarias||{}).find(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v)===nombre;});
   document.getElementById('adminTabs').style.display='flex';
   tabAdmin('material');
+  setTimeout(verificarRetroViernes,600);
 };
 
+// ── Retroalimentación semanal: aparece los viernes con fortalezas y áreas a mejorar ──
+function verificarRetroViernes(){
+  var diaHoy=diaDeDate(hoyStr());
+  if(diaHoy!=='Viernes')return;
+  var nombre=window._adminNombre;if(!nombre)return;
+  var lsKey='tcsu_retroAdmin_'+S+'_'+hoyStr()+'_'+nombre.replace(/\s/g,'_');
+  if(sessionStorage.getItem(lsKey))return;
+  sessionStorage.setItem(lsKey,'1');
+  var key=window._adminKeyActual;
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  var lun=new Date(hoy);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
+  var dias=[];
+  for(var i=0;i<5;i++){var d=new Date(lun);d.setDate(d.getDate()+i);dias.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2));}
+  var capKey=(nombre||'').replace(/[.#$/\[\]\s]/g,'_');
+  var capSemana=[];
+  var todosMeses=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[capKey])||{};
+  Object.values(todosMeses).forEach(function(mesData){Object.values(mesData).forEach(function(reg){if(dias.indexOf(reg.fecha)>-1)capSemana.push(reg.pct);});});
+  var promCap=capSemana.length?Math.round(capSemana.reduce(function(a,b){return a+b;},0)/capSemana.length):null;
+  var diasConProd=key?dias.filter(function(f){return produccionAdmin[key]&&produccionAdmin[key][f];}).length:0;
+  var pctProd=Math.round(diasConProd/5*100);
+  var fortalezas=[],mejoras=[];
+  if(promCap!=null){
+    if(promCap>=80)fortalezas.push('Tu nivel de conocimiento en las capacitaciones fue excelente ('+promCap+'%).');
+    else if(promCap>=60)fortalezas.push('Cumpliste bien con las capacitaciones ('+promCap+'%).');
+    else mejoras.push('Repasa los protocolos: tu promedio en capacitación fue '+promCap+'%. Dedica un momento a releer el material.');
+  } else {
+    mejoras.push('No respondiste capacitaciones esta semana. Intenta responder al menos una vez al día.');
+  }
+  if(pctProd>=80)fortalezas.push('Registraste tu producción casi todos los días ('+diasConProd+'/5). ¡Muy constante!');
+  else if(pctProd>=50)mejoras.push('Registraste producción '+diasConProd+' de 5 días. Trata de no dejar días sin registrar.');
+  else mejoras.push('Registraste producción solo '+diasConProd+' de 5 días. La constancia en el registro es clave para medir bien tu trabajo.');
+  if(!fortalezas.length)fortalezas.push('Sigue así, cada semana es una oportunidad para mejorar.');
+  mostrarRetroViernes(nombre,fortalezas,mejoras);
+}
+function mostrarRetroViernes(nombre,fortalezas,mejoras){
+  var m=document.createElement('div');
+  m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9700;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML='<div style="background:#16233d;border-radius:18px;padding:24px;max-width:400px;width:100%">'+
+    '<div style="text-align:center;margin-bottom:16px"><div style="font-size:44px">📅</div>'+
+    '<div style="font-size:17px;font-weight:800;color:#fbbf24">¡Termina la semana, '+esc(nombre.split(' ')[0])+'!</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px">Este es tu resumen de rendimiento</div></div>'+
+    '<div style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:12px;margin-bottom:10px">'+
+      '<div style="font-size:12px;font-weight:700;color:#6ee7b7;margin-bottom:6px">💪 Lo que hiciste bien</div>'+
+      fortalezas.map(function(f){return '<div style="font-size:12px;color:rgba(255,255,255,.85);margin-bottom:4px">✓ '+esc(f)+'</div>';}).join('')+
+    '</div>'+
+    (mejoras.length?'<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:12px;margin-bottom:14px">'+
+      '<div style="font-size:12px;font-weight:700;color:#fcd34d;margin-bottom:6px">📚 Qué puedes mejorar</div>'+
+      mejoras.map(function(f){return '<div style="font-size:12px;color:rgba(255,255,255,.85);margin-bottom:4px">→ '+esc(f)+'</div>';}).join('')+
+    '</div>':'')+
+    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;background:linear-gradient(135deg,#d97706,#fbbf24);color:#0b1220;border:none;border-radius:12px;padding:12px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">¡Gracias, buen fin de semana!</button>'+
+  '</div>';
+  document.body.appendChild(m);
+}
+
 window.tabAdmin=function(tab){
-  ['mat','preg','rank'].forEach(function(t){var b=document.getElementById('tabAD_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
-  var map={material:'tabAD_mat',preguntas:'tabAD_preg',ranking:'tabAD_rank'};
+  ['mat','preg','rend','rank'].forEach(function(t){var b=document.getElementById('tabAD_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={material:'tabAD_mat',preguntas:'tabAD_preg',rendimiento:'tabAD_rend',ranking:'tabAD_rank'};
   var activo=document.getElementById(map[tab]);
   if(activo){activo.style.background='rgba(251,191,36,.3)';activo.style.color='#fff';}
   var cont=document.getElementById('adminContenido');
   if(tab==='material')renderMaterialAdmin(cont);
   else if(tab==='preguntas')renderPreguntasAdminTab(cont);
+  else if(tab==='rendimiento')renderRendimientoDiarioAdmin(cont);
   else renderRankingAdmin('adminContenido');
+};
+
+// ── Gráfica de rendimiento diario del administrativo (su propia semana) ──
+window.renderRendimientoDiarioAdmin=function(cont){
+  if(!cont)return;
+  var nombre=window._adminNombre;var key=window._adminKeyActual||Object.keys(secretarias||{}).find(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v)===nombre;});
+  var hoy=new Date(hoyStr()+'T12:00:00');
+  var lun=new Date(hoy);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
+  var dias=[];
+  for(var i=0;i<6;i++){var d=new Date(lun);d.setDate(d.getDate()+i);dias.push({fecha:d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2),label:['Lun','Mar','Mié','Jue','Vie','Sáb'][i]});}
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px">📈 Mi rendimiento — esta semana</div>';
+  var capKey=(nombre||'').replace(/[.#$/\[\]\s]/g,'_');
+  var activo=dias.map(function(d){
+    var prod=key&&produccionAdmin[key]&&produccionAdmin[key][d.fecha];
+    var cap=(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===d.fecha)?fichaProgresoAdmin[capKey].pct:null;
+    return {tieneProd:!!prod,pctCap:cap};
+  });
+  html+='<div style="display:flex;align-items:flex-end;gap:8px;height:100px;margin-bottom:6px">';
+  activo.forEach(function(a){
+    var v=a.pctCap!=null?a.pctCap:(a.tieneProd?70:null);
+    var h=v!=null?Math.max(4,(v/100)*85):2;
+    var color=v==null?'rgba(255,255,255,.1)':(v>=80?'#6ee7b7':v>=60?'#fbbf24':'#fca5a5');
+    html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'+
+      (v!=null?'<div style="font-size:9px;color:'+color+';font-weight:700">'+v+'%</div>':'<div style="font-size:9px;color:rgba(255,255,255,.3)">—</div>')+
+      '<div style="width:100%;height:'+h+'px;background:'+color+';border-radius:4px 4px 0 0;margin-top:2px"></div></div>';
+  });
+  html+='</div><div style="display:flex;gap:8px">'+dias.map(function(d){return '<div style="flex:1;text-align:center;font-size:9px;color:rgba(255,255,255,.4)">'+d.label+'</div>';}).join('')+'</div>';
+  html+='<div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:10px">Verde = buen desempeño · Amarillo = regular · Rojo = necesita reforzar</div>';
+  html+='</div>';
+  cont.innerHTML=html;
 };
 
 // ¿Este protocolo está dirigido a esta persona? (según grupos dirigidos)
