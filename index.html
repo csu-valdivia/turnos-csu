@@ -2766,6 +2766,28 @@ window.renderRendimientoDiarioAdmin=function(cont){
 };
 
 // ¿Este protocolo está dirigido a esta persona? (según grupos dirigidos)
+// ¿Es esta persona administrativa o docente? (para decidir la regla de visibilidad)
+function esAdminORol(nombre){
+  return Object.values(secretarias||{}).some(function(v){return (typeof v==='object'?v.nombre:v)===nombre;});
+}
+function esDocenteRol(nombre){
+  return Object.values(docentes||{}).some(function(d){return d.nombre===nombre;});
+}
+// Visibilidad de un protocolo, distinguiendo el rol:
+// - Administrativo/Docente: SIEMPRE opt-in (nada visible salvo lo que actives explícitamente).
+// - Clínico (u otro): comportamiento existente — abierto por defecto, con inducción opt-in.
+function visibleParaPersonaSegunRol(doc,nombre){
+  if(doc.bloqueadoPersonas&&doc.bloqueadoPersonas.indexOf(nombre)>-1)return false;
+  if(esAdminORol(nombre)||esDocenteRol(nombre)){
+    if(doc.dirigidoPersonas&&doc.dirigidoPersonas.indexOf(nombre)>-1)return true;
+    if(doc.dirigidoA&&doc.dirigidoA.length){
+      return doc.dirigidoA.some(function(gid){var g=gruposModulo[gid];return g&&g.miembros&&g.miembros.indexOf(nombre)>-1;});
+    }
+    return false; // sin activación explícita → nunca visible para admin/docente
+  }
+  return protocoloVisiblePara(doc,nombre);
+}
+
 function protocoloVisiblePara(doc,nombre){
   // Bloqueo explícito individual: SIEMPRE gana, sin importar si está "abierto a todos" o por grupo.
   if(doc.bloqueadoPersonas&&doc.bloqueadoPersonas.indexOf(nombre)>-1)return false;
@@ -2791,12 +2813,12 @@ function protocoloVisiblePara(doc,nombre){
 function renderMaterialAdmin(cont){
   if(!cont)return;
   var nombre=window._adminNombre;
-  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return protocoloVisiblePara(e[1],nombre);});
+  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return visibleParaPersonaSegunRol(e[1],nombre);});
   // Sumar protocolos de la biblioteca clínica marcados para administrativos
   Object.entries(biblioteca||{}).forEach(function(e){
     if(e[1].visible===false)return;
     var grupos=e[1].visibleGrupos||(Array.isArray(e[1].visibilidad)?e[1].visibilidad:[e[1].visibilidad||'todos']);
-    if(grupos.indexOf('administrativos')>-1||grupos.indexOf('todos')>-1)protocolos.push(e);
+    if((grupos.indexOf('administrativos')>-1||grupos.indexOf('todos')>-1)&&visibleParaPersonaSegunRol(e[1],nombre))protocolos.push(e);
   });
   if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">Aún no tienes material de estudio asignado.</div>';return;}
   var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Lee los protocolos antes de responder las preguntas.</div>';
@@ -2833,14 +2855,14 @@ function renderPreguntasAdminTab(cont){
   if(!cont)return;
   if(!moduloTrabajoAbierto()){cont.innerHTML=mensajeFueraHorario();return;}
   var nombre=window._adminNombre;
-  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&protocoloVisiblePara(e[1],nombre);});
+  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&visibleParaPersonaSegunRol(e[1],nombre);});
   // Sumar protocolos de la biblioteca clínica marcados para administrativos que tengan preguntas
   Object.entries(biblioteca||{}).forEach(function(e){
     if(e[1].visible===false)return;
     if(!e[1].preguntas||Object.keys(e[1].preguntas).length<2)return;
     var grupos=e[1].visibleGrupos||(Array.isArray(e[1].visibilidad)?e[1].visibilidad:[e[1].visibilidad||'todos']);
     var visible=(grupos.indexOf('administrativos')>-1||grupos.indexOf('todos')>-1);
-    if(visible&&preguntasActivasPara(e[1],nombre))protocolos.push(e);
+    if(visible&&visibleParaPersonaSegunRol(e[1],nombre))protocolos.push(e);
   });
   if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
   var hoy=hoyStr();var key=nombre.replace(/[.#$/\[\]\s]/g,'_');
@@ -8674,13 +8696,13 @@ function protocolosDocente(nombre){
   var res=[];
   // Protocolos del Centro (bibliotecaAdmin) módulo docente
   Object.entries(bibliotecaAdmin||{}).forEach(function(e){
-    if(e[1].modulo==='docente'&&protocoloVisiblePara(e[1],nombre))res.push(e);
+    if(e[1].modulo==='docente'&&visibleParaPersonaSegunRol(e[1],nombre))res.push(e);
   });
   // Protocolos de la biblioteca clínica marcados visibles para docentes
   Object.entries(biblioteca||{}).forEach(function(e){
     if(e[1].visible===false)return;
     var grupos=e[1].visibleGrupos||(Array.isArray(e[1].visibilidad)?e[1].visibilidad:[e[1].visibilidad||'todos']);
-    if(grupos.indexOf('docentes')>-1||grupos.indexOf('todos')>-1)res.push(e);
+    if((grupos.indexOf('docentes')>-1||grupos.indexOf('todos')>-1)&&visibleParaPersonaSegunRol(e[1],nombre))res.push(e);
   });
   return res;
 }
@@ -8704,7 +8726,7 @@ function renderPreguntasDocente(cont){
   if(!cont)return;
   if(!moduloTrabajoAbierto()){cont.innerHTML=mensajeFueraHorario();return;}
   var d=window._docActual;var key=window._docKey;
-  var protos=protocolosDocente(d.nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&preguntasActivasPara(e[1],d.nombre);});
+  var protos=protocolosDocente(d.nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&visibleParaPersonaSegunRol(e[1],d.nombre);});
   if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
   var hoy=hoyStr();
   if(fichaProgresoDocente[key]&&fichaProgresoDocente[key].fecha===hoy){
@@ -8975,12 +8997,12 @@ window.renderActivacionPorPersona=function(){
   var protos=Object.entries(bibliotecaAdmin||{}).concat(Object.entries(biblioteca||{}));
   if(!protos.length){cont.innerHTML=html+'<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">No hay protocolos creados aún.</div>';return;}
   // Cuenta de activos
-  var nActivos=protos.filter(function(e){return protocoloVisiblePara(e[1],persona);}).length;
+  var nActivos=protos.filter(function(e){return visibleParaPersonaSegunRol(e[1],persona);}).length;
   html+='<div style="background:rgba(52,211,153,.1);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#6ee7b7;text-align:center">'+persona+' tiene <b>'+nActivos+'</b> de '+protos.length+' protocolos activos</div>';
   var kp=persona.replace(/[.#$/\[\]]/g,'_');
   protos.forEach(function(e){
     var id=e[0],doc=e[1];
-    var activo=protocoloVisiblePara(doc,persona);
+    var activo=visibleParaPersonaSegunRol(doc,persona);
     // ¿Está activo por grupo o individual?
     var porGrupo=doc.dirigidoA&&doc.dirigidoA.some(function(gid){var g=gruposModulo[gid];return g&&g.miembros&&g.miembros.indexOf(persona)>-1;});
     var abierto=(!doc.dirigidoA||!doc.dirigidoA.length)&&(!doc.dirigidoPersonas||!doc.dirigidoPersonas.length);
@@ -9040,7 +9062,7 @@ window.toggleProtocoloPersona=function(protId){
   var doc=(origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId];
   if(!doc.dirigidoPersonas)doc.dirigidoPersonas=[];
   if(!doc.bloqueadoPersonas)doc.bloqueadoPersonas=[];
-  var activoAhora=protocoloVisiblePara(doc,persona);
+  var activoAhora=visibleParaPersonaSegunRol(doc,persona);
   if(activoAhora){
     // Apagar: si estaba individual, sacarlo de dirigidoPersonas. Si estaba por grupo o abierto, bloquearlo explícitamente.
     var idxD=doc.dirigidoPersonas.indexOf(persona);
