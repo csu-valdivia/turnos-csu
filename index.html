@@ -1917,8 +1917,9 @@ function attach(){
   on('fichaProgresoDocente',function(v){fichaProgresoDocente=v||{};});
   on('rankingDocente',function(v){rankingDocente=v||{};});
   on('metricasAdmin',function(v){metricasAdmin=v||{};});
-  on('fichaProgresoAdmin',function(v){fichaProgresoAdmin=v||{};});
-  on('produccionAdmin',function(v){produccionAdmin=v||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();});
+  on('fichaProgresoAdmin',function(v){fichaProgresoAdmin=v||{};if(window._adminTabActual==='rendimiento'&&document.getElementById('adminContenido'))tabAdmin('rendimiento');});
+  on('produccionAdmin',function(v){produccionAdmin=v||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();if(window._adminTabActual==='rendimiento'&&document.getElementById('adminContenido'))tabAdmin('rendimiento');});
+  on('rankingAdmin',function(v){rankingAdmin=v||{};if((window._adminTabActual==='rendimiento'||window._adminTabActual==='ranking')&&document.getElementById('adminContenido'))tabAdmin(window._adminTabActual);if(document.getElementById('jefaOpContenido'))renderRankingAdmin('jefaOpContenido');});
   on('pesosAdmin',function(v){if(v&&typeof v==='object'&&typeof v.produccion==='number')pesosAdmin=v;});
   on('secretarias',function(v){secretarias=v||{};});
 }
@@ -2167,16 +2168,19 @@ window.borrarDatosPruebaAdmin=function(){
   var seq=[];
   // 1. Producción del día
   seq.push(sedeRef('produccionAdmin/'+key+'/'+fecha).remove());
+  if(produccionAdmin[key])delete produccionAdmin[key][fecha];
   // 2. Capacitación: buscar entradas de ese día dentro del mes y borrarlas
   var mesData=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[capKey]&&rankingAdmin.capacitacion[capKey][mesN])||{};
   Object.keys(mesData).forEach(function(ts){
     if(mesData[ts].fecha===fecha){
       seq.push(sedeRef('rankingAdmin/capacitacion/'+capKey+'/'+mesN+'/'+ts).remove());
+      delete rankingAdmin.capacitacion[capKey][mesN][ts];
     }
   });
   // 3. Progreso del día (para que pueda volver a responder si corresponde)
   if(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===fecha){
     seq.push(sedeRef('fichaProgresoAdmin/'+capKey).remove());
+    delete fichaProgresoAdmin[capKey];
   }
   Promise.all(seq).then(function(){
     showSaved('corrSaved');
@@ -2814,6 +2818,7 @@ function mostrarRetroViernes(nombre,fortalezas,mejoras){
 }
 
 window.tabAdmin=function(tab){
+  window._adminTabActual=tab;
   ['mat','preg','rend','rank'].forEach(function(t){var b=document.getElementById('tabAD_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
   var map={material:'tabAD_mat',preguntas:'tabAD_preg',rendimiento:'tabAD_rend',ranking:'tabAD_rank'};
   var activo=document.getElementById(map[tab]);
