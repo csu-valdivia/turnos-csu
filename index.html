@@ -5219,8 +5219,29 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
 });
 
 // ── FICHAS OBLIGATORIAS ──
+// ¿Puede el equipo clínico responder preguntas ahora? Según SU turno real asignado hoy (bloques), L-V únicamente.
+function ventanaPreguntasClinico(nombre){
+  var dow=new Date().getDay();
+  if(dow===0||dow===6)return false; // sin preguntas fin de semana, para no generar diferencias
+  var diaHoy=diaDeDate(hoyStr());
+  var misBloques=Object.values(bloques||{}).filter(function(b){return b.nombre===nombre&&b.dia===diaHoy&&!b.libre&&b.horario;});
+  if(!misBloques.length)return true; // sin turno asignado hoy: no se restringe (evita bloquear roles sin bloque horario)
+  var inicios=[],fines=[];
+  misBloques.forEach(function(b){
+    var p=b.horario.split('–');
+    if(p[0])inicios.push(t2m(p[0].trim()));
+    if(p[1])fines.push(t2m(p[1].trim()));
+  });
+  if(!inicios.length||!fines.length)return true;
+  var minIni=Math.min.apply(null,inicios),maxFin=Math.max.apply(null,fines);
+  var ahora=new Date();var m=ahora.getHours()*60+ahora.getMinutes();
+  return m>=minIni&&m<=maxFin;
+}
+
 function fichasObligatoriasPendientes(nombre){
   if(!nombre)return [];
+  // Fuera de la ventana de su turno (o fin de semana) → sin preguntas por ahora
+  if(!ventanaPreguntasClinico(nombre))return [];
   var key=nombre.replace(/\s/g,'_');
   var hoyStr2=hoyStr();
   var hoyObj=new Date();hoyObj.setHours(0,0,0,0);
@@ -9090,7 +9111,7 @@ window.agregarPreguntaAdmin=function(){
   // Mapear la correcta a su posición en el array final
   var opcionesFinal=ops.map(function(o){return o.txt;});
   var correctaFinal=ops.findIndex(function(o){return o.idx===correctaIdx;});
-  if(correctaFinal<0)correctaFinal=0;
+  if(correctaFinal<0){alert('Marcaste como correcta una opción que dejaste vacía. Escribe el texto de esa opción o marca otra como correcta antes de guardar.');return;}
   window._protPreguntas['p'+Date.now()]={pregunta:preg,opciones:opcionesFinal,correcta:correctaFinal,tema:'General'};
   renderPreguntasEditorAdmin();
 };
