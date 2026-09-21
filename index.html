@@ -2604,8 +2604,9 @@ window.renderRankingAdmin=function(contId){
   Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var nom=(typeof v==='object'?v.nombre:v);participantes.push({key:k,capKey:(nom||'').replace(/[.#$/\[\]\s]/g,'_'),nombre:nom,rol:(typeof v==='object'?v.cargo:'Secretaria')});});
   var filas=participantes.map(function(p){
     var pf=puntajeFinalAdminRango(p.key,desde,hasta,p.capKey);
-    return {nombre:p.nombre,rol:p.rol,final:pf.final,prod:pf.prod,cap:pf.cap};
-  }).filter(function(x){return x.final!==null;}).sort(function(a,b){return b.final-a.final;});
+    var tProm=tiempoPromedioCapacitacion(p.capKey,desde,hasta);
+    return {nombre:p.nombre,rol:p.rol,final:pf.final,prod:pf.prod,cap:pf.cap,tiempoSeg:tProm};
+  }).filter(function(x){return x.final!==null;}).sort(function(a,b){return (b.final-a.final)||(a.tiempoSeg-b.tiempoSeg);});
   function btnP(val,lab){return '<button onclick="window._rankAdminPeriodo=\''+val+'\';renderRankingAdmin(\''+contId+'\')" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;background:'+(periodo===val?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
   var emoji={Secretaria:'🗂️',Bodega:'📦',Mantención:'🔧'};
   var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
@@ -2679,6 +2680,13 @@ function puntajeCapacitacionRango(key,desde,hasta){
   Object.values(todosMeses).forEach(function(mesData){Object.values(mesData).forEach(function(reg){if(reg.fecha>=desde&&reg.fecha<=hasta)pcts.push(reg.pct);});});
   if(!pcts.length)return null;
   return Math.round(pcts.reduce(function(a,b){return a+b;},0)/pcts.length);
+}
+// Tiempo promedio (segundos) que tardó en responder, para desempatar cuando el puntaje queda igual.
+function tiempoPromedioCapacitacion(key,desde,hasta){
+  var todosMeses=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[key])||{};
+  var tiempos=[];
+  Object.values(todosMeses).forEach(function(mesData){Object.values(mesData).forEach(function(reg){if(reg.fecha>=desde&&reg.fecha<=hasta&&reg.tiempoSeg!=null)tiempos.push(reg.tiempoSeg);});});
+  return tiempos.length?Math.round(tiempos.reduce(function(a,b){return a+b;},0)/tiempos.length):Infinity;
 }
 
 
@@ -3015,6 +3023,7 @@ function renderPreguntasAdminTab(cont){
   }
   var elegido=protocolos[Math.floor(Math.random()*protocolos.length)];
   window._adminProtocolo={id:elegido[0],doc:elegido[1]};
+  window._adminInicioTs=Date.now();
   mostrarPreguntasAdmin(cont);
 }
 
@@ -3054,13 +3063,14 @@ window.enviarPreguntasAdmin=function(){
   if(respondidas<total){alert('Responde todas las preguntas antes de enviar.');return;}
   var correctas=Object.values(window._adminRespuestas).filter(function(v){return v===true;}).length;
   var pct=Math.round(correctas/total*100);
+  var tiempoSeg=window._adminInicioTs?Math.round((Date.now()-window._adminInicioTs)/1000):null;
   var nombre=window._adminNombre;var key=nombre.replace(/[.#$/\[\]\s]/g,'_');var hoy=hoyStr();
   // Guardar progreso en namespace SEPARADO (fichaProgresoAdmin)
-  var registro={fecha:hoy,correctas:correctas,total:total,pct:pct,aprobadoHoy:(pct>=60),ts:Date.now(),protocolo:window._adminProtocolo.doc.titulo};
+  var registro={fecha:hoy,correctas:correctas,total:total,pct:pct,aprobadoHoy:(pct>=60),ts:Date.now(),protocolo:window._adminProtocolo.doc.titulo,tiempoSeg:tiempoSeg};
   sedeRef('fichaProgresoAdmin/'+key).set(registro);
   // También acumular en ranking mensual admin
   var mesKey=hoy.slice(0,7);
-  sedeRef('rankingAdmin/capacitacion/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy});
+  sedeRef('rankingAdmin/capacitacion/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy,tiempoSeg:tiempoSeg});
   var view=document.getElementById('adminContenido');
   view.innerHTML='<div style="background:'+(pct>=60?'rgba(16,185,129,.1)':'rgba(251,191,36,.1)')+';border:1px solid '+(pct>=60?'rgba(16,185,129,.3)':'rgba(251,191,36,.3)')+';border-radius:12px;padding:24px;text-align:center">'+
     '<div style="font-size:40px;margin-bottom:8px">'+(pct>=60?'✅':'📚')+'</div>'+
@@ -8957,6 +8967,7 @@ function renderPreguntasGerencia(cont){
   }
   var elegido=protos[Math.floor(Math.random()*protos.length)];
   window._gerProtocolo={id:elegido[0],doc:elegido[1]};
+  window._gerInicioTs=Date.now();
   var doc=elegido[1];
   var preguntas=Object.values(doc.preguntas||{}).sort(function(){return Math.random()-0.5;}).slice(0,4);
   window._gerPreguntas=preguntas;window._gerRespuestas={};
@@ -8984,11 +8995,12 @@ window.enviarPreguntasGerencia=function(){
   if(Object.keys(window._gerRespuestas).length<total){alert('Responde todas las preguntas.');return;}
   var correctas=Object.values(window._gerRespuestas).filter(Boolean).length;
   var pct=Math.round(correctas/total*100);
+  var tiempoSeg=window._gerInicioTs?Math.round((Date.now()-window._gerInicioTs)/1000):null;
   var key=window._gerKey;var nombre=window._gerNombre;var cargo=window._gerCargo;var hoy=hoyStr();
-  var reg={fecha:hoy,correctas:correctas,total:total,pct:pct,ts:Date.now(),protocolo:window._gerProtocolo.doc.titulo,nombre:nombre,cargo:cargo};
+  var reg={fecha:hoy,correctas:correctas,total:total,pct:pct,ts:Date.now(),protocolo:window._gerProtocolo.doc.titulo,nombre:nombre,cargo:cargo,tiempoSeg:tiempoSeg};
   sedeRef('fichaProgresoGerencia/'+key).set(reg);
   var mesKey=hoy.slice(0,7);
-  sedeRef('rankingGerencia/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy,nombre:nombre,cargo:cargo});
+  sedeRef('rankingGerencia/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy,nombre:nombre,cargo:cargo,tiempoSeg:tiempoSeg});
   var cont=document.getElementById('gerContenido');
   cont.innerHTML='<div style="background:'+(pct>=60?'rgba(16,185,129,.1)':'rgba(251,191,36,.1)')+';border:1px solid '+(pct>=60?'rgba(16,185,129,.3)':'rgba(251,191,36,.3)')+';border-radius:12px;padding:24px;text-align:center">'+
     '<div style="font-size:40px;margin-bottom:8px">'+(pct>=60?'✅':'📚')+'</div>'+
@@ -9036,9 +9048,12 @@ function renderRankingGerencia(cont){
     var regs=Object.values(data);if(!regs.length)return;
     var nombre=regs[0].nombre,cargo=regs[0].cargo;
     var prom=Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length);
-    filas.push({nombre:nombre,cargo:cargo,pct:prom,dias:regs.length});
+    var tiempos=regs.filter(function(r){return r.tiempoSeg!=null;}).map(function(r){return r.tiempoSeg;});
+    var tProm=tiempos.length?Math.round(tiempos.reduce(function(a,b){return a+b;},0)/tiempos.length):Infinity;
+    filas.push({nombre:nombre,cargo:cargo,pct:prom,dias:regs.length,tiempoSeg:tProm});
   });
-  filas.sort(function(a,b){return b.pct-a.pct;});
+  // Empate en puntaje → gana quien responde más rápido en promedio (nunca hay empate real)
+  filas.sort(function(a,b){return (b.pct-a.pct)||(a.tiempoSeg-b.tiempoSeg);});
   var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
     '<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:4px">🏆 Ranking · Equipo de Gerencia</div>'+
     '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+mes+'</div>';
@@ -9305,6 +9320,7 @@ function renderPreguntasDocente(cont){
   }
   var elegido=protos[Math.floor(Math.random()*protos.length)];
   window._docProtocolo={id:elegido[0],doc:elegido[1]};
+  window._docInicioTs=Date.now();
   var doc=elegido[1];
   var preguntas=Object.values(doc.preguntas||{}).sort(function(){return Math.random()-0.5;}).slice(0,4);
   window._docPreguntas=preguntas;window._docRespuestas={};
@@ -9336,11 +9352,12 @@ window.enviarPreguntasDocente=function(){
     else fallosPorTema[r.tema]=(fallosPorTema[r.tema]||0)+1;
   });
   var pct=Math.round(correctas/total*100);
+  var tiempoSeg=window._docInicioTs?Math.round((Date.now()-window._docInicioTs)/1000):null;
   var key=window._docKey;var d=window._docActual;var hoy=hoyStr();
-  var reg={fecha:hoy,correctas:correctas,total:total,pct:pct,ts:Date.now(),protocolo:window._docProtocolo.doc.titulo,carrera:d.carrera,nombre:d.nombre,fallosPorTema:fallosPorTema};
+  var reg={fecha:hoy,correctas:correctas,total:total,pct:pct,ts:Date.now(),protocolo:window._docProtocolo.doc.titulo,carrera:d.carrera,nombre:d.nombre,fallosPorTema:fallosPorTema,tiempoSeg:tiempoSeg};
   sedeRef('fichaProgresoDocente/'+key).set(reg);
   var mesKey=hoy.slice(0,7);
-  sedeRef('rankingDocente/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy,carrera:d.carrera,nombre:d.nombre});
+  sedeRef('rankingDocente/'+key+'/'+mesKey+'/'+Date.now()).set({pct:pct,fecha:hoy,carrera:d.carrera,nombre:d.nombre,tiempoSeg:tiempoSeg});
   // Retroalimentación de áreas débiles
   var areasDebiles=Object.keys(fallosPorTema);
   var retro='';
@@ -9367,9 +9384,11 @@ function renderRankingDocente(cont){
     var carrera=regs[0].carrera;var nombre=regs[0].nombre;
     if(carrera!==miCarrera)return; // solo su carrera
     var prom=Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length);
-    filas.push({nombre:nombre,pct:prom,dias:regs.length});
+    var tiempos=regs.filter(function(r){return r.tiempoSeg!=null;}).map(function(r){return r.tiempoSeg;});
+    var tProm=tiempos.length?Math.round(tiempos.reduce(function(a,b){return a+b;},0)/tiempos.length):Infinity;
+    filas.push({nombre:nombre,pct:prom,dias:regs.length,tiempoSeg:tProm});
   });
-  filas.sort(function(a,b){return b.pct-a.pct;});
+  filas.sort(function(a,b){return (b.pct-a.pct)||(a.tiempoSeg-b.tiempoSeg);});
   var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
     '<div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:4px">🏆 Ranking · '+esc(miCarrera)+'</div>'+
     '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+mes+' · Solo docentes de tu carrera. Cumplimiento de capacitación.</div>';
