@@ -2028,6 +2028,7 @@ var PIN_JEFA_OPERACIONES='1234c';
 // PIN de Gerencia (distinto de los demás roles). Puedes cambiarlo después si quieres.
 var PIN_GERENCIA='9910g';
 var gerenciaEquipo={},fichaProgresoGerencia={},rankingGerencia={};
+var cumpleanosAdmin={}; // caché local del nodo compartido 'cumpleanos' (mismo que usa el equipo clínico)
 
 // Etapa 1: entrada provisional de los roles nuevos (los módulos se construyen en etapas siguientes)
 // ══════════════ PANEL JEFA DE OPERACIONES ══════════════
@@ -2044,7 +2045,8 @@ window.abrirPanelJefaOperaciones=function(){
     sedeRef('rankingAdmin').once('value'),
     sedeRef('pesosAdmin').once('value'),
     sedeRef('borradores').once('value'),
-    sedeRef('metricasAdmin').once('value')
+    sedeRef('metricasAdmin').once('value'),
+    sedeRef('cumpleanos').once('value')
   ]).then(function(snaps){
     secretarias=snaps[0].val()||{};
     produccionAdmin=snaps[1].val()||{};
@@ -2052,6 +2054,7 @@ window.abrirPanelJefaOperaciones=function(){
     var pa=snaps[3].val();if(pa&&typeof pa==='object')pesosAdmin=pa;
     borradoresData=snaps[4].val()||{};
     metricasAdmin=snaps[5].val()||{};
+    cumpleanosAdmin=snaps[6].val()||{};
     sedeRef('secretarias').on('value',function(s){secretarias=s.val()||{};});
     sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();});
     sedeRef('rankingAdmin').on('value',function(s){
@@ -2376,11 +2379,40 @@ function renderSecretariasAdmin(){
   if(!lista.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no hay personas. Agrégalas arriba.</div>';}
   else{
     var emoji={Secretaria:'🗂️',Bodega:'📦',Mantención:'🔧'};
-    html+=lista.map(function(s){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:13px;color:#fff">'+(emoji[s.cargo]||'👤')+' '+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+esc(s.cargo)+'</span></span><button onclick="quitarSecretaria(\''+s.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>';}).join('');
+    html+=lista.map(function(s){
+      var ck=s.nombre.replace(/\s/g,'_');
+      var cump=(cumpleanosAdmin&&cumpleanosAdmin[ck])||{};
+      var mesActual=cump.fecha?cump.fecha.slice(0,2):'';
+      var diaActual=cump.fecha?cump.fecha.slice(3,5):'';
+      return '<div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;color:#fff">'+(emoji[s.cargo]||'👤')+' '+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+esc(s.cargo)+'</span></span><button onclick="quitarSecretaria(\''+s.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>'+
+        '<div style="display:flex;gap:6px;align-items:center">'+
+          '<span style="font-size:10px;color:rgba(255,255,255,.4)">🎂</span>'+
+          '<select id="cumpMes_'+s.key+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+            '<option value="">Mes</option>'+['01','02','03','04','05','06','07','08','09','10','11','12'].map(function(mm,i){var lbl=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][i];return '<option value="'+mm+'"'+(mm===mesActual?' selected':'')+'>'+lbl+'</option>';}).join('')+
+          '</select>'+
+          '<select id="cumpDia_'+s.key+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+            '<option value="">Día</option>'+Array.from({length:31},function(_,i){var dd=('0'+(i+1)).slice(-2);return '<option value="'+dd+'"'+(dd===diaActual?' selected':'')+'>'+(i+1)+'</option>';}).join('')+
+          '</select>'+
+          '<select id="cumpGen_'+s.key+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+            '<option value="F"'+(cump.genero==='F'?' selected':'')+'>♀</option><option value="M"'+(cump.genero==='M'?' selected':'')+'>♂</option>'+
+          '</select>'+
+          '<button onclick="guardarCumpleAdmin(\''+ck+'\')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">Guardar</button>'+
+        '</div></div>';
+    }).join('');
   }
   html+='</div>';
   cont.innerHTML=html;
 }
+window.guardarCumpleAdmin=function(ck){
+  var mes=document.getElementById('cumpMes_'+ck).value;
+  var dia=document.getElementById('cumpDia_'+ck).value;
+  var gen=document.getElementById('cumpGen_'+ck).value;
+  if(!mes||!dia){alert('Elige mes y día.');return;}
+  var f=mes+'-'+dia;
+  cumpleanosAdmin[ck]={fecha:f,genero:gen};
+  sedeRef('cumpleanos/'+ck).set({fecha:f,genero:gen}).then(function(){renderSecretariasAdmin();});
+};
 window.agregarSecretaria=function(){
   var n=document.getElementById('nuevaSecretaria').value.trim();
   var cargo=document.getElementById('nuevoCargo').value||'Secretaria';
@@ -2794,6 +2826,7 @@ window.autoRegistrarAdmin=function(){
     window._adminNombre=nombre;
     document.getElementById('adminTabs').style.display='flex';
     tabAdmin('material');
+    setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(nombre);},900);
   });
 };
 
@@ -2806,6 +2839,7 @@ window.cargarPreguntasAdmin=function(){
   document.getElementById('adminTabs').style.display='flex';
   tabAdmin('material');
   setTimeout(verificarRetroViernes,600);
+  setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(nombre);},900);
 };
 
 // ── Retroalimentación semanal: aparece los viernes con fortalezas y áreas a mejorar ──
@@ -3345,6 +3379,7 @@ function showApp(){
   if(verificarBienvenidaSemana())return;
   // 2. Check cumpleanos
   if(verificarCumpleanos())return;
+  setTimeout(function(){verificarProximoCumpleanos(curNombre);},1000);
   // 2b. Anuncio de capacitación por 3 fallos (se muestra sobre la app, no bloquea el flujo)
   setTimeout(verificarAnuncioCapacitacion,800);
   // 3. Then fichas obligatorias
@@ -3663,12 +3698,53 @@ window.cerrarBienvenida=function(){
   document.getElementById('appView').style.display='block';
 };
 
+// Aviso de "próximo cumpleaños": avisa a TODOS menos al propio festejado/a, 7 días y 2-3 días antes.
+function verificarProximoCumpleanos(personaActual){
+  sedeRef('cumpleanos').once('value',function(s){
+    var todos=s.val()||{};
+    var hoy=new Date(hoyStr()+'T12:00:00');
+    var candidatos=[];
+    Object.entries(todos).forEach(function(e){
+      var nombre=e[0].replace(/_/g,' ');
+      if(nombre===personaActual)return; // nunca se avisa a la propia futura cumpleañera/o
+      var val=e[1];var fecha=typeof val==='string'?val:(val&&val.fecha?val.fecha:'');
+      if(!fecha||fecha.length<5)return;
+      var mm=parseInt(fecha.slice(0,2),10),dd=parseInt(fecha.slice(3,5),10);
+      if(!mm||!dd)return;
+      var prox=new Date(hoy.getFullYear(),mm-1,dd,12,0,0);
+      if(prox<hoy)prox=new Date(hoy.getFullYear()+1,mm-1,dd,12,0,0);
+      var dias=Math.round((prox-hoy)/(1000*60*60*24));
+      if(dias===7||dias===3||dias===2)candidatos.push({nombre:nombre,dias:dias});
+    });
+    if(!candidatos.length)return;
+    candidatos.forEach(function(c){
+      var lsKey='tcsu_proxCump_'+S+'_'+hoyStr()+'_'+c.nombre.replace(/\s/g,'_')+'_'+c.dias;
+      if(sessionStorage.getItem(lsKey))return;
+      sessionStorage.setItem(lsKey,'1');
+      mostrarAvisoProximoCumple(c.nombre,c.dias);
+    });
+  });
+}
+function mostrarAvisoProximoCumple(nombre,dias){
+  var m=document.createElement('div');
+  m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.9);z-index:9650;display:flex;align-items:center;justify-content:center;padding:20px';
+  var texto=dias===7?'¡En una semana!':(dias+' días');
+  m.innerHTML='<div style="background:linear-gradient(135deg,#831843,#be185d);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(190,24,93,.4)">'+
+    '<div style="font-size:52px;margin-bottom:10px">🎂</div>'+
+    '<div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:6px">'+texto+' es el cumpleaños de</div>'+
+    '<div style="font-size:20px;font-weight:900;color:#fbcfe8;margin-bottom:14px">'+esc(nombre)+'</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:18px">¡No lo olvides! Prepárale un lindo saludo cuando llegue el día 🎉</div>'+
+    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:12px;padding:10px 28px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">¡Anotado!</button>'+
+  '</div>';
+  document.body.appendChild(m);
+}
+
 function verificarCumpleanos(){
   var hoy=hoyStr().substring(5); // MM-DD
   sedeRef('cumpleanos').once('value',function(s){
     var todos=s.val()||{};
     var cumpleaneros=Object.entries(todos)
-      .filter(function(e){return e[1]&&e[1].substring(5)===hoy;})
+      .filter(function(e){var val=e[1];var fecha=typeof val==='string'?val:(val&&val.fecha?val.fecha:'');return fecha&&fecha.substring(0,5)===hoy;})
       .map(function(e){return e[0].replace(/_/g,' ');});
     if(cumpleaneros.length){
       mostrarCumpleanosConCallback(cumpleaneros,function(){
@@ -8897,6 +8973,7 @@ window.cargarGerencia=function(){
   if(!key)return;
   window._gerKey=key;window._gerNombre=gerenciaEquipo[key].nombre;window._gerCargo=gerenciaEquipo[key].cargo;
   mostrarTabsGerencia();
+  setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(gerenciaEquipo[key].nombre);},900);
 };
 function mostrarTabsGerencia(){
   var esJefa=(window._gerCargo==='Jefa de Operaciones');
@@ -9264,6 +9341,7 @@ window.cargarDocente=function(){
   window._docActual=docentes[key];
   document.getElementById('docTabs').style.display='flex';
   tabDoc('material');
+  setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(docentes[key].nombre);},900);
 };
 window.tabDoc=function(tab){
   window._docTabActual=tab;
