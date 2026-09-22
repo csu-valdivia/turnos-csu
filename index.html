@@ -3714,25 +3714,26 @@ function verificarProximoCumpleanos(personaActual){
       var prox=new Date(hoy.getFullYear(),mm-1,dd,12,0,0);
       if(prox<hoy)prox=new Date(hoy.getFullYear()+1,mm-1,dd,12,0,0);
       var dias=Math.round((prox-hoy)/(1000*60*60*24));
-      if(dias===7||dias===3||dias===2)candidatos.push({nombre:nombre,dias:dias});
+      var genero=(typeof val==='object'&&val.genero)?val.genero:'F';
+      if(dias===7||dias===3||dias===2)candidatos.push({nombre:nombre,dias:dias,genero:genero});
     });
     if(!candidatos.length)return;
     candidatos.forEach(function(c){
       var lsKey='tcsu_proxCump_'+S+'_'+hoyStr()+'_'+c.nombre.replace(/\s/g,'_')+'_'+c.dias;
       if(sessionStorage.getItem(lsKey))return;
       sessionStorage.setItem(lsKey,'1');
-      mostrarAvisoProximoCumple(c.nombre,c.dias);
+      mostrarAvisoProximoCumple(c.nombre,c.dias,c.genero);
     });
   });
 }
-function mostrarAvisoProximoCumple(nombre,dias){
+function mostrarAvisoProximoCumple(nombre,dias,genero){
   var m=document.createElement('div');
   m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.9);z-index:9650;display:flex;align-items:center;justify-content:center;padding:20px';
   var texto=dias===7?'¡En una semana!':(dias+' días');
-  m.innerHTML='<div style="background:linear-gradient(135deg,#831843,#be185d);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(190,24,93,.4)">'+
-    '<div style="font-size:52px;margin-bottom:10px">🎂</div>'+
+  m.innerHTML='<div style="background:linear-gradient(135deg,#831843,#be185d);border-radius:20px;padding:24px 24px 20px;max-width:360px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(190,24,93,.4)">'+
+    '<div style="width:130px;height:130px;margin:0 auto 8px">'+svgAvatarBienvenida(genero||'F')+'</div>'+
     '<div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:6px">'+texto+' es el cumpleaños de</div>'+
-    '<div style="font-size:20px;font-weight:900;color:#fbcfe8;margin-bottom:14px">'+esc(nombre)+'</div>'+
+    '<div style="font-size:20px;font-weight:900;color:#fbcfe8;margin-bottom:14px">'+esc(nombre)+' 🎂</div>'+
     '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:18px">¡No lo olvides! Prepárale un lindo saludo cuando llegue el día 🎉</div>'+
     '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:12px;padding:10px 28px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">¡Anotado!</button>'+
   '</div>';
@@ -8696,10 +8697,19 @@ window.abrirGestionGerencia=function(){
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
   ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
   document.body.appendChild(ov);
-  Promise.all([sedeRef('gerenciaEquipo').once('value'),sedeRef('rankingGerencia').once('value'),sedeRef('metricasAdmin').once('value'),sedeRef('produccionAdmin').once('value'),sedeRef('secretarias').once('value')]).then(function(s){
-    gerenciaEquipo=s[0].val()||{};rankingGerencia=s[1].val()||{};metricasAdmin=s[2].val()||{};produccionAdmin=s[3].val()||{};secretarias=s[4].val()||{};
+  Promise.all([sedeRef('gerenciaEquipo').once('value'),sedeRef('rankingGerencia').once('value'),sedeRef('metricasAdmin').once('value'),sedeRef('produccionAdmin').once('value'),sedeRef('secretarias').once('value'),sedeRef('cumpleanos').once('value')]).then(function(s){
+    gerenciaEquipo=s[0].val()||{};rankingGerencia=s[1].val()||{};metricasAdmin=s[2].val()||{};produccionAdmin=s[3].val()||{};secretarias=s[4].val()||{};cumpleanosAdmin=s[5].val()||{};
     renderGestionGerencia();
   });
+};
+window.guardarCumpleGerencia=function(ck){
+  var mes=document.getElementById('cumpMesG_'+ck).value;
+  var dia=document.getElementById('cumpDiaG_'+ck).value;
+  var gen=document.getElementById('cumpGenG_'+ck).value;
+  if(!mes||!dia){alert('Elige mes y día.');return;}
+  var f=mes+'-'+dia;
+  cumpleanosAdmin[ck]={fecha:f,genero:gen};
+  sedeRef('cumpleanos/'+ck).set({fecha:f,genero:gen}).then(function(){renderGestionGerencia();});
 };
 window.renderGestionGerencia=function(){
   var ov=document.getElementById('gestGerOv');if(!ov)return;
@@ -8728,10 +8738,29 @@ window.renderGestionGerencia=function(){
           '<span style="font-size:14px;font-weight:700;color:#fff">'+esc(f.nombre)+'</span>'+
           '<span style="font-size:10px;color:rgba(255,255,255,.4)">'+esc(f.cargo)+'</span>'+
         '</div>'+
-        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
           '<span style="font-size:11px;color:rgba(255,255,255,.5)">'+f.evals+' evaluaciones este mes</span>'+
           '<span style="font-size:18px;font-weight:800;color:'+color+'">'+(f.pct!=null?f.pct+'%':'Sin datos')+'</span>'+
         '</div>'+
+        (function(){
+          var ck=f.nombre.replace(/\s/g,'_');
+          var cump=(cumpleanosAdmin&&cumpleanosAdmin[ck])||{};
+          var mesActual=cump.fecha?cump.fecha.slice(0,2):'';
+          var diaActual=cump.fecha?cump.fecha.slice(3,5):'';
+          return '<div style="display:flex;gap:6px;align-items:center;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)">'+
+            '<span style="font-size:10px;color:rgba(255,255,255,.4)">🎂</span>'+
+            '<select id="cumpMesG_'+ck+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+              '<option value="">Mes</option>'+['01','02','03','04','05','06','07','08','09','10','11','12'].map(function(mm,i){var lbl=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][i];return '<option value="'+mm+'"'+(mm===mesActual?' selected':'')+'>'+lbl+'</option>';}).join('')+
+            '</select>'+
+            '<select id="cumpDiaG_'+ck+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+              '<option value="">Día</option>'+Array.from({length:31},function(_,i){var dd=('0'+(i+1)).slice(-2);return '<option value="'+dd+'"'+(dd===diaActual?' selected':'')+'>'+(i+1)+'</option>';}).join('')+
+            '</select>'+
+            '<select id="cumpGenG_'+ck+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+              '<option value="F"'+(cump.genero==='F'?' selected':'')+'>♀</option><option value="M"'+(cump.genero==='M'?' selected':'')+'>♂</option>'+
+            '</select>'+
+            '<button onclick="guardarCumpleGerencia(\''+ck+'\')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">Guardar</button>'+
+          '</div>';
+        })()+
       '</div>';
     });
   }
@@ -8966,6 +8995,7 @@ window.autoRegistrarGerencia=function(){
   sedeRef('gerenciaEquipo/'+key).set({nombre:nombre,cargo:cargo}).then(function(){
     window._gerKey=key;window._gerNombre=nombre;window._gerCargo=cargo;
     mostrarTabsGerencia();
+    setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(nombre);},900);
   });
 };
 window.cargarGerencia=function(){
@@ -9332,6 +9362,7 @@ window.autoRegistrarDocente=function(){
     window._docKey=dkey;window._docActual=docentes[dkey];
     document.getElementById('docTabs').style.display='flex';
     tabDoc('material');
+    setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(nombre);},900);
   });
 };
 window.cargarDocente=function(){
