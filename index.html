@@ -2388,13 +2388,13 @@ function renderSecretariasAdmin(){
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;color:#fff">'+(emoji[s.cargo]||'👤')+' '+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+esc(s.cargo)+'</span></span><button onclick="quitarSecretaria(\''+s.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>'+
         '<div style="display:flex;gap:6px;align-items:center">'+
           '<span style="font-size:10px;color:rgba(255,255,255,.4)">🎂</span>'+
-          '<select id="cumpMes_'+s.key+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+          '<select id="cumpMes_'+ck+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
             '<option value="">Mes</option>'+['01','02','03','04','05','06','07','08','09','10','11','12'].map(function(mm,i){var lbl=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][i];return '<option value="'+mm+'"'+(mm===mesActual?' selected':'')+'>'+lbl+'</option>';}).join('')+
           '</select>'+
-          '<select id="cumpDia_'+s.key+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+          '<select id="cumpDia_'+ck+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
             '<option value="">Día</option>'+Array.from({length:31},function(_,i){var dd=('0'+(i+1)).slice(-2);return '<option value="'+dd+'"'+(dd===diaActual?' selected':'')+'>'+(i+1)+'</option>';}).join('')+
           '</select>'+
-          '<select id="cumpGen_'+s.key+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+          '<select id="cumpGen_'+ck+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
             '<option value="F"'+(cump.genero==='F'?' selected':'')+'>♀</option><option value="M"'+(cump.genero==='M'?' selected':'')+'>♂</option>'+
           '</select>'+
           '<button onclick="guardarCumpleAdmin(\''+ck+'\')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">Guardar</button>'+
