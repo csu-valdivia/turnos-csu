@@ -644,6 +644,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirCargaTrabajoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">⚖️ Carga de trabajo del equipo</button>
             <button class="btn-add" id="abrirBorradoresBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">📝 Borradores del equipo sin terminar</button>
             <button class="btn-add" id="abrirCentroProtocolosBtn" style="background:linear-gradient(135deg,#7c3aed,#c4b5fd);margin-top:6px">📚 Centro de protocolos (otros roles)</button>
+            <button class="btn-add" id="abrirPendientesHoyBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🔔 Quién no ha respondido hoy</button>
             <button class="btn-add" id="abrirGestionDocentesBtn" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">🎓 Docentes y carreras</button>
             <button class="btn-add" id="abrirGestionGerenciaBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">💼 Equipo de Gerencia</button>
             <button class="btn-add" id="abrirRecesoBtn" style="background:linear-gradient(135deg,#0369a1,#38bdf8);margin-top:6px">🏖️ Modo receso académico</button>
@@ -1968,7 +1969,7 @@ window.ingresarRol=function(rol){
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _ct=document.getElementById('abrirCargaTrabajoBtn');if(_ct)_ct.onclick=abrirCargaTrabajo;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
-      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;var _gd=document.getElementById('abrirGestionDocentesBtn');if(_gd)_gd.onclick=abrirGestionDocentes;var _gg=document.getElementById('abrirGestionGerenciaBtn');if(_gg)_gg.onclick=abrirGestionGerencia;var _rc=document.getElementById('abrirRecesoBtn');if(_rc)_rc.onclick=abrirReceso;
+      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;var _gd=document.getElementById('abrirGestionDocentesBtn');if(_gd)_gd.onclick=abrirGestionDocentes;var _gg=document.getElementById('abrirGestionGerenciaBtn');if(_gg)_gg.onclick=abrirGestionGerencia;var _rc=document.getElementById('abrirRecesoBtn');if(_rc)_rc.onclick=abrirReceso;var _ph=document.getElementById('abrirPendientesHoyBtn');if(_ph)_ph.onclick=abrirPendientesHoy;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderPlanEstudio==='function')renderPlanEstudio();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
@@ -3040,16 +3041,16 @@ function renderPreguntasAdminTab(cont){
   if(!cont)return;
   if(!moduloTrabajoAbierto()){cont.innerHTML=mensajeFueraHorario();return;}
   var nombre=window._adminNombre;
-  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&visibleParaPersonaSegunRol(e[1],nombre);});
+  var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&visibleParaPersonaSegunRol(e[1],nombre)&&preguntasActivasParaRol(e[1],nombre);});
   // Sumar protocolos de la biblioteca clínica marcados para administrativos que tengan preguntas
   Object.entries(biblioteca||{}).forEach(function(e){
     if(e[1].visible===false)return;
     if(!e[1].preguntas||Object.keys(e[1].preguntas).length<2)return;
     var grupos=e[1].visibleGrupos||(Array.isArray(e[1].visibilidad)?e[1].visibilidad:[e[1].visibilidad||'todos']);
     var visible=(grupos.indexOf('administrativos')>-1||grupos.indexOf('todos')>-1);
-    if(visible&&visibleParaPersonaSegunRol(e[1],nombre))protocolos.push(e);
+    if(visible&&visibleParaPersonaSegunRol(e[1],nombre)&&preguntasActivasParaRol(e[1],nombre))protocolos.push(e);
   });
-  if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
+  if(!protocolos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes preguntas activas aún. Tu jefa/supervisor debe activarlas desde el Centro de protocolos.</div>';return;}
   var hoy=hoyStr();var key=nombre.replace(/[.#$/\[\]\s]/g,'_');
   if(fichaProgresoAdmin[key]&&fichaProgresoAdmin[key].fecha===hoy&&fichaProgresoAdmin[key].aprobadoHoy){
     cont.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;margin-bottom:6px">¡Ya completaste hoy!</div><div style="font-size:13px;color:rgba(255,255,255,.6)">Nos vemos mañana.</div></div>';
@@ -8690,6 +8691,76 @@ window.marcarTareaReceso=function(tid){
 };
 
 
+// ══════════════ QUIÉN NO HA RESPONDIDO HOY (vista consolidada) ══════════════
+window.abrirPendientesHoy=function(){
+  var ov=document.getElementById('pendHoyOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='pendHoyOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:600px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  var hoy=hoyStr();
+  Promise.all([
+    sedeRef('secretarias').once('value'),sedeRef('fichaProgresoAdmin').once('value'),
+    sedeRef('docentes').once('value'),sedeRef('fichaProgresoDocente').once('value'),
+    sedeRef('gerenciaEquipo').once('value'),sedeRef('fichaProgresoGerencia').once('value'),
+    sedeRef('nombres').once('value'),sedeRef('fichaProgreso').once('value'),
+    sedeRef('biblioteca').once('value'),sedeRef('induccion').once('value'),sedeRef('bancoActivo').once('value'),sedeRef('planEstudio').once('value')
+  ]).then(function(s){
+    var secs=s[0].val()||{},fpAdmin=s[1].val()||{};
+    var docs=s[2].val()||{},fpDoc=s[3].val()||{};
+    var gers=s[4].val()||{},fpGer=s[5].val()||{};
+    var nombresClin=s[6].val()||[];var fichaProgClin=s[7].val()||{};
+    biblioteca=s[8].val()||{};induccion=s[9].val()||{};bancoActivo=s[10].val()||{};planEstudio=s[11].val()||{};
+
+    // Administrativos: pendientes = quienes no tienen fichaProgresoAdmin con fecha=hoy
+    var pendAdmin=Object.values(secs).map(function(v){return typeof v==='object'?v.nombre:v;}).filter(function(nom){
+      var ck=(nom||'').replace(/[.#$/\[\]\s]/g,'_');
+      return !(fpAdmin[ck]&&fpAdmin[ck].fecha===hoy);
+    });
+    // Docentes
+    var pendDoc=Object.values(docs).map(function(d){return d.nombre;}).filter(function(nom){
+      var ck=Object.keys(docs).find(function(k){return docs[k].nombre===nom;});
+      return !(fpDoc[ck]&&fpDoc[ck].fecha===hoy);
+    });
+    // Gerencia
+    var pendGer=Object.values(gers).map(function(g){return g.nombre;}).filter(function(nom){
+      var ck=Object.keys(gers).find(function(k){return gers[k].nombre===nom;});
+      return !(fpGer[ck]&&fpGer[ck].fecha===hoy);
+    });
+    // Clínicos: usa la lógica real de pendientes (respeta ventana de turno, banco activo, inducción, etc.)
+    var listaClin=(nombresClin||[]).map(function(n){return n.nombre||n;});
+    var pendClin=listaClin.filter(function(nom){
+      try{return fichasObligatoriasPendientes(nom).length>0;}catch(e){return false;}
+    });
+
+    renderPendientesHoy({admin:pendAdmin,docente:pendDoc,gerencia:pendGer,clinico:pendClin});
+  });
+};
+function renderPendientesHoy(datos){
+  var ov=document.getElementById('pendHoyOv');if(!ov)return;
+  function seccion(titulo,color,lista,nota){
+    var html='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:'+color+';margin-bottom:4px">'+titulo+' <span style="font-size:11px;color:rgba(255,255,255,.4)">('+lista.length+')</span></div>'+
+      (nota?'<div style="font-size:9px;color:rgba(255,255,255,.35);margin-bottom:8px">'+nota+'</div>':'');
+    if(!lista.length){html+='<div style="font-size:12px;color:#6ee7b7">✅ Todos respondieron hoy.</div>';}
+    else{html+=lista.map(function(n){return '<div style="font-size:12px;color:#fca5a5;padding:4px 0">⏳ '+esc(n)+'</div>';}).join('');}
+    html+='</div>';
+    return html;
+  }
+  var html='<div style="max-width:600px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:18px;font-weight:800;color:#f87171">🔔 Quién no ha respondido hoy</span>'+
+      '<button onclick="document.getElementById(\'pendHoyOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">'+hoyStr()+'</div>'+
+    seccion('⚕️ Clínicos','#7ec8f7',datos.clinico,'Solo cuenta a quienes tienen algo pendiente visible ahora mismo (según su turno y banco activo).')+
+    seccion('🗂️ Administrativos','#fbbf24',datos.admin)+
+    seccion('🎓 Docentes','#34d399',datos.docente)+
+    seccion('💼 Gerencia','#c4b5fd',datos.gerencia)+
+  '</div>';
+  ov.innerHTML=html;
+}
+
 // ══════════════ SUPERVISIÓN DEL EQUIPO DE GERENCIA (panel del Jefe) ══════════════
 window.abrirGestionGerencia=function(){
   var ov=document.getElementById('gestGerOv');if(ov)ov.remove();
@@ -9065,8 +9136,8 @@ function renderPreguntasGerencia(cont){
   if(!cont)return;
   if(!moduloTrabajoAbierto()){cont.innerHTML=mensajeFueraHorario();return;}
   var nombre=window._gerNombre;var key=window._gerKey;
-  var protos=protocolosGerencia(nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2;});
-  if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
+  var protos=protocolosGerencia(nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&preguntasActivasParaRol(e[1],nombre);});
+  if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes preguntas activas aún. El Enfermero Jefe debe activarlas desde el Centro de protocolos.</div>';return;}
   var hoy=hoyStr();
   if(fichaProgresoGerencia[key]&&fichaProgresoGerencia[key].fecha===hoy){
     cont.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;margin-bottom:6px">¡Ya completaste hoy!</div><div style="font-size:13px;color:rgba(255,255,255,.6)">Nos vemos mañana.</div></div>';
@@ -9418,8 +9489,8 @@ function renderPreguntasDocente(cont){
   if(!cont)return;
   if(!moduloTrabajoAbierto()){cont.innerHTML=mensajeFueraHorario();return;}
   var d=window._docActual;var key=window._docKey;
-  var protos=protocolosDocente(d.nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&visibleParaPersonaSegunRol(e[1],d.nombre);});
-  if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes protocolos con preguntas asignados aún.</div>';return;}
+  var protos=protocolosDocente(d.nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&visibleParaPersonaSegunRol(e[1],d.nombre)&&preguntasActivasParaRol(e[1],d.nombre);});
+  if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes preguntas activas aún. El Enfermero Jefe debe activarlas desde el Centro de protocolos.</div>';return;}
   var hoy=hoyStr();
   if(fichaProgresoDocente[key]&&fichaProgresoDocente[key].fecha===hoy){
     cont.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;margin-bottom:6px">¡Ya completaste hoy!</div><div style="font-size:13px;color:rgba(255,255,255,.6)">Nos vemos la próxima semana.</div></div>';
@@ -9709,8 +9780,16 @@ window.renderActivacionPorPersona=function(){
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
       '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">'+esc(doc.titulo)+'</div>'+
         '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+(MODULOS_PROTOCOLO[doc.modulo]||'')+(activo?' · '+razon:'')+'</div></div>'+
-      '<button onclick="toggleProtocoloPersona(\''+id+'\')" style="background:'+(activo?'rgba(52,211,153,.25);color:#6ee7b7;border:1px solid rgba(52,211,153,.4)':'rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15)')+';border-radius:20px;padding:6px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;margin-left:10px">'+(activo?'✓ Activo':'Activar')+'</button>'+
+      '<button onclick="toggleProtocoloPersona(\''+id+'\')" style="background:'+(activo?'rgba(52,211,153,.25);color:#6ee7b7;border:1px solid rgba(52,211,153,.4)':'rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15)')+';border-radius:20px;padding:6px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;margin-left:10px">'+(activo?'✓ Material':'Activar')+'</button>'+
       '</div>';
+    // Para roles NO clínicos: segundo interruptor independiente para las Preguntas (dos pasos: primero material, luego preguntas)
+    var esNoClinico=esAdminORol(persona)||esDocenteRol(persona)||esGerenciaRol(persona);
+    if(esNoClinico&&doc.preguntas&&Object.keys(doc.preguntas).length>=2){
+      var pregOn=activo&&preguntasActivasParaRol(doc,persona);
+      html+='<div style="margin-top:6px;display:flex;justify-content:flex-end">'+
+        '<button '+(activo?'onclick="togglePreguntasPersonaRol(\''+id+'\')"':'disabled')+' style="background:'+(pregOn?'rgba(96,165,250,.25);color:#93c5fd;border:1px solid rgba(96,165,250,.4)':'rgba(255,255,255,.05);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1)')+';border-radius:16px;padding:5px 14px;font-family:inherit;font-size:11px;font-weight:700;cursor:'+(activo?'pointer':'not-allowed')+'">'+(pregOn?'✓ Preguntas activas':(activo?'📝 Activar preguntas':'📝 Preguntas (activa el material primero)'))+'</button>'+
+      '</div>';
+    }
     // Temas del protocolo (solo si está activo y tiene más de un tema)
     if(activo&&doc.preguntas){
       var temas=temasDeDoc(doc);
@@ -9742,6 +9821,21 @@ window.toggleTemaPersona=function(protId,tema){
   if(idx>-1)doc.temasBloqueados[kp].splice(idx,1);else doc.temasBloqueados[kp].push(tk);
   (origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId]=doc;
   sedeRef(origen+'/'+protId+'/temasBloqueados/'+kp).set(doc.temasBloqueados[kp]).then(function(){renderActivacionPorPersona();});
+};
+// ¿Tiene esta persona (rol no clínico) las preguntas de este protocolo activadas? Segundo paso, independiente del material.
+function preguntasActivasParaRol(doc,nombre){
+  return !!(doc.preguntasActivasPersonas&&doc.preguntasActivasPersonas.indexOf(nombre)>-1);
+}
+window.togglePreguntasPersonaRol=function(protId){
+  var persona=window._persActivacion;if(!persona)return;
+  var origen=bibliotecaAdmin[protId]?'bibliotecaAdmin':(biblioteca[protId]?'biblioteca':null);
+  if(!origen)return;
+  var doc=(origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId];
+  if(!doc.preguntasActivasPersonas)doc.preguntasActivasPersonas=[];
+  var idx=doc.preguntasActivasPersonas.indexOf(persona);
+  if(idx>-1)doc.preguntasActivasPersonas.splice(idx,1);else doc.preguntasActivasPersonas.push(persona);
+  (origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId]=doc;
+  sedeRef(origen+'/'+protId+'/preguntasActivasPersonas').set(doc.preguntasActivasPersonas).then(function(){renderActivacionPorPersona();});
 };
 window.toggleInduccionRapido=function(persona){
   var k=keyPersona(persona);
