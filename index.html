@@ -9362,7 +9362,6 @@ window.autoRegistrarDocente=function(){
     window._docKey=dkey;window._docActual=docentes[dkey];
     document.getElementById('docTabs').style.display='flex';
     tabDoc('material');
-    setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(nombre);},900);
   });
 };
 window.cargarDocente=function(){
@@ -9372,7 +9371,6 @@ window.cargarDocente=function(){
   window._docActual=docentes[key];
   document.getElementById('docTabs').style.display='flex';
   tabDoc('material');
-  setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(docentes[key].nombre);},900);
 };
 window.tabDoc=function(tab){
   window._docTabActual=tab;
