@@ -645,6 +645,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirBorradoresBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">📝 Borradores del equipo sin terminar</button>
             <button class="btn-add" id="abrirCentroProtocolosBtn" style="background:linear-gradient(135deg,#7c3aed,#c4b5fd);margin-top:6px">📚 Centro de protocolos (otros roles)</button>
             <button class="btn-add" id="abrirPendientesHoyBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🔔 Quién no ha respondido hoy</button>
+            <button class="btn-add" id="abrirSinPreguntasBtn" style="background:linear-gradient(135deg,#b45309,#fbbf24);margin-top:6px">📋 Quién no tiene preguntas activadas</button>
             <button class="btn-add" id="abrirGestionDocentesBtn" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">🎓 Docentes y carreras</button>
             <button class="btn-add" id="abrirGestionGerenciaBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">💼 Equipo de Gerencia</button>
             <button class="btn-add" id="abrirRecesoBtn" style="background:linear-gradient(135deg,#0369a1,#38bdf8);margin-top:6px">🏖️ Modo receso académico</button>
@@ -1969,7 +1970,7 @@ window.ingresarRol=function(rol){
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _ct=document.getElementById('abrirCargaTrabajoBtn');if(_ct)_ct.onclick=abrirCargaTrabajo;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
-      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;var _gd=document.getElementById('abrirGestionDocentesBtn');if(_gd)_gd.onclick=abrirGestionDocentes;var _gg=document.getElementById('abrirGestionGerenciaBtn');if(_gg)_gg.onclick=abrirGestionGerencia;var _rc=document.getElementById('abrirRecesoBtn');if(_rc)_rc.onclick=abrirReceso;var _ph=document.getElementById('abrirPendientesHoyBtn');if(_ph)_ph.onclick=abrirPendientesHoy;
+      var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;var _gd=document.getElementById('abrirGestionDocentesBtn');if(_gd)_gd.onclick=abrirGestionDocentes;var _gg=document.getElementById('abrirGestionGerenciaBtn');if(_gg)_gg.onclick=abrirGestionGerencia;var _rc=document.getElementById('abrirRecesoBtn');if(_rc)_rc.onclick=abrirReceso;var _ph=document.getElementById('abrirPendientesHoyBtn');if(_ph)_ph.onclick=abrirPendientesHoy;var _sp=document.getElementById('abrirSinPreguntasBtn');if(_sp)_sp.onclick=abrirSinPreguntas;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderPlanEstudio==='function')renderPlanEstudio();if(typeof renderInduccionList==='function')renderInduccionList();
       // Llevar la vista al panel admin
@@ -8690,6 +8691,73 @@ window.marcarTareaReceso=function(tid){
   });
 };
 
+
+// ══════════════ QUIÉN NO TIENE PREGUNTAS ACTIVADAS (estructural, no de hoy) ══════════════
+window.abrirSinPreguntas=function(){
+  var ov=document.getElementById('sinPregOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='sinPregOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:600px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Revisando...</div></div>';
+  document.body.appendChild(ov);
+  Promise.all([
+    sedeRef('secretarias').once('value'),sedeRef('docentes').once('value'),sedeRef('gerenciaEquipo').once('value'),
+    sedeRef('nombres').once('value'),sedeRef('bibliotecaAdmin').once('value'),sedeRef('biblioteca').once('value'),sedeRef('gruposModulo').once('value')
+  ]).then(function(s){
+    secretarias=s[0].val()||{};docentes=s[1].val()||{};gerenciaEquipo=s[2].val()||{};
+    var nombresClin=s[3].val()||[];bibliotecaAdmin=s[4].val()||{};biblioteca=s[5].val()||{};gruposModulo=s[6].val()||{};
+
+    function tieneAlgunaPreguntaRol(nombre){
+      var todos=Object.entries(bibliotecaAdmin).concat(Object.entries(biblioteca));
+      return todos.some(function(e){
+        var doc=e[1];
+        if(!doc.preguntas||Object.keys(doc.preguntas).length<2)return false;
+        return visibleParaPersonaSegunRol(doc,nombre)&&preguntasActivasParaRol(doc,nombre);
+      });
+    }
+    function tieneAlgunaPreguntaClinico(nombre){
+      return Object.values(biblioteca).some(function(doc){
+        if(!doc.obligatoria||!doc.preguntas||Object.keys(doc.preguntas).length<2)return false;
+        if(doc.bancoCerrado===false)return false;
+        return protocoloVisiblePara(doc,nombre);
+      });
+    }
+    var sinAdmin=Object.values(secretarias).map(function(v){return typeof v==='object'?v.nombre:v;}).filter(function(n){return !tieneAlgunaPreguntaRol(n);});
+    var sinDoc=Object.values(docentes).map(function(d){return d.nombre;}).filter(function(n){return !tieneAlgunaPreguntaRol(n);});
+    var sinGer=Object.values(gerenciaEquipo).map(function(g){return g.nombre;}).filter(function(n){return !tieneAlgunaPreguntaRol(n);});
+    var listaClin=(nombresClin||[]).map(function(n){return n.nombre||n;});
+    var sinClin=listaClin.filter(function(n){return !tieneAlgunaPreguntaClinico(n);});
+
+    renderSinPreguntas({admin:sinAdmin,docente:sinDoc,gerencia:sinGer,clinico:sinClin});
+  });
+};
+function renderSinPreguntas(datos){
+  var ov=document.getElementById('sinPregOv');if(!ov)return;
+  function seccion(titulo,color,lista){
+    var html='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:'+color+';margin-bottom:8px">'+titulo+' <span style="font-size:11px;color:rgba(255,255,255,.4)">('+lista.length+')</span></div>';
+    if(!lista.length){html+='<div style="font-size:12px;color:#6ee7b7">✅ Todos tienen al menos un protocolo con preguntas activas.</div>';}
+    else{
+      html+=lista.map(function(n){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+        '<span style="font-size:12px;color:#fca5a5">⚠️ '+esc(n)+'</span>'+
+        '<button onclick="abrirControlPersona(\''+esc(n).replace(/'/g,"")+'\')" style="background:rgba(96,165,250,.15);color:#93c5fd;border:none;border-radius:6px;padding:5px 12px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer">🎯 Activar ahora</button>'+
+      '</div>';}).join('');
+    }
+    html+='</div>';
+    return html;
+  }
+  var html='<div style="max-width:600px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:18px;font-weight:800;color:#fbbf24">📋 Quién no tiene preguntas activadas</span>'+
+      '<button onclick="document.getElementById(\'sinPregOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">No es sobre hoy — es si tienen ALGÚN protocolo con preguntas activas, alguna vez. Toca "Activar ahora" para ir directo a configurarlo.</div>'+
+    seccion('🗂️ Administrativos','#fbbf24',datos.admin)+
+    seccion('🎓 Docentes','#34d399',datos.docente)+
+    seccion('💼 Gerencia','#c4b5fd',datos.gerencia)+
+    seccion('⚕️ Clínicos','#7ec8f7',datos.clinico)+
+  '</div>';
+  ov.innerHTML=html;
+}
 
 // ══════════════ QUIÉN NO HA RESPONDIDO HOY (vista consolidada) ══════════════
 window.abrirPendientesHoy=function(){
