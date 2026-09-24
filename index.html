@@ -2319,7 +2319,10 @@ window.renderEditorMetricas=function(){
   // botón para crear el set por defecto solo si el usuario lo pide.
   var vacioDeVerdad=!metricasAdmin||!Object.keys(metricasAdmin).length;
   var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v);});
-  var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Configura las métricas: qué se mide, si es individual/grupal/de una persona, y si más o menos es mejor.</div>';
+  var html='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5)">Configura las métricas: qué se mide, si es individual/grupal/de una persona, y si más o menos es mejor.</div>'+
+    '<button onclick="restaurarMetricasDefault()" style="flex-shrink:0;background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.35);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">↺ Restaurar por defecto</button>'+
+  '</div>';
   if(vacioDeVerdad){
     html+='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:700;color:#fca5a5;margin-bottom:6px">⚠️ No hay métricas guardadas en este momento</div>'+
@@ -2356,10 +2359,11 @@ window.renderEditorMetricas=function(){
   html+='<div class="saved" id="metricasSaved" style="margin-top:8px">✓ Guardado</div>';
   cont.innerHTML=html;
 };
-// Solo se llama si el usuario confirma explícitamente que quiere partir de cero con el set por
-// defecto (ver aviso en renderEditorMetricas). Nunca se dispara solo.
+// Solo se llama si el usuario confirma explícitamente. Reemplaza TODO lo que haya ahora
+// (aunque sean 12 métricas configuradas o solo entradas vacías/rotas) por las 12 métricas
+// originales del set por defecto. Nunca se dispara solo.
 window.restaurarMetricasDefault=function(){
-  if(!confirm('¿Crear el set de métricas por defecto? Si más adelante aparecen las que ya tenías guardadas, tendrás ambas — revísalo con calma.'))return;
+  if(!confirm('¿Reemplazar las métricas actuales por las 12 del set por defecto?\n\nEsto borra lo que esté cargado ahora en esta pantalla (incluyendo métricas vacías o mal cargadas) y deja las 12 originales: Agendar pacientes, Confirmación, WhatsApp, Caja, Laboratorio, etc.\n\nEsta acción no se puede deshacer.'))return;
   var base=JSON.parse(JSON.stringify(METRICAS_ADMIN_DEFAULT));
   metricasAdmin=base;
   sedeRef('metricasAdmin').set(base).then(function(){renderEditorMetricas();});
