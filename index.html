@@ -629,7 +629,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
         <div id="pendientesSection"></div>
 
-        <div class="atoggle"><button id="adminBtn">⚙ Admin</button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button> <button id="conductBtn" style="background:rgba(37,99,235,.15);border:1px solid rgba(96,165,250,.35);color:#93c5fd">💧 Conductividad</button></div>
+        <div class="atoggle"><button id="adminBtn" style="position:relative">⚙ Admin<span id="adminNuevoBadge" style="display:none;position:absolute;top:-8px;right:-8px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;border-radius:10px;min-width:18px;height:18px;line-height:18px;padding:0 5px;box-shadow:0 0 0 2px #0b1220">0</span></button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button> <button id="conductBtn" style="background:rgba(37,99,235,.15);border:1px solid rgba(96,165,250,.35);color:#93c5fd">💧 Conductividad</button></div>
         <div class="apanel" id="adminPanel">
 
           <div class="asec" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(16,185,129,.1));border:1px solid rgba(59,130,246,.3)">
@@ -2823,8 +2823,8 @@ window.autoRegistrarAdmin=function(){
   var yaExiste=Object.values(secretarias||{}).some(function(v){var n=(typeof v==='object'?v.nombre:v);return n&&n.trim().toLowerCase()===nombre.toLowerCase();});
   if(yaExiste){alert('Ya estás registrado/a. Selecciona tu nombre en la lista de arriba.');return;}
   var key='sec_'+Date.now();
-  secretarias[key]={nombre:nombre,cargo:cargo};
-  sedeRef('secretarias/'+key).set({nombre:nombre,cargo:cargo}).then(function(){
+  secretarias[key]={nombre:nombre,cargo:cargo,ts:Date.now()};
+  sedeRef('secretarias/'+key).set({nombre:nombre,cargo:cargo,ts:Date.now()}).then(function(){
     window._adminNombre=nombre;
     document.getElementById('adminTabs').style.display='flex';
     tabAdmin('material');
@@ -3382,6 +3382,8 @@ function showApp(){
   // 2. Check cumpleanos
   if(verificarCumpleanos())return;
   setTimeout(function(){verificarProximoCumpleanos(curNombre);},1000);
+  // 2c. Aviso pasivo (badge en botón Admin) de nuevos administrativos/docentes/gerencia sin activar
+  if(curNombre&&curNombre.trim().toLowerCase()==='patricio baeza')setTimeout(chequearNuevosSinActivar,1200);
   // 2b. Anuncio de capacitación por 3 fallos (se muestra sobre la app, no bloquea el flujo)
   setTimeout(verificarAnuncioCapacitacion,800);
   // 3. Then fichas obligatorias
@@ -7691,6 +7693,7 @@ document.getElementById('adminBtn').addEventListener('click',function(){
   var p=document.getElementById('adminPanel');
   if(p.classList.contains('open')){
     p.classList.remove('open');adminUnlocked=false;renderPendientes();
+    if(curNombre&&curNombre.trim().toLowerCase()==='patricio baeza')chequearNuevosSinActivar();
     if(!W){mostrarConfirmacionSemana();}
     else if(curNombre&&verificarFichasPendientes()){/* bloqueado por ficha pendiente */}
     return;
@@ -8693,6 +8696,37 @@ window.marcarTareaReceso=function(tid){
 
 
 // ══════════════ QUIÉN NO TIENE PREGUNTAS ACTIVADAS (estructural, no de hoy) ══════════════
+// Aviso pasivo (badge en botón ⚙ Admin) de nuevos inscritos (admin/docente/gerencia) que aún
+// no tienen ningún protocolo activado. Solo corre para Patricio Baeza, y se ve apenas entra
+// a la app, sin necesidad de acordarse de revisar manualmente.
+function chequearNuevosSinActivar(){
+  var badge=document.getElementById('adminNuevoBadge');
+  if(!badge)return;
+  Promise.all([
+    sedeRef('secretarias').once('value'),sedeRef('docentes').once('value'),sedeRef('gerenciaEquipo').once('value'),
+    sedeRef('bibliotecaAdmin').once('value'),sedeRef('biblioteca').once('value'),sedeRef('gruposModulo').once('value')
+  ]).then(function(s){
+    secretarias=s[0].val()||{};docentes=s[1].val()||{};gerenciaEquipo=s[2].val()||{};
+    bibliotecaAdmin=s[3].val()||{};biblioteca=s[4].val()||{};gruposModulo=s[5].val()||{};
+    var LIMITE_MS=10*24*60*60*1000; // considera "nuevo" si se inscribió hace 10 días o menos
+    var ahora=Date.now();
+    function esNuevo(ts){return !!ts&&(ahora-ts)<LIMITE_MS;}
+    function tieneAlgunaPreguntaRol(nombre){
+      var todos=Object.entries(bibliotecaAdmin).concat(Object.entries(biblioteca));
+      return todos.some(function(e){
+        var doc=e[1];
+        if(!doc.preguntas||Object.keys(doc.preguntas).length<2)return false;
+        return visibleParaPersonaSegunRol(doc,nombre)&&preguntasActivasParaRol(doc,nombre);
+      });
+    }
+    var nuevosAdmin=Object.values(secretarias).filter(function(v){return typeof v==='object'&&esNuevo(v.ts)&&!tieneAlgunaPreguntaRol(v.nombre);});
+    var nuevosDoc=Object.values(docentes).filter(function(d){return esNuevo(d.ts)&&!tieneAlgunaPreguntaRol(d.nombre);});
+    var nuevosGer=Object.values(gerenciaEquipo).filter(function(g){return esNuevo(g.ts)&&!tieneAlgunaPreguntaRol(g.nombre);});
+    var total=nuevosAdmin.length+nuevosDoc.length+nuevosGer.length;
+    if(total>0){badge.textContent=total>9?'9+':String(total);badge.style.display='inline-block';}
+    else{badge.style.display='none';}
+  }).catch(function(){});
+}
 window.abrirSinPreguntas=function(){
   var ov=document.getElementById('sinPregOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='sinPregOv';
@@ -9130,8 +9164,8 @@ window.autoRegistrarGerencia=function(){
   var yaExiste=Object.values(gerenciaEquipo||{}).some(function(g){return g.nombre&&g.nombre.trim().toLowerCase()===nombre.toLowerCase();});
   if(yaExiste){alert('Ya estás registrado/a. Selecciona tu nombre en la lista de arriba.');return;}
   var key='ger_'+Date.now();
-  gerenciaEquipo[key]={nombre:nombre,cargo:cargo};
-  sedeRef('gerenciaEquipo/'+key).set({nombre:nombre,cargo:cargo}).then(function(){
+  gerenciaEquipo[key]={nombre:nombre,cargo:cargo,ts:Date.now()};
+  sedeRef('gerenciaEquipo/'+key).set({nombre:nombre,cargo:cargo,ts:Date.now()}).then(function(){
     window._gerKey=key;window._gerNombre=nombre;window._gerCargo=cargo;
     mostrarTabsGerencia();
     setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(nombre);},900);
