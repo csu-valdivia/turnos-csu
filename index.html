@@ -629,7 +629,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
         <div id="pendientesSection"></div>
 
-        <div class="atoggle"><button id="adminBtn" style="position:relative">⚙ Admin<span id="adminNuevoBadge" style="display:none;position:absolute;top:-8px;right:-8px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;border-radius:10px;min-width:18px;height:18px;line-height:18px;padding:0 5px;box-shadow:0 0 0 2px #0b1220">0</span></button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button> <button id="conductBtn" style="background:rgba(37,99,235,.15);border:1px solid rgba(96,165,250,.35);color:#93c5fd">💧 Conductividad</button></div>
+        <div class="atoggle"><button id="adminBtn" style="position:relative">⚙ Admin<span id="adminNuevoBadge" style="display:none;position:absolute;top:-10px;right:-6px;gap:2px;box-shadow:0 0 0 2px #0b1220;border-radius:10px;overflow:hidden"><span id="adminBadgePreg" title="Pendientes: activar preguntas" style="display:none;background:#2563eb;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span><span id="adminBadgeAmbos" title="Pendientes: ambos (esperando 7 días)" style="display:none;background:#b45309;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span><span id="adminBadgeProt" title="Pendientes: falta protocolo" style="display:none;background:#dc2626;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span></span></button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button> <button id="conductBtn" style="background:rgba(37,99,235,.15);border:1px solid rgba(96,165,250,.35);color:#93c5fd">💧 Conductividad</button></div>
         <div class="apanel" id="adminPanel">
 
           <div class="asec" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(16,185,129,.1));border:1px solid rgba(59,130,246,.3)">
@@ -8696,35 +8696,31 @@ window.marcarTareaReceso=function(tid){
 
 
 // ══════════════ QUIÉN NO TIENE PREGUNTAS ACTIVADAS (estructural, no de hoy) ══════════════
-// Aviso pasivo (badge en botón ⚙ Admin) de nuevos inscritos (admin/docente/gerencia) que aún
-// no tienen ningún protocolo activado. Solo corre para Patricio Baeza, y se ve apenas entra
-// a la app, sin necesidad de acordarse de revisar manualmente.
+// Aviso pasivo (badge en botón ⚙ Admin) de administrativos/docentes/gerencia con algo pendiente:
+// falta activar protocolo, falta activar preguntas (ya se puede), o ambos (esperando los 7 días).
+// Solo corre para Patricio Baeza, y se ve apenas entra a la app, sin necesidad de acordarse de revisar.
 function chequearNuevosSinActivar(){
-  var badge=document.getElementById('adminNuevoBadge');
-  if(!badge)return;
+  var cont=document.getElementById('adminNuevoBadge');
+  if(!cont)return;
+  var bPreg=document.getElementById('adminBadgePreg'),bAmbos=document.getElementById('adminBadgeAmbos'),bProt=document.getElementById('adminBadgeProt');
   Promise.all([
     sedeRef('secretarias').once('value'),sedeRef('docentes').once('value'),sedeRef('gerenciaEquipo').once('value'),
     sedeRef('bibliotecaAdmin').once('value'),sedeRef('biblioteca').once('value'),sedeRef('gruposModulo').once('value')
   ]).then(function(s){
     secretarias=s[0].val()||{};docentes=s[1].val()||{};gerenciaEquipo=s[2].val()||{};
     bibliotecaAdmin=s[3].val()||{};biblioteca=s[4].val()||{};gruposModulo=s[5].val()||{};
-    var LIMITE_MS=10*24*60*60*1000; // considera "nuevo" si se inscribió hace 10 días o menos
-    var ahora=Date.now();
-    function esNuevo(ts){return !!ts&&(ahora-ts)<LIMITE_MS;}
-    function tieneAlgunaPreguntaRol(nombre){
-      var todos=Object.entries(bibliotecaAdmin).concat(Object.entries(biblioteca));
-      return todos.some(function(e){
-        var doc=e[1];
-        if(!doc.preguntas||Object.keys(doc.preguntas).length<2)return false;
-        return visibleParaPersonaSegunRol(doc,nombre)&&preguntasActivasParaRol(doc,nombre);
-      });
-    }
-    var nuevosAdmin=Object.values(secretarias).filter(function(v){return typeof v==='object'&&esNuevo(v.ts)&&!tieneAlgunaPreguntaRol(v.nombre);});
-    var nuevosDoc=Object.values(docentes).filter(function(d){return esNuevo(d.ts)&&!tieneAlgunaPreguntaRol(d.nombre);});
-    var nuevosGer=Object.values(gerenciaEquipo).filter(function(g){return esNuevo(g.ts)&&!tieneAlgunaPreguntaRol(g.nombre);});
-    var total=nuevosAdmin.length+nuevosDoc.length+nuevosGer.length;
-    if(total>0){badge.textContent=total>9?'9+':String(total);badge.style.display='inline-block';}
-    else{badge.style.display='none';}
+    var nombresRol=[];
+    Object.values(secretarias).forEach(function(v){var n=typeof v==='object'?v.nombre:v;if(n)nombresRol.push(n);});
+    Object.values(docentes).forEach(function(d){if(d&&d.nombre)nombresRol.push(d.nombre);});
+    Object.values(gerenciaEquipo).forEach(function(g){if(g&&g.nombre)nombresRol.push(g.nombre);});
+    var cProt=0,cAmbos=0,cPreg=0;
+    nombresRol.forEach(function(n){
+      var est=estadoPendientePersonaRol(n);
+      if(est==='protocolo')cProt++;else if(est==='ambos')cAmbos++;else if(est==='preguntas')cPreg++;
+    });
+    function set(span,n){if(n>0){span.textContent=n>9?'9+':String(n);span.style.display='inline-block';}else{span.style.display='none';}}
+    set(bPreg,cPreg);set(bAmbos,cAmbos);set(bProt,cProt);
+    cont.style.display=(cProt+cAmbos+cPreg)>0?'flex':'none';
   }).catch(function(){});
 }
 window.abrirSinPreguntas=function(){
@@ -8740,14 +8736,6 @@ window.abrirSinPreguntas=function(){
     secretarias=s[0].val()||{};docentes=s[1].val()||{};gerenciaEquipo=s[2].val()||{};
     var nombresClin=s[3].val()||[];bibliotecaAdmin=s[4].val()||{};biblioteca=s[5].val()||{};gruposModulo=s[6].val()||{};
 
-    function tieneAlgunaPreguntaRol(nombre){
-      var todos=Object.entries(bibliotecaAdmin).concat(Object.entries(biblioteca));
-      return todos.some(function(e){
-        var doc=e[1];
-        if(!doc.preguntas||Object.keys(doc.preguntas).length<2)return false;
-        return visibleParaPersonaSegunRol(doc,nombre)&&preguntasActivasParaRol(doc,nombre);
-      });
-    }
     function tieneAlgunaPreguntaClinico(nombre){
       return Object.values(biblioteca).some(function(doc){
         if(!doc.obligatoria||!doc.preguntas||Object.keys(doc.preguntas).length<2)return false;
@@ -8755,25 +8743,32 @@ window.abrirSinPreguntas=function(){
         return protocoloVisiblePara(doc,nombre);
       });
     }
-    var sinAdmin=Object.values(secretarias).map(function(v){return typeof v==='object'?v.nombre:v;}).filter(function(n){return !tieneAlgunaPreguntaRol(n);});
-    var sinDoc=Object.values(docentes).map(function(d){return d.nombre;}).filter(function(n){return !tieneAlgunaPreguntaRol(n);});
-    var sinGer=Object.values(gerenciaEquipo).map(function(g){return g.nombre;}).filter(function(n){return !tieneAlgunaPreguntaRol(n);});
+    var sinAdmin=Object.values(secretarias).map(function(v){return typeof v==='object'?v.nombre:v;}).filter(function(n){return !!estadoPendientePersonaRol(n);});
+    var sinDoc=Object.values(docentes).map(function(d){return d.nombre;}).filter(function(n){return !!estadoPendientePersonaRol(n);});
+    var sinGer=Object.values(gerenciaEquipo).map(function(g){return g.nombre;}).filter(function(n){return !!estadoPendientePersonaRol(n);});
     var listaClin=(nombresClin||[]).map(function(n){return n.nombre||n;});
     var sinClin=listaClin.filter(function(n){return !tieneAlgunaPreguntaClinico(n);});
 
     renderSinPreguntas({admin:sinAdmin,docente:sinDoc,gerencia:sinGer,clinico:sinClin});
   });
 };
+var ETIQ_ESTADO_ROL={protocolo:{icono:'🔴',texto:'Falta protocolo',color:'#f87171'},ambos:{icono:'🟡',texto:'Ambos pendientes (esperando 7 días)',color:'#fbbf24'},preguntas:{icono:'🔵',texto:'Falta activar preguntas',color:'#60a5fa'}};
 function renderSinPreguntas(datos){
   var ov=document.getElementById('sinPregOv');if(!ov)return;
-  function seccion(titulo,color,lista){
+  function seccion(titulo,color,lista,conEstado){
     var html='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:700;color:'+color+';margin-bottom:8px">'+titulo+' <span style="font-size:11px;color:rgba(255,255,255,.4)">('+lista.length+')</span></div>';
     if(!lista.length){html+='<div style="font-size:12px;color:#6ee7b7">✅ Todos tienen al menos un protocolo con preguntas activas.</div>';}
     else{
-      html+=lista.map(function(n){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
-        '<span style="font-size:12px;color:#fca5a5">⚠️ '+esc(n)+'</span>'+
-        '<button onclick="abrirControlPersona(\''+esc(n).replace(/'/g,"")+'\')" style="background:rgba(96,165,250,.15);color:#93c5fd;border:none;border-radius:6px;padding:5px 12px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer">🎯 Activar ahora</button>'+
+      html+=lista.map(function(n){
+        var tag='';
+        if(conEstado){
+          var est=estadoPendientePersonaRol(n);var e=ETIQ_ESTADO_ROL[est];
+          if(e)tag='<div style="font-size:10px;color:'+e.color+';margin-top:1px">'+e.icono+' '+e.texto+'</div>';
+        }
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+        '<span><span style="font-size:12px;color:#fca5a5">⚠️ '+esc(n)+'</span>'+tag+'</span>'+
+        '<button onclick="abrirControlPersona(\''+esc(n).replace(/'/g,"")+'\')" style="background:rgba(96,165,250,.15);color:#93c5fd;border:none;border-radius:6px;padding:5px 12px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">🎯 Activar ahora</button>'+
       '</div>';}).join('');
     }
     html+='</div>';
@@ -8785,10 +8780,10 @@ function renderSinPreguntas(datos){
       '<button onclick="document.getElementById(\'sinPregOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px">No es sobre hoy — es si tienen ALGÚN protocolo con preguntas activas, alguna vez. Toca "Activar ahora" para ir directo a configurarlo.</div>'+
-    seccion('🗂️ Administrativos','#fbbf24',datos.admin)+
-    seccion('🎓 Docentes','#34d399',datos.docente)+
-    seccion('💼 Gerencia','#c4b5fd',datos.gerencia)+
-    seccion('⚕️ Clínicos','#7ec8f7',datos.clinico)+
+    seccion('🗂️ Administrativos','#fbbf24',datos.admin,true)+
+    seccion('🎓 Docentes','#34d399',datos.docente,true)+
+    seccion('💼 Gerencia','#c4b5fd',datos.gerencia,true)+
+    seccion('⚕️ Clínicos','#7ec8f7',datos.clinico,false)+
   '</div>';
   ov.innerHTML=html;
 }
@@ -9852,10 +9847,28 @@ window.renderActivacionPorPersona=function(){
   Object.keys(docentes||{}).forEach(function(k){var nom=docentes[k].nombre;if(nom&&personas.indexOf(nom)<0)personas.push(nom);});
   Object.keys(gerenciaEquipo||{}).forEach(function(k){var nom=gerenciaEquipo[k].nombre;if(nom&&personas.indexOf(nom)<0)personas.push(nom);});
   personas.sort();
-  var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Activa o desactiva cada protocolo para una persona. Útil para quien recién ingresa: le activas de a poco.</div>'+
-    '<select id="persActivSelector" onchange="window._persActivacion=this.value;renderActivacionPorPersona()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:14px">'+
+  // Estado de pendientes (solo aplica a administrativos/docentes/gerencia — los clínicos no usan este sistema de 2 pasos)
+  var estadoPorPersona={};
+  personas.forEach(function(p){
+    if(esAdminORol(p)||esDocenteRol(p)||esGerenciaRol(p))estadoPorPersona[p]=estadoPendientePersonaRol(p);
+  });
+  var ETIQ_ESTADO={protocolo:{icono:'🔴',texto:'Falta protocolo',color:'#f87171'},ambos:{icono:'🟡',texto:'Ambos pendientes (esperando 7 días)',color:'#fbbf24'},preguntas:{icono:'🔵',texto:'Falta activar preguntas',color:'#60a5fa'}};
+  var pendientes=personas.filter(function(p){return estadoPorPersona[p];});
+  var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Activa o desactiva cada protocolo para una persona. Útil para quien recién ingresa: le activas de a poco.</div>';
+  if(pendientes.length){
+    html+='<div style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:12px">'+
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:8px">⚠️ '+pendientes.length+' persona'+(pendientes.length===1?'':'s')+' con algo pendiente — toca para ir directo:</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+      pendientes.map(function(p){
+        var e=ETIQ_ESTADO[estadoPorPersona[p]];
+        var sel=(p===window._persActivacion);
+        return '<button onclick="window._persActivacion=\''+esc(p).replace(/'/g,"")+'\';renderActivacionPorPersona()" title="'+e.texto+'" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:14px;background:'+(sel?'rgba(255,255,255,.18)':'rgba(255,255,255,.05)')+';border:1px solid '+e.color+';color:'+e.color+';font-family:inherit;cursor:pointer;animation:pulse 1.6s infinite">'+e.icono+' '+esc(p)+'</button>';
+      }).join('')+
+      '</div></div>';
+  }
+  html+='<select id="persActivSelector" onchange="window._persActivacion=this.value;renderActivacionPorPersona()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:14px">'+
       '<option value="">— Selecciona una persona —</option>'+
-      personas.map(function(p){return '<option value="'+esc(p).replace(/"/g,'')+'"'+(p===window._persActivacion?' selected':'')+'>'+esc(p)+'</option>';}).join('')+
+      personas.map(function(p){var est=estadoPorPersona[p];var icono=est?ETIQ_ESTADO[est].icono+' ':'';return '<option value="'+esc(p).replace(/"/g,'')+'"'+(p===window._persActivacion?' selected':'')+'>'+icono+esc(p)+'</option>';}).join('')+
     '</select>';
   var persona=window._persActivacion;
   if(!persona){cont.innerHTML=html+'<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Selecciona una persona para ver y activar sus protocolos.</div>';return;}
@@ -9888,9 +9901,17 @@ window.renderActivacionPorPersona=function(){
     var esNoClinico=esAdminORol(persona)||esDocenteRol(persona)||esGerenciaRol(persona);
     if(esNoClinico&&doc.preguntas&&Object.keys(doc.preguntas).length>=2){
       var pregOn=activo&&preguntasActivasParaRol(doc,persona);
+      var puedeYa=activo&&puedeActivarPreguntas(doc,persona);
+      var diasFaltan=(activo&&!puedeYa)?diasParaActivarPreguntas(doc,persona):0;
+      var puedeClick=activo&&puedeYa;
+      var etiqueta=pregOn?'✓ Preguntas activas':(!activo?'📝 Preguntas (activa el material primero)':(!puedeYa?'⏳ Disponible en '+diasFaltan+' día'+(diasFaltan===1?'':'s'):'📝 Activar preguntas'));
+      var bg=pregOn?'rgba(96,165,250,.25);color:#93c5fd;border:1px solid rgba(96,165,250,.4)':((activo&&!puedeYa)?'rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.3)':'rgba(255,255,255,.05);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1)');
       html+='<div style="margin-top:6px;display:flex;justify-content:flex-end">'+
-        '<button '+(activo?'onclick="togglePreguntasPersonaRol(\''+id+'\')"':'disabled')+' style="background:'+(pregOn?'rgba(96,165,250,.25);color:#93c5fd;border:1px solid rgba(96,165,250,.4)':'rgba(255,255,255,.05);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1)')+';border-radius:16px;padding:5px 14px;font-family:inherit;font-size:11px;font-weight:700;cursor:'+(activo?'pointer':'not-allowed')+'">'+(pregOn?'✓ Preguntas activas':(activo?'📝 Activar preguntas':'📝 Preguntas (activa el material primero)'))+'</button>'+
+        '<button '+(puedeClick?'onclick="togglePreguntasPersonaRol(\''+id+'\')"':'disabled')+' style="background:'+bg+';border-radius:16px;padding:5px 14px;font-family:inherit;font-size:11px;font-weight:700;cursor:'+(puedeClick?'pointer':'not-allowed')+'">'+etiqueta+'</button>'+
       '</div>';
+      if(activo&&!pregOn&&!puedeYa){
+        html+='<div style="text-align:right;font-size:9px;color:rgba(251,191,36,.7);margin-top:2px">Regla: las preguntas se habilitan recién 7 días después de activar el protocolo.</div>';
+      }
     }
     // Temas del protocolo (solo si está activo y tiene más de un tema)
     if(activo&&doc.preguntas){
@@ -9928,6 +9949,29 @@ window.toggleTemaPersona=function(protId,tema){
 function preguntasActivasParaRol(doc,nombre){
   return !!(doc.preguntasActivasPersonas&&doc.preguntasActivasPersonas.indexOf(nombre)>-1);
 }
+// Regla: las preguntas de un protocolo recién activado INDIVIDUALMENTE para una persona no se
+// pueden activar hasta que pase 1 semana desde que se le activó el protocolo/material.
+// Si el protocolo está activo para ella por grupo o porque está abierto a todos (no fue una
+// activación individual reciente), no aplica esta espera.
+var DIAS_ESPERA_PREGUNTAS=7;
+function puedeActivarPreguntas(doc,persona){
+  if(!visibleParaPersonaSegunRol(doc,persona))return false;
+  var porIndividual=doc.dirigidoPersonas&&doc.dirigidoPersonas.indexOf(persona)>-1;
+  if(!porIndividual)return true;
+  var fecha=doc.fechaActivacion&&doc.fechaActivacion[keyPersonaProt(persona)];
+  if(!fecha)return true; // protocolo activado antes de existir este control: no la hacemos esperar retroactivamente
+  var diasPasados=(Date.now()-fecha)/(1000*60*60*24);
+  return diasPasados>=DIAS_ESPERA_PREGUNTAS;
+}
+// Días que faltan para poder activar las preguntas (0 si ya se puede o no aplica espera)
+function diasParaActivarPreguntas(doc,persona){
+  var porIndividual=doc.dirigidoPersonas&&doc.dirigidoPersonas.indexOf(persona)>-1;
+  if(!porIndividual)return 0;
+  var fecha=doc.fechaActivacion&&doc.fechaActivacion[keyPersonaProt(persona)];
+  if(!fecha)return 0;
+  var restante=DIAS_ESPERA_PREGUNTAS-((Date.now()-fecha)/(1000*60*60*24));
+  return restante>0?Math.ceil(restante):0;
+}
 window.togglePreguntasPersonaRol=function(protId){
   var persona=window._persActivacion;if(!persona)return;
   var origen=bibliotecaAdmin[protId]?'bibliotecaAdmin':(biblioteca[protId]?'biblioteca':null);
@@ -9935,10 +9979,31 @@ window.togglePreguntasPersonaRol=function(protId){
   var doc=(origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId];
   if(!doc.preguntasActivasPersonas)doc.preguntasActivasPersonas=[];
   var idx=doc.preguntasActivasPersonas.indexOf(persona);
+  if(idx<0&&!puedeActivarPreguntas(doc,persona)){
+    var faltan=diasParaActivarPreguntas(doc,persona);
+    alert('Todavía no se puede: deben pasar 7 días desde que se activó el protocolo para '+persona+'. Faltan '+faltan+' día'+(faltan===1?'':'s')+'.');
+    return;
+  }
   if(idx>-1)doc.preguntasActivasPersonas.splice(idx,1);else doc.preguntasActivasPersonas.push(persona);
   (origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId]=doc;
   sedeRef(origen+'/'+protId+'/preguntasActivasPersonas').set(doc.preguntasActivasPersonas).then(function(){renderActivacionPorPersona();});
 };
+// Estado consolidado de pendientes para una persona (rol admin/docente/gerencia):
+// 'protocolo' = no tiene ningún protocolo/material activo todavía.
+// 'preguntas' = ya tiene protocolo activo hace 7+ días con banco de preguntas, pero no las ha activado.
+// 'ambos'     = tiene protocolo activo pero activado hace MENOS de 7 días (todavía en espera para ambos pasos).
+// null        = sin pendientes (o el protocolo activo no tiene banco de preguntas, no aplica).
+function estadoPendientePersonaRol(persona){
+  var protos=Object.entries(bibliotecaAdmin||{}).concat(Object.entries(biblioteca||{}));
+  var activos=protos.filter(function(e){return visibleParaPersonaSegunRol(e[1],persona);});
+  if(!activos.length)return 'protocolo';
+  var conPreguntas=activos.filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2;});
+  if(!conPreguntas.length)return null;
+  var tieneActivas=conPreguntas.some(function(e){return preguntasActivasParaRol(e[1],persona);});
+  if(tieneActivas)return null;
+  var algunaLista=conPreguntas.some(function(e){return puedeActivarPreguntas(e[1],persona);});
+  return algunaLista?'preguntas':'ambos';
+}
 window.toggleInduccionRapido=function(persona){
   var k=keyPersona(persona);
   var eraInd=estaEnInduccion(persona);
@@ -9948,6 +10013,8 @@ window.toggleInduccionRapido=function(persona){
     sedeRef('induccion/'+k).set({enInduccion:true,fichasActivas:{},supervisionActiva:false,bienvenidaPendiente:false,desde:Date.now()}).then(function(){renderActivacionPorPersona();});
   }
 };
+// Clave segura por persona, usada para guardar fechas de activación individual por protocolo.
+function keyPersonaProt(nombre){return (nombre||'').replace(/[.#$/\[\]]/g,'_');}
 window.toggleProtocoloPersona=function(protId){
   var persona=window._persActivacion;if(!persona)return;
   // Buscar en ambas bibliotecas (admin/otros roles Y clínica)
@@ -9956,23 +10023,31 @@ window.toggleProtocoloPersona=function(protId){
   var doc=(origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId];
   if(!doc.dirigidoPersonas)doc.dirigidoPersonas=[];
   if(!doc.bloqueadoPersonas)doc.bloqueadoPersonas=[];
+  if(!doc.fechaActivacion)doc.fechaActivacion={};
+  var kp=keyPersonaProt(persona);
   var activoAhora=visibleParaPersonaSegunRol(doc,persona);
+  var updates={};
   if(activoAhora){
     // Apagar: si estaba individual, sacarlo de dirigidoPersonas. Si estaba por grupo o abierto, bloquearlo explícitamente.
     var idxD=doc.dirigidoPersonas.indexOf(persona);
     if(idxD>-1)doc.dirigidoPersonas.splice(idxD,1);
     if(doc.bloqueadoPersonas.indexOf(persona)<0)doc.bloqueadoPersonas.push(persona);
+    // Se apaga: si vuelve a activarse más adelante, el conteo de 7 días parte de nuevo.
+    if(doc.fechaActivacion[kp]){delete doc.fechaActivacion[kp];updates[origen+'/'+protId+'/fechaActivacion/'+kp]=null;}
   } else {
     // Encender: quitar del bloqueo y agregar a dirigidos individuales
     var idxB=doc.bloqueadoPersonas.indexOf(persona);
     if(idxB>-1)doc.bloqueadoPersonas.splice(idxB,1);
     if(doc.dirigidoPersonas.indexOf(persona)<0)doc.dirigidoPersonas.push(persona);
+    // Registra desde cuándo tiene el protocolo activo: las preguntas de este protocolo no se
+    // podrán activar para esta persona hasta que pase 1 semana (ver puedeActivarPreguntas).
+    doc.fechaActivacion[kp]=Date.now();
+    updates[origen+'/'+protId+'/fechaActivacion/'+kp]=doc.fechaActivacion[kp];
   }
   (origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId]=doc;
-  Promise.all([
-    sedeRef(origen+'/'+protId+'/dirigidoPersonas').set(doc.dirigidoPersonas),
-    sedeRef(origen+'/'+protId+'/bloqueadoPersonas').set(doc.bloqueadoPersonas)
-  ]).then(function(){renderActivacionPorPersona();});
+  updates[origen+'/'+protId+'/dirigidoPersonas']=doc.dirigidoPersonas;
+  updates[origen+'/'+protId+'/bloqueadoPersonas']=doc.bloqueadoPersonas;
+  db.ref('sedes/'+S).update(updates).then(function(){renderActivacionPorPersona();});
 };
 
 function renderGruposList(){
