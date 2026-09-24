@@ -8894,8 +8894,8 @@ window.abrirGestionGerencia=function(){
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
   ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
   document.body.appendChild(ov);
-  Promise.all([sedeRef('gerenciaEquipo').once('value'),sedeRef('rankingGerencia').once('value'),sedeRef('metricasAdmin').once('value'),sedeRef('produccionAdmin').once('value'),sedeRef('secretarias').once('value'),sedeRef('cumpleanos').once('value')]).then(function(s){
-    gerenciaEquipo=s[0].val()||{};rankingGerencia=s[1].val()||{};metricasAdmin=s[2].val()||{};produccionAdmin=s[3].val()||{};secretarias=s[4].val()||{};cumpleanosAdmin=s[5].val()||{};
+  Promise.all([sedeRef('gerenciaEquipo').once('value'),sedeRef('rankingGerencia').once('value'),sedeRef('metricasAdmin').once('value'),sedeRef('produccionAdmin').once('value'),sedeRef('secretarias').once('value'),sedeRef('cumpleanos').once('value'),sedeRef('rankingAdmin').once('value'),sedeRef('fichaProgresoAdmin').once('value')]).then(function(s){
+    gerenciaEquipo=s[0].val()||{};rankingGerencia=s[1].val()||{};metricasAdmin=s[2].val()||{};produccionAdmin=s[3].val()||{};secretarias=s[4].val()||{};cumpleanosAdmin=s[5].val()||{};rankingAdmin=s[6].val()||{};fichaProgresoAdmin=s[7].val()||{};
     renderGestionGerencia();
   });
 };
@@ -9131,10 +9131,12 @@ window.abrirModuloGerencia=function(){
   Promise.all([
     sedeRef('gerenciaEquipo').once('value'),sedeRef('bibliotecaAdmin').once('value'),sedeRef('biblioteca').once('value'),
     sedeRef('gruposModulo').once('value'),sedeRef('fichaProgresoGerencia').once('value'),sedeRef('rankingGerencia').once('value'),
-    sedeRef('produccionAdmin').once('value'),sedeRef('secretarias').once('value'),sedeRef('metricasAdmin').once('value')
+    sedeRef('produccionAdmin').once('value'),sedeRef('secretarias').once('value'),sedeRef('metricasAdmin').once('value'),
+    sedeRef('rankingAdmin').once('value'),sedeRef('fichaProgresoAdmin').once('value')
   ]).then(function(s){
     gerenciaEquipo=s[0].val()||{};bibliotecaAdmin=s[1].val()||{};biblioteca=s[2].val()||{};gruposModulo=s[3].val()||{};
     fichaProgresoGerencia=s[4].val()||{};rankingGerencia=s[5].val()||{};produccionAdmin=s[6].val()||{};secretarias=s[7].val()||{};metricasAdmin=s[8].val()||{};
+    rankingAdmin=s[9].val()||{};fichaProgresoAdmin=s[10].val()||{};
     renderModuloGerencia();
     sedeRef('rankingGerencia').on('value',function(sn){
       rankingGerencia=sn.val()||{};
@@ -9388,16 +9390,21 @@ function renderLogroEquipoJefa(cont){
   var dom=new Date(lun);dom.setDate(dom.getDate()+6);
   var desde=lun.getFullYear()+'-'+('0'+(lun.getMonth()+1)).slice(-2)+'-'+('0'+lun.getDate()).slice(-2);
   var hasta=dom.getFullYear()+'-'+('0'+(dom.getMonth()+1)).slice(-2)+'-'+('0'+dom.getDate()).slice(-2);
+  var mesActual=hoyStr().slice(0,7);
+  var hoyF=hoyStr();
+  var equipo=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v)};});
+
+  // ── 1) Métricas de trabajo (producción/gestión) ──
   var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
-    '<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:4px">🎯 Logro de mi equipo, por ítem</div>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:14px">Esta es tu métrica de gestión: el % de logro promedio del equipo en cada indicador esta semana. Te muestra dónde enfocar tu apoyo.</div>';
+    '<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:4px">📊 Métricas de trabajo, por ítem</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:14px">El % de logro promedio del equipo en cada indicador de producción esta semana. Te muestra dónde enfocar tu apoyo.</div>';
   var items=[];
   Object.keys(METRICAS).forEach(function(mid){
     var m=METRICAS[mid];
     if(m.ambito==='grupal')return; // grupal no se promedia por persona
     var totalesPersonas=[];
-    Object.keys(secretarias||{}).forEach(function(k){
-      var dias=produccionAdmin[k]||{};var tot=0,tiene=false;
+    equipo.forEach(function(p){
+      var dias=produccionAdmin[p.key]||{};var tot=0,tiene=false;
       Object.keys(dias).forEach(function(f){if(f>=desde&&f<=hasta&&dias[f]&&dias[f][mid]!=null){tot+=Number(dias[f][mid]);tiene=true;}});
       if(tiene)totalesPersonas.push(tot);
     });
@@ -9420,6 +9427,66 @@ function renderLogroEquipoJefa(cont){
     html+='<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">'+
       '<span style="font-size:13px;font-weight:800;color:#fff">Promedio general</span>'+
       '<span style="font-size:18px;font-weight:800;color:'+(prom>=70?'#6ee7b7':prom>=45?'#fbbf24':'#fca5a5')+'">'+prom+'%</span></div>';
+  }
+  html+='</div>';
+
+  // ── 2) Conocimiento de protocolos (capacitación/preguntas) ──
+  html+='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:4px">📚 Conocimiento de protocolos, por persona</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:14px">Promedio de aciertos en las preguntas de capacitación respondidas esta semana. Distinto de la producción: esto mide cuánto saben, no cuánto hicieron.</div>';
+  var conocPersonas=[];
+  equipo.forEach(function(p){
+    var capKey=(p.nombre||'').replace(/[.#$/\[\]\s]/g,'_');
+    var mesData=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[capKey]&&rankingAdmin.capacitacion[capKey][mesActual])||{};
+    var pctsSemana=Object.values(mesData).filter(function(r){return r&&r.fecha>=desde&&r.fecha<=hasta;}).map(function(r){return r.pct;});
+    if(pctsSemana.length){
+      var prom=Math.round(pctsSemana.reduce(function(a,b){return a+b;},0)/pctsSemana.length);
+      conocPersonas.push({nombre:p.nombre,pct:prom,evals:pctsSemana.length});
+    } else {
+      conocPersonas.push({nombre:p.nombre,pct:null,evals:0});
+    }
+  });
+  conocPersonas.sort(function(a,b){return (a.pct==null?-1:a.pct)-(b.pct==null?-1:b.pct);});
+  if(!conocPersonas.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Sin personas registradas.</div>';}
+  else{
+    conocPersonas.forEach(function(p){
+      if(p.pct==null){
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#fff">'+esc(p.nombre)+'</span><span style="font-size:11px;color:rgba(255,255,255,.35)">Sin evaluaciones esta semana</span></div>';
+      } else {
+        var color=p.pct>=70?'#6ee7b7':p.pct>=45?'#fbbf24':'#fca5a5';
+        html+='<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#fff">'+esc(p.nombre)+' <span style="color:rgba(255,255,255,.35);font-size:10px">('+p.evals+' resp.)</span></span><span style="color:'+color+';font-weight:700">'+p.pct+'%</span></div>'+
+          '<div style="height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+p.pct+'%;background:'+color+'"></div></div></div>';
+      }
+    });
+    var conEval=conocPersonas.filter(function(p){return p.pct!=null;});
+    if(conEval.length){
+      var promC=Math.round(conEval.reduce(function(a,b){return a+b.pct;},0)/conEval.length);
+      html+='<div style="margin-top:4px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:13px;font-weight:800;color:#fff">Promedio del equipo</span>'+
+        '<span style="font-size:18px;font-weight:800;color:'+(promC>=70?'#6ee7b7':promC>=45?'#fbbf24':'#fca5a5')+'">'+promC+'%</span></div>';
+    }
+  }
+  html+='</div>';
+
+  // ── 3) Conexión de hoy ──
+  // Nota: esto NO es un registro de hora de entrada/marcaje (eso está deshabilitado en toda la
+  // app por resguardo legal de control de jornada). Es simplemente si la persona registró ALGO
+  // hoy en el sistema (producción o capacitación) — el mismo dato que ya usa "Cumplimiento".
+  html+='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#6ee7b7;margin-bottom:4px">🔌 Conexión de hoy</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:14px">Quién ha registrado algo en el sistema hoy ('+hoyF+') — producción o capacitación. No es un marcaje de horario, solo actividad en la app.</div>';
+  if(!equipo.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Sin personas registradas.</div>';}
+  else{
+    equipo.forEach(function(p){
+      var capKey=(p.nombre||'').replace(/[.#$/\[\]\s]/g,'_');
+      var prodHoy=!!(produccionAdmin[p.key]&&produccionAdmin[p.key][hoyF]);
+      var capHoy=!!(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===hoyF);
+      var conectada=prodHoy||capHoy;
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+        '<span style="font-size:12px;color:#fff">'+esc(p.nombre)+'</span>'+
+        '<span style="font-size:11px;font-weight:700;color:'+(conectada?'#6ee7b7':'#fca5a5')+'">'+(conectada?'✅ Se conectó hoy':'⚠️ No se ha conectado hoy')+'</span>'+
+      '</div>';
+    });
   }
   html+='</div>';
   cont.innerHTML=html;
