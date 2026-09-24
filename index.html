@@ -2040,7 +2040,9 @@ window.abrirPanelJefaOperaciones=function(){
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9000;overflow-y:auto;padding:16px';
   ov.innerHTML='<div style="max-width:720px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
   document.body.appendChild(ov);
-  // Cargar los datos del módulo admin DIRECTAMENTE (no depender de listeners globales)
+  // Cargar los datos del módulo admin DIRECTAMENTE (no depender de listeners globales, que solo
+  // se activan con attach() al confirmar semana del lado clínico — esta puerta de entrada es
+  // independiente y NUNCA pasa por ahí, así que todo lo que esta pantalla necesita se trae aquí).
   Promise.all([
     sedeRef('secretarias').once('value'),
     sedeRef('produccionAdmin').once('value'),
@@ -2048,7 +2050,8 @@ window.abrirPanelJefaOperaciones=function(){
     sedeRef('pesosAdmin').once('value'),
     sedeRef('borradores').once('value'),
     sedeRef('metricasAdmin').once('value'),
-    sedeRef('cumpleanos').once('value')
+    sedeRef('cumpleanos').once('value'),
+    sedeRef('fichaProgresoAdmin').once('value')
   ]).then(function(snaps){
     secretarias=snaps[0].val()||{};
     produccionAdmin=snaps[1].val()||{};
@@ -2057,8 +2060,11 @@ window.abrirPanelJefaOperaciones=function(){
     borradoresData=snaps[4].val()||{};
     metricasAdmin=snaps[5].val()||{};
     cumpleanosAdmin=snaps[6].val()||{};
+    fichaProgresoAdmin=snaps[7].val()||{};
     sedeRef('secretarias').on('value',function(s){secretarias=s.val()||{};});
-    sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();});
+    sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();if(document.getElementById('jefaOpContenido')&&document.querySelector('#tabJO_cump')&&document.querySelector('#tabJO_cump').style.background.indexOf('34,211,238')>-1)renderCumplimientoAdmin();});
+    sedeRef('fichaProgresoAdmin').on('value',function(s){fichaProgresoAdmin=s.val()||{};if(document.getElementById('jefaOpContenido')&&document.querySelector('#tabJO_cump')&&document.querySelector('#tabJO_cump').style.background.indexOf('34,211,238')>-1)renderCumplimientoAdmin();});
+    sedeRef('metricasAdmin').on('value',function(s){metricasAdmin=s.val()||{};});
     sedeRef('rankingAdmin').on('value',function(s){
       rankingAdmin=s.val()||{};
       var cont=document.getElementById('jefaOpContenido');
@@ -2306,12 +2312,23 @@ window.exportarCumplimientoPDF=function(){
 
 window.renderEditorMetricas=function(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
-  // Inicializar con el default si está vacío
-  if(!metricasAdmin||!Object.keys(metricasAdmin).length){
-    metricasAdmin=JSON.parse(JSON.stringify(METRICAS_ADMIN_DEFAULT));
-  }
+  // IMPORTANTE: ya NO reemplazamos silenciosamente por el set por defecto cuando llega vacío.
+  // Antes esto hacía que, ante una lectura vacía (o una carga a medias), se mostrara el set
+  // genérico sin avisar — parecía que las métricas configuradas "se habían borrado".
+  // Ahora: si de verdad no hay nada guardado en Firebase, mostramos un aviso explícito y un
+  // botón para crear el set por defecto solo si el usuario lo pide.
+  var vacioDeVerdad=!metricasAdmin||!Object.keys(metricasAdmin).length;
   var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v);});
   var html='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px">Configura las métricas: qué se mide, si es individual/grupal/de una persona, y si más o menos es mejor.</div>';
+  if(vacioDeVerdad){
+    html+='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:#fca5a5;margin-bottom:6px">⚠️ No hay métricas guardadas en este momento</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px">No es necesariamente que se hayan borrado — puede ser una lectura vacía puntual. Si esto se repite después de recargar, avísame para revisarlo. Mientras tanto, puedes crear el set de métricas por defecto para partir de nuevo:</div>'+
+      '<button onclick="restaurarMetricasDefault()" style="background:rgba(124,58,237,.2);color:#c4b5fd;border:1px solid rgba(124,58,237,.4);border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">↺ Crear métricas por defecto</button>'+
+    '</div>';
+    cont.innerHTML=html;
+    return;
+  }
   Object.keys(metricasAdmin).forEach(function(id){
     var m=metricasAdmin[id];
     html+='<div style="background:#16233d;border-radius:10px;padding:12px;margin-bottom:8px">'+
@@ -2338,6 +2355,14 @@ window.renderEditorMetricas=function(){
   html+='<button onclick="agregarMetrica()" class="btn-add" style="margin-top:8px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">+ Agregar métrica</button>';
   html+='<div class="saved" id="metricasSaved" style="margin-top:8px">✓ Guardado</div>';
   cont.innerHTML=html;
+};
+// Solo se llama si el usuario confirma explícitamente que quiere partir de cero con el set por
+// defecto (ver aviso en renderEditorMetricas). Nunca se dispara solo.
+window.restaurarMetricasDefault=function(){
+  if(!confirm('¿Crear el set de métricas por defecto? Si más adelante aparecen las que ya tenías guardadas, tendrás ambas — revísalo con calma.'))return;
+  var base=JSON.parse(JSON.stringify(METRICAS_ADMIN_DEFAULT));
+  metricasAdmin=base;
+  sedeRef('metricasAdmin').set(base).then(function(){renderEditorMetricas();});
 };
 window.editMetrica=function(id,campo,valor){
   if(!metricasAdmin[id])return;
