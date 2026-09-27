@@ -599,9 +599,10 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
         <div class="tc" id="tc-ausencias">
           <div style="margin-bottom:12px">
-            <select id="ausenciaSol" style="margin-bottom:8px;background:rgba(255,255,255,.08);color:#fff"><option value="">Soy...</option></select>
+            <select id="ausenciaSol" onchange="renderAusencias()" style="margin-bottom:8px;background:rgba(255,255,255,.08);color:#fff"><option value="">Soy...</option></select>
             <button class="btn-add" onclick="formAusencia()">+ Solicitar permiso o vacaciones</button>
           </div>
+          <div id="premioSemanalBox"></div>
           <div id="ausenciasList"></div>
         </div>
 
@@ -985,10 +986,11 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pedido">🟠 Pedido</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Instrumental recibido</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="entrega_esteril">📤 Entrega material estéril</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pabellon_asig">🏥 Pabellón (asignado pre/post)</option><option value="pedido">🟠 Pedido de bodega (semanal · corte 13:00)</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Recepción material contaminado</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="entrega_esteril">📤 Entrega material estéril</option><option value="almacen_ester">🗄️ Almacenamiento (gabetas)</option><option value="clinica_privada">🏷️ Clínica privada</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
-            <textarea class="atxt" id="tTxt" placeholder="Descripción..."></textarea>
+            <textarea class="atxt" id="tTxt" placeholder="Descripción (opcional)..."></textarea>
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.6);cursor:pointer;margin:-4px 0 8px"><input type="checkbox" id="tTxtOblig" style="accent-color:var(--accent2)"> El colaborador debe leer esto sí o sí antes de continuar</label>
             <div id="tPabHorario" style="display:none;gap:8px;margin-bottom:8px">
               <div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">🏥 Inicio programado</label>
                 <input type="time" id="tPabInicio" style="width:100%;font-size:13px;padding:7px"></div>
@@ -1436,11 +1438,15 @@ var ROLES_TECNICOS_BASE={
   radiografias:{emoji:'🩻',label:'Radiografías',desc:'Cantidad de radiografías tomadas (diario)',fn:'abrirRegProduccion'},
   dispensario_2:{emoji:'💊',label:'Dispensario 2° piso',desc:'N° de atenciones dispensario 2° piso (diario)',fn:'abrirRegProduccion'},
   dispensario_3:{emoji:'💊',label:'Dispensario 3° piso',desc:'N° de atenciones dispensario 3° piso (diario)',fn:'abrirRegProduccion'},
-  inst_recibido:{emoji:'📥',label:'Instrumental recibido',desc:'Cantidad de instrumental recibido (diario)',fn:'abrirRegProduccion'},
-  inst_lavado:{emoji:'🧼',label:'Instrumental lavado',desc:'Cantidad de instrumental lavado (diario)',fn:'abrirRegProduccion'},
-  inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',desc:'Cantidad de instrumental empaquetado (diario)',fn:'abrirRegProduccion'},
-  inst_secado:{emoji:'💨',label:'Instrumental secado',desc:'Cantidad de instrumental secado (diario)',fn:'abrirRegProduccion'},
-  entrega_esteril:{emoji:'📤',label:'Entrega material estéril',desc:'Entrega con N° estudiantes atendidos y horario (diario)',fn:'abrirRegProduccion'},
+  inst_recibido:{emoji:'📥',label:'Recepción material contaminado',desc:'Cantidad de material contaminado recibido (diario · T2)',fn:'abrirRegProduccion'},
+  inst_lavado:{emoji:'🧼',label:'Instrumental lavado',desc:'Cantidad de instrumental lavado (diario · T2)',fn:'abrirRegProduccion'},
+  inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',desc:'Cantidad de instrumental empaquetado (diario · T1)',fn:'abrirRegProduccion'},
+  inst_secado:{emoji:'💨',label:'Instrumental secado',desc:'Cantidad de instrumental secado (diario · T2)',fn:'abrirRegProduccion'},
+  entrega_esteril:{emoji:'📤',label:'Entrega material estéril',desc:'Entrega con N° estudiantes atendidos y horario (diario · T1)',fn:'abrirRegProduccion'},
+  almacen_ester:{emoji:'🗄️',label:'Almacenamiento',desc:'Material que sale del autoclave y se guarda en gabetas de estudiantes (diario · T1)',fn:'abrirRegProduccion'},
+  pabellon_asig:{emoji:'🏥',label:'Pabellón (asignado)',desc:'Pre-cx: espacio y material ok · Post-cx: recibe, lava y seca el instrumental (según asignación puntual)',fn:'abrirRegPabellonAsig'},
+  pedido:{emoji:'🟠',label:'Pedido de bodega',desc:'1 vez a la semana, debe registrarse antes de las 13:00 AM',fn:'abrirRegPedido'},
+  clinica_privada:{emoji:'🏷️',label:'Clínica privada',desc:'Tarea general de apoyo a clínica privada (diario, puede tocarle a cualquiera)',fn:'abrirRegProduccion'},
   apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',desc:'Pacientes contactados y agendados (meta 4 diarios)',fn:'abrirRegApoyoClinico'},
   aseo:{emoji:'🧹',label:'Aseo semanal',desc:'Aseo esterilización y pabellón (semanal)',fn:'abrirRegAseo'}
 };
@@ -1449,11 +1455,13 @@ var PRODUCCION_TIPOS={
   radiografias:{emoji:'🩻',label:'Radiografías',unidad:'radiografías',color:'#a78bfa'},
   dispensario_2:{emoji:'💊',label:'Dispensario 2° piso',unidad:'atenciones',color:'#f472b6'},
   dispensario_3:{emoji:'💊',label:'Dispensario 3° piso',unidad:'atenciones',color:'#fb7185'},
-  inst_recibido:{emoji:'📥',label:'Instrumental recibido',unidad:'piezas',color:'#60a5fa'},
+  inst_recibido:{emoji:'📥',label:'Recepción material contaminado',unidad:'piezas',color:'#60a5fa'},
   inst_lavado:{emoji:'🧼',label:'Instrumental lavado',unidad:'piezas',color:'#22d3ee'},
   inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',unidad:'paquetes',color:'#34d399'},
   inst_secado:{emoji:'💨',label:'Instrumental secado',unidad:'piezas',color:'#fbbf24'},
   entrega_esteril:{emoji:'📤',label:'Entrega material estéril',unidad:'estudiantes',color:'#f97316'},
+  almacen_ester:{emoji:'🗄️',label:'Almacenamiento',unidad:'paquetes',color:'#22d3ee'},
+  clinica_privada:{emoji:'🏷️',label:'Clínica privada',unidad:'pacientes',color:'#c084fc'},
   apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',unidad:'pacientes',color:'#ec4899',max:4}
 };
 // Tiempos reales calibrados por proceso (horas). modo: 'lote' = fijo por registro; 'unidad' = tiempo × cantidad.
@@ -1470,7 +1478,11 @@ var TIEMPOS_PROCESO={
   temp_ester:{h:0.1,modo:'lote'},temp_pabellon:{h:0.1,modo:'lote'},
   temp_box:{h:0.1,modo:'lote'},temp_refri:{h:0.1,modo:'lote'},
   conductividad:{h:0.15,modo:'lote'},reas:{h:0.25,modo:'lote'},
-  apoyo_clinico:{h:0.5,modo:'unidad'}
+  apoyo_clinico:{h:0.5,modo:'unidad'},
+  almacen_ester:{h:0.04,modo:'unidad'},   // similar a empaque, ~2.5min por paquete guardado
+  pabellon_asig:{h:0.5,modo:'lote'},      // pre + post combinados, estimación conservadora
+  pedido:{h:0.25,modo:'lote'},            // 1 vez/semana, ~15min
+  clinica_privada:{h:0.083,modo:'unidad'} // 5 min por paciente
 };
 // TIEMPO DE TRABAJO HUMANO REAL (lo que UNA persona hace en su turno, NO el total del servicio ni el ciclo de máquina).
 // h = horas de trabajo por vez. vecesDia = cuántas veces al día lo hace ESA persona (estimación conservadora).
@@ -1492,7 +1504,11 @@ var TIEMPOS_TRABAJO={
   temp_box:{h:0.1,modo:'lote',vecesDia:1},
   conductividad:{h:0.083,modo:'lote',vecesDia:1},
   reas:{h:0.15,modo:'lote',vecesDia:1},
-  apoyo_clinico:{h:0.5,modo:'unidad',vecesDia:4}
+  apoyo_clinico:{h:0.5,modo:'unidad',vecesDia:4},
+  almacen_ester:{h:0.033,modo:'unidad',vecesDia:15}, // 2min/paquete × ~15 que guarda
+  pabellon_asig:{h:0.5,modo:'lote',vecesDia:1},       // pre + post combinados
+  pedido:{h:0.25,modo:'lote',vecesDia:1},             // 1 vez/semana
+  clinica_privada:{h:0.083,modo:'unidad',vecesDia:4}
 };
 var COSTO_TERCERIZAR_CARGA=200000; // $ por carga de autoclave (150 lts) tercerizada
 var factorIndirecto=0.40; // se recalcula desde horasIndirectasDia; 40% es el valor inicial de referencia
@@ -1797,7 +1813,7 @@ var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
 var supervisorActivo='',supervisorAreas=[];
-var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={};
+var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={},regPedido={},regPabellonAsig={},regLecturaTareas={},historialGanadores={};
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={};
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
@@ -3192,6 +3208,10 @@ window.setSede=function(sede){
   sedeRef('regProduccion').on('value',function(s){regProduccion=s.val()||{};verificarCierreMes();});
   sedeRef('regTemperatura').on('value',function(s){regTemperatura=s.val()||{};});
   sedeRef('regAseo').on('value',function(s){regAseo=s.val()||{};});
+  sedeRef('regPedido').on('value',function(s){regPedido=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
+  sedeRef('regPabellonAsig').on('value',function(s){regPabellonAsig=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
+  sedeRef('regLecturaTareas').on('value',function(s){regLecturaTareas=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
+  sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
   sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
   sedeRef('regCustom').on('value',function(s){regCustom=s.val()||{};});
@@ -4082,6 +4102,84 @@ window.quitarBloqueTurno=function(bloqueKey){
   });
 };
 
+// ══════════════ EDICIÓN COMPLETA DEL TURNO DE UNA PERSONA (desde Mis Turnos) ══════════════
+// A diferencia de editarBloqueTurno (1 bloque, se cierra al guardar), esto deja editar TODOS
+// los bloques de la semana de esa persona en una sola vista, y al guardar NO se cierra:
+// se actualiza mostrando cómo quedó, y el usuario decide cuándo salir.
+window.abrirEditarTurnoSemana=function(nombre){
+  if(!adminUnlocked){alert('Solo la jefatura puede editar la planificación.');return;}
+  var ov=document.getElementById('editTurnoSemanaOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='editTurnoSemanaOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9400;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  document.body.appendChild(ov);
+  renderEditorTurnoSemana(nombre);
+};
+
+function renderEditorTurnoSemana(nombre){
+  var ov=document.getElementById('editTurnoSemanaOv');if(!ov)return;
+  var misBloques=Object.entries(bloques).filter(function(e){return e[1].nombre===nombre&&!e[1].libre&&!e[1].sinAtencion;})
+    .sort(function(a,b){
+      var da=DIAS.indexOf(a[1].dia),db=DIAS.indexOf(b[1].dia);
+      if(da!==db)return da-db;
+      return (a[1].horario||'').localeCompare(b[1].horario||'');
+    });
+  var filas=misBloques.map(function(e){
+    var key=e[0],b=e[1];
+    var opcDias=DIAS.map(function(d){return '<option value="'+d+'"'+(d===b.dia?' selected':'')+'>'+d+'</option>';}).join('');
+    var opcAreas=AREAS.map(function(a){return '<option value="'+a+'"'+(a===b.area?' selected':'')+'>'+a+'</option>';}).join('');
+    var opcHor=HORARIOS.map(function(h){return '<option value="'+h+'"'+(h===b.horario?' selected':'')+'>'+h+'</option>';}).join('');
+    var opcSub='<option value="">— Sin subárea —</option>'+Object.keys(SUBAREAS).map(function(t){return '<option value="'+t+'"'+(t===b.turno?' selected':'')+'>'+t+' · '+SUBAREAS[t]+'</option>';}).join('');
+    return '<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px;margin-bottom:8px">'+
+      '<div style="display:flex;gap:6px;margin-bottom:6px">'+
+        '<select class="etDia" data-k="'+key+'" style="flex:1;font-size:12px;padding:6px">'+opcDias+'</select>'+
+        '<button onclick="quitarFilaTurnoSemana(\''+key+'\',\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:0 10px;font-family:inherit;cursor:pointer">🗑</button>'+
+      '</div>'+
+      '<select class="etArea" data-k="'+key+'" style="width:100%;font-size:12px;padding:6px;margin-bottom:6px">'+opcAreas+'</select>'+
+      '<select class="etHor" data-k="'+key+'" style="width:100%;font-size:12px;padding:6px;margin-bottom:6px">'+opcHor+'</select>'+
+      '<select class="etSub" data-k="'+key+'" style="width:100%;font-size:12px;padding:6px">'+opcSub+'</select>'+
+    '</div>';
+  }).join('');
+  var nombreEsc=esc(nombre).replace(/'/g,"\\'");
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">✏️ Editar turno completo</div>'+
+    '<div style="font-size:12px;color:#93c5fd;margin-bottom:14px">'+esc(nombre)+' · esta semana</div>'+
+    (filas||'<div style="font-size:12px;color:rgba(255,255,255,.4);padding:10px 0 14px">Sin turnos esta semana.</div>')+
+    '<button onclick="guardarEditorTurnoSemana(\''+nombreEsc+'\')" class="btn-add" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar todos los cambios</button>'+
+    '<div id="etSaved" class="saved">✓ Guardado — así quedó su turno</div>'+
+    '<button onclick="document.getElementById(\'editTurnoSemanaOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+  '</div>';
+}
+
+window.quitarFilaTurnoSemana=function(bloqueKey,nombre){
+  var b=bloques[bloqueKey];if(!b)return;
+  if(!confirm('¿Quitar este turno ('+b.dia+' · '+b.area+' · '+b.horario+')?'))return;
+  sRef('bloques/'+bloqueKey).remove().then(function(){
+    renderPanorama();if(typeof renderMisTurnos==='function')renderMisTurnos(nombre);
+    renderEditorTurnoSemana(nombre); // se mantiene abierto, mostrando cómo quedó
+    setTimeout(function(){genPendientes(function(){});},400);
+  });
+};
+
+window.guardarEditorTurnoSemana=function(nombre){
+  var proms=[];
+  document.querySelectorAll('.etDia').forEach(function(sel){
+    var k=sel.dataset.k;
+    var b=bloques[k];if(!b)return;
+    var areaSel=document.querySelector('.etArea[data-k="'+k+'"]');
+    var horSel=document.querySelector('.etHor[data-k="'+k+'"]');
+    var subSel=document.querySelector('.etSub[data-k="'+k+'"]');
+    var actualizado=Object.assign({},b,{dia:sel.value,area:areaSel.value,horario:horSel.value});
+    if(subSel&&subSel.value)actualizado.turno=subSel.value;else delete actualizado.turno;
+    proms.push(sRef('bloques/'+k).set(actualizado));
+  });
+  Promise.all(proms).then(function(){
+    showSaved('etSaved');
+    renderPanorama();if(typeof renderMisTurnos==='function')renderMisTurnos(nombre);
+    renderEditorTurnoSemana(nombre); // NO se cierra: se refresca mostrando el resultado. Cierra el usuario cuando quiera.
+    setTimeout(function(){genPendientes(function(){});},400);
+  });
+};
+
 // Encuentra la clave de un bloque por sus datos (para los chips del panorama)
 function buscarClaveBloque(nombre,dia,area,horario){
   var found=null;
@@ -4194,11 +4292,11 @@ function renderMisTurnos(nombre){
   // Roles técnicos asignados a esta persona → botón de su registro en Mis Turnos
   // Los roles DIARIOS aparecen cualquier día que tenga el rol; el aseo (semanal) solo su día.
   var diaHoyRol=diaDeDate(hoyStr());
-  var ROLES_SEMANALES={aseo:true};
+  var ROLES_SEMANALES={aseo:true,pedido:true,pabellon_asig:true};
   var misRoles=Object.values(tareas||{}).filter(function(t){
     var esRol=ROLES_TECNICOS_BASE[t.tipo]||rolesTecnicos[t.tipo];
     if(!esRol||t.nombre!==nombre)return false;
-    // Rol semanal (aseo): solo el día asignado. Rol diario: cualquier día.
+    // Roles puntuales (aseo semanal, pedido semanal, pabellón por asignación puntual): solo su día. Rol diario: cualquier día.
     if(ROLES_SEMANALES[t.tipo])return t.dia===diaHoyRol;
     return true;
   });
@@ -4206,15 +4304,24 @@ function renderMisTurnos(nombre){
   var rolesVistos={};
   misRoles=misRoles.filter(function(t){if(rolesVistos[t.tipo])return false;rolesVistos[t.tipo]=1;return true;});
   if(misRoles.length){
+    // Confirmación diaria de lectura de tareas (adopción de la app) — 1 tap, cuenta para el puntaje del día
+    var hoyLT=hoyStr();
+    var yaLeyoHoy=Object.values(regLecturaTareas||{}).some(function(r){return r.fecha===hoyLT&&r.quien===nombre;});
+    html+=yaLeyoHoy?
+      '<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#6ee7b7">📖 ✓ Ya confirmaste que leíste tus tareas de hoy.</div>':
+      '<button onclick="abrirConfirmarLecturaTareas();renderMisTurnos(curNombre)" style="display:block;width:100%;text-align:center;background:linear-gradient(135deg,#059669,#34d399);border:none;border-radius:10px;padding:11px;margin-bottom:10px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📖 Confirmar que leí mis tareas de hoy</button>';
     html+='<div style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(96,165,250,.06));border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
       '<p style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">🔧 Mis registros de hoy</p>'+
       misRoles.map(function(t){
+        var estRol=verificarCumplimiento(t.tipo,hoyLT);
+        var estBadge=estRol.cumplido?'<span style="font-size:10px;color:#6ee7b7;background:rgba(16,185,129,.12);padding:2px 7px;border-radius:10px;white-space:nowrap">✓ Hecho</span>':'<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,.12);padding:2px 7px;border-radius:10px;white-space:nowrap">⏳ Pendiente</span>';
+        var rowStyle='display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer';
         if(ROLES_TECNICOS_BASE[t.tipo]){
           var r=ROLES_TECNICOS_BASE[t.tipo];
-          return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+' ›</button>';
+          return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+'</span>'+estBadge+'</button>';
         } else {
           var rc=rolesTecnicos[t.tipo];
-          return '<button onclick="abrirRegCustom(\''+t.tipo+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+' ›</button>';
+          return '<button onclick="abrirRegCustom(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+'</span>'+estBadge+'</button>';
         }
       }).join('')+
       '<button onclick="verTodasMisGraficas()" style="display:block;width:100%;text-align:center;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px 12px;margin-top:4px;color:#93c5fd;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📊 Ver todas mis gráficas de resultados</button>'+
@@ -4668,12 +4775,94 @@ window.formAusencia=function(){
   box.appendChild(tipS);box.appendChild(dr);box.appendChild(ta);box.appendChild(row);
   m.appendChild(box);document.body.appendChild(m);
 };
+// ¿Quién ganó la última semana cerrada, y ya se puede solicitar el día libre (desde el sábado)?
+// Devuelve la semana SIGUIENTE a la ganada (donde se aplicaría el día libre), o null si no corresponde aún.
+function ultimoGanadorInfo(){
+  var entradas=Object.entries(historialGanadores||{});
+  if(!entradas.length)return null;
+  entradas.sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);});
+  var ult=entradas[0][1];
+  if(!ult||!ult.semFin||!ult.nombre)return null;
+  var finD=new Date(ult.semFin+'T12:00:00');
+  var sabado=new Date(finD);sabado.setDate(sabado.getDate()+1);
+  var sabadoStr=sabado.getFullYear()+'-'+pad(sabado.getMonth()+1)+'-'+pad(sabado.getDate());
+  if(hoyStr()<sabadoStr)return null; // recién se puede pedir desde el sábado siguiente al cierre
+  var semSigId=null,semSigIni=null;
+  Object.entries(semanas||{}).forEach(function(e){
+    var sid=e[0],s=e[1];
+    if(!s||!s.ini||s.ini<=ult.semFin)return;
+    if(semSigIni===null||s.ini<semSigIni){semSigIni=s.ini;semSigId=sid;}
+  });
+  if(!semSigId)return null;
+  return {nombre:ult.nombre,semSigId:semSigId,semSig:semanas[semSigId]};
+}
+
 function renderAusencias(){
   var d=document.getElementById('ausenciasList');if(!d)return;
   var sol=document.getElementById('ausenciaSol').value;
+  // 🏆 Botón de día libre — solo visible para quien ganó la semana recién cerrada
+  var pb=document.getElementById('premioSemanalBox');
+  if(pb){
+    var info=ultimoGanadorInfo();
+    if(info&&sol&&sol===info.nombre&&window._diaLibreSolicitado!==info.semSigId+'_'+sol){
+      pb.innerHTML='<div style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(217,119,6,.08));border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
+        '<p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px">🏆 ¡Ganaste la semana!</p>'+
+        '<p style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:8px">Puedes solicitar un día libre en la semana '+esc(info.semSig.nombre||info.semSig.ini+' al '+info.semSig.fin)+'.</p>'+
+        '<button class="btn-add" onclick="formDiaLibreGanador()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">🎁 Solicitar mi día libre</button>'+
+        '</div>';
+    } else pb.innerHTML='';
+  }
   var en=Object.entries(ausencias);var rel=sol?en.filter(function(e){return e[1].nombre===sol;}):en;
   if(!rel.length){d.innerHTML='<p class="empty" style="padding:1rem">Sin solicitudes.</p>';return;}
   d.innerHTML=rel.sort(function(a,b){return(b[1].ts||0)-(a[1].ts||0);}).map(function(e){var k=e[0],a=e[1];var fs=a.inicio===a.fin?a.inicio:a.inicio+' → '+a.fin;return '<div class="cambio-card"><div class="cambio-hdr">'+(a.tipoLabel||a.tipo)+' <span class="ebdg '+a.estado+'">'+a.estado+'</span></div><div class="cambio-sub">'+a.nombre+' · '+fs+(a.motivo?' · '+a.motivo:'')+'</div></div>';}).join('');
+}
+
+// ── Solicitud de día libre del ganador de la semana (requiere aprobación de jefatura) ──
+window.formDiaLibreGanador=function(){
+  var sol=document.getElementById('ausenciaSol').value;if(!sol)return;
+  var info=ultimoGanadorInfo();
+  if(!info||info.nombre!==sol){alert('Esta opción ya no está disponible.');renderAusencias();return;}
+  var semSigId=info.semSigId,semSig=info.semSig;
+  db.ref('sedes/'+S+'/semanas/'+semSigId+'/bloques').once('value',function(snap){
+    var bl=snap.val()||{};
+    var misDias=[];
+    Object.values(bl).forEach(function(b){if(b&&b.nombre===sol&&misDias.indexOf(b.dia)===-1)misDias.push(b.dia);});
+    var m=mkOverlay();var box=document.createElement('div');box.className='obox obox-wide';
+    box.innerHTML='<h3>🎁 Solicitar día libre</h3>'+
+      '<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px">Semana '+esc(semSig.nombre||semSig.ini+' al '+semSig.fin)+'. Elige el día que quieres libre.</p>'+
+      (misDias.length?'':'<div style="background:rgba(96,165,250,.1);border-radius:8px;padding:10px;font-size:12px;color:#93c5fd;margin-bottom:10px">Esa semana aún no tienes turnos cargados — puedes igual indicar el día que prefieres.</div>');
+    var sel=document.createElement('select');sel.style.cssText='width:100%;margin-bottom:10px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px;font-family:inherit;font-size:13px';
+    var diasOpts=misDias.length?misDias:DIAS.filter(function(dd){return dd!=='Sábado'&&dd!=='Domingo';});
+    sel.innerHTML=diasOpts.map(function(dd){return '<option value="'+dd+'">'+dd+'</option>';}).join('');
+    box.appendChild(sel);
+    var aviso=document.createElement('div');aviso.style.cssText='background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.3);border-radius:8px;padding:10px;font-size:12px;color:#fbbf24;margin-bottom:12px';
+    aviso.textContent='⚠ Esta solicitud queda sujeta a la aprobación de la jefatura. Coordínalo directamente con ella.';
+    box.appendChild(aviso);
+    var row=document.createElement('div');row.style.cssText='display:flex;gap:8px';
+    row.appendChild(oBtn('Cancelar',function(){m.remove();}));
+    row.appendChild(pBtn('Enviar solicitud',function(){
+      var diaElegido=sel.value;
+      var fechaDia=fechaDeDiaEnSemana(diaElegido,semSig);
+      // Se guarda directo en la semana SIGUIENTE (no en la semana activa ahora), para que
+      // aparezca en "Ausencias" de la jefatura justo cuando cargue esa semana para planificarla.
+      db.ref('sedes/'+S+'/semanas/'+semSigId+'/ausencias').push({nombre:sol,tipo:'dia_libre_ganador',tipoLabel:'🏆 Día libre (premio semanal)',inicio:fechaDia,fin:fechaDia,motivo:'Premio por ganar la semana anterior · '+diaElegido,estado:'pendiente',semanaId:semSigId,ts:Date.now()}).then(function(){
+        window._diaLibreSolicitado=semSigId+'_'+sol;
+        m.remove();
+        alert('✓ Solicitud enviada. Quedará pendiente para que la jefatura la revise cuando cargue la semana '+(semSig.nombre||semSig.ini+' al '+semSig.fin)+'.');
+        renderAusencias();
+      });
+    }));
+    box.appendChild(row);
+    m.appendChild(box);document.body.appendChild(m);
+  });
+};
+// Calcula la fecha (YYYY-MM-DD) de un día de la semana dado dentro de una semana {ini,fin}
+function fechaDeDiaEnSemana(diaNombre,sem){
+  if(!sem||!sem.ini)return '';
+  var idx=DIAS.indexOf(diaNombre);if(idx<0)idx=0;
+  var d=new Date(sem.ini+'T12:00:00');
+  d.setDate(d.getDate()+idx);
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 }
 function renderAusenciasAdmin(){
   var dp=document.getElementById('ausAdminList');
@@ -6668,6 +6857,10 @@ function mostrarGanadorSemana(){
   if(!ordenado.length)return;
   var ganador=ordenado[0];
   var key=ganador.nombre.replace(/\s/g,'_');
+  // Guardar el ganador de esta semana (historial), para poder habilitarle después el
+  // botón de "día libre" en la semana siguiente sin tener que recalcular el ranking
+  // de una semana ya cerrada (evita duplicar la lógica de puntaje semanal).
+  if(W)sedeRef('historialGanadores/'+W).set({nombre:ganador.nombre,puntos:ganador.puntos,semIni:(semanas[W]&&semanas[W].ini)||'',semFin:(semanas[W]&&semanas[W].fin)||'',ts:Date.now()});
   // Get gender from cumpleanos data or default to F
   sedeRef('cumpleanos').once('value',function(s){
     var todos=s.val()||{};
@@ -12990,6 +13183,88 @@ window.guardarRegAseo=function(){
   });
 };
 
+// ── REGISTRO DE PEDIDO DE BODEGA (1 vez/semana, corte estricto 13:00) ──
+window.abrirRegPedido=function(){
+  var ov=document.getElementById('regPedidoOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regPedidoOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var hoy=hoyStr();
+  var yaHoy=Object.values(regPedido||{}).some(function(r){return r.fecha===hoy;});
+  var minAh=minAhora();
+  var fueraPlazo=minAh>hhmmAMin('13:00');
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🟠 Pedido de bodega</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">1 vez a la semana · '+hoy+'</div>'+
+    (fueraPlazo&&!yaHoy?'<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px;font-size:12px;color:#fca5a5;margin-bottom:12px">⏰ Ya pasaron las 13:00. Si registras ahora, quedará marcado como <b>fuera de plazo</b> e incumplido en tu puntaje del día y de la semana.</div>':
+      '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">Debe registrarse antes de las 13:00 para contar como cumplido.</div>')+
+    (yaHoy?'<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px;font-size:12px;color:#6ee7b7;margin-bottom:12px">✓ Ya registraste el pedido hoy.</div>':'')+
+    '<label style="font-size:13px;color:#fff;cursor:pointer;display:block;margin-bottom:12px"><input type="checkbox" id="pedidoHecho" style="vertical-align:middle"> Realicé el pedido de bodega en día, horario y forma correcta</label>'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
+    '<textarea id="pedidoObs" rows="2" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
+    '<button class="btn-add" onclick="guardarRegPedido()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">💾 Guardar</button>'+
+    '<button onclick="document.getElementById(\'regPedidoOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="regPedidoSaved">✓ Registrado</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+window.guardarRegPedido=function(){
+  if(!document.getElementById('pedidoHecho').checked){alert('Marca que realizaste el pedido antes de guardar.');return;}
+  var ahora=new Date();
+  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
+  var reg={obs:document.getElementById('pedidoObs').value.trim(),quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  sedeRef('regPedido/'+reg.ts).set(reg).then(function(){
+    showSaved('regPedidoSaved');
+    setTimeout(function(){var o=document.getElementById('regPedidoOv');if(o)o.remove();},1000);
+  });
+};
+
+// ── REGISTRO DE PABELLÓN ASIGNADO (pre-cx y post-cx, misma jornada) ──
+window.abrirRegPabellonAsig=function(){
+  var ov=document.getElementById('regPabellonAsigOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regPabellonAsigOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var hoy=hoyStr();
+  var regsHoy=Object.values(regPabellonAsig||{}).filter(function(r){return r.fecha===hoy;});
+  var yaPre=regsHoy.some(function(r){return r.pre;});
+  var yaPost=regsHoy.some(function(r){return r.post;});
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🏥 Pabellón asignado</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+hoy+'</div>'+
+    '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:8px">'+
+      '<label style="font-size:13px;color:#fff;cursor:pointer"><input type="checkbox" id="pabPre"'+(yaPre?' checked disabled':'')+' style="vertical-align:middle"> Pre-cx: espacio y material solicitado ok'+(yaPre?' <span style="color:#6ee7b7">(✓ ya registrado)</span>':'')+'</label></div>'+
+    '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:12px">'+
+      '<label style="font-size:13px;color:#fff;cursor:pointer"><input type="checkbox" id="pabPost"'+(yaPost?' checked disabled':'')+' style="vertical-align:middle"> Post-cx: instrumental recibido, lavado y secado'+(yaPost?' <span style="color:#6ee7b7">(✓ ya registrado)</span>':'')+'</label></div>'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
+    '<textarea id="pabObs" rows="2" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
+    '<button class="btn-add" onclick="guardarRegPabellonAsig()" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">💾 Guardar</button>'+
+    '<button onclick="document.getElementById(\'regPabellonAsigOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="regPabellonAsigSaved">✓ Registrado</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+window.guardarRegPabellonAsig=function(){
+  var pre=document.getElementById('pabPre').checked,post=document.getElementById('pabPost').checked;
+  if(!pre&&!post){alert('Marca al menos un paso (pre o post) antes de guardar.');return;}
+  var ahora=new Date();
+  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
+  var reg={pre:pre,post:post,obs:document.getElementById('pabObs').value.trim(),quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  sedeRef('regPabellonAsig/'+reg.ts).set(reg).then(function(){
+    showSaved('regPabellonAsigSaved');
+    setTimeout(function(){var o=document.getElementById('regPabellonAsigOv');if(o)o.remove();},1000);
+  });
+};
+
+// ── CONFIRMACIÓN DIARIA DE LECTURA DE TAREAS (adopción de la app) ──
+window.abrirConfirmarLecturaTareas=function(){
+  var hoy=hoyStr();
+  var yaHoy=Object.values(regLecturaTareas||{}).some(function(r){return r.fecha===hoy&&r.quien===curNombre;});
+  if(yaHoy)return;
+  var ahora=new Date();
+  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
+  var reg={quien:curNombre||'—',hora:hora,fecha:hoy,ts:Date.now()};
+  sedeRef('regLecturaTareas/'+reg.ts).set(reg);
+};
+
 window.abrirRegTemp=function(tipo){
   var cfg={
     temp_ester:{titulo:'🌡️ Temp. Esterilización',sub:'Zona de almacenamiento · 1 vez al día (AM)',rango:null,puntos:['Zona de almacenamiento'],doble:false,filtroTipo:null},
@@ -13687,6 +13962,22 @@ function verificarCumplimiento(tipo,fecha){
     var hay5=Object.values(regAseo||{}).some(function(r){return r.fecha===fecha;});
     return {cumplido:hay5,detalle:hay5?'Registrado hoy':'Pendiente'};
   }
+  if(tipo==='pedido'){
+    // Debe registrarse el mismo día, antes de las 13:00 (corte propio, más estricto que la ventana AM general)
+    var regsPed=Object.values(regPedido||{}).filter(function(r){return r.fecha===fecha;});
+    if(!regsPed.length)return {cumplido:false,detalle:'Sin registro'};
+    var aTiempo=regsPed.some(function(r){return hhmmAMin(r.hora||'23:59')<=hhmmAMin('13:00');});
+    return {cumplido:aTiempo,detalle:aTiempo?'Registrado a tiempo (antes de 13:00)':'Registrado fuera de plazo (después de 13:00)'};
+  }
+  if(tipo==='pabellon_asig'){
+    // Debe completar AMBOS pasos (pre y post) ese día para considerarse cumplido
+    var regsPab=Object.values(regPabellonAsig||{}).filter(function(r){return r.fecha===fecha;});
+    var pre=regsPab.some(function(r){return r.pre;});
+    var post=regsPab.some(function(r){return r.post;});
+    if(pre&&post)return {cumplido:true,detalle:'Pre y post ✓'};
+    if(pre||post)return {cumplido:false,detalle:pre?'Falta post-cx':'Falta pre-cx'};
+    return {cumplido:false,detalle:'Sin registro (pre y post)'};
+  }
   if(rolesTecnicos&&rolesTecnicos[tipo]){
     var hay6=Object.values(regCustom||{}).some(function(r){return r.rolId===tipo&&r.fecha===fecha;});
     return {cumplido:hay6,detalle:hay6?'Registrado':'Sin registro'};
@@ -13702,8 +13993,8 @@ function nombreRol(tipo){
 }
 
 // Tipos que son "medibles" (tienen registro verificable)
-var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario_2:1,dispensario_3:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1,apoyo_clinico:1};
-var TIPOS_SEMANALES={aseo:1}; // tareas que se controlan 1 vez por semana, no diariamente
+var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario_2:1,dispensario_3:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1,apoyo_clinico:1,almacen_ester:1,pabellon_asig:1,pedido:1,clinica_privada:1};
+var TIPOS_SEMANALES={aseo:1,reas:1,pedido:1}; // tareas que se controlan 1 vez por semana, no diariamente (pedido igual se penaliza si no se hace antes de las 13:00 del día asignado)
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
 // Cruza el equipo (nombres) con turnos, tareas/roles y subbodegas.
@@ -16058,7 +16349,9 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
   var t=document.getElementById('tTip').value;
   var x=document.getElementById('tTxt').value.trim();
   var jornada=document.getElementById('tJornada').value||'dia';
-  if(!n||!dias.length||!t||!x){alert('Selecciona persona, al menos un día, tipo y descripción.');return;}
+  var oblig=document.getElementById('tTxtOblig')&&document.getElementById('tTxtOblig').checked;
+  if(!n||!dias.length||!t){alert('Selecciona persona, al menos un día y tipo.');return;}
+  if(oblig&&!x){alert('Marcaste la descripción como obligatoria: escribe qué debe leer el colaborador.');return;}
   // ── VALIDACIÓN DE EXCLUSIVIDAD POR JORNADA ──
   // Solo aplica a tipos medibles (los que son "puestos" únicos). Las tareas genéricas no se bloquean.
   if(TIPOS_MEDIBLES[t]){
@@ -16073,11 +16366,12 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
       return;
     }
   }
-  // Horario programado (solo para pabellón)
-  var pabIni=(t==='pabellon')?document.getElementById('tPabInicio').value:'';
-  var pabTer=(t==='pabellon')?document.getElementById('tPabTermino').value:'';
+  // Horario programado (pabellón y pabellón asignado)
+  var pabIni=(t==='pabellon'||t==='pabellon_asig')?document.getElementById('tPabInicio').value:'';
+  var pabTer=(t==='pabellon'||t==='pabellon_asig')?document.getElementById('tPabTermino').value:'';
   Promise.all(dias.map(function(dia){
     var tarea={dia:dia,nombre:n,tipo:t,texto:x,jornada:jornada};
+    if(oblig)tarea.obligatoria=true;
     if(pabIni)tarea.pabInicio=pabIni;
     if(pabTer)tarea.pabTermino=pabTer;
     return sRef('tareas').push(tarea);
@@ -16086,6 +16380,7 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
     document.getElementById('tTip').value='';
     document.getElementById('tTxt').value='';
     document.getElementById('tJornada').value='dia';
+    if(document.getElementById('tTxtOblig'))document.getElementById('tTxtOblig').checked=false;
     if(document.getElementById('tPabInicio'))document.getElementById('tPabInicio').value='';
     if(document.getElementById('tPabTermino'))document.getElementById('tPabTermino').value='';
     if(document.getElementById('tPabHorario'))document.getElementById('tPabHorario').style.display='none';
@@ -16304,10 +16599,10 @@ window.editarColacion=function(colKey,actual){
   sedeRef('colacionManual/'+colKey).set(nueva).then(function(){if(typeof renderMisTurnos==='function'&&curNombre)renderMisTurnos(curNombre);if(typeof renderPanorama==='function')renderPanorama();});
 };
 
-// Mostrar campos de horario solo cuando el tipo es pabellón
+// Mostrar campos de horario solo cuando el tipo es pabellón (o pabellón asignado)
 document.getElementById('tTip').addEventListener('change',function(){
   var box=document.getElementById('tPabHorario');
-  if(box)box.style.display=(this.value==='pabellon')?'flex':'none';
+  if(box)box.style.display=(this.value==='pabellon'||this.value==='pabellon_asig')?'flex':'none';
 });
 document.getElementById('addPendBtn').addEventListener('click',function(){var d=document.getElementById('pD').value,a=document.getElementById('pA').value,h=document.getElementById('pH').value;if(!d||!a||!h)return;sRef('pendientes').push({dia:d,area:a,horario:h,auto:false}).then(function(){['pD','pA','pH'].forEach(function(id){document.getElementById(id).value='';});showSaved('pendSaved');renderPendList();});});
 document.getElementById('addLicBtn').addEventListener('click',function(){var n=document.getElementById('licN').value,ini=document.getElementById('licIni').value,fin=document.getElementById('licFin').value;var tipoAus=document.getElementById('licTipo').value||'licencia';if(!n||!ini||!fin){alert('Completa todos los campos.');return;}if(ini>fin){alert('Inicio debe ser antes que fin.');return;}var etiquetas={licencia:'Licencia médica',administrativo:'Permiso administrativo',vacaciones:'Vacaciones'};var lab=etiquetas[tipoAus]||'Ausencia';sRef('ausencias').push({nombre:n,tipo:tipoAus,tipoLabel:lab,inicio:ini,fin:fin,motivo:lab,estado:'aprobado',ts:Date.now()}).then(function(){var fechas=fechasRango(ini,fin);var dias=fechas.map(function(f){return diaDeDate(f);});var del=Object.entries(bloques).filter(function(e){return e[1].nombre===n&&dias.indexOf(e[1].dia)!==-1;});Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});['licN','licIni','licFin'].forEach(function(id){document.getElementById(id).value='';});showSaved('licSaved');});});
