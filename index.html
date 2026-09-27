@@ -1438,11 +1438,11 @@ var ROLES_TECNICOS_BASE={
   radiografias:{emoji:'🩻',label:'Radiografías',desc:'Cantidad de radiografías tomadas (diario)',fn:'abrirRegProduccion'},
   dispensario_2:{emoji:'💊',label:'Dispensario 2° piso',desc:'N° de atenciones dispensario 2° piso (diario)',fn:'abrirRegProduccion'},
   dispensario_3:{emoji:'💊',label:'Dispensario 3° piso',desc:'N° de atenciones dispensario 3° piso (diario)',fn:'abrirRegProduccion'},
-  inst_recibido:{emoji:'📥',label:'Recepción material contaminado',desc:'Cantidad de material contaminado recibido (diario · T2)',fn:'abrirRegProduccion'},
-  inst_lavado:{emoji:'🧼',label:'Instrumental lavado',desc:'Cantidad de instrumental lavado (diario · T2)',fn:'abrirRegProduccion'},
-  inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',desc:'Cantidad de instrumental empaquetado (diario · T1)',fn:'abrirRegProduccion'},
-  inst_secado:{emoji:'💨',label:'Instrumental secado',desc:'Cantidad de instrumental secado (diario · T2)',fn:'abrirRegProduccion'},
-  entrega_esteril:{emoji:'📤',label:'Entrega material estéril',desc:'Entrega con N° estudiantes atendidos y horario (diario · T1)',fn:'abrirRegProduccion'},
+  // inst_recibido, inst_lavado, inst_empaque, inst_secado y entrega_esteril NO están aquí a propósito:
+  // son puestos/actividades donde trabaja la persona (T1/T2), pero Pato no quiere medir cantidad en
+  // ellos — la carga se sigue estimando (TIEMPOS_TRABAJO) y siguen en TIPOS/TIPOS_MEDIBLES para la
+  // exclusividad de puesto, pero al no tener 'fn' aquí no aparece botón de registro de cantidad,
+  // y TIPOS_SIN_MEDICION los excluye del cálculo de cumplimiento (ver más abajo).
   almacen_ester:{emoji:'🗄️',label:'Almacenamiento',desc:'Material que sale del autoclave y se guarda en gabetas de estudiantes (diario · T1)',fn:'abrirRegProduccion'},
   pabellon_asig:{emoji:'🏥',label:'Pabellón (asignado)',desc:'Pre-cx: espacio y material ok · Post-cx: recibe, lava y seca el instrumental (según asignación puntual)',fn:'abrirRegPabellonAsig'},
   pedido:{emoji:'🟠',label:'Pedido de bodega',desc:'1 vez a la semana, debe registrarse antes de las 13:00 AM',fn:'abrirRegPedido'},
