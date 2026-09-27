@@ -1406,6 +1406,27 @@ function colacionPorJornada(bloques){
   return ini+'–'+fin;
 }
 var SUBAREAS={T1:'Empaque · Autoclave · Almacenamiento · Entrega',T2:'Recepción · Lavado · Secado'};
+// Qué tipo de tarea corresponde a cada actividad de T1/T2, para poder resaltar en el turno del
+// colaborador SOLO la(s) que le corresponden ese día (y si es todo el día o solo AM/PM).
+var SUBAREAS_ITEMS={
+  T1:[{label:'Empaque',tipo:'inst_empaque'},{label:'Autoclave',tipo:'autoclave'},{label:'Almacenamiento',tipo:'almacen_ester'},{label:'Entrega',tipo:'entrega_esteril'}],
+  T2:[{label:'Recepción',tipo:'inst_recibido'},{label:'Lavado',tipo:'inst_lavado'},{label:'Secado',tipo:'inst_secado'}]
+};
+// Para el colaborador: pinta en azul SOLO la(s) actividad(es) que debe cumplir ese día, con un
+// mini-badge AM/PM que se enciende completo (todo el día) o solo la mitad correspondiente
+// (AM o PM), para que quede claro en qué jornada le toca. Las que no tiene asignadas quedan en gris.
+function renderSubareaTareas(turno,nombre,dia){
+  var items=SUBAREAS_ITEMS[turno];if(!items)return '';
+  return items.map(function(it){
+    var t=Object.values(tareas||{}).find(function(x){return x.nombre===nombre&&x.dia===dia&&x.tipo===it.tipo;});
+    if(!t)return '<span style="color:var(--text3)">'+it.label+'</span>';
+    var j=t.jornada||'dia';
+    var amOn=(j==='dia'||j==='am'),pmOn=(j==='dia'||j==='pm');
+    function seg(on,txt){return '<span style="background:'+(on?'#2563eb':'#e5e7eb')+';color:'+(on?'#fff':'#94a3b8')+';padding:1px 4px;font-size:8px;font-weight:800;letter-spacing:.3px">'+txt+'</span>';}
+    var badge='<span style="display:inline-flex;border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:3px">'+seg(amOn,'AM')+seg(pmOn,'PM')+'</span>';
+    return badge+'<span style="color:#1e3a8a;font-weight:700">'+it.label+'</span>';
+  }).join(' · ');
+}
 // Inyecta los roles personalizados como opciones en el selector de tipo de tarea
 function actualizarTiposTarea(){
   var sel=document.getElementById('tTip');
@@ -4420,7 +4441,7 @@ function renderMisTurnos(nombre){
     var notaLista=notaObj?Object.keys(notaObj).map(function(k){var o=notaObj[k];o.pushKey=k;return o;}).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
     var cobDia=cobP.find(function(cv){return cv.dia===dia;});
     html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">📅</span><span class="day-name">'+dia+'</span>'+(cobDia?'<span style="font-size:11px;background:rgba(239,68,68,.1);color:#991b1b;padding:2px 8px;border-radius:4px;margin-left:auto">Cubre '+cobDia.destino+'</span>':'')+'</div>';
-    ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?SUBAREAS[b.turno]:null;var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,b.area,b.horario):null;var editBtn=claveB?'<button onclick="abrirEditarTurnoSemana(\''+nombre.replace(/'/g,"\\'")+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'';html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+editBtn+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
+    ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?renderSubareaTareas(b.turno,b.nombre,dia):null;var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,b.area,b.horario):null;var editBtn=claveB?'<button onclick="abrirEditarTurnoSemana(\''+nombre.replace(/'/g,"\\'")+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'';html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+editBtn+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
     if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span>'+(adminUnlocked?'<button onclick="editarColacion(\''+colKey+'\',\''+col+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'')+'</div></div>';
     tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
     notaLista.forEach(function(nt){
