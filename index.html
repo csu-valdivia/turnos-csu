@@ -989,6 +989,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pabellon_asig">🏥 Pabellón (asignado pre/post)</option><option value="pedido">🟠 Pedido de bodega (semanal · corte 13:00)</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Recepción de contaminado</option><option value="inst_lavado">🧼 Lavado de instrumental</option><option value="inst_empaque">📦 Empaque de instrumental</option><option value="inst_secado">💨 Secado de instrumental</option><option value="entrega_esteril">📤 Entrega de material estéril</option><option value="almacen_ester">🗄️ Almacenamiento de material</option><option value="clinica_privada">🏷️ Clínica privada</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
+            <input type="text" id="tSector" placeholder="Sector (opcional — solo para tareas que se comparten en la misma jornada)" style="display:none">
             <textarea class="atxt" id="tTxt" placeholder="Descripción (opcional)..."></textarea>
             <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.6);cursor:pointer;margin:-4px 0 8px"><input type="checkbox" id="tTxtOblig" style="accent-color:var(--accent2)"> El colaborador debe leer esto sí o sí antes de continuar</label>
             <div id="tPabHorario" style="display:none;gap:8px;margin-bottom:8px">
@@ -4146,8 +4147,9 @@ function renderEditorTurnoSemana(nombre){
   var filasTareas=misTareas.map(function(e){
     var tk=e[0],t=e[1];
     var soloAsig=TIPOS_SIN_MEDICION[t.tipo]?' <span style="color:#93c5fd;font-size:10px">(solo asignación, no mide cantidad)</span>':'';
+    var sectorTxt=t.sector?' <span style="color:#fbbf24;font-size:10px">· 📍'+esc(t.sector)+'</span>':'';
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:5px">'+
-      '<span style="flex:1;font-size:12px;color:#fff">'+nombreRol(t.tipo)+' <span style="color:rgba(255,255,255,.4)">· '+t.dia+'</span> '+jornadaLabel(t.jornada)+soloAsig+'</span>'+
+      '<span style="flex:1;font-size:12px;color:#fff">'+nombreRol(t.tipo)+' <span style="color:rgba(255,255,255,.4)">· '+t.dia+'</span> '+jornadaLabel(t.jornada)+sectorTxt+soloAsig+'</span>'+
       '<button onclick="quitarTareaEnEditor(\''+tk+'\',\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:2px 8px;font-family:inherit;cursor:pointer;font-size:11px">🗑</button>'+
     '</div>';
   }).join('');
@@ -4160,7 +4162,8 @@ function renderEditorTurnoSemana(nombre){
       '<select id="etNuevaTareaDia" style="flex:1;font-size:12px;padding:6px">'+opcDiasTarea+'</select>'+
       '<select id="etNuevaTareaJornada" style="width:auto;font-size:12px;padding:6px"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>'+
     '</div>'+
-    '<select id="etNuevaTareaTipo" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
+    '<select id="etNuevaTareaTipo" onchange="var sb=document.getElementById(\'etNuevaTareaSector\');if(sb)sb.style.display=TIPOS_COMPARTIDOS_JORNADA[this.value]?\'block\':\'none\';" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
+    '<input type="text" id="etNuevaTareaSector" placeholder="Sector (opcional — para tareas que se comparten en la misma jornada)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
     '<button onclick="agregarTareaEnEditor(\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="width:100%;margin-top:6px;background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">+ Agregar tarea/rol</button>';
   var nombreEsc=esc(nombre).replace(/'/g,"\\'");
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
@@ -4179,12 +4182,15 @@ window.agregarTareaEnEditor=function(nombre){
   var dia=document.getElementById('etNuevaTareaDia').value;
   var jornada=document.getElementById('etNuevaTareaJornada').value||'dia';
   var tipo=document.getElementById('etNuevaTareaTipo').value;
+  var sector=(document.getElementById('etNuevaTareaSector').value||'').trim();
   if(!tipo){alert('Elige qué tarea o rol quieres asignar.');return;}
   if(TIPOS_MEDIBLES[tipo]){
     var conflicto=tareaYaAsignada(tipo,dia,jornada,nombre);
     if(conflicto){alert('⛔ "'+(TIPOS[tipo]||{l:tipo}).l+'" ya está asignada ese día/jornada a '+conflicto.nombre+'. Elige otro día, jornada o quítasela primero a esa persona.');return;}
   }
-  sRef('tareas').push({dia:dia,nombre:nombre,tipo:tipo,texto:'',jornada:jornada}).then(function(){
+  var nuevaTarea={dia:dia,nombre:nombre,tipo:tipo,texto:'',jornada:jornada};
+  if(sector)nuevaTarea.sector=sector;
+  sRef('tareas').push(nuevaTarea).then(function(){
     if(typeof renderMisTurnos==='function')renderMisTurnos(nombre);
     renderEditorTurnoSemana(nombre);
   });
@@ -14049,6 +14055,10 @@ var TIPOS_SEMANALES={aseo:1,reas:1,pedido:1}; // tareas que se controlan 1 vez p
 // ni se cuentan como pendiente/cumplido en Control de Cumplimiento: son solo el lugar donde trabaja la
 // persona ese día. Las métricas reales de desempeño se asignan aparte, independientes de la actividad.
 var TIPOS_SIN_MEDICION={inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1};
+// Puestos/actividades que se pueden COMPARTIR entre varias personas en la misma jornada
+// (no exigen exclusividad — cualquier cantidad de personas puede tener el mismo tipo+día+jornada).
+// Se diferencian entre sí por el campo libre "sector" (texto), no por el bloqueo de tareaYaAsignada.
+var TIPOS_COMPARTIDOS_JORNADA={inst_empaque:1,inst_recibido:1,inst_lavado:1,inst_secado:1,entrega_esteril:1,aseo:1,reas:1};
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
 // Cruza el equipo (nombres) con turnos, tareas/roles y subbodegas.
@@ -16405,6 +16415,7 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
   var t=document.getElementById('tTip').value;
   var x=document.getElementById('tTxt').value.trim();
   var jornada=document.getElementById('tJornada').value||'dia';
+  var sector=(document.getElementById('tSector').value||'').trim();
   var oblig=document.getElementById('tTxtOblig')&&document.getElementById('tTxtOblig').checked;
   if(!n||!dias.length||!t){alert('Selecciona persona, al menos un día y tipo.');return;}
   if(oblig&&!x){alert('Marcaste la descripción como obligatoria: escribe qué debe leer el colaborador.');return;}
@@ -16430,12 +16441,15 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
     if(oblig)tarea.obligatoria=true;
     if(pabIni)tarea.pabInicio=pabIni;
     if(pabTer)tarea.pabTermino=pabTer;
+    if(sector)tarea.sector=sector;
     return sRef('tareas').push(tarea);
   })).then(function(){
     document.getElementById('tN').value='';
     document.getElementById('tTip').value='';
     document.getElementById('tTxt').value='';
     document.getElementById('tJornada').value='dia';
+    document.getElementById('tSector').value='';
+    document.getElementById('tSector').style.display='none';
     if(document.getElementById('tTxtOblig'))document.getElementById('tTxtOblig').checked=false;
     if(document.getElementById('tPabInicio'))document.getElementById('tPabInicio').value='';
     if(document.getElementById('tPabTermino'))document.getElementById('tPabTermino').value='';
@@ -16623,6 +16637,8 @@ window.aplicarPropuestaTurnos=function(){
 // ¿La tarea (tipo) ya está asignada ese día en una jornada que choca? Devuelve la tarea en conflicto o null.
 // Regla: 'dia' (todo el día) choca con cualquier jornada. AM solo con AM o dia. PM solo con PM o dia.
 function tareaYaAsignada(tipo,dia,jornadaNueva,excluirNombre){
+  // Estos tipos se pueden compartir entre varias personas en la misma jornada — no hay exclusividad.
+  if(TIPOS_COMPARTIDOS_JORNADA[tipo])return null;
   var conflicto=null;
   Object.values(tareas||{}).forEach(function(t){
     if(conflicto)return;
@@ -16659,6 +16675,8 @@ window.editarColacion=function(colKey,actual){
 document.getElementById('tTip').addEventListener('change',function(){
   var box=document.getElementById('tPabHorario');
   if(box)box.style.display=(this.value==='pabellon'||this.value==='pabellon_asig')?'flex':'none';
+  var secBox=document.getElementById('tSector');
+  if(secBox)secBox.style.display=TIPOS_COMPARTIDOS_JORNADA[this.value]?'block':'none';
 });
 document.getElementById('addPendBtn').addEventListener('click',function(){var d=document.getElementById('pD').value,a=document.getElementById('pA').value,h=document.getElementById('pH').value;if(!d||!a||!h)return;sRef('pendientes').push({dia:d,area:a,horario:h,auto:false}).then(function(){['pD','pA','pH'].forEach(function(id){document.getElementById(id).value='';});showSaved('pendSaved');renderPendList();});});
 document.getElementById('addLicBtn').addEventListener('click',function(){var n=document.getElementById('licN').value,ini=document.getElementById('licIni').value,fin=document.getElementById('licFin').value;var tipoAus=document.getElementById('licTipo').value||'licencia';if(!n||!ini||!fin){alert('Completa todos los campos.');return;}if(ini>fin){alert('Inicio debe ser antes que fin.');return;}var etiquetas={licencia:'Licencia médica',administrativo:'Permiso administrativo',vacaciones:'Vacaciones'};var lab=etiquetas[tipoAus]||'Ausencia';sRef('ausencias').push({nombre:n,tipo:tipoAus,tipoLabel:lab,inicio:ini,fin:fin,motivo:lab,estado:'aprobado',ts:Date.now()}).then(function(){var fechas=fechasRango(ini,fin);var dias=fechas.map(function(f){return diaDeDate(f);});var del=Object.entries(bloques).filter(function(e){return e[1].nombre===n&&dias.indexOf(e[1].dia)!==-1;});Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});['licN','licIni','licFin'].forEach(function(id){document.getElementById(id).value='';});showSaved('licSaved');});});
