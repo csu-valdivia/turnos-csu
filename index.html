@@ -4139,16 +4139,62 @@ function renderEditorTurnoSemana(nombre){
       '<select class="etSub" data-k="'+key+'" style="width:100%;font-size:12px;padding:6px">'+opcSub+'</select>'+
     '</div>';
   }).join('');
+  // 🔧 Tareas/roles técnicos asignados esta semana (autoclave, lavado, secado, recepción, entrega,
+  // almacenamiento, clínica privada, etc.) — antes solo se veían/asignaban en otra pantalla aparte.
+  var misTareas=Object.entries(tareas).filter(function(e){return e[1].nombre===nombre;})
+    .sort(function(a,b){var da=DIAS.indexOf(a[1].dia),db=DIAS.indexOf(b[1].dia);return da-db;});
+  var filasTareas=misTareas.map(function(e){
+    var tk=e[0],t=e[1];
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:5px">'+
+      '<span style="flex:1;font-size:12px;color:#fff">'+nombreRol(t.tipo)+' <span style="color:rgba(255,255,255,.4)">· '+t.dia+'</span> '+jornadaLabel(t.jornada)+'</span>'+
+      '<button onclick="quitarTareaEnEditor(\''+tk+'\',\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:2px 8px;font-family:inherit;cursor:pointer;font-size:11px">🗑</button>'+
+    '</div>';
+  }).join('');
+  var opcDiasTarea=DIAS.map(function(d){return '<option value="'+d+'">'+d+'</option>';}).join('');
+  var opcTiposTarea=Object.keys(TIPOS).map(function(k){return '<option value="'+k+'">'+TIPOS[k].e+' '+TIPOS[k].l+'</option>';}).join('');
+  var tareasSection='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">🔧 Tareas / dónde debe trabajar</p>'+
+    (filasTareas||'<div style="font-size:12px;color:rgba(255,255,255,.4);padding:6px 0 8px">Sin tareas asignadas esta semana.</div>')+
+    '<div style="display:flex;gap:6px;margin-top:8px">'+
+      '<select id="etNuevaTareaDia" style="flex:1;font-size:12px;padding:6px">'+opcDiasTarea+'</select>'+
+      '<select id="etNuevaTareaJornada" style="width:auto;font-size:12px;padding:6px"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>'+
+    '</div>'+
+    '<select id="etNuevaTareaTipo" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
+    '<button onclick="agregarTareaEnEditor(\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="width:100%;margin-top:6px;background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">+ Agregar tarea/rol</button>';
   var nombreEsc=esc(nombre).replace(/'/g,"\\'");
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">✏️ Editar turno completo</div>'+
     '<div style="font-size:12px;color:#93c5fd;margin-bottom:14px">'+esc(nombre)+' · esta semana</div>'+
+    '<p style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">📍 Días, área y horario</p>'+
     (filas||'<div style="font-size:12px;color:rgba(255,255,255,.4);padding:10px 0 14px">Sin turnos esta semana.</div>')+
     '<button onclick="guardarEditorTurnoSemana(\''+nombreEsc+'\')" class="btn-add" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar todos los cambios</button>'+
     '<div id="etSaved" class="saved">✓ Guardado — así quedó su turno</div>'+
-    '<button onclick="document.getElementById(\'editTurnoSemanaOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    tareasSection+
+    '<button onclick="document.getElementById(\'editTurnoSemanaOv\').remove()" style="width:100%;margin-top:14px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button>'+
   '</div>';
 }
+
+window.agregarTareaEnEditor=function(nombre){
+  var dia=document.getElementById('etNuevaTareaDia').value;
+  var jornada=document.getElementById('etNuevaTareaJornada').value||'dia';
+  var tipo=document.getElementById('etNuevaTareaTipo').value;
+  if(!tipo){alert('Elige qué tarea o rol quieres asignar.');return;}
+  if(TIPOS_MEDIBLES[tipo]){
+    var conflicto=tareaYaAsignada(tipo,dia,jornada,nombre);
+    if(conflicto){alert('⛔ "'+(TIPOS[tipo]||{l:tipo}).l+'" ya está asignada ese día/jornada a '+conflicto.nombre+'. Elige otro día, jornada o quítasela primero a esa persona.');return;}
+  }
+  sRef('tareas').push({dia:dia,nombre:nombre,tipo:tipo,texto:'',jornada:jornada}).then(function(){
+    if(typeof renderMisTurnos==='function')renderMisTurnos(nombre);
+    renderEditorTurnoSemana(nombre);
+  });
+};
+
+window.quitarTareaEnEditor=function(tareaKey,nombre){
+  if(!confirm('¿Quitar esta tarea/rol asignado?'))return;
+  sRef('tareas/'+tareaKey).remove().then(function(){
+    if(typeof renderMisTurnos==='function')renderMisTurnos(nombre);
+    renderEditorTurnoSemana(nombre);
+  });
+};
 
 window.quitarFilaTurnoSemana=function(bloqueKey,nombre){
   var b=bloques[bloqueKey];if(!b)return;
