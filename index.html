@@ -986,7 +986,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pabellon_asig">🏥 Pabellón (asignado pre/post)</option><option value="pedido">🟠 Pedido de bodega (semanal · corte 13:00)</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Recepción material contaminado</option><option value="inst_lavado">🧼 Instrumental lavado</option><option value="inst_empaque">📦 Instrumental empaquetado</option><option value="inst_secado">💨 Instrumental secado</option><option value="entrega_esteril">📤 Entrega material estéril</option><option value="almacen_ester">🗄️ Almacenamiento (gabetas)</option><option value="clinica_privada">🏷️ Clínica privada</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pabellon_asig">🏥 Pabellón (asignado pre/post)</option><option value="pedido">🟠 Pedido de bodega (semanal · corte 13:00)</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Recepción de contaminado</option><option value="inst_lavado">🧼 Lavado de instrumental</option><option value="inst_empaque">📦 Empaque de instrumental</option><option value="inst_secado">💨 Secado de instrumental</option><option value="entrega_esteril">📤 Entrega de material estéril</option><option value="almacen_ester">🗄️ Almacenamiento de material</option><option value="clinica_privada">🏷️ Clínica privada</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
             <textarea class="atxt" id="tTxt" placeholder="Descripción (opcional)..."></textarea>
@@ -1426,7 +1426,7 @@ function jornadaLabel(j){
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pabellon_asig:{e:'🏥',l:'Pabellón (asignado pre/post)'},pedido:{e:'🟠',l:'Pedido de bodega (semanal)'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Recepción material contaminado'},inst_lavado:{e:'🧼',l:'Instrumental lavado'},inst_empaque:{e:'📦',l:'Instrumental empaquetado'},inst_secado:{e:'💨',l:'Instrumental secado'},entrega_esteril:{e:'📤',l:'Entrega material estéril'},almacen_ester:{e:'🗄️',l:'Almacenamiento (gabetas)'},clinica_privada:{e:'🏷️',l:'Clínica privada'},apoyo_clinico:{e:'🩺',l:'Apoyo clínico'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pabellon_asig:{e:'🏥',l:'Pabellón (asignado pre/post)'},pedido:{e:'🟠',l:'Pedido de bodega (semanal)'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Recepción de contaminado'},inst_lavado:{e:'🧼',l:'Lavado de instrumental'},inst_empaque:{e:'📦',l:'Empaque de instrumental'},inst_secado:{e:'💨',l:'Secado de instrumental'},entrega_esteril:{e:'📤',l:'Entrega de material estéril'},almacen_ester:{e:'🗄️',l:'Almacenamiento de material'},clinica_privada:{e:'🏷️',l:'Clínica privada'},apoyo_clinico:{e:'🩺',l:'Apoyo clínico'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Catálogo de roles técnicos: cada uno abre una funcionalidad de registro en Mis Turnos.
 // tipo = valor de la tarea; fn = función que abre el registro. Ampliable por el admin vía rolesTecnicos.
 var ROLES_TECNICOS_BASE={
@@ -1443,7 +1443,7 @@ var ROLES_TECNICOS_BASE={
   // ellos — la carga se sigue estimando (TIEMPOS_TRABAJO) y siguen en TIPOS/TIPOS_MEDIBLES para la
   // exclusividad de puesto, pero al no tener 'fn' aquí no aparece botón de registro de cantidad,
   // y TIPOS_SIN_MEDICION los excluye del cálculo de cumplimiento (ver más abajo).
-  almacen_ester:{emoji:'🗄️',label:'Almacenamiento',desc:'Material que sale del autoclave y se guarda en gabetas de estudiantes (diario · T1)',fn:'abrirRegProduccion'},
+  almacen_ester:{emoji:'🗄️',label:'Almacenamiento de material',desc:'Material que sale del autoclave y se guarda en gabetas de estudiantes (diario · T1)',fn:'abrirRegProduccion'},
   pabellon_asig:{emoji:'🏥',label:'Pabellón (asignado)',desc:'Pre-cx: espacio y material ok · Post-cx: recibe, lava y seca el instrumental (según asignación puntual)',fn:'abrirRegPabellonAsig'},
   pedido:{emoji:'🟠',label:'Pedido de bodega',desc:'1 vez a la semana, debe registrarse antes de las 13:00 AM',fn:'abrirRegPedido'},
   clinica_privada:{emoji:'🏷️',label:'Clínica privada',desc:'Tarea general de apoyo a clínica privada (diario, puede tocarle a cualquiera)',fn:'abrirRegProduccion'},
@@ -1455,12 +1455,12 @@ var PRODUCCION_TIPOS={
   radiografias:{emoji:'🩻',label:'Radiografías',unidad:'radiografías',color:'#a78bfa'},
   dispensario_2:{emoji:'💊',label:'Dispensario 2° piso',unidad:'atenciones',color:'#f472b6'},
   dispensario_3:{emoji:'💊',label:'Dispensario 3° piso',unidad:'atenciones',color:'#fb7185'},
-  inst_recibido:{emoji:'📥',label:'Recepción material contaminado',unidad:'piezas',color:'#60a5fa'},
-  inst_lavado:{emoji:'🧼',label:'Instrumental lavado',unidad:'piezas',color:'#22d3ee'},
-  inst_empaque:{emoji:'📦',label:'Instrumental empaquetado',unidad:'paquetes',color:'#34d399'},
-  inst_secado:{emoji:'💨',label:'Instrumental secado',unidad:'piezas',color:'#fbbf24'},
-  entrega_esteril:{emoji:'📤',label:'Entrega material estéril',unidad:'estudiantes',color:'#f97316'},
-  almacen_ester:{emoji:'🗄️',label:'Almacenamiento',unidad:'paquetes',color:'#22d3ee'},
+  inst_recibido:{emoji:'📥',label:'Recepción de contaminado',unidad:'piezas',color:'#60a5fa'},
+  inst_lavado:{emoji:'🧼',label:'Lavado de instrumental',unidad:'piezas',color:'#22d3ee'},
+  inst_empaque:{emoji:'📦',label:'Empaque de instrumental',unidad:'paquetes',color:'#34d399'},
+  inst_secado:{emoji:'💨',label:'Secado de instrumental',unidad:'piezas',color:'#fbbf24'},
+  entrega_esteril:{emoji:'📤',label:'Entrega de material estéril',unidad:'estudiantes',color:'#f97316'},
+  almacen_ester:{emoji:'🗄️',label:'Almacenamiento de material',unidad:'paquetes',color:'#22d3ee'},
   clinica_privada:{emoji:'🏷️',label:'Clínica privada',unidad:'pacientes',color:'#c084fc'},
   apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',unidad:'pacientes',color:'#ec4899',max:4}
 };
@@ -3468,7 +3468,7 @@ function chequearVentanaHoraria(){
   // Tareas medibles de esta persona para hoy en la jornada de la ventana activa (o todo el día)
   var misTareas=Object.values(tareas||{}).filter(function(t){
     if(t.nombre!==curNombre||t.dia!==diaHoy)return false;
-    if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo])return false;
+    if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return false;
     var jt=t.jornada||'dia';
     // La tarea aplica si su jornada coincide con la ventana activa, o si es 'dia'
     return jt===va.jornada||jt==='dia'||va.jornada==='dia';
@@ -3600,7 +3600,7 @@ function chequearPendientesMediodia(){
   var hoy=hoyStr();
   var diaHoy=diaDeFecha(hoy);
   var misTareas=Object.values(tareas||{}).filter(function(t){
-    return t.nombre===curNombre&&t.dia===diaHoy&&TIPOS_MEDIBLES[t.tipo]&&!TIPOS_SEMANALES[t.tipo];
+    return t.nombre===curNombre&&t.dia===diaHoy&&TIPOS_MEDIBLES[t.tipo]&&!TIPOS_SEMANALES[t.tipo]&&!TIPOS_SIN_MEDICION[t.tipo];
   });
   if(!misTareas.length)return; // sin tareas medibles hoy → nada
   var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy).cumplido;});
@@ -4145,14 +4145,16 @@ function renderEditorTurnoSemana(nombre){
     .sort(function(a,b){var da=DIAS.indexOf(a[1].dia),db=DIAS.indexOf(b[1].dia);return da-db;});
   var filasTareas=misTareas.map(function(e){
     var tk=e[0],t=e[1];
+    var soloAsig=TIPOS_SIN_MEDICION[t.tipo]?' <span style="color:#93c5fd;font-size:10px">(solo asignación, no mide cantidad)</span>':'';
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:5px">'+
-      '<span style="flex:1;font-size:12px;color:#fff">'+nombreRol(t.tipo)+' <span style="color:rgba(255,255,255,.4)">· '+t.dia+'</span> '+jornadaLabel(t.jornada)+'</span>'+
+      '<span style="flex:1;font-size:12px;color:#fff">'+nombreRol(t.tipo)+' <span style="color:rgba(255,255,255,.4)">· '+t.dia+'</span> '+jornadaLabel(t.jornada)+soloAsig+'</span>'+
       '<button onclick="quitarTareaEnEditor(\''+tk+'\',\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:2px 8px;font-family:inherit;cursor:pointer;font-size:11px">🗑</button>'+
     '</div>';
   }).join('');
   var opcDiasTarea=DIAS.map(function(d){return '<option value="'+d+'">'+d+'</option>';}).join('');
-  var opcTiposTarea=Object.keys(TIPOS).map(function(k){return '<option value="'+k+'">'+TIPOS[k].e+' '+TIPOS[k].l+'</option>';}).join('');
+  var opcTiposTarea=Object.keys(TIPOS).map(function(k){return '<option value="'+k+'">'+TIPOS[k].e+' '+TIPOS[k].l+(TIPOS_SIN_MEDICION[k]?' (solo asignación)':'')+'</option>';}).join('');
   var tareasSection='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">🔧 Tareas / dónde debe trabajar</p>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Esto asigna el PUESTO donde trabaja ese día. Las que dicen "solo asignación" no piden cantidad — el desempeño se mide con métricas aparte, independientes de la actividad.</div>'+
     (filasTareas||'<div style="font-size:12px;color:rgba(255,255,255,.4);padding:6px 0 8px">Sin tareas asignadas esta semana.</div>')+
     '<div style="display:flex;gap:6px;margin-top:8px">'+
       '<select id="etNuevaTareaDia" style="flex:1;font-size:12px;padding:6px">'+opcDiasTarea+'</select>'+
@@ -6655,7 +6657,7 @@ function calcCumplimientoSemanaPersona(nombre){
     if(esFeriado(diaSem))continue;
     Object.values(tareas||{}).forEach(function(t){
       if(t.nombre!==nombre||t.dia!==diaSem)return;
-      if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo])return;
+      if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
       asig++;
       if(verificarCumplimiento(t.tipo,fechaD).cumplido)cumpl++;
     });
@@ -7067,6 +7069,7 @@ function calcPuntajeSupDia(nombre,fecha){
 function calcCumplimientoTareas(nombre,fecha){
   var diaSem=diaDeDate(fecha);
   var asignadas=Object.values(tareas||{}).filter(function(t){
+    if(TIPOS_SIN_MEDICION[t.tipo])return false;
     return t.nombre===nombre&&t.dia===diaSem&&(TIPOS_MEDIBLES[t.tipo]||(rolesTecnicos&&rolesTecnicos[t.tipo]));
   });
   if(!asignadas.length)return null; // no tiene tareas medibles ese día
@@ -11445,7 +11448,7 @@ function calcCumplimientoEquipoMes(mes){
     var fechaD=mes+'-'+('0'+d).slice(-2);
     var diaSem=diaDeFecha(fechaD);
     Object.values(tareas||{}).forEach(function(t){
-      if(t.dia!==diaSem||!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo])return;
+      if(t.dia!==diaSem||!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
       asig++;
       if(verificarCumplimiento(t.tipo,fechaD).cumplido)cumpl++;
     });
@@ -14034,13 +14037,18 @@ function verificarCumplimiento(tipo,fecha){
 function nombreRol(tipo){
   if(ROLES_TECNICOS_BASE[tipo])return ROLES_TECNICOS_BASE[tipo].emoji+' '+ROLES_TECNICOS_BASE[tipo].label;
   if(rolesTecnicos&&rolesTecnicos[tipo])return rolesTecnicos[tipo].emoji+' '+rolesTecnicos[tipo].nombre;
-  var otros={reas:'♻️ REAS',conductividad:'💧 Conductividad',pedido:'🟠 Pedido',pabellon:'🔵 Pabellón'};
-  return otros[tipo]||tipo;
+  if(TIPOS[tipo])return TIPOS[tipo].e+' '+TIPOS[tipo].l;
+  return tipo;
 }
 
-// Tipos que son "medibles" (tienen registro verificable)
+// Tipos que son "medibles" (tienen registro verificable) — también se usa para exigir exclusividad
+// de puesto (una misma tarea no puede quedar asignada a 2 personas la misma jornada).
 var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario_2:1,dispensario_3:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1,apoyo_clinico:1,almacen_ester:1,pabellon_asig:1,pedido:1,clinica_privada:1};
 var TIPOS_SEMANALES={aseo:1,reas:1,pedido:1}; // tareas que se controlan 1 vez por semana, no diariamente (pedido igual se penaliza si no se hace antes de las 13:00 del día asignado)
+// Puestos/actividades que SÍ exigen exclusividad (van en TIPOS_MEDIBLES) pero NO se miden por cantidad
+// ni se cuentan como pendiente/cumplido en Control de Cumplimiento: son solo el lugar donde trabaja la
+// persona ese día. Las métricas reales de desempeño se asignan aparte, independientes de la actividad.
+var TIPOS_SIN_MEDICION={inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1};
 
 // ══════════════ QUIÉN NO TIENE ASIGNACIONES ══════════════
 // Cruza el equipo (nombres) con turnos, tareas/roles y subbodegas.
@@ -14747,6 +14755,7 @@ function renderControlCumplimiento(){
   var diaHoy=diaDeFecha(hoy);
   // 1. PENDIENTES DE HOY: solo tareas DIARIAS asignadas hoy
   var asignadosHoy=Object.values(tareas||{}).filter(function(t){
+    if(TIPOS_SIN_MEDICION[t.tipo])return false;
     return t.dia===diaHoy&&!TIPOS_SEMANALES[t.tipo]&&(TIPOS_MEDIBLES[t.tipo]||(rolesTecnicos&&rolesTecnicos[t.tipo]));
   });
   var pendientes=[],cumplidos=[];
@@ -14847,6 +14856,7 @@ function renderControlCumplimiento(){
     Object.values(tareas||{}).forEach(function(t){
       if(t.dia!==diaSemD)return;
       if(TIPOS_SEMANALES[t.tipo])return; // semanales aparte
+      if(TIPOS_SIN_MEDICION[t.tipo])return; // solo asignación de puesto, no se mide cantidad
       if(!TIPOS_MEDIBLES[t.tipo]&&!(rolesTecnicos&&rolesTecnicos[t.tipo]))return;
       var s=num(t.nombre);s.diaAsig++;
       if(verificarCumplimiento(t.tipo,fechaD).cumplido)s.diaCumpl++;
