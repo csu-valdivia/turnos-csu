@@ -9411,6 +9411,23 @@ function primerAccesoArea(accesos,area){
 }
 
 function sumarDias(fechaStr,n){var d=new Date(fechaStr+'T12:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+// Cumplimiento por persona = promedio de (cobertura de ingreso, cobertura de respuesta) sobre los días
+// hábiles que le correspondían esa semana. null cuando aún no hay ningún día de referencia (sin datos).
+function aplicarCumplimiento(filas,denom){
+  filas.forEach(function(f){
+    if(!denom){f.coberturaIngreso=null;f.coberturaRespuesta=null;f.cumplimiento=null;return;}
+    f.coberturaIngreso=Math.round(f.diasIngreso/denom*100);
+    f.coberturaRespuesta=Math.round(f.diasRespondio/denom*100);
+    f.cumplimiento=Math.round((f.coberturaIngreso+f.coberturaRespuesta)/2);
+  });
+}
+function nivelCumplimiento(pct){
+  if(pct==null)return {texto:'Sin datos aún',color:'#94a3b8',barra:'rgba(148,163,184,.5)'};
+  if(pct>=90)return {texto:'Cumplimiento total',color:'#6ee7b7',barra:'rgba(16,185,129,.75)'};
+  if(pct>=70)return {texto:'Buen cumplimiento',color:'#93c5fd',barra:'rgba(59,130,246,.7)'};
+  if(pct>=50)return {texto:'Cumplimiento regular',color:'#fcd34d',barra:'rgba(245,158,11,.7)'};
+  return {texto:'Bajo cumplimiento',color:'#fca5a5',barra:'rgba(239,68,68,.75)'};
+}
 window.cambiarSemanaInforme=function(delta){
   var wo=(window._informeSemanalWeekOffset||0)+delta;
   if(wo>0)wo=0; // no se puede ir a semanas futuras
@@ -9444,15 +9461,17 @@ function renderInformeSemanal(){
   var ov=document.getElementById('informeSemanalOv');if(!ov)return;
   var data=window._informeSemanalData;
   var hoy=hoyStr();
-  var lunes=lunesDeSemana(hoy);
-  var finSemana=diasHabilesEntre(lunes,hoy).slice(-1)[0]||hoy; // último día hábil transcurrido
-  var fechasSemanaHabiles=diasHabilesEntre(lunes,hoy);
+  var weekOffset=window._informeSemanalWeekOffset||0;
+  var esSemanaActual=(weekOffset===0);
+  var lunes=sumarDias(lunesDeSemana(hoy),weekOffset*7);
+  var finSemana=esSemanaActual?hoy:sumarDias(lunes,4); // semana pasada: hasta el viernes de esa semana
+  var fechasSemanaHabiles=diasHabilesEntre(lunes,finSemana);
 
   // ── Administrativos ──
   var listaAdmin=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:(typeof secretarias[k]==='object'?secretarias[k].nombre:secretarias[k])};}).filter(function(p){return p.nombre;});
   var primerIngresoAdmin=primerAccesoArea(data.accesos,'administrativo');
-  // El equipo administrativo se mide desde que existe registro de ingresos, o desde el lunes si ya hay historial previo
-  var fechasAdmin=primerIngresoAdmin&&primerIngresoAdmin>lunes?diasHabilesEntre(primerIngresoAdmin,hoy):fechasSemanaHabiles;
+  // El equipo administrativo se mide desde que existe registro de ingresos, o desde el lunes de esa semana si ya hay historial previo
+  var fechasAdmin=primerIngresoAdmin&&primerIngresoAdmin>lunes?diasHabilesEntre(primerIngresoAdmin,finSemana):fechasSemanaHabiles;
   var filasAdmin=listaAdmin.map(function(p){
     var ing=diasIngresoEnRango(data.accesos,p.nombre,'administrativo',fechasAdmin);
     var regs=registrosRankingEnRango(data.rankingAdmin,p.key,fechasAdmin);
@@ -9460,13 +9479,17 @@ function renderInformeSemanal(){
     var pend=estadoPendientePersonaRol(p.nombre);
     return {nombre:p.nombre,diasIngreso:ing.diasDistintos,aperturas:ing.totalAperturas,diasRespondio:regs.length,promedio:prom,pendiente:pend};
   });
+  aplicarCumplimiento(filasAdmin,fechasAdmin.length);
 
   // ── Docentes ──
   var listaDoc=Object.keys(docentes||{}).map(function(k){return {key:k,nombre:docentes[k].nombre,carrera:docentes[k].carrera};}).filter(function(p){return p.nombre;});
   var primerRegistroDocGlobal=null;
   listaDoc.forEach(function(p){var f=primerRegistroRanking(data.rankingDocente,p.key);if(f&&(!primerRegistroDocGlobal||f<primerRegistroDocGlobal))primerRegistroDocGlobal=f;});
-  var docenciaRecienInicia=!primerRegistroDocGlobal||primerRegistroDocGlobal>=lunes;
-  var fechasDoc=(primerRegistroDocGlobal&&primerRegistroDocGlobal<lunes)?diasHabilesEntre(primerRegistroDocGlobal,hoy):fechasSemanaHabiles;
+  // ¿Docencia ya tenía registros de cuestionario DENTRO de la semana que se está viendo?
+  var docenciaSinDatosEnEstaSemana=!primerRegistroDocGlobal||primerRegistroDocGlobal>finSemana;
+  var docenciaComienzaEnEstaSemana=primerRegistroDocGlobal&&primerRegistroDocGlobal>=lunes&&primerRegistroDocGlobal<=finSemana;
+  var docenciaRecienInicia=docenciaSinDatosEnEstaSemana||docenciaComienzaEnEstaSemana;
+  var fechasDoc=(primerRegistroDocGlobal&&primerRegistroDocGlobal<lunes)?diasHabilesEntre(primerRegistroDocGlobal,finSemana):fechasSemanaHabiles;
   var filasDoc=listaDoc.map(function(p){
     var ing=diasIngresoEnRango(data.accesos,p.nombre,'docente',fechasDoc);
     var regs=registrosRankingEnRango(data.rankingDocente,p.key,fechasDoc);
@@ -9474,15 +9497,16 @@ function renderInformeSemanal(){
     var pend=estadoPendientePersonaRol(p.nombre);
     return {nombre:p.nombre,carrera:p.carrera,diasIngreso:ing.diasDistintos,aperturas:ing.totalAperturas,diasRespondio:regs.length,promedio:prom,pendiente:pend};
   });
+  aplicarCumplimiento(filasDoc,fechasDoc.length);
 
-  // ── Pendientes de hoy (quién no ha respondido hoy) ──
-  var noRespondioHoyAdmin=listaAdmin.filter(function(p){var ck=p.key;return !(fichaProgresoAdmin[ck]&&fichaProgresoAdmin[ck].fecha===hoy);}).map(function(p){return p.nombre;});
-  var noRespondioHoyDoc=listaDoc.filter(function(p){return !(fichaProgresoDocente[p.key]&&fichaProgresoDocente[p.key].fecha===hoy);}).map(function(p){return p.nombre;});
+  // ── Pendientes de hoy (quién no ha respondido hoy) — solo tiene sentido en la semana actual ──
+  var noRespondioHoyAdmin=esSemanaActual?listaAdmin.filter(function(p){var ck=p.key;return !(fichaProgresoAdmin[ck]&&fichaProgresoAdmin[ck].fecha===hoy);}).map(function(p){return p.nombre;}):[];
+  var noRespondioHoyDoc=esSemanaActual?listaDoc.filter(function(p){return !(fichaProgresoDocente[p.key]&&fichaProgresoDocente[p.key].fecha===hoy);}).map(function(p){return p.nombre;}):[];
   var sinPregAdmin=listaAdmin.filter(function(p){return !!estadoPendientePersonaRol(p.nombre);});
   var sinPregDoc=listaDoc.filter(function(p){return !!estadoPendientePersonaRol(p.nombre);});
 
   window._informeSemanalCalc={filasAdmin:filasAdmin,filasDoc:filasDoc,fechasAdmin:fechasAdmin,fechasDoc:fechasDoc,
-    lunes:lunes,hoy:hoy,docenciaRecienInicia:docenciaRecienInicia,primerRegistroDocGlobal:primerRegistroDocGlobal,
+    lunes:lunes,hoy:hoy,finSemana:finSemana,esSemanaActual:esSemanaActual,docenciaRecienInicia:docenciaRecienInicia,primerRegistroDocGlobal:primerRegistroDocGlobal,
     primerIngresoAdmin:primerIngresoAdmin,noRespondioHoyAdmin:noRespondioHoyAdmin,noRespondioHoyDoc:noRespondioHoyDoc,
     sinPregAdmin:sinPregAdmin,sinPregDoc:sinPregDoc};
 
@@ -9512,9 +9536,13 @@ function renderInformeSemanal(){
       '<span style="font-size:18px;font-weight:800;color:#7ec8f7">📅 Informe semanal — Admin y Docencia</span>'+
       '<button onclick="document.getElementById(\'informeSemanalOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Semana del '+fmtFechaCorta(lunes)+' al '+fmtFechaCorta(hoy)+' (días hábiles transcurridos)</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px">'+
+      '<button onclick="cambiarSemanaInforme(-1)" style="background:rgba(255,255,255,.08);color:#93c5fd;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;font-size:12px;cursor:pointer">◀ Semana anterior</button>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;flex:1">Semana del '+fmtFechaCorta(lunes)+' al '+fmtFechaCorta(finSemana)+(esSemanaActual?' (en curso)':'')+'</div>'+
+      (esSemanaActual?'<span style="width:112px"></span>':'<button onclick="cambiarSemanaInforme(1)" style="background:rgba(255,255,255,.08);color:#93c5fd;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;font-size:12px;cursor:pointer">Semana siguiente ▶</button>')+
+    '</div>'+
     '<button onclick="copiarInformeSemanal()" class="btn-add" style="background:linear-gradient(135deg,#2563eb,#38bdf8);margin-bottom:14px" id="copiarInformeBtn">📋 Copiar informe para enviar a gerencia</button>'+
-    (primerIngresoAdminNota(primerIngresoAdmin,lunes))+
+    (esSemanaActual?primerIngresoAdminNota(primerIngresoAdmin,lunes):'')+
     '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px">🗂️ Equipo administrativo <span style="font-size:11px;color:rgba(255,255,255,.4)">('+filasAdmin.length+')</span></div>'+
       '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Cobertura de ingreso: '+resAdmin.covIngreso+'% · Cobertura de respuesta: '+resAdmin.covRespuesta+'%</div>'+
@@ -9522,17 +9550,23 @@ function renderInformeSemanal(){
     '</div>'+
     '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:6px">🎓 Docencia <span style="font-size:11px;color:rgba(255,255,255,.4)">('+filasDoc.length+')</span></div>'+
-      (docenciaRecienInicia?'<div style="font-size:11px;color:#fcd34d;margin-bottom:8px">🆕 Docencia recién está comenzando a responder cuestionarios'+(primerRegistroDocGlobal?' (primer registro: '+fmtFechaCorta(primerRegistroDocGlobal)+')':' — aún sin registros esta semana')+'. No se compara con el ritmo del área administrativa.</div>':
+      (docenciaRecienInicia?'<div style="font-size:11px;color:#fcd34d;margin-bottom:8px">'+(docenciaSinDatosEnEstaSemana?'Docencia aún no tenía registros de cuestionario en esta semana.':'🆕 Docencia comenzó a responder cuestionarios esta semana (primer registro: '+fmtFechaCorta(primerRegistroDocGlobal)+'). No se compara con el ritmo del área administrativa.')+'</div>':
         '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Cobertura de ingreso: '+resDoc.covIngreso+'% · Cobertura de respuesta: '+resDoc.covRespuesta+'%</div>')+
       (filasDoc.length?filasDoc.map(function(f){return filaHtml(f,true);}).join(''):'<div style="font-size:12px;color:rgba(255,255,255,.4)">Sin docentes registrados aún.</div>')+
     '</div>'+
+    (esSemanaActual?(
     '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:700;color:#f87171;margin-bottom:8px">🔔 Pendientes de hoy ('+hoy+')</div>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px"><b>Administrativos sin responder hoy:</b> '+(noRespondioHoyAdmin.length?esc(noRespondioHoyAdmin.join(', ')):'✅ todos respondieron')+'</div>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px"><b>Docentes sin responder hoy:</b> '+(noRespondioHoyDoc.length?esc(noRespondioHoyDoc.join(', ')):'✅ todos respondieron')+'</div>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px"><b>Administrativos sin protocolo/preguntas activadas:</b> '+(sinPregAdmin.length?esc(sinPregAdmin.map(function(p){return p.nombre;}).join(', ')):'✅ ninguno')+'</div>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.6)"><b>Docentes sin protocolo/preguntas activadas:</b> '+(sinPregDoc.length?esc(sinPregDoc.map(function(p){return p.nombre;}).join(', ')):'✅ ninguno')+'</div>'+
-    '</div>'+
+    '</div>'
+    ):(
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.4)">🔔 La sección de "pendientes de hoy" solo aplica a la semana en curso — vuelve a la semana actual para verla.</div>'+
+    '</div>'
+    ))+
     '<textarea id="informeSemanalTexto" readonly style="width:100%;min-height:220px;font-family:monospace;font-size:11px;background:#0b1220;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px;margin-top:4px" onclick="this.select()"></textarea>'+
     '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:6px">Si el botón de copiar no funciona en tu navegador, toca el cuadro de texto de arriba para seleccionarlo todo y copiar manualmente.</div>'+
   '</div>';
@@ -9547,11 +9581,10 @@ function generarTextoInformeSemanal(){
   var c=window._informeSemanalCalc;if(!c)return '';
   var L=[];
   L.push('📊 INFORME SEMANAL — GESTHOR');
-  L.push('Semana del '+fmtFechaCorta(c.lunes)+' al '+fmtFechaCorta(c.hoy)+' (generado '+fmtFechaCorta(c.hoy)+')');
+  L.push('Semana del '+fmtFechaCorta(c.lunes)+' al '+fmtFechaCorta(c.finSemana)+(c.esSemanaActual?' (en curso)':'')+' (generado '+fmtFechaCorta(c.hoy)+')');
   L.push('');
   L.push('🗂️ EQUIPO ADMINISTRATIVO ('+c.filasAdmin.length+' personas)');
-  if(c.primerIngresoAdmin&&c.primerIngresoAdmin<c.lunes){/* sin nota */}
-  else L.push('ℹ️ Registro de ingresos activo desde '+(c.primerIngresoAdmin?fmtFechaCorta(c.primerIngresoAdmin):fmtFechaCorta(c.hoy))+' — días anteriores no cuentan con dato de ingreso.');
+  if(c.esSemanaActual&&(!c.primerIngresoAdmin||c.primerIngresoAdmin>=c.lunes))L.push('ℹ️ Registro de ingresos activo desde '+(c.primerIngresoAdmin?fmtFechaCorta(c.primerIngresoAdmin):fmtFechaCorta(c.hoy))+' — días anteriores no cuentan con dato de ingreso.');
   if(!c.filasAdmin.length)L.push('— Sin personas registradas aún.');
   c.filasAdmin.forEach(function(f){
     var pendTxt=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].texto:'pendiente'):'al día';
@@ -9560,7 +9593,9 @@ function generarTextoInformeSemanal(){
   L.push('');
   L.push('🎓 DOCENCIA ('+c.filasDoc.length+' personas)');
   if(c.docenciaRecienInicia){
-    L.push('🆕 Docencia recién está comenzando a responder cuestionarios'+(c.primerRegistroDocGlobal?' (primer registro: '+fmtFechaCorta(c.primerRegistroDocGlobal)+')':' — aún sin registros')+'. No es comparable todavía con el ritmo del área administrativa.');
+    L.push(c.primerRegistroDocGlobal&&c.primerRegistroDocGlobal<=c.finSemana?
+      '🆕 Docencia comenzó a responder cuestionarios esta semana (primer registro: '+fmtFechaCorta(c.primerRegistroDocGlobal)+'). No es comparable todavía con el ritmo del área administrativa.':
+      'Docencia aún no tenía registros de cuestionario en esta semana.');
   }
   if(!c.filasDoc.length)L.push('— Sin docentes registrados aún.');
   c.filasDoc.forEach(function(f){
@@ -9568,12 +9603,14 @@ function generarTextoInformeSemanal(){
     L.push('— '+f.nombre+(f.carrera?' ('+f.carrera+')':'')+': ingresó '+f.diasIngreso+' día(s) ('+f.aperturas+' apertura(s)) · respondió '+f.diasRespondio+' vez/veces · promedio '+(f.promedio!=null?f.promedio+'%':'—')+' · '+pendTxt);
   });
   L.push('');
-  L.push('🔔 PENDIENTES DE HOY ('+c.hoy+')');
-  L.push('Administrativos sin responder hoy: '+(c.noRespondioHoyAdmin.length?c.noRespondioHoyAdmin.join(', '):'ninguno — todos respondieron'));
-  L.push('Docentes sin responder hoy: '+(c.noRespondioHoyDoc.length?c.noRespondioHoyDoc.join(', '):'ninguno — todos respondieron'));
-  L.push('Administrativos sin protocolo/preguntas activadas: '+(c.sinPregAdmin.length?c.sinPregAdmin.map(function(p){return p.nombre;}).join(', '):'ninguno'));
-  L.push('Docentes sin protocolo/preguntas activadas: '+(c.sinPregDoc.length?c.sinPregDoc.map(function(p){return p.nombre;}).join(', '):'ninguno'));
-  L.push('');
+  if(c.esSemanaActual){
+    L.push('🔔 PENDIENTES DE HOY ('+c.hoy+')');
+    L.push('Administrativos sin responder hoy: '+(c.noRespondioHoyAdmin.length?c.noRespondioHoyAdmin.join(', '):'ninguno — todos respondieron'));
+    L.push('Docentes sin responder hoy: '+(c.noRespondioHoyDoc.length?c.noRespondioHoyDoc.join(', '):'ninguno — todos respondieron'));
+    L.push('Administrativos sin protocolo/preguntas activadas: '+(c.sinPregAdmin.length?c.sinPregAdmin.map(function(p){return p.nombre;}).join(', '):'ninguno'));
+    L.push('Docentes sin protocolo/preguntas activadas: '+(c.sinPregDoc.length?c.sinPregDoc.map(function(p){return p.nombre;}).join(', '):'ninguno'));
+    L.push('');
+  }
   L.push('Generado automáticamente por GESTHOR.');
   return L.join('\n');
 }
