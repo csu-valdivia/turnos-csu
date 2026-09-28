@@ -9413,6 +9413,12 @@ function primerAccesoArea(accesos,area){
 }
 
 function sumarDias(fechaStr,n){var d=new Date(fechaStr+'T12:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+// El key de "secretarias" (sec_<timestamp>) NO es el mismo key con el que se guardan sus respuestas:
+// enviarPreguntasAdmin() guarda fichaProgresoAdmin/rankingAdmin.capacitacion usando el NOMBRE saneado
+// como key (nombre.replace(...)), no el key de secretarias. Sin esto, la búsqueda de respuestas de
+// administrativos siempre da 0 aunque la persona sí haya respondido — este helper reproduce esa
+// misma sanitización para poder encontrar sus registros.
+function claveDesdeNombre(nombre){return (nombre||'').replace(/[.#$/\[\]\s]/g,'_');}
 // Cumplimiento por persona = promedio de (cobertura de ingreso, cobertura de respuesta), cada una con
 // SU PROPIO denominador: el de ingreso se acorta a los días en que el registro de accesos ya existía
 // (denomIngreso), mientras que el de respuesta usa siempre la semana completa que se está viendo
@@ -9509,11 +9515,12 @@ function renderInformeSemanal(){
   var primerIngresoAdmin=primerAccesoArea(data.accesos,'administrativo');
   var fechasIngresoAdmin=primerIngresoAdmin?fechasSemanaHabiles.filter(function(f){return f>=primerIngresoAdmin;}):fechasSemanaHabiles;
   var filasAdmin=listaAdmin.map(function(p){
+    var ck=claveDesdeNombre(p.nombre); // key real de sus respuestas (no el key de secretarias)
     var ing=diasIngresoEnRango(data.accesos,p.nombre,'administrativo',fechasIngresoAdmin);
-    var regs=registrosRankingEnRango(data.rankingAdmin,p.key,fechasSemanaHabiles);
+    var regs=registrosRankingEnRango(data.rankingAdmin,ck,fechasSemanaHabiles);
     var prom=regs.length?Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length):null;
     var pend=estadoPendientePersonaRol(p.nombre);
-    return {nombre:p.nombre,diasIngreso:ing.diasDistintos,aperturas:ing.totalAperturas,diasRespondio:regs.length,promedio:prom,pendiente:pend};
+    return {nombre:p.nombre,claveResp:ck,diasIngreso:ing.diasDistintos,aperturas:ing.totalAperturas,diasRespondio:regs.length,promedio:prom,pendiente:pend};
   });
   aplicarCumplimiento(filasAdmin,fechasIngresoAdmin.length,fechasSemanaHabiles.length);
 
@@ -9537,7 +9544,7 @@ function renderInformeSemanal(){
   aplicarCumplimiento(filasDoc,fechasIngresoDoc.length,fechasSemanaHabiles.length);
 
   // ── Pendientes de hoy (quién no ha respondido hoy) — solo tiene sentido en la semana actual ──
-  var noRespondioHoyAdmin=esSemanaActual?listaAdmin.filter(function(p){var ck=p.key;return !(fichaProgresoAdmin[ck]&&fichaProgresoAdmin[ck].fecha===hoy);}).map(function(p){return p.nombre;}):[];
+  var noRespondioHoyAdmin=esSemanaActual?listaAdmin.filter(function(p){var ck=claveDesdeNombre(p.nombre);return !(fichaProgresoAdmin[ck]&&fichaProgresoAdmin[ck].fecha===hoy);}).map(function(p){return p.nombre;}):[];
   var noRespondioHoyDoc=esSemanaActual?listaDoc.filter(function(p){return !(fichaProgresoDocente[p.key]&&fichaProgresoDocente[p.key].fecha===hoy);}).map(function(p){return p.nombre;}):[];
   var sinPregAdmin=listaAdmin.filter(function(p){return !!estadoPendientePersonaRol(p.nombre);});
   var sinPregDoc=listaDoc.filter(function(p){return !!estadoPendientePersonaRol(p.nombre);});
