@@ -736,6 +736,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirGestionGerenciaBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">💼 Equipo de Gerencia</button>
             <button class="btn-add" id="abrirRecesoBtn" style="background:linear-gradient(135deg,#0369a1,#38bdf8);margin-top:6px">🏖️ Modo receso académico</button>
             <button class="btn-add" id="abrirRendimientoBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">💼 Rendimiento de dotación (confidencial)</button>
+            <button class="btn-add" id="abrirInformeSemanalBtn" style="background:linear-gradient(135deg,#0369a1,#2563eb);margin-top:6px">📅 Informe semanal (Admin y Docencia) — para enviar a gerencia</button>
           </div>
 
 
@@ -2094,6 +2095,7 @@ window.ingresarRol=function(rol){
       var _dc=document.getElementById('abrirCumplimientoBtn');if(_dc)_dc.onclick=abrirControlCumplimiento;
       var _sa=document.getElementById('abrirSinAsignarBtn');if(_sa)_sa.onclick=abrirSinAsignar;var _ct=document.getElementById('abrirCargaTrabajoBtn');if(_ct)_ct.onclick=abrirCargaTrabajo;
       var _rd=document.getElementById('abrirRendimientoBtn');if(_rd)_rd.onclick=abrirRendimiento;
+      var _is=document.getElementById('abrirInformeSemanalBtn');if(_is)_is.onclick=abrirInformeSemanal;
       var _bp=document.getElementById('abrirBorradoresBtn');if(_bp)_bp.onclick=abrirPanelBorradores;var _cp=document.getElementById('abrirCentroProtocolosBtn');if(_cp)_cp.onclick=abrirCentroProtocolos;var _gd=document.getElementById('abrirGestionDocentesBtn');if(_gd)_gd.onclick=abrirGestionDocentes;var _gg=document.getElementById('abrirGestionGerenciaBtn');if(_gg)_gg.onclick=abrirGestionGerencia;var _rc=document.getElementById('abrirRecesoBtn');if(_rc)_rc.onclick=abrirReceso;var _ph=document.getElementById('abrirPendientesHoyBtn');if(_ph)_ph.onclick=abrirPendientesHoy;var _sp=document.getElementById('abrirSinPreguntasBtn');if(_sp)_sp.onclick=abrirSinPreguntas;
       var _dm=document.getElementById('abrirDashMaestroBtn');if(_dm)_dm.onclick=abrirDashMaestro;
       if(typeof initHoraAvisoSelect==='function')initHoraAvisoSelect();if(typeof initPesosRanking==='function')initPesosRanking();if(typeof renderClasifPersonal==='function')renderClasifPersonal();if(typeof renderPlanEstudio==='function')renderPlanEstudio();if(typeof renderInduccionList==='function')renderInduccionList();
@@ -2968,6 +2970,17 @@ function renderAdminNombreSel(){
   cont.innerHTML=html;
 }
 
+// ── Registro de accesos por área (administrativo/docente) — usado por el Informe semanal para gerencia ──
+// Se registra una vez por sesión (al elegir/registrar el nombre), no en cada render, para no inflar el conteo.
+function registrarAccesoArea(nombre,area){
+  if(!nombre||!area)return;
+  var flagKey='_accesoReg_'+area+'_'+nombre;
+  if(window[flagKey])return; // ya registrado en esta sesión
+  window[flagKey]=true;
+  var ahora=new Date();
+  sedeRef('accesos').push({nombre:nombre,area:area,fecha:hoyStr(),hora:('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2),ts:Date.now()});
+}
+
 window.autoRegistrarAdmin=function(){
   var nombre=document.getElementById('adminAutoNombre').value.trim();
   var cargo=document.getElementById('adminAutoCargo').value;
@@ -2979,6 +2992,7 @@ window.autoRegistrarAdmin=function(){
   secretarias[key]={nombre:nombre,cargo:cargo,ts:Date.now()};
   sedeRef('secretarias/'+key).set({nombre:nombre,cargo:cargo,ts:Date.now()}).then(function(){
     window._adminNombre=nombre;
+    registrarAccesoArea(nombre,'administrativo');
     document.getElementById('adminTabs').style.display='flex';
     tabAdmin('material');
     setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(nombre);},900);
@@ -2991,6 +3005,7 @@ window.cargarPreguntasAdmin=function(){
   if(!nombre)return;
   window._adminNombre=nombre;
   window._adminKeyActual=Object.keys(secretarias||{}).find(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v)===nombre;});
+  registrarAccesoArea(nombre,'administrativo');
   document.getElementById('adminTabs').style.display='flex';
   tabAdmin('material');
   setTimeout(verificarRetroViernes,600);
@@ -9330,6 +9345,250 @@ function renderPendientesHoy(datos){
   ov.innerHTML=html;
 }
 
+// ══════════════ INFORME SEMANAL PARA GERENCIA (Admin + Docencia) ══════════════
+// Combina: accesos (cuántas veces entró cada persona), respuestas de cuestionario
+// (desde rankingAdmin.capacitacion / rankingDocente, que SÍ guardan historial completo,
+// a diferencia de fichaProgresoAdmin/Docente que solo guardan el día más reciente),
+// y pendientes estructurales (protocolo/preguntas sin activar). Cada equipo se evalúa
+// desde que realmente tiene datos (fecha de su primer registro), no desde el lunes a la fuerza,
+// para no penalizar a un equipo que recién está empezando (p.ej. Docencia).
+function diasHabilesEntre(fechaIniStr,fechaFinStr){
+  var out=[];
+  var d=new Date(fechaIniStr+'T12:00:00');
+  var fin=new Date(fechaFinStr+'T12:00:00');
+  while(d<=fin){
+    var dia=d.getDay();
+    if(dia!==0&&dia!==6)out.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+function lunesDeSemana(fechaStr){
+  var d=new Date(fechaStr+'T12:00:00');
+  var dia=d.getDay(); // 0=dom
+  var diff=(dia===0?-6:1-dia);
+  d.setDate(d.getDate()+diff);
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function fmtFechaCorta(fechaStr){
+  var p=fechaStr.split('-');return p[2]+'-'+p[1]+'-'+p[0];
+}
+// Aplana un nodo tipo rankingAdmin.capacitacion[key][mesKey][ts]={pct,fecha,...} o
+// rankingDocente[key][mesKey][ts]={...} y devuelve los registros cuya fecha cae en el rango dado.
+function registrosRankingEnRango(nodoPorKey,key,fechas){
+  var porMes=nodoPorKey&&nodoPorKey[key];if(!porMes)return [];
+  var out=[];
+  Object.keys(porMes).forEach(function(mesKey){
+    var entradas=porMes[mesKey];
+    if(entradas&&typeof entradas==='object'){
+      Object.values(entradas).forEach(function(e){if(e&&fechas.indexOf(e.fecha)>-1)out.push(e);});
+    }
+  });
+  return out;
+}
+// Primer registro histórico de una persona en ese nodo (para saber desde cuándo tiene datos)
+function primerRegistroRanking(nodoPorKey,key){
+  var porMes=nodoPorKey&&nodoPorKey[key];if(!porMes)return null;
+  var min=null;
+  Object.values(porMes).forEach(function(entradas){
+    if(entradas&&typeof entradas==='object'){
+      Object.values(entradas).forEach(function(e){if(e&&e.fecha&&(!min||e.fecha<min))min=e.fecha;});
+    }
+  });
+  return min;
+}
+function diasIngresoEnRango(accesos,nombre,area,fechas){
+  var dias={};var total=0;
+  Object.values(accesos||{}).forEach(function(a){
+    if(a&&a.nombre===nombre&&a.area===area&&fechas.indexOf(a.fecha)>-1){dias[a.fecha]=true;total++;}
+  });
+  return {diasDistintos:Object.keys(dias).length,totalAperturas:total};
+}
+function primerAccesoArea(accesos,area){
+  var min=null;
+  Object.values(accesos||{}).forEach(function(a){if(a&&a.area===area&&a.fecha&&(!min||a.fecha<min))min=a.fecha;});
+  return min;
+}
+
+window.abrirInformeSemanal=function(){
+  var ov=document.getElementById('informeSemanalOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='informeSemanalOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Generando informe...</div></div>';
+  document.body.appendChild(ov);
+  Promise.all([
+    sedeRef('secretarias').once('value'),sedeRef('docentes').once('value'),
+    sedeRef('accesos').once('value'),sedeRef('rankingAdmin').once('value'),sedeRef('rankingDocente').once('value'),
+    sedeRef('fichaProgresoAdmin').once('value'),sedeRef('fichaProgresoDocente').once('value'),
+    sedeRef('bibliotecaAdmin').once('value'),sedeRef('biblioteca').once('value'),sedeRef('gruposModulo').once('value'),
+    sedeRef('gerenciaEquipo').once('value')
+  ]).then(function(s){
+    secretarias=s[0].val()||{};docentes=s[1].val()||{};
+    var accesos=s[2].val()||{};var rankingAdminV=s[3].val()||{};var rankingDocenteV=s[4].val()||{};
+    fichaProgresoAdmin=s[5].val()||{};fichaProgresoDocente=s[6].val()||{};
+    bibliotecaAdmin=s[7].val()||{};biblioteca=s[8].val()||{};gruposModulo=s[9].val()||{};gerenciaEquipo=s[10].val()||{};
+    window._informeSemanalData={accesos:accesos,rankingAdmin:rankingAdminV.capacitacion||{},rankingDocente:rankingDocenteV};
+    renderInformeSemanal();
+  });
+};
+
+function renderInformeSemanal(){
+  var ov=document.getElementById('informeSemanalOv');if(!ov)return;
+  var data=window._informeSemanalData;
+  var hoy=hoyStr();
+  var lunes=lunesDeSemana(hoy);
+  var finSemana=diasHabilesEntre(lunes,hoy).slice(-1)[0]||hoy; // último día hábil transcurrido
+  var fechasSemanaHabiles=diasHabilesEntre(lunes,hoy);
+
+  // ── Administrativos ──
+  var listaAdmin=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:(typeof secretarias[k]==='object'?secretarias[k].nombre:secretarias[k])};}).filter(function(p){return p.nombre;});
+  var primerIngresoAdmin=primerAccesoArea(data.accesos,'administrativo');
+  // El equipo administrativo se mide desde que existe registro de ingresos, o desde el lunes si ya hay historial previo
+  var fechasAdmin=primerIngresoAdmin&&primerIngresoAdmin>lunes?diasHabilesEntre(primerIngresoAdmin,hoy):fechasSemanaHabiles;
+  var filasAdmin=listaAdmin.map(function(p){
+    var ing=diasIngresoEnRango(data.accesos,p.nombre,'administrativo',fechasAdmin);
+    var regs=registrosRankingEnRango(data.rankingAdmin,p.key,fechasAdmin);
+    var prom=regs.length?Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length):null;
+    var pend=estadoPendientePersonaRol(p.nombre);
+    return {nombre:p.nombre,diasIngreso:ing.diasDistintos,aperturas:ing.totalAperturas,diasRespondio:regs.length,promedio:prom,pendiente:pend};
+  });
+
+  // ── Docentes ──
+  var listaDoc=Object.keys(docentes||{}).map(function(k){return {key:k,nombre:docentes[k].nombre,carrera:docentes[k].carrera};}).filter(function(p){return p.nombre;});
+  var primerRegistroDocGlobal=null;
+  listaDoc.forEach(function(p){var f=primerRegistroRanking(data.rankingDocente,p.key);if(f&&(!primerRegistroDocGlobal||f<primerRegistroDocGlobal))primerRegistroDocGlobal=f;});
+  var docenciaRecienInicia=!primerRegistroDocGlobal||primerRegistroDocGlobal>=lunes;
+  var fechasDoc=(primerRegistroDocGlobal&&primerRegistroDocGlobal<lunes)?diasHabilesEntre(primerRegistroDocGlobal,hoy):fechasSemanaHabiles;
+  var filasDoc=listaDoc.map(function(p){
+    var ing=diasIngresoEnRango(data.accesos,p.nombre,'docente',fechasDoc);
+    var regs=registrosRankingEnRango(data.rankingDocente,p.key,fechasDoc);
+    var prom=regs.length?Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length):null;
+    var pend=estadoPendientePersonaRol(p.nombre);
+    return {nombre:p.nombre,carrera:p.carrera,diasIngreso:ing.diasDistintos,aperturas:ing.totalAperturas,diasRespondio:regs.length,promedio:prom,pendiente:pend};
+  });
+
+  // ── Pendientes de hoy (quién no ha respondido hoy) ──
+  var noRespondioHoyAdmin=listaAdmin.filter(function(p){var ck=p.key;return !(fichaProgresoAdmin[ck]&&fichaProgresoAdmin[ck].fecha===hoy);}).map(function(p){return p.nombre;});
+  var noRespondioHoyDoc=listaDoc.filter(function(p){return !(fichaProgresoDocente[p.key]&&fichaProgresoDocente[p.key].fecha===hoy);}).map(function(p){return p.nombre;});
+  var sinPregAdmin=listaAdmin.filter(function(p){return !!estadoPendientePersonaRol(p.nombre);});
+  var sinPregDoc=listaDoc.filter(function(p){return !!estadoPendientePersonaRol(p.nombre);});
+
+  window._informeSemanalCalc={filasAdmin:filasAdmin,filasDoc:filasDoc,fechasAdmin:fechasAdmin,fechasDoc:fechasDoc,
+    lunes:lunes,hoy:hoy,docenciaRecienInicia:docenciaRecienInicia,primerRegistroDocGlobal:primerRegistroDocGlobal,
+    primerIngresoAdmin:primerIngresoAdmin,noRespondioHoyAdmin:noRespondioHoyAdmin,noRespondioHoyDoc:noRespondioHoyDoc,
+    sinPregAdmin:sinPregAdmin,sinPregDoc:sinPregDoc};
+
+  function filaHtml(f,esDoc){
+    var pctTxt=f.promedio!=null?f.promedio+'%':'—';
+    var pendTxt=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].icono+' '+ETIQ_ESTADO_ROL[f.pendiente].texto:''):'✅ al día';
+    var pendColor=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].color:'#fca5a5'):'#6ee7b7';
+    return '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
+      '<div style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+(esDoc&&f.carrera?' <span style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400">· '+esc(f.carrera)+'</span>':'')+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:2px">Ingresó '+f.diasIngreso+' día'+(f.diasIngreso===1?'':'s')+' ('+f.aperturas+' apertura'+(f.aperturas===1?'':'s')+') · Respondió '+f.diasRespondio+' vez'+(f.diasRespondio===1?'':'es')+' · Promedio '+pctTxt+'</div>'+
+      '<div style="font-size:10px;color:'+pendColor+';margin-top:2px">'+pendTxt+'</div>'+
+    '</div>';
+  }
+  function resumenEquipo(filas){
+    if(!filas.length)return {covIngreso:0,covRespuesta:0};
+    var n=filas.length;
+    var maxDias=Math.max.apply(null,filas.map(function(f){return f.diasIngreso;}).concat([1]));
+    return {
+      covIngreso:Math.round(filas.reduce(function(a,f){return a+(f.diasIngreso>0?1:0);},0)/n*100),
+      covRespuesta:Math.round(filas.reduce(function(a,f){return a+(f.diasRespondio>0?1:0);},0)/n*100)
+    };
+  }
+  var resAdmin=resumenEquipo(filasAdmin),resDoc=resumenEquipo(filasDoc);
+
+  var html='<div style="max-width:640px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:18px;font-weight:800;color:#7ec8f7">📅 Informe semanal — Admin y Docencia</span>'+
+      '<button onclick="document.getElementById(\'informeSemanalOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Semana del '+fmtFechaCorta(lunes)+' al '+fmtFechaCorta(hoy)+' (días hábiles transcurridos)</div>'+
+    '<button onclick="copiarInformeSemanal()" class="btn-add" style="background:linear-gradient(135deg,#2563eb,#38bdf8);margin-bottom:14px" id="copiarInformeBtn">📋 Copiar informe para enviar a gerencia</button>'+
+    (primerIngresoAdminNota(primerIngresoAdmin,lunes))+
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px">🗂️ Equipo administrativo <span style="font-size:11px;color:rgba(255,255,255,.4)">('+filasAdmin.length+')</span></div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Cobertura de ingreso: '+resAdmin.covIngreso+'% · Cobertura de respuesta: '+resAdmin.covRespuesta+'%</div>'+
+      (filasAdmin.length?filasAdmin.map(function(f){return filaHtml(f,false);}).join(''):'<div style="font-size:12px;color:rgba(255,255,255,.4)">Sin personas registradas aún.</div>')+
+    '</div>'+
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:6px">🎓 Docencia <span style="font-size:11px;color:rgba(255,255,255,.4)">('+filasDoc.length+')</span></div>'+
+      (docenciaRecienInicia?'<div style="font-size:11px;color:#fcd34d;margin-bottom:8px">🆕 Docencia recién está comenzando a responder cuestionarios'+(primerRegistroDocGlobal?' (primer registro: '+fmtFechaCorta(primerRegistroDocGlobal)+')':' — aún sin registros esta semana')+'. No se compara con el ritmo del área administrativa.</div>':
+        '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Cobertura de ingreso: '+resDoc.covIngreso+'% · Cobertura de respuesta: '+resDoc.covRespuesta+'%</div>')+
+      (filasDoc.length?filasDoc.map(function(f){return filaHtml(f,true);}).join(''):'<div style="font-size:12px;color:rgba(255,255,255,.4)">Sin docentes registrados aún.</div>')+
+    '</div>'+
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:#f87171;margin-bottom:8px">🔔 Pendientes de hoy ('+hoy+')</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px"><b>Administrativos sin responder hoy:</b> '+(noRespondioHoyAdmin.length?esc(noRespondioHoyAdmin.join(', ')):'✅ todos respondieron')+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px"><b>Docentes sin responder hoy:</b> '+(noRespondioHoyDoc.length?esc(noRespondioHoyDoc.join(', ')):'✅ todos respondieron')+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px"><b>Administrativos sin protocolo/preguntas activadas:</b> '+(sinPregAdmin.length?esc(sinPregAdmin.map(function(p){return p.nombre;}).join(', ')):'✅ ninguno')+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6)"><b>Docentes sin protocolo/preguntas activadas:</b> '+(sinPregDoc.length?esc(sinPregDoc.map(function(p){return p.nombre;}).join(', ')):'✅ ninguno')+'</div>'+
+    '</div>'+
+    '<textarea id="informeSemanalTexto" readonly style="width:100%;min-height:220px;font-family:monospace;font-size:11px;background:#0b1220;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px;margin-top:4px" onclick="this.select()"></textarea>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:6px">Si el botón de copiar no funciona en tu navegador, toca el cuadro de texto de arriba para seleccionarlo todo y copiar manualmente.</div>'+
+  '</div>';
+  ov.innerHTML=html;
+  var ta=document.getElementById('informeSemanalTexto');if(ta)ta.value=generarTextoInformeSemanal();
+}
+function primerIngresoAdminNota(primerIngresoAdmin,lunes){
+  if(primerIngresoAdmin&&primerIngresoAdmin<lunes)return '';
+  return '<div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:#93c5fd">ℹ️ El registro automático de ingresos del equipo administrativo '+(primerIngresoAdmin?'comenzó el '+fmtFechaCorta(primerIngresoAdmin):'recién se activó hoy')+'. Los días anteriores no tienen datos de ingreso porque el registro no estaba activo — no significa que no hayan entrado.</div>';
+}
+function generarTextoInformeSemanal(){
+  var c=window._informeSemanalCalc;if(!c)return '';
+  var L=[];
+  L.push('📊 INFORME SEMANAL — GESTHOR');
+  L.push('Semana del '+fmtFechaCorta(c.lunes)+' al '+fmtFechaCorta(c.hoy)+' (generado '+fmtFechaCorta(c.hoy)+')');
+  L.push('');
+  L.push('🗂️ EQUIPO ADMINISTRATIVO ('+c.filasAdmin.length+' personas)');
+  if(c.primerIngresoAdmin&&c.primerIngresoAdmin<c.lunes){/* sin nota */}
+  else L.push('ℹ️ Registro de ingresos activo desde '+(c.primerIngresoAdmin?fmtFechaCorta(c.primerIngresoAdmin):fmtFechaCorta(c.hoy))+' — días anteriores no cuentan con dato de ingreso.');
+  if(!c.filasAdmin.length)L.push('— Sin personas registradas aún.');
+  c.filasAdmin.forEach(function(f){
+    var pendTxt=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].texto:'pendiente'):'al día';
+    L.push('— '+f.nombre+': ingresó '+f.diasIngreso+' día(s) ('+f.aperturas+' apertura(s)) · respondió '+f.diasRespondio+' vez/veces · promedio '+(f.promedio!=null?f.promedio+'%':'—')+' · '+pendTxt);
+  });
+  L.push('');
+  L.push('🎓 DOCENCIA ('+c.filasDoc.length+' personas)');
+  if(c.docenciaRecienInicia){
+    L.push('🆕 Docencia recién está comenzando a responder cuestionarios'+(c.primerRegistroDocGlobal?' (primer registro: '+fmtFechaCorta(c.primerRegistroDocGlobal)+')':' — aún sin registros')+'. No es comparable todavía con el ritmo del área administrativa.');
+  }
+  if(!c.filasDoc.length)L.push('— Sin docentes registrados aún.');
+  c.filasDoc.forEach(function(f){
+    var pendTxt=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].texto:'pendiente'):'al día';
+    L.push('— '+f.nombre+(f.carrera?' ('+f.carrera+')':'')+': ingresó '+f.diasIngreso+' día(s) ('+f.aperturas+' apertura(s)) · respondió '+f.diasRespondio+' vez/veces · promedio '+(f.promedio!=null?f.promedio+'%':'—')+' · '+pendTxt);
+  });
+  L.push('');
+  L.push('🔔 PENDIENTES DE HOY ('+c.hoy+')');
+  L.push('Administrativos sin responder hoy: '+(c.noRespondioHoyAdmin.length?c.noRespondioHoyAdmin.join(', '):'ninguno — todos respondieron'));
+  L.push('Docentes sin responder hoy: '+(c.noRespondioHoyDoc.length?c.noRespondioHoyDoc.join(', '):'ninguno — todos respondieron'));
+  L.push('Administrativos sin protocolo/preguntas activadas: '+(c.sinPregAdmin.length?c.sinPregAdmin.map(function(p){return p.nombre;}).join(', '):'ninguno'));
+  L.push('Docentes sin protocolo/preguntas activadas: '+(c.sinPregDoc.length?c.sinPregDoc.map(function(p){return p.nombre;}).join(', '):'ninguno'));
+  L.push('');
+  L.push('Generado automáticamente por GESTHOR.');
+  return L.join('\n');
+}
+window.copiarInformeSemanal=function(){
+  var ta=document.getElementById('informeSemanalTexto');
+  var texto=(ta&&ta.value)||generarTextoInformeSemanal();
+  var btn=document.getElementById('copiarInformeBtn');
+  function marcarCopiado(){if(btn){var t=btn.textContent;btn.textContent='✅ Copiado';setTimeout(function(){btn.textContent=t;},1800);}}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(marcarCopiado).catch(function(){copiarConFallback(ta,marcarCopiado);});
+  } else {
+    copiarConFallback(ta,marcarCopiado);
+  }
+};
+function copiarConFallback(ta,cb){
+  try{
+    if(!ta)return;
+    ta.style.position='fixed';ta.style.opacity='0';ta.select();
+    document.execCommand('copy');
+    if(cb)cb();
+  }catch(e){alert('No se pudo copiar automáticamente. Selecciona el texto del cuadro y cópialo manualmente.');}
+}
+
 // ══════════════ SUPERVISIÓN DEL EQUIPO DE GERENCIA (panel del Jefe) ══════════════
 window.abrirGestionGerencia=function(){
   var ov=document.getElementById('gestGerOv');if(ov)ov.remove();
@@ -10067,6 +10326,7 @@ window.autoRegistrarDocente=function(){
   seq.push(sedeRef('docentes/'+dkey).set(docentes[dkey]));
   Promise.all(seq).then(function(){
     window._docKey=dkey;window._docActual=docentes[dkey];
+    registrarAccesoArea(nombre,'docente');
     document.getElementById('docTabs').style.display='flex';
     tabDoc('material');
   });
@@ -10076,6 +10336,7 @@ window.cargarDocente=function(){
   if(!key)return;
   window._docKey=key;
   window._docActual=docentes[key];
+  registrarAccesoArea(docentes[key]&&docentes[key].nombre,'docente');
   document.getElementById('docTabs').style.display='flex';
   tabDoc('material');
 };
