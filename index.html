@@ -9514,8 +9514,13 @@ function renderInformeSemanal(){
     var pctTxt=f.promedio!=null?f.promedio+'%':'—';
     var pendTxt=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].icono+' '+ETIQ_ESTADO_ROL[f.pendiente].texto:''):'✅ al día';
     var pendColor=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].color:'#fca5a5'):'#6ee7b7';
+    var niv=nivelCumplimiento(f.cumplimiento);
+    var cumplTxt=f.cumplimiento!=null?f.cumplimiento+'% — '+niv.texto:niv.texto;
     return '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
-      '<div style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+(esDoc&&f.carrera?' <span style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400">· '+esc(f.carrera)+'</span>':'')+'</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<div style="font-size:13px;color:#fff;font-weight:600">'+esc(f.nombre)+(esDoc&&f.carrera?' <span style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400">· '+esc(f.carrera)+'</span>':'')+'</div>'+
+        '<span style="font-size:10px;font-weight:700;color:'+niv.color+';white-space:nowrap">'+cumplTxt+'</span>'+
+      '</div>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:2px">Ingresó '+f.diasIngreso+' día'+(f.diasIngreso===1?'':'s')+' ('+f.aperturas+' apertura'+(f.aperturas===1?'':'s')+') · Respondió '+f.diasRespondio+' vez'+(f.diasRespondio===1?'':'es')+' · Promedio '+pctTxt+'</div>'+
       '<div style="font-size:10px;color:'+pendColor+';margin-top:2px">'+pendTxt+'</div>'+
     '</div>';
@@ -9530,6 +9535,19 @@ function renderInformeSemanal(){
     };
   }
   var resAdmin=resumenEquipo(filasAdmin),resDoc=resumenEquipo(filasDoc);
+
+  // ── Conclusión: ranking combinado de cumplimiento (solo quienes ya tienen días de referencia) ──
+  function conEquipo(f,equipo){var g={};for(var k in f)g[k]=f[k];g.equipo=equipo;return g;}
+  var todos=filasAdmin.map(function(f){return conEquipo(f,'Administrativo');})
+    .concat(filasDoc.map(function(f){return conEquipo(f,'Docencia');}));
+  var conDatos=todos.filter(function(f){return f.cumplimiento!=null;}).sort(function(a,b){return b.cumplimiento-a.cumplimiento;});
+  var cumplenTodo=conDatos.filter(function(f){return f.cumplimiento>=90;});
+  var bajoCumplimiento=conDatos.filter(function(f){return f.cumplimiento<50;});
+  var promedioEquipoGeneral=conDatos.length?Math.round(conDatos.reduce(function(a,f){return a+f.cumplimiento;},0)/conDatos.length):null;
+  window._informeSemanalCalc.conDatos=conDatos;
+  window._informeSemanalCalc.cumplenTodo=cumplenTodo;
+  window._informeSemanalCalc.bajoCumplimiento=bajoCumplimiento;
+  window._informeSemanalCalc.promedioEquipoGeneral=promedioEquipoGeneral;
 
   var html='<div style="max-width:640px;margin:0 auto">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
@@ -9554,6 +9572,15 @@ function renderInformeSemanal(){
         '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Cobertura de ingreso: '+resDoc.covIngreso+'% · Cobertura de respuesta: '+resDoc.covRespuesta+'%</div>')+
       (filasDoc.length?filasDoc.map(function(f){return filaHtml(f,true);}).join(''):'<div style="font-size:12px;color:rgba(255,255,255,.4)">Sin docentes registrados aún.</div>')+
     '</div>'+
+    '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:8px">🏆 Conclusión — cumplimiento del equipo</div>'+
+      (conDatos.length?(
+        (promedioEquipoGeneral!=null?'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px">Cumplimiento promedio del equipo esta semana: <b style="color:#c4b5fd">'+promedioEquipoGeneral+'%</b></div>':'')+
+        '<canvas id="chartCumplimientoInforme" height="'+Math.max(140,conDatos.length*28)+'"></canvas>'+
+        '<div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px"><b style="color:#6ee7b7">✅ Cumplimiento total (≥90%):</b> '+(cumplenTodo.length?esc(cumplenTodo.map(function(f){return f.nombre+' ('+f.cumplimiento+'%)';}).join(', ')):'nadie todavía')+'</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.6)"><b style="color:#fca5a5">⚠️ Bajo cumplimiento (&lt;50%):</b> '+(bajoCumplimiento.length?esc(bajoCumplimiento.map(function(f){return f.nombre+' ('+f.cumplimiento+'%)';}).join(', ')):'nadie — buena señal')+'</div>'
+      ):'<div style="font-size:12px;color:rgba(255,255,255,.4)">Aún no hay suficientes días de referencia esta semana para calcular cumplimiento.</div>')+
+    '</div>'+
     (esSemanaActual?(
     '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:700;color:#f87171;margin-bottom:8px">🔔 Pendientes de hoy ('+hoy+')</div>'+
@@ -9572,6 +9599,26 @@ function renderInformeSemanal(){
   '</div>';
   ov.innerHTML=html;
   var ta=document.getElementById('informeSemanalTexto');if(ta)ta.value=generarTextoInformeSemanal();
+  renderChartCumplimientoInforme(conDatos);
+}
+function renderChartCumplimientoInforme(conDatos){
+  if(window._informeSemanalChart){window._informeSemanalChart.destroy();window._informeSemanalChart=null;}
+  var cv=document.getElementById('chartCumplimientoInforme');
+  if(!cv||!conDatos||!conDatos.length||typeof Chart==='undefined')return;
+  window._informeSemanalChart=new Chart(cv,{
+    type:'bar',
+    data:{
+      labels:conDatos.map(function(f){return f.nombre+(f.equipo==='Docencia'?' 🎓':' 🗂️');}),
+      datasets:[{label:'Cumplimiento %',data:conDatos.map(function(f){return f.cumplimiento;}),backgroundColor:conDatos.map(function(f){return nivelCumplimiento(f.cumplimiento).barra;}),borderRadius:5}]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.parsed.x+'% de cumplimiento';}}}},
+      scales:{x:{min:0,max:100,ticks:{color:'rgba(255,255,255,.5)'},grid:{color:'rgba(255,255,255,.06)'}},y:{ticks:{color:'rgba(255,255,255,.8)',font:{size:11}},grid:{display:false}}}
+    }
+  });
 }
 function primerIngresoAdminNota(primerIngresoAdmin,lunes){
   if(primerIngresoAdmin&&primerIngresoAdmin<lunes)return '';
@@ -9588,7 +9635,7 @@ function generarTextoInformeSemanal(){
   if(!c.filasAdmin.length)L.push('— Sin personas registradas aún.');
   c.filasAdmin.forEach(function(f){
     var pendTxt=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].texto:'pendiente'):'al día';
-    L.push('— '+f.nombre+': ingresó '+f.diasIngreso+' día(s) ('+f.aperturas+' apertura(s)) · respondió '+f.diasRespondio+' vez/veces · promedio '+(f.promedio!=null?f.promedio+'%':'—')+' · '+pendTxt);
+    L.push('— '+f.nombre+': ingresó '+f.diasIngreso+' día(s) ('+f.aperturas+' apertura(s)) · respondió '+f.diasRespondio+' vez/veces · promedio '+(f.promedio!=null?f.promedio+'%':'—')+' · cumplimiento '+(f.cumplimiento!=null?f.cumplimiento+'%':'—')+' · '+pendTxt);
   });
   L.push('');
   L.push('🎓 DOCENCIA ('+c.filasDoc.length+' personas)');
@@ -9600,8 +9647,19 @@ function generarTextoInformeSemanal(){
   if(!c.filasDoc.length)L.push('— Sin docentes registrados aún.');
   c.filasDoc.forEach(function(f){
     var pendTxt=f.pendiente?(ETIQ_ESTADO_ROL[f.pendiente]?ETIQ_ESTADO_ROL[f.pendiente].texto:'pendiente'):'al día';
-    L.push('— '+f.nombre+(f.carrera?' ('+f.carrera+')':'')+': ingresó '+f.diasIngreso+' día(s) ('+f.aperturas+' apertura(s)) · respondió '+f.diasRespondio+' vez/veces · promedio '+(f.promedio!=null?f.promedio+'%':'—')+' · '+pendTxt);
+    L.push('— '+f.nombre+(f.carrera?' ('+f.carrera+')':'')+': ingresó '+f.diasIngreso+' día(s) ('+f.aperturas+' apertura(s)) · respondió '+f.diasRespondio+' vez/veces · promedio '+(f.promedio!=null?f.promedio+'%':'—')+' · cumplimiento '+(f.cumplimiento!=null?f.cumplimiento+'%':'—')+' · '+pendTxt);
   });
+  L.push('');
+  L.push('🏆 CONCLUSIÓN — CUMPLIMIENTO DEL EQUIPO');
+  if(!c.conDatos||!c.conDatos.length){
+    L.push('Aún no hay suficientes días de referencia esta semana para calcular cumplimiento.');
+  } else {
+    if(c.promedioEquipoGeneral!=null)L.push('Cumplimiento promedio del equipo: '+c.promedioEquipoGeneral+'%');
+    L.push('Ranking (de mayor a menor cumplimiento):');
+    c.conDatos.forEach(function(f,i){L.push('  '+(i+1)+'. '+f.nombre+' ('+f.equipo+'): '+f.cumplimiento+'%');});
+    L.push('✅ Cumplimiento total (≥90%): '+(c.cumplenTodo.length?c.cumplenTodo.map(function(f){return f.nombre+' ('+f.cumplimiento+'%)';}).join(', '):'nadie todavía'));
+    L.push('⚠️ Bajo cumplimiento (<50%): '+(c.bajoCumplimiento.length?c.bajoCumplimiento.map(function(f){return f.nombre+' ('+f.cumplimiento+'%)';}).join(', '):'nadie — buena señal'));
+  }
   L.push('');
   if(c.esSemanaActual){
     L.push('🔔 PENDIENTES DE HOY ('+c.hoy+')');
