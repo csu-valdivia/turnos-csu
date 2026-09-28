@@ -12,58 +12,62 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-/* ══════════ SPLASH DE ARRANQUE GESTHOR (cinematográfico ~8s) ══════════ */
+/* ══════════ SPLASH DE ARRANQUE GESTHOR (cinematográfico ~8.3s) ══════════ */
 #gesthorSplash{position:fixed;inset:0;background:radial-gradient(ellipse 80% 80% at center,#0e1e3d 0%,#081127 45%,#040814 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;animation:splashOut .7s 7.6s ease forwards;overflow:hidden}
 /* Halo de fondo que respira */
-#gesthorSplash::before{content:'';position:absolute;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.16) 0%,rgba(37,99,235,.05) 40%,transparent 70%);opacity:0;animation:splashHalo 6s .8s ease-in-out forwards}
+#gesthorSplash::before{content:'';position:absolute;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.16) 0%,rgba(37,99,235,.05) 40%,transparent 70%);opacity:0;animation:splashHalo 6s .8s ease-in-out forwards}
 @keyframes splashHalo{0%{opacity:0;transform:scale(.6)}30%{opacity:1}100%{opacity:1;transform:scale(1)}}
-.splash-svg{width:190px;height:190px;position:relative;z-index:2;filter:drop-shadow(0 0 22px rgba(56,189,248,.55)) drop-shadow(0 0 40px rgba(37,99,235,.3))}
 
-/* Punto de luz inicial que pulsa */
-.splash-dot{fill:#e0f2fe;opacity:0;filter:drop-shadow(0 0 8px #7dd3fc);animation:splashDotIn .6s ease forwards,splashDotPulse 1.4s .6s ease-in-out}
-@keyframes splashDotIn{from{opacity:0;r:2}to{opacity:1;r:5}}
-@keyframes splashDotPulse{0%,100%{opacity:1}50%{opacity:.5}}
+.ghs-wrap{width:min(92vw,380px);position:relative;z-index:2}
+.ghs-svg{width:100%;height:auto;display:block;filter:drop-shadow(0 0 22px rgba(56,189,248,.4)) drop-shadow(0 0 40px rgba(37,99,235,.25))}
 
-/* Punto viajero que recorre el borde dejando estela (dibuja el círculo) */
-.splash-travel{fill:#e0f2fe;filter:drop-shadow(0 0 10px #7dd3fc) drop-shadow(0 0 18px #38bdf8);opacity:0;animation:splashTravelShow .1s .55s forwards,splashTravel 1.5s .6s cubic-bezier(.5,0,.5,1) forwards}
-@keyframes splashTravelShow{to{opacity:1}}
-@keyframes splashTravel{0%{opacity:1}90%{opacity:1}100%{opacity:0}}
-.splash-ring{fill:none;stroke:url(#splashGlow);stroke-width:3.5;stroke-linecap:round;stroke-dasharray:277;stroke-dashoffset:277;animation:splashDrawRing 1.5s .6s cubic-bezier(.5,0,.5,1) forwards}
-@keyframes splashDrawRing{to{stroke-dashoffset:0}}
+@keyframes ghsGearSpin{to{transform:rotate(360deg)}}
+.ghs-gear-spin{animation:ghsGearSpin 34s linear infinite;transform-origin:350px 350px}
 
-/* Dientes del engranaje: aparecen con rebote */
-.splash-teeth{opacity:0;transform-origin:60px 60px;transform:scale(.75);animation:splashTeethIn .9s 2.1s cubic-bezier(.34,1.56,.64,1) forwards}
-@keyframes splashTeethIn{0%{opacity:0;transform:scale(.75) rotate(-15deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes ghsRingGlow{0%,100%{opacity:.85}50%{opacity:1}}
+.ghs-gear-ring{animation:ghsRingGlow 3s ease-in-out infinite}
 
-/* La G interior se dibuja */
-.splash-g{fill:none;stroke:url(#splashGlow);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:150;stroke-dashoffset:150;filter:drop-shadow(0 0 6px rgba(125,211,252,.8));animation:splashDrawG 1.3s 3.3s cubic-bezier(.5,0,.5,1) forwards}
-@keyframes splashDrawG{to{stroke-dashoffset:0}}
+@keyframes ghsPulseTravel{to{stroke-dashoffset:-220}}
+.ghs-heartbeat{fill:none;stroke:#1e3a8a;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:20 16;animation:ghsPulseTravel 6.4s linear infinite;filter:drop-shadow(0 0 4px rgba(56,189,248,.9))}
 
-/* Rotación del engranaje una vez formado */
-.splash-gear-group{transform-origin:60px 60px}
-.splash-gear-spin{animation:splashGearSpin 22s 3.2s linear infinite}
-@keyframes splashGearSpin{to{transform:rotate(360deg)}}
+@keyframes ghsCrossGlow{0%,100%{filter:drop-shadow(0 0 10px rgba(224,242,254,.7))}50%{filter:drop-shadow(0 0 18px rgba(224,242,254,.95))}}
+.ghs-cross{animation:ghsCrossGlow 6.4s ease-in-out infinite}
+
+@keyframes ghsLineDraw{0%{stroke-dashoffset:110;opacity:0}100%{stroke-dashoffset:0;opacity:1}}
+.ghs-line{fill:none;stroke:#38bdf8;stroke-width:4;stroke-linecap:round;stroke-dasharray:110;animation:ghsLineDraw 1s cubic-bezier(.4,0,.2,1) forwards;opacity:0;filter:drop-shadow(0 0 3px rgba(56,189,248,.6))}
+
+@keyframes ghsNodeIn{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+.ghs-node{opacity:0;transform-box:fill-box;transform-origin:center;animation:ghsNodeIn .6s cubic-bezier(.34,1.56,.64,1) forwards}
+
+@keyframes ghsNodeRingPulse{0%,100%{opacity:.45;filter:drop-shadow(0 0 3px rgba(56,189,248,.25))}50%{opacity:1;filter:drop-shadow(0 0 26px rgba(56,189,248,1)) drop-shadow(0 0 46px rgba(125,211,252,.65))}}
+.ghs-node-ring{animation:ghsNodeRingPulse 3s ease-in-out infinite}
+
+@keyframes ghsOrbitSpin{to{transform:rotate(360deg)}}
+.ghs-orbit{animation:ghsOrbitSpin 34s linear infinite;transform-origin:350px 350px}
+
+@keyframes ghsCounterSpin{to{transform:rotate(-360deg)}}
+.ghs-counter-spin{animation:ghsCounterSpin 34s linear infinite;transform-origin:0 0}
 
 /* Texto GESTHOR letra por letra con glow */
-.splash-brand{margin-top:26px;font-size:42px;font-weight:800;letter-spacing:3px;display:flex;gap:0;position:relative;z-index:2}
-.splash-brand span{opacity:0;transform:translateY(12px) scale(.9);display:inline-block;animation:splashLetterIn .5s cubic-bezier(.34,1.56,.64,1) forwards}
+.splash-brand{margin-top:14px;font-size:38px;font-weight:800;letter-spacing:2px;display:flex;gap:0;position:relative;z-index:2}
+.splash-brand span{opacity:0;display:inline-block;transform:translateY(14px) scale(.9);animation:splashLetterIn .5s cubic-bezier(.34,1.56,.64,1) forwards}
 .splash-brand .st{color:#fff;text-shadow:0 0 16px rgba(255,255,255,.4)}
-.splash-brand .sh{color:#38bdf8;text-shadow:0 0 18px rgba(56,189,248,.7)}
+.splash-brand .sh{background:radial-gradient(circle at 32% 32%,#bae6fd 0%,#38bdf8 45%,#1e40af 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
 @keyframes splashLetterIn{to{opacity:1;transform:translateY(0) scale(1)}}
 
 /* Subtítulo */
-.splash-subtitle{margin-top:14px;font-size:12px;color:rgba(147,197,253,.8);letter-spacing:.5px;opacity:0;animation:splashSubIn .8s 5.8s ease forwards;text-align:center;max-width:360px;padding:0 24px;line-height:1.5;position:relative;z-index:2}
+.splash-subtitle{margin-top:10px;font-size:12px;color:rgba(147,197,253,.8);letter-spacing:.5px;opacity:0;animation:splashSubIn .8s 3.9s ease forwards;text-align:center;max-width:360px;padding:0 24px;line-height:1.5;position:relative;z-index:2}
 @keyframes splashSubIn{to{opacity:1}}
 
 /* Cargando */
-.splash-loading{position:absolute;bottom:64px;display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;animation:splashSubIn .5s .4s ease forwards;z-index:2}
+.splash-loading{position:absolute;bottom:48px;display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;animation:splashSubIn .5s .4s ease forwards;z-index:2}
 .splash-loading-txt{font-size:10px;letter-spacing:5px;color:rgba(147,197,253,.55)}
 .splash-loading-bar{width:190px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
 .splash-loading-fill{height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#2563eb);border-radius:2px;box-shadow:0 0 8px rgba(56,189,248,.6);animation:splashLoadFill 7.4s ease forwards}
 @keyframes splashLoadFill{to{width:100%}}
 @keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
 #gesthorSplash.skip{display:none}
-@media(prefers-reduced-motion:reduce){#gesthorSplash{animation:splashOut .3s .5s ease forwards}#gesthorSplash::before,.splash-dot,.splash-travel,.splash-ring,.splash-teeth,.splash-g,.splash-brand span,.splash-subtitle,.splash-loading{animation-duration:.01s;animation-delay:0s;opacity:1}.splash-teeth{transform:scale(1)}.splash-ring,.splash-g{stroke-dashoffset:0}.splash-gear-spin{animation:none}}
+@media(prefers-reduced-motion:reduce){#gesthorSplash{animation:splashOut .3s .5s ease forwards}#gesthorSplash::before,.ghs-line,.ghs-node,.ghs-node-ring,.splash-brand span,.splash-subtitle,.splash-loading{animation-duration:.01s;animation-delay:0s;opacity:1}.ghs-gear-spin,.ghs-orbit,.ghs-counter-spin{animation:none}}
 :root{
   --bg:#0d1b3e;--bg2:#112254;--surface:#1a2e6b;--surface2:#1e3580;
   --card:#fff;--card2:#f0f4f8;
@@ -327,57 +331,138 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 </head>
 <body>
 <div id="gesthorSplash">
-  <svg class="splash-svg" viewBox="0 0 120 120">
+  <div class="ghs-wrap">
+  <svg class="ghs-svg" viewBox="0 0 700 700">
     <defs>
-      <linearGradient id="splashGear" x1="0" y1="0" x2="1" y2="1">
+      <linearGradient id="ghsGear" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#2563eb"/>
       </linearGradient>
-      <linearGradient id="splashGlow" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#bae6fd"/><stop offset="0.5" stop-color="#38bdf8"/><stop offset="1" stop-color="#2563eb"/>
-      </linearGradient>
-      <radialGradient id="splashTeethGrad" cx="0.5" cy="0.3" r="0.8">
+      <radialGradient id="ghsTeethGrad" cx="0.5" cy="0.3" r="0.8">
         <stop offset="0" stop-color="#93d8fc"/><stop offset="1" stop-color="#1e40af"/>
       </radialGradient>
-      <filter id="splashBlur"><feGaussianBlur stdDeviation="1.2"/></filter>
+      <radialGradient id="ghsCrossGrad" cx="0.5" cy="0.35" r="0.75">
+        <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfe9ff"/>
+      </radialGradient>
     </defs>
-    <!-- Punto de luz inicial -->
-    <circle class="splash-dot" cx="60" cy="16" r="5"/>
-    <!-- Círculo que se dibuja -->
-    <circle class="splash-ring" cx="60" cy="60" r="44"/>
-    <!-- Punto viajero con estela que recorre el borde -->
-    <circle class="splash-travel" r="4">
-      <animateMotion dur="1.5s" begin="0.6s" fill="freeze" path="M 60 16 A 44 44 0 1 1 59.9 16"/>
-    </circle>
-    <!-- Engranaje: dientes + G, giran juntos -->
-    <g class="splash-gear-group splash-gear-spin">
-      <g class="splash-teeth">
-        <g fill="url(#splashTeethGrad)">
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(0 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(30 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(60 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(90 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(120 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(150 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(180 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(210 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(240 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(270 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(300 60 60)"/>
-          <polygon points="54.5,4 65.5,4 64,16 56,16" transform="rotate(330 60 60)"/>
+
+    <!-- Grupo orbital: líneas + nodos giran juntos alrededor del centro, al ritmo del engranaje -->
+    <g class="ghs-orbit">
+      <path class="ghs-line" style="animation-delay:.3s" d="M 350 255 L 350 152"/>
+      <path class="ghs-line" style="animation-delay:.5s" d="M 424.27 290.77 L 504.80 226.55"/>
+      <path class="ghs-line" style="animation-delay:.7s" d="M 442.62 371.14 L 543.04 394.06"/>
+      <path class="ghs-line" style="animation-delay:.9s" d="M 391.22 435.59 L 435.91 528.39"/>
+      <path class="ghs-line" style="animation-delay:1.1s" d="M 308.78 435.59 L 264.09 528.39"/>
+      <path class="ghs-line" style="animation-delay:1.3s" d="M 257.38 371.14 L 156.96 394.06"/>
+      <path class="ghs-line" style="animation-delay:1.5s" d="M 275.73 290.77 L 195.20 226.55"/>
+
+      <g transform="translate(350,100)"><g class="ghs-counter-spin"><g class="ghs-node" style="animation-delay:1.0s">
+        <circle class="ghs-node-ring" r="52" fill="#0e1e3d" stroke="#38bdf8" stroke-width="10" style="animation-delay:0s;animation-duration:2.2s"/>
+        <g fill="url(#ghsTeethGrad)">
+          <polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(0)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(45)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(90)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(135)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(180)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(225)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(270)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(315)"/>
         </g>
-        <circle cx="60" cy="60" r="44" fill="none" stroke="url(#splashGear)" stroke-width="6"/>
+        <g stroke="#e0f2fe" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="-16" y="-14" width="32" height="26" rx="3"/><line x1="-16" y1="-6" x2="16" y2="-6"/><line x1="-8" y1="-20" x2="-8" y2="-14"/><line x1="8" y1="-20" x2="8" y2="-14"/><circle cx="9" cy="8" r="7"/><line x1="9" y1="8" x2="9" y2="3"/><line x1="9" y1="8" x2="13" y2="8"/>
+        </g>
+        <text x="0" y="-106" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">GESTIÓN</text>
+        <text x="0" y="-90" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">DE TURNOS</text>
+      </g></g></g>
+
+      <g transform="translate(545.46,194.13)"><g class="ghs-counter-spin"><g class="ghs-node" style="animation-delay:1.2s">
+        <circle class="ghs-node-ring" r="52" fill="#0e1e3d" stroke="#38bdf8" stroke-width="10" style="animation-delay:0.8s;animation-duration:3.9s"/>
+        <g fill="url(#ghsTeethGrad)">
+          <polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(0)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(45)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(90)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(135)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(180)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(225)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(270)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(315)"/>
+        </g>
+        <g stroke="#e0f2fe" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="-16,-4 0,-14 16,-4 16,14 0,22 -16,14"/><polyline points="-16,-4 0,4 16,-4"/><line x1="0" y1="4" x2="0" y2="22"/>
+        </g>
+        <circle cx="16" cy="16" r="7" fill="#0e1e3d" stroke="#e0f2fe" stroke-width="2"/>
+        <text x="0" y="-106" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">INSUMOS E</text>
+        <text x="0" y="-90" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">INVENTARIO</text>
+      </g></g></g>
+
+      <g transform="translate(593.73,405.63)"><g class="ghs-counter-spin"><g class="ghs-node" style="animation-delay:1.4s">
+        <circle class="ghs-node-ring" r="52" fill="#0e1e3d" stroke="#38bdf8" stroke-width="10" style="animation-delay:2.5s;animation-duration:2.7s"/>
+        <g fill="url(#ghsTeethGrad)">
+          <polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(0)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(45)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(90)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(135)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(180)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(225)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(270)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(315)"/>
+        </g>
+        <g stroke="#e0f2fe" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M 0 -18 L 16 -11 L 16 6 C 16 16 8 22 0 25 C -8 22 -16 16 -16 6 L -16 -11 Z"/><polyline points="-7,3 -2,9 8,-6"/>
+        </g>
+        <text x="0" y="-90" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">ACREDITACIÓN</text>
+      </g></g></g>
+
+      <g transform="translate(458.47,575.24)"><g class="ghs-counter-spin"><g class="ghs-node" style="animation-delay:1.6s">
+        <circle class="ghs-node-ring" r="52" fill="#0e1e3d" stroke="#38bdf8" stroke-width="10" style="animation-delay:0.2s;animation-duration:4.4s"/>
+        <g fill="url(#ghsTeethGrad)">
+          <polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(0)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(45)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(90)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(135)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(180)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(225)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(270)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(315)"/>
+        </g>
+        <g stroke="#e0f2fe" stroke-width="2" fill="none">
+          <rect x="-18" y="-18" width="36" height="36" rx="6"/><circle cx="0" cy="0" r="12"/><circle cx="0" cy="0" r="2.4" fill="#e0f2fe"/><line x1="0" y1="-12" x2="0" y2="-8"/><line x1="0" y1="12" x2="0" y2="8"/><line x1="-12" y1="0" x2="-8" y2="0"/><line x1="12" y1="0" x2="8" y2="0"/>
+        </g>
+        <text x="0" y="-90" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">ESTERILIZACIÓN</text>
+      </g></g></g>
+
+      <g transform="translate(241.53,575.24)"><g class="ghs-counter-spin"><g class="ghs-node" style="animation-delay:1.8s">
+        <circle class="ghs-node-ring" r="52" fill="#0e1e3d" stroke="#38bdf8" stroke-width="10" style="animation-delay:1.7s;animation-duration:2.1s"/>
+        <g fill="url(#ghsTeethGrad)">
+          <polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(0)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(45)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(90)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(135)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(180)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(225)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(270)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(315)"/>
+        </g>
+        <g stroke="#e0f2fe" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="0" cy="-8" rx="13" ry="6"/><path d="M -18 10 L 18 10"/><path d="M -18 10 L -18 2 L 14 2 C 18 2 18 6 18 10"/><line x1="-18" y1="10" x2="-18" y2="18"/><line x1="18" y1="10" x2="18" y2="18"/>
+        </g>
+        <text x="0" y="-90" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">PABELLONES</text>
+      </g></g></g>
+
+      <g transform="translate(106.27,405.63)"><g class="ghs-counter-spin"><g class="ghs-node" style="animation-delay:2.0s">
+        <circle class="ghs-node-ring" r="52" fill="#0e1e3d" stroke="#38bdf8" stroke-width="10" style="animation-delay:3.3s;animation-duration:3.3s"/>
+        <g fill="url(#ghsTeethGrad)">
+          <polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(0)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(45)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(90)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(135)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(180)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(225)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(270)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(315)"/>
+        </g>
+        <g stroke="#e0f2fe" stroke-width="2.4" fill="none" stroke-linecap="round">
+          <line x1="-16" y1="16" x2="-16" y2="0"/><line x1="-5" y1="16" x2="-5" y2="-6"/><line x1="6" y1="16" x2="6" y2="-14"/><polyline points="-16,-6 6,-22 16,-14"/><polyline points="8,-22 16,-22 16,-14" fill="none"/>
+        </g>
+        <text x="0" y="-90" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">PRODUCTIVIDAD</text>
+      </g></g></g>
+
+      <g transform="translate(154.54,194.13)"><g class="ghs-counter-spin"><g class="ghs-node" style="animation-delay:2.2s">
+        <circle class="ghs-node-ring" r="52" fill="#0e1e3d" stroke="#38bdf8" stroke-width="10" style="animation-delay:1.1s;animation-duration:4.8s"/>
+        <g fill="url(#ghsTeethGrad)">
+          <polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(0)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(45)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(90)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(135)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(180)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(225)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(270)"/><polygon points="-4,-75 4,-75 6,-56 -6,-56" transform="rotate(315)"/>
+        </g>
+        <g stroke="#e0f2fe" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="-4" cy="-6" r="15"/><line x1="7" y1="5" x2="19" y2="17"/>
+        </g>
+        <text x="0" y="-90" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">SUPERVISIÓN</text>
+      </g></g></g>
+    </g>
+
+    <!-- Engranaje central (anillo grueso con forma de dientes reales) -->
+    <g class="ghs-gear-spin">
+      <g fill="url(#ghsTeethGrad)">
+        <polygon points="342,212 358,212 361,248 339,248" transform="rotate(0 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(30 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(60 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(90 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(120 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(150 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(180 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(210 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(240 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(270 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(300 350 350)"/><polygon points="342,212 358,212 361,248 339,248" transform="rotate(330 350 350)"/>
       </g>
-      <path class="splash-g" d="M 74 44 A 20 20 0 1 0 74 76 L 74 61 L 61 61"/>
+      <circle class="ghs-gear-ring" cx="350" cy="350" r="95" fill="none" stroke="url(#ghsGear)" stroke-width="21"/>
+    </g>
+
+    <!-- Cruz + electro (fijos, no giran) -->
+    <g transform="translate(350,350)">
+      <circle r="70" fill="#0e1e3d" stroke="rgba(125,211,252,.4)" stroke-width="1.5"/>
+      <g class="ghs-cross">
+        <rect x="-9" y="-32" width="18" height="64" rx="5" fill="url(#ghsCrossGrad)"/>
+        <rect x="-32" y="-9" width="64" height="18" rx="5" fill="url(#ghsCrossGrad)"/>
+      </g>
+      <path class="ghs-heartbeat" d="M -30 0 L -14 0 L -8 -18 L 0 18 L 7 -10 L 13 0 L 30 0"/>
     </g>
   </svg>
+  </div>
   <div class="splash-brand">
-    <span class="st" style="animation-delay:4.6s">G</span>
-    <span class="st" style="animation-delay:4.75s">E</span>
-    <span class="st" style="animation-delay:4.9s">S</span>
-    <span class="st" style="animation-delay:5.05s">T</span>
-    <span class="sh" style="animation-delay:5.2s">H</span>
-    <span class="sh" style="animation-delay:5.35s">O</span>
-    <span class="sh" style="animation-delay:5.5s">R</span>
+    <span class="st" style="animation-delay:2.8s">G</span>
+    <span class="st" style="animation-delay:2.9s">E</span>
+    <span class="st" style="animation-delay:3.0s">S</span>
+    <span class="st" style="animation-delay:3.1s">T</span>
+    <span class="st" style="animation-delay:3.2s">H</span>
+    <span class="sh" style="animation-delay:3.3s">O</span>
+    <span class="st" style="animation-delay:3.4s">R</span>
   </div>
   <div class="splash-subtitle">Sistema de Gestión Operacional para Instituciones de Salud</div>
   <div class="splash-loading">
@@ -4443,7 +4528,7 @@ function renderMisTurnos(nombre){
     html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">📅</span><span class="day-name">'+dia+'</span>'+(cobDia?'<span style="font-size:11px;background:rgba(239,68,68,.1);color:#991b1b;padding:2px 8px;border-radius:4px;margin-left:auto">Cubre '+cobDia.destino+'</span>':'')+'</div>';
     ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?renderSubareaTareas(b.turno,b.nombre,dia):null;var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,b.area,b.horario):null;var editBtn=claveB?'<button onclick="abrirEditarTurnoSemana(\''+nombre.replace(/'/g,"\\'")+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'';html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+editBtn+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
     if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span>'+(adminUnlocked?'<button onclick="editarColacion(\''+colKey+'\',\''+col+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'')+'</div></div>';
-    tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';var sectorT=t.sector?'<span style="font-size:10px;color:#94a3b8;margin-left:5px">📍'+esc(t.sector)+'</span>':'';var msgT=t.texto?'<div style="margin-top:4px">'+t.texto+'</div>':'<div style="margin-top:4px;font-size:11px;color:rgba(255,255,255,.3);font-style:italic">Sin mensaje adicional</div>';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+' '+jornadaLabel(t.jornada||'dia')+sectorT+'</div>'+msgT+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
+    tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';var sectorT=t.sector?'<span style="font-size:10px;color:#94a3b8;margin-left:5px">📍'+esc(t.sector)+'</span>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+' '+jornadaLabel(t.jornada||'dia')+sectorT+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
     notaLista.forEach(function(nt){
       var respuestas=nt.respuestas?Object.values(nt.respuestas).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
       var respHtml=respuestas.map(function(rp){return '<div style="margin-top:6px;padding:6px 10px;background:rgba(96,165,250,.1);border-left:2px solid #60a5fa;border-radius:4px;font-size:12px;color:rgba(255,255,255,.85)"><b style="color:#93c5fd">↳ '+esc(rp.quien||'Jefatura')+':</b> '+esc(rp.texto)+'</div>';}).join('');
