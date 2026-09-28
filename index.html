@@ -1568,7 +1568,9 @@ var PRODUCCION_TIPOS={
   inst_empaque:{emoji:'📦',label:'Empaque de instrumental',unidad:'paquetes',color:'#34d399'},
   inst_secado:{emoji:'💨',label:'Secado de instrumental',unidad:'piezas',color:'#fbbf24'},
   entrega_esteril:{emoji:'📤',label:'Entrega de material estéril',unidad:'estudiantes',color:'#f97316'},
-  almacen_ester:{emoji:'🗄️',label:'Almacenamiento de material',unidad:'paquetes',color:'#22d3ee'},
+  // sinCantidad: esta persona GUARDA material, no lo cuenta — lo que importa es el horario en que lo hizo,
+  // no inventar una cantidad. Con sinCantidad el formulario no pide cantidad y exige hora inicio/término.
+  almacen_ester:{emoji:'🗄️',label:'Almacenamiento de material',unidad:'paquetes',color:'#22d3ee',sinCantidad:true},
   clinica_privada:{emoji:'🏷️',label:'Clínica privada',unidad:'pacientes',color:'#c084fc'},
   apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',unidad:'pacientes',color:'#ec4899',max:4}
 };
@@ -13086,17 +13088,22 @@ window.abrirRegProduccion=function(tipo){
   var yaHoy=Object.values(regProduccion||{}).filter(function(r){return r.tipo===tipo&&r.fecha===hoy;});
   var totalHoy=yaHoy.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
   var camposProd=['prodCantidad','prodInicio','prodTermino','prodObs'];
+  var yaRegistroHoy=cfg.sinCantidad&&yaHoy.length>0;
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+cfg.emoji+' '+cfg.label+'</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Cantidad diaria · '+hoy+(totalHoy?' · ya registrado hoy: '+totalHoy+' '+cfg.unidad:'')+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+(cfg.sinCantidad?('Registro de horario · '+hoy+(yaRegistroHoy?' · ya registraste tu horario hoy ('+(yaHoy[yaHoy.length-1].horaInicio||'')+'–'+(yaHoy[yaHoy.length-1].horaTermino||'')+')':'')):('Cantidad diaria · '+hoy+(totalHoy?' · ya registrado hoy: '+totalHoy+' '+cfg.unidad:'')))+'</div>'+
     bannerBorrador(tipo,camposProd)+
-    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Cantidad de '+cfg.unidad+'</label>'+
-    '<input type="number" id="prodCantidad" min="0" step="1" placeholder="N° de '+cfg.unidad+'" style="width:100%;font-size:16px;padding:10px;margin-bottom:10px" oninput="calcDuracionProd()">'+
+    (cfg.sinCantidad?
+      '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px">Este registro no pide contar material — solo indica a qué hora empezaste y a qué hora terminaste de guardarlo.</div>'
+      :
+      '<label style="font-size:12px;color:rgba(255,255,255,.7)">Cantidad de '+cfg.unidad+'</label>'+
+      '<input type="number" id="prodCantidad" min="0" step="1" placeholder="N° de '+cfg.unidad+'" style="width:100%;font-size:16px;padding:10px;margin-bottom:10px" oninput="calcDuracionProd()">'
+    )+
     // Hora de inicio y término
     '<div style="display:flex;gap:8px;margin-bottom:6px">'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora inicio</label>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora inicio'+(cfg.sinCantidad?' *':'')+'</label>'+
         '<input type="time" id="prodInicio" style="width:100%;font-size:13px;padding:7px" oninput="calcDuracionProd()"></div>'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora término</label>'+
+      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora término'+(cfg.sinCantidad?' *':'')+'</label>'+
         '<input type="time" id="prodTermino" style="width:100%;font-size:13px;padding:7px" oninput="calcDuracionProd()"></div>'+
     '</div>'+
     '<div id="prodDuracion" style="font-size:11px;color:#6ee7b7;margin-bottom:10px;min-height:16px"></div>'+
@@ -13105,7 +13112,7 @@ window.abrirRegProduccion=function(tipo){
     '<button class="btn-add" onclick="guardarRegProduccion(\''+tipo+'\')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
     '<button onclick="guardarBorradorProduccion(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">📝 Guardar borrador (seguir después)</button>'+
     '<div id="borradorEstado" style="font-size:11px;text-align:center;margin-top:6px;min-height:14px"></div>'+
-    '<button onclick="verGraficoProduccion(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver gráfico del mes</button>'+
+    (cfg.sinCantidad?'':'<button onclick="verGraficoProduccion(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(96,165,250,.12);color:#93c5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📈 Ver gráfico del mes</button>')+
     '<button onclick="verTiemposProceso(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(167,139,250,.12);color:#c4b5fd;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">⏱ Ver tiempos y promedios</button>'+
     '<button onclick="verRegistrosProduccion(\''+tipo+'\')" style="width:100%;margin-top:6px;background:rgba(52,211,153,.12);color:#6ee7b7;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">📋 Ver registros (quién y cuándo)</button>'+
     '<button onclick="document.getElementById(\'regProdOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
@@ -13153,7 +13160,7 @@ window.calcDuracionProd=function(){
   if(!ini.value||!ter.value){out.innerHTML='';return;}
   var dur=minutosEntre(ini.value,ter.value);
   if(dur<=0){out.innerHTML='<span style="color:#fca5a5">La hora de término debe ser posterior al inicio.</span>';return;}
-  var cant=Number(cantEl.value)||0;
+  var cant=cantEl?(Number(cantEl.value)||0):0;
   var txt='⏱ Duración: <b>'+formatoDur(dur)+'</b>';
   if(cant>0)txt+=' · <b>'+(dur/cant).toFixed(1)+' min</b> por unidad';
   out.innerHTML=txt;
@@ -13170,18 +13177,26 @@ function formatoDur(min){
 }
 
 window.guardarRegProduccion=function(tipo){
-  var cant=document.getElementById('prodCantidad').value;
-  if(cant===''||Number(cant)<0){alert('Ingresa una cantidad válida.');return;}
-  // Máximo definido en el tipo (ej: apoyo clínico máx 4 pacientes)
   var cfgT=PRODUCCION_TIPOS[tipo];
-  if(cfgT&&cfgT.max&&Number(cant)>cfgT.max){alert('El máximo permitido es '+cfgT.max+' '+cfgT.unidad+' por día.');return;}
-  var ahora=new Date();
-  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
   var hIni=document.getElementById('prodInicio').value;
   var hTer=document.getElementById('prodTermino').value;
+  var cant=null;
+  if(cfgT&&cfgT.sinCantidad){
+    // No se pide cantidad: en cambio, la hora de inicio y término son obligatorias.
+    if(!hIni||!hTer){alert('Ingresa la hora de inicio y de término.');return;}
+    if(minutosEntre(hIni,hTer)<=0){alert('La hora de término debe ser posterior al inicio.');return;}
+  } else {
+    cant=document.getElementById('prodCantidad').value;
+    if(cant===''||Number(cant)<0){alert('Ingresa una cantidad válida.');return;}
+    // Máximo definido en el tipo (ej: apoyo clínico máx 4 pacientes)
+    if(cfgT&&cfgT.max&&Number(cant)>cfgT.max){alert('El máximo permitido es '+cfgT.max+' '+cfgT.unidad+' por día.');return;}
+  }
+  var ahora=new Date();
+  var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
   var duracion=(hIni&&hTer)?minutosEntre(hIni,hTer):null;
-  var reg={tipo:tipo,cantidad:Number(cant),obs:document.getElementById('prodObs').value.trim(),
+  var reg={tipo:tipo,obs:document.getElementById('prodObs').value.trim(),
     quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  if(cant!==null)reg.cantidad=Number(cant);
   if(hIni)reg.horaInicio=hIni;
   if(hTer)reg.horaTermino=hTer;
   if(duracion&&duracion>0)reg.duracionMin=duracion;
@@ -13207,20 +13222,21 @@ window.verRegistrosProduccion=function(tipo){
     var horario=(r.horaInicio&&r.horaTermino)?' ('+r.horaInicio+'–'+r.horaTermino+')':'';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05)">'+
       '<div>'+
-        '<div style="font-size:13px;color:#fff;font-weight:600">'+r.fecha+' · '+(Number(r.cantidad)||0)+' '+cfg.unidad+'</div>'+
-        '<div style="font-size:11px;color:rgba(255,255,255,.5)">👤 '+esc(r.quien||'—')+' · '+(r.hora||'')+horario+dur+'</div>'+
+        '<div style="font-size:13px;color:#fff;font-weight:600">'+r.fecha+(cfg.sinCantidad?(horario||' (sin horario)'):(' · '+(Number(r.cantidad)||0)+' '+cfg.unidad))+'</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5)">👤 '+esc(r.quien||'—')+' · '+(r.hora||'')+(cfg.sinCantidad?'':horario)+dur+'</div>'+
         (r.obs?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">📝 '+esc(r.obs)+'</div>':'')+
       '</div>'+
       (esAdmin?'<button onclick="borrarRegProduccion(\''+r._key+'\',\''+tipo+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer;flex-shrink:0">🗑</button>':'')+
     '</div>';
   }).join('');
   var total=regs.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
+  var resumenTotal=cfg.sinCantidad?(regs.length+' registro(s) de horario'):(regs.length+' registro(s) · '+total+' '+cfg.unidad+' en total');
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:520px;width:100%;margin-top:20px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
       '<span style="font-size:15px;font-weight:700;color:#fff">'+cfg.emoji+' '+cfg.label+' — registros</span>'+
       '<button onclick="document.getElementById(\'regDetalleOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button>'+
     '</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">'+regs.length+' registro(s) · '+total+' '+cfg.unidad+' en total'+(esAdmin?' · toca 🗑 para borrar registros de prueba':'')+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">'+resumenTotal+(esAdmin?' · toca 🗑 para borrar registros de prueba':'')+'</div>'+
     (regs.length?'<div style="background:#0f1a30;border-radius:10px;overflow:hidden">'+filas+'</div>':'<div style="padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros de este tipo.</div>')+
     '</div>';
   document.body.appendChild(ov);
