@@ -9410,7 +9410,15 @@ function primerAccesoArea(accesos,area){
   return min;
 }
 
+function sumarDias(fechaStr,n){var d=new Date(fechaStr+'T12:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+window.cambiarSemanaInforme=function(delta){
+  var wo=(window._informeSemanalWeekOffset||0)+delta;
+  if(wo>0)wo=0; // no se puede ir a semanas futuras
+  window._informeSemanalWeekOffset=wo;
+  renderInformeSemanal();
+};
 window.abrirInformeSemanal=function(){
+  window._informeSemanalWeekOffset=0;
   var ov=document.getElementById('informeSemanalOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='informeSemanalOv';
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
