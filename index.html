@@ -9434,13 +9434,37 @@ function nivelCumplimiento(pct){
   if(pct>=50)return {texto:'Cumplimiento regular',color:'#fcd34d',barra:'rgba(245,158,11,.7)'};
   return {texto:'Bajo cumplimiento',color:'#fca5a5',barra:'rgba(239,68,68,.75)'};
 }
+window.cerrarInformeSemanal=function(){
+  if(window._informeSemanalChart){try{window._informeSemanalChart.destroy();}catch(e){}window._informeSemanalChart=null;}
+  var ov=document.getElementById('informeSemanalOv');if(ov)ov.remove();
+};
+window.exportarInformeSemanalPDF=function(){
+  // Sin librerías extra: usamos el diálogo de impresión del navegador (Guardar como PDF), que en
+  // Chrome/Android y iOS funciona de forma nativa. El CSS @media print (#informePrintCSS) oculta
+  // todo lo demás y fuerza a imprimir los colores oscuros y el gráfico tal cual se ven en pantalla.
+  window.print();
+};
 window.cambiarSemanaInforme=function(delta){
   var wo=(window._informeSemanalWeekOffset||0)+delta;
   if(wo>0)wo=0; // no se puede ir a semanas futuras
   window._informeSemanalWeekOffset=wo;
   renderInformeSemanal();
 };
+function asegurarEstilosImpresionInforme(){
+  if(document.getElementById('informePrintCSS'))return;
+  var st=document.createElement('style');
+  st.id='informePrintCSS';
+  st.textContent='@media print{'+
+    'body>*:not(#informeSemanalOv){display:none !important;}'+
+    '#informeSemanalOv{position:static !important;overflow:visible !important;padding:0 !important;}'+
+    '#informeSemanalOv .no-print{display:none !important;}'+
+    '#informeSemanalOv, #informeSemanalOv *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}'+
+    '#informeSemanalOv{background:#0b1220 !important;}'+
+  '}';
+  document.head.appendChild(st);
+}
 window.abrirInformeSemanal=function(){
+  asegurarEstilosImpresionInforme();
   window._informeSemanalWeekOffset=0;
   var ov=document.getElementById('informeSemanalOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='informeSemanalOv';
@@ -9564,14 +9588,18 @@ function renderInformeSemanal(){
   var html='<div style="max-width:640px;margin:0 auto">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
       '<span style="font-size:18px;font-weight:800;color:#7ec8f7">📅 Informe semanal — Admin y Docencia</span>'+
-      '<button onclick="document.getElementById(\'informeSemanalOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+      '<button onclick="cerrarInformeSemanal()" class="no-print" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px">'+
+    '<div class="no-print" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px">'+
       '<button onclick="cambiarSemanaInforme(-1)" style="background:rgba(255,255,255,.08);color:#93c5fd;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;font-size:12px;cursor:pointer">◀ Semana anterior</button>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;flex:1">Semana del '+fmtFechaCorta(lunes)+' al '+fmtFechaCorta(finSemana)+(esSemanaActual?' (en curso)':'')+'</div>'+
       (esSemanaActual?'<span style="width:112px"></span>':'<button onclick="cambiarSemanaInforme(1)" style="background:rgba(255,255,255,.08);color:#93c5fd;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;font-size:12px;cursor:pointer">Semana siguiente ▶</button>')+
     '</div>'+
-    '<button onclick="copiarInformeSemanal()" class="btn-add" style="background:linear-gradient(135deg,#2563eb,#38bdf8);margin-bottom:14px" id="copiarInformeBtn">📋 Copiar informe para enviar a gerencia</button>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px" id="informeRangoImpreso">Semana del '+fmtFechaCorta(lunes)+' al '+fmtFechaCorta(finSemana)+(esSemanaActual?' (en curso)':'')+'</div>'+
+    '<div class="no-print" style="display:flex;gap:8px;margin-bottom:14px">'+
+      '<button onclick="copiarInformeSemanal()" class="btn-add" style="background:linear-gradient(135deg,#2563eb,#38bdf8);flex:1" id="copiarInformeBtn">📋 Copiar</button>'+
+      '<button onclick="exportarInformeSemanalPDF()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);flex:1">🖨️ Exportar a PDF</button>'+
+    '</div>'+
     (esSemanaActual?primerIngresoAdminNota(primerIngresoAdmin,lunes):'')+
     '<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px">🗂️ Equipo administrativo <span style="font-size:11px;color:rgba(255,255,255,.4)">('+filasAdmin.length+')</span></div>'+
@@ -9588,7 +9616,7 @@ function renderInformeSemanal(){
       '<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:8px">🏆 Conclusión — cumplimiento del equipo</div>'+
       (conDatos.length?(
         (promedioEquipoGeneral!=null?'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px">Cumplimiento promedio del equipo esta semana: <b style="color:#c4b5fd">'+promedioEquipoGeneral+'%</b></div>':'')+
-        '<canvas id="chartCumplimientoInforme" height="'+Math.max(140,conDatos.length*28)+'"></canvas>'+
+        '<div id="chartCumplimientoWrap" style="width:100%;overflow:hidden"><canvas id="chartCumplimientoInforme"></canvas></div>'+
         '<div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px"><b style="color:#6ee7b7">✅ Cumplimiento total (≥90%):</b> '+(cumplenTodo.length?esc(cumplenTodo.map(function(f){return f.nombre+' ('+f.cumplimiento+'%)';}).join(', ')):'nadie todavía')+'</div>'+
         '<div style="font-size:11px;color:rgba(255,255,255,.6)"><b style="color:#fca5a5">⚠️ Bajo cumplimiento (&lt;50%):</b> '+(bajoCumplimiento.length?esc(bajoCumplimiento.map(function(f){return f.nombre+' ('+f.cumplimiento+'%)';}).join(', ')):'nadie — buena señal')+'</div>'
       ):'<div style="font-size:12px;color:rgba(255,255,255,.4)">Aún no hay suficientes días de referencia esta semana para calcular cumplimiento.</div>')+
@@ -9606,17 +9634,33 @@ function renderInformeSemanal(){
       '<div style="font-size:11px;color:rgba(255,255,255,.4)">🔔 La sección de "pendientes de hoy" solo aplica a la semana en curso — vuelve a la semana actual para verla.</div>'+
     '</div>'
     ))+
-    '<textarea id="informeSemanalTexto" readonly style="width:100%;min-height:220px;font-family:monospace;font-size:11px;background:#0b1220;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px;margin-top:4px" onclick="this.select()"></textarea>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:6px">Si el botón de copiar no funciona en tu navegador, toca el cuadro de texto de arriba para seleccionarlo todo y copiar manualmente.</div>'+
+    '<textarea id="informeSemanalTexto" readonly class="no-print" style="width:100%;min-height:220px;font-family:monospace;font-size:11px;background:#0b1220;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px;margin-top:4px" onclick="this.select()"></textarea>'+
+    '<div class="no-print" style="font-size:10px;color:rgba(255,255,255,.35);margin-top:6px">Si el botón de copiar no funciona en tu navegador, toca el cuadro de texto de arriba para seleccionarlo todo y copiar manualmente. Para PDF, usa "🖨️ Exportar a PDF" y elige "Guardar como PDF" en el diálogo de impresión.</div>'+
   '</div>';
   ov.innerHTML=html;
   var ta=document.getElementById('informeSemanalTexto');if(ta)ta.value=generarTextoInformeSemanal();
   renderChartCumplimientoInforme(conDatos);
 }
 function renderChartCumplimientoInforme(conDatos){
-  if(window._informeSemanalChart){window._informeSemanalChart.destroy();window._informeSemanalChart=null;}
+  // Destruir cualquier instancia previa (la nuestra Y cualquier otra que Chart.js tenga registrada
+  // contra este canvas) antes de crear una nueva — evita el error "Canvas is already in use" y el
+  // bucle de redimensionado infinito que ocurre si queda una instancia viva apuntando a un <canvas>
+  // que el innerHTML ya reemplazó.
+  if(window._informeSemanalChart){try{window._informeSemanalChart.destroy();}catch(e){}window._informeSemanalChart=null;}
   var cv=document.getElementById('chartCumplimientoInforme');
-  if(!cv||!conDatos||!conDatos.length||typeof Chart==='undefined')return;
+  var wrap=document.getElementById('chartCumplimientoWrap');
+  if(!cv||!wrap||!conDatos||!conDatos.length||typeof Chart==='undefined')return;
+  var existente=typeof Chart.getChart==='function'?Chart.getChart(cv):null;
+  if(existente){try{existente.destroy();}catch(e){}}
+  // Tamaño FIJO en píxeles (ancho real del contenedor, alto según cantidad de personas), fijado como
+  // atributos width/height del propio <canvas> y con responsive:false. Con responsive:true, si el
+  // contenedor no tiene una altura resuelta de antemano (recién insertado con innerHTML), Chart.js
+  // puede entrar en un bucle de redimensionado que hace crecer el canvas sin fin — la "barra sin fin"
+  // reportada. Fijar el tamaño a mano elimina ese bucle por completo.
+  var anchoPx=Math.max(280,wrap.clientWidth||wrap.offsetWidth||320);
+  var altoPx=Math.max(160,conDatos.length*32);
+  cv.width=anchoPx;cv.height=altoPx;
+  cv.style.width=anchoPx+'px';cv.style.height=altoPx+'px';
   window._informeSemanalChart=new Chart(cv,{
     type:'bar',
     data:{
@@ -9625,7 +9669,7 @@ function renderChartCumplimientoInforme(conDatos){
     },
     options:{
       indexAxis:'y',
-      responsive:true,
+      responsive:false,
       maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.parsed.x+'% de cumplimiento';}}}},
       scales:{x:{min:0,max:100,ticks:{color:'rgba(255,255,255,.5)'},grid:{color:'rgba(255,255,255,.06)'}},y:{ticks:{color:'rgba(255,255,255,.8)',font:{size:11}},grid:{display:false}}}
