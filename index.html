@@ -9411,14 +9411,20 @@ function primerAccesoArea(accesos,area){
 }
 
 function sumarDias(fechaStr,n){var d=new Date(fechaStr+'T12:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
-// Cumplimiento por persona = promedio de (cobertura de ingreso, cobertura de respuesta) sobre los días
-// hábiles que le correspondían esa semana. null cuando aún no hay ningún día de referencia (sin datos).
-function aplicarCumplimiento(filas,denom){
+// Cumplimiento por persona = promedio de (cobertura de ingreso, cobertura de respuesta), cada una con
+// SU PROPIO denominador: el de ingreso se acorta a los días en que el registro de accesos ya existía
+// (denomIngreso), mientras que el de respuesta usa siempre la semana completa que se está viendo
+// (denomRespuesta), porque el historial de cuestionarios es independiente y completo desde antes.
+// Si en esa semana no hay ningún día con registro de ingresos (p.ej. una semana pasada anterior a que
+// se activara el registro), el cumplimiento se calcula solo con la respuesta, para no perder el dato.
+function aplicarCumplimiento(filas,denomIngreso,denomRespuesta){
   filas.forEach(function(f){
-    if(!denom){f.coberturaIngreso=null;f.coberturaRespuesta=null;f.cumplimiento=null;return;}
-    f.coberturaIngreso=Math.round(f.diasIngreso/denom*100);
-    f.coberturaRespuesta=Math.round(f.diasRespondio/denom*100);
-    f.cumplimiento=Math.round((f.coberturaIngreso+f.coberturaRespuesta)/2);
+    f.coberturaIngreso=denomIngreso?Math.round(f.diasIngreso/denomIngreso*100):null;
+    f.coberturaRespuesta=denomRespuesta?Math.round(f.diasRespondio/denomRespuesta*100):null;
+    if(f.coberturaIngreso==null&&f.coberturaRespuesta==null)f.cumplimiento=null;
+    else if(f.coberturaIngreso==null)f.cumplimiento=f.coberturaRespuesta;
+    else if(f.coberturaRespuesta==null)f.cumplimiento=f.coberturaIngreso;
+    else f.cumplimiento=Math.round((f.coberturaIngreso+f.coberturaRespuesta)/2);
   });
 }
 function nivelCumplimiento(pct){
@@ -9468,36 +9474,41 @@ function renderInformeSemanal(){
   var fechasSemanaHabiles=diasHabilesEntre(lunes,finSemana);
 
   // ── Administrativos ──
+  // OJO: el historial de RESPUESTAS (rankingAdmin/rankingDocente) es independiente y completo desde
+  // siempre, así que su denominador es siempre la semana completa que se está viendo (fechasSemanaHabiles).
+  // El registro de INGRESOS (accesos) recién se activó, así que su denominador se acorta a los días
+  // de esa semana en que el registro ya existía — nunca se usa la fecha de activación para acortar
+  // la semana completa (eso fue lo que rompía el cumplimiento de semanas pasadas).
   var listaAdmin=Object.keys(secretarias||{}).map(function(k){return {key:k,nombre:(typeof secretarias[k]==='object'?secretarias[k].nombre:secretarias[k])};}).filter(function(p){return p.nombre;});
   var primerIngresoAdmin=primerAccesoArea(data.accesos,'administrativo');
-  // El equipo administrativo se mide desde que existe registro de ingresos, o desde el lunes de esa semana si ya hay historial previo
-  var fechasAdmin=primerIngresoAdmin&&primerIngresoAdmin>lunes?diasHabilesEntre(primerIngresoAdmin,finSemana):fechasSemanaHabiles;
+  var fechasIngresoAdmin=primerIngresoAdmin?fechasSemanaHabiles.filter(function(f){return f>=primerIngresoAdmin;}):fechasSemanaHabiles;
   var filasAdmin=listaAdmin.map(function(p){
-    var ing=diasIngresoEnRango(data.accesos,p.nombre,'administrativo',fechasAdmin);
-    var regs=registrosRankingEnRango(data.rankingAdmin,p.key,fechasAdmin);
+    var ing=diasIngresoEnRango(data.accesos,p.nombre,'administrativo',fechasIngresoAdmin);
+    var regs=registrosRankingEnRango(data.rankingAdmin,p.key,fechasSemanaHabiles);
     var prom=regs.length?Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length):null;
     var pend=estadoPendientePersonaRol(p.nombre);
     return {nombre:p.nombre,diasIngreso:ing.diasDistintos,aperturas:ing.totalAperturas,diasRespondio:regs.length,promedio:prom,pendiente:pend};
   });
-  aplicarCumplimiento(filasAdmin,fechasAdmin.length);
+  aplicarCumplimiento(filasAdmin,fechasIngresoAdmin.length,fechasSemanaHabiles.length);
 
   // ── Docentes ──
   var listaDoc=Object.keys(docentes||{}).map(function(k){return {key:k,nombre:docentes[k].nombre,carrera:docentes[k].carrera};}).filter(function(p){return p.nombre;});
   var primerRegistroDocGlobal=null;
   listaDoc.forEach(function(p){var f=primerRegistroRanking(data.rankingDocente,p.key);if(f&&(!primerRegistroDocGlobal||f<primerRegistroDocGlobal))primerRegistroDocGlobal=f;});
-  // ¿Docencia ya tenía registros de cuestionario DENTRO de la semana que se está viendo?
+  // ¿Docencia ya tenía registros de cuestionario DENTRO de la semana que se está viendo? (solo afecta la nota, no el denominador)
   var docenciaSinDatosEnEstaSemana=!primerRegistroDocGlobal||primerRegistroDocGlobal>finSemana;
   var docenciaComienzaEnEstaSemana=primerRegistroDocGlobal&&primerRegistroDocGlobal>=lunes&&primerRegistroDocGlobal<=finSemana;
   var docenciaRecienInicia=docenciaSinDatosEnEstaSemana||docenciaComienzaEnEstaSemana;
-  var fechasDoc=(primerRegistroDocGlobal&&primerRegistroDocGlobal<lunes)?diasHabilesEntre(primerRegistroDocGlobal,finSemana):fechasSemanaHabiles;
+  var primerIngresoDoc=primerAccesoArea(data.accesos,'docente');
+  var fechasIngresoDoc=primerIngresoDoc?fechasSemanaHabiles.filter(function(f){return f>=primerIngresoDoc;}):fechasSemanaHabiles;
   var filasDoc=listaDoc.map(function(p){
-    var ing=diasIngresoEnRango(data.accesos,p.nombre,'docente',fechasDoc);
-    var regs=registrosRankingEnRango(data.rankingDocente,p.key,fechasDoc);
+    var ing=diasIngresoEnRango(data.accesos,p.nombre,'docente',fechasIngresoDoc);
+    var regs=registrosRankingEnRango(data.rankingDocente,p.key,fechasSemanaHabiles);
     var prom=regs.length?Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length):null;
     var pend=estadoPendientePersonaRol(p.nombre);
     return {nombre:p.nombre,carrera:p.carrera,diasIngreso:ing.diasDistintos,aperturas:ing.totalAperturas,diasRespondio:regs.length,promedio:prom,pendiente:pend};
   });
-  aplicarCumplimiento(filasDoc,fechasDoc.length);
+  aplicarCumplimiento(filasDoc,fechasIngresoDoc.length,fechasSemanaHabiles.length);
 
   // ── Pendientes de hoy (quién no ha respondido hoy) — solo tiene sentido en la semana actual ──
   var noRespondioHoyAdmin=esSemanaActual?listaAdmin.filter(function(p){var ck=p.key;return !(fichaProgresoAdmin[ck]&&fichaProgresoAdmin[ck].fecha===hoy);}).map(function(p){return p.nombre;}):[];
@@ -9505,7 +9516,8 @@ function renderInformeSemanal(){
   var sinPregAdmin=listaAdmin.filter(function(p){return !!estadoPendientePersonaRol(p.nombre);});
   var sinPregDoc=listaDoc.filter(function(p){return !!estadoPendientePersonaRol(p.nombre);});
 
-  window._informeSemanalCalc={filasAdmin:filasAdmin,filasDoc:filasDoc,fechasAdmin:fechasAdmin,fechasDoc:fechasDoc,
+  window._informeSemanalCalc={filasAdmin:filasAdmin,filasDoc:filasDoc,fechasSemanaHabiles:fechasSemanaHabiles,
+    fechasIngresoAdmin:fechasIngresoAdmin,fechasIngresoDoc:fechasIngresoDoc,
     lunes:lunes,hoy:hoy,finSemana:finSemana,esSemanaActual:esSemanaActual,docenciaRecienInicia:docenciaRecienInicia,primerRegistroDocGlobal:primerRegistroDocGlobal,
     primerIngresoAdmin:primerIngresoAdmin,noRespondioHoyAdmin:noRespondioHoyAdmin,noRespondioHoyDoc:noRespondioHoyDoc,
     sinPregAdmin:sinPregAdmin,sinPregDoc:sinPregDoc};
