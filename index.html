@@ -1568,8 +1568,8 @@ var PRODUCCION_TIPOS={
   inst_empaque:{emoji:'📦',label:'Empaque de instrumental',unidad:'paquetes',color:'#34d399'},
   inst_secado:{emoji:'💨',label:'Secado de instrumental',unidad:'piezas',color:'#fbbf24'},
   entrega_esteril:{emoji:'📤',label:'Entrega de material estéril',unidad:'estudiantes',color:'#f97316'},
-  // sinCantidad: esta persona GUARDA material, no lo cuenta — lo que importa es el horario en que lo hizo,
-  // no inventar una cantidad. Con sinCantidad el formulario no pide cantidad y exige hora inicio/término.
+  // sinCantidad: esta persona GUARDA material, no lo cuenta — no hay que inventar una cantidad
+  // ni un horario. Solo confirma que lo hizo hoy, con una novedad opcional si la hubo.
   almacen_ester:{emoji:'🗄️',label:'Almacenamiento de material',unidad:'paquetes',color:'#22d3ee',sinCantidad:true},
   clinica_privada:{emoji:'🏷️',label:'Clínica privada',unidad:'pacientes',color:'#c084fc'},
   apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',unidad:'pacientes',color:'#ec4899',max:4}
@@ -13258,22 +13258,22 @@ window.abrirRegProduccion=function(tipo){
   var yaRegistroHoy=cfg.sinCantidad&&yaHoy.length>0;
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+cfg.emoji+' '+cfg.label+'</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+(cfg.sinCantidad?('Registro de horario · '+hoy+(yaRegistroHoy?' · ya registraste tu horario hoy ('+(yaHoy[yaHoy.length-1].horaInicio||'')+'–'+(yaHoy[yaHoy.length-1].horaTermino||'')+')':'')):('Cantidad diaria · '+hoy+(totalHoy?' · ya registrado hoy: '+totalHoy+' '+cfg.unidad:'')))+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+(cfg.sinCantidad?('Registro diario · '+hoy+(yaRegistroHoy?' · ya registraste esto hoy':'')):('Cantidad diaria · '+hoy+(totalHoy?' · ya registrado hoy: '+totalHoy+' '+cfg.unidad:'')))+'</div>'+
     bannerBorrador(tipo,camposProd)+
     (cfg.sinCantidad?
-      '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px">Este registro no pide contar material — solo indica a qué hora empezaste y a qué hora terminaste de guardarlo.</div>'
+      '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px">Este registro no pide contar material ni horario — solo confirma que lo hiciste hoy. Anota una novedad si la hubo (opcional).</div>'
       :
       '<label style="font-size:12px;color:rgba(255,255,255,.7)">Cantidad de '+cfg.unidad+'</label>'+
-      '<input type="number" id="prodCantidad" min="0" step="1" placeholder="N° de '+cfg.unidad+'" style="width:100%;font-size:16px;padding:10px;margin-bottom:10px" oninput="calcDuracionProd()">'
+      '<input type="number" id="prodCantidad" min="0" step="1" placeholder="N° de '+cfg.unidad+'" style="width:100%;font-size:16px;padding:10px;margin-bottom:10px" oninput="calcDuracionProd()">'+
+      // Hora de inicio y término (solo para tipos que sí cuentan cantidad)
+      '<div style="display:flex;gap:8px;margin-bottom:6px">'+
+        '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora inicio</label>'+
+          '<input type="time" id="prodInicio" style="width:100%;font-size:13px;padding:7px" oninput="calcDuracionProd()"></div>'+
+        '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora término</label>'+
+          '<input type="time" id="prodTermino" style="width:100%;font-size:13px;padding:7px" oninput="calcDuracionProd()"></div>'+
+      '</div>'+
+      '<div id="prodDuracion" style="font-size:11px;color:#6ee7b7;margin-bottom:10px;min-height:16px"></div>'
     )+
-    // Hora de inicio y término
-    '<div style="display:flex;gap:8px;margin-bottom:6px">'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora inicio'+(cfg.sinCantidad?' *':'')+'</label>'+
-        '<input type="time" id="prodInicio" style="width:100%;font-size:13px;padding:7px" oninput="calcDuracionProd()"></div>'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.7)">Hora término'+(cfg.sinCantidad?' *':'')+'</label>'+
-        '<input type="time" id="prodTermino" style="width:100%;font-size:13px;padding:7px" oninput="calcDuracionProd()"></div>'+
-    '</div>'+
-    '<div id="prodDuracion" style="font-size:11px;color:#6ee7b7;margin-bottom:10px;min-height:16px"></div>'+
     '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
     '<textarea id="prodObs" rows="2" placeholder="Anota si hubo alguna novedad" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
     '<button class="btn-add" onclick="guardarRegProduccion(\''+tipo+'\')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar registro</button>'+
@@ -13345,14 +13345,14 @@ function formatoDur(min){
 
 window.guardarRegProduccion=function(tipo){
   var cfgT=PRODUCCION_TIPOS[tipo];
-  var hIni=document.getElementById('prodInicio').value;
-  var hTer=document.getElementById('prodTermino').value;
+  var hIniEl=document.getElementById('prodInicio'),hTerEl=document.getElementById('prodTermino');
+  var hIni=hIniEl?hIniEl.value:'';
+  var hTer=hTerEl?hTerEl.value:'';
   var cant=null;
   if(cfgT&&cfgT.sinCantidad){
-    // No se pide cantidad: en cambio, la hora de inicio y término son obligatorias.
-    if(!hIni||!hTer){alert('Ingresa la hora de inicio y de término.');return;}
-    if(minutosEntre(hIni,hTer)<=0){alert('La hora de término debe ser posterior al inicio.');return;}
+    // No se pide cantidad ni horario: solo confirma que se hizo hoy, con novedad opcional.
   } else {
+    if(minutosEntre&&hIni&&hTer&&minutosEntre(hIni,hTer)<=0){alert('La hora de término debe ser posterior al inicio.');return;}
     cant=document.getElementById('prodCantidad').value;
     if(cant===''||Number(cant)<0){alert('Ingresa una cantidad válida.');return;}
     // Máximo definido en el tipo (ej: apoyo clínico máx 4 pacientes)
