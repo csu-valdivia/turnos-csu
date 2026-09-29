@@ -14554,10 +14554,12 @@ function calcularResumenCustodia(bodega,fecha,nombre,desdeTs){
     .filter(function(m){return m.bodega===bodega&&m.fecha===fecha&&m.por===nombre&&(!desdeTs||m.ts>=desdeTs);});
   var consumos=movs.filter(function(m){return m.tipo==='consumo';});
   var ajustes=movs.filter(function(m){return m.tipo==='ajuste';});
+  var cargas=movs.filter(function(m){return m.tipo==='ingreso';});
   return {
     totalMovs:movs.length,
     consumos:consumos.map(function(m){return {desc:m.desc,unidades:m.unidades};}),
     ajustes:ajustes.length,
+    cargas:cargas.length,
     ts:Date.now()
   };
 }
@@ -14565,6 +14567,7 @@ function resumenCustodiaTexto(r){
   if(!r)return 'Sin movimientos registrados.';
   if(!r.totalMovs)return 'Sin movimientos registrados.';
   var partes=[r.totalMovs+' movimiento(s)'];
+  if(r.cargas)partes.push(r.cargas+' carga(s) de inventario');
   if(r.consumos&&r.consumos.length)partes.push(r.consumos.length+' consumo(s): '+r.consumos.slice(0,4).map(function(c){return esc(c.desc)+' ('+c.unidades+')';}).join(', ')+(r.consumos.length>4?'…':''));
   if(r.ajustes)partes.push(r.ajustes+' ajuste(s)');
   return partes.join(' · ');
@@ -14628,8 +14631,10 @@ function renderPanelSubbodegaHoy(bodega,jornada,reg){
     amInfo+
     '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'+
       '<button class="cli-tab active" data-v="stock" onclick="subHoyTab(\''+bodega+'\',\''+jornada+'\',\'stock\')">📊 Mi stock</button>'+
+      (puedoEditar?'<button class="cli-tab" data-v="carga" onclick="subHoyTab(\''+bodega+'\',\''+jornada+'\',\'carga\')">📥 Cargar inventario</button>':'')+
       (puedoEditar?'<button class="cli-tab" data-v="consumo" onclick="subHoyTab(\''+bodega+'\',\''+jornada+'\',\'consumo\')">📤 Consumo</button>':'')+
       (puedoEditar?'<button class="cli-tab" data-v="ajuste" onclick="subHoyTab(\''+bodega+'\',\''+jornada+'\',\'ajuste\')">✏️ Ajuste</button>':'')+
+      '<button class="cli-tab" data-v="ficha" onclick="subHoyTab(\''+bodega+'\',\''+jornada+'\',\'ficha\')">📝 Ficha</button>'+
     '</div>'+
     '<div id="subHoyContenido"></div>'+
     (puedoEditar?'<button onclick="cerrarMiTurnoSubbodega(\''+bodega+'\',\''+jornada+'\')" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#dc2626,#f87171);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔒 Cerrar mi turno en esta subbodega</button>':'')+
@@ -14642,8 +14647,10 @@ window.subHoyTab=function(bodega,jornada,v){
   document.querySelectorAll('#subHoyOv .cli-tab').forEach(function(t){t.classList.toggle('active',t.dataset.v===v);});
   var c=document.getElementById('subHoyContenido');if(!c)return;
   if(v==='stock')c.innerHTML=cliVistaStock(bodega);
+  else if(v==='carga')c.innerHTML=cliVistaCarga(bodega);
   else if(v==='consumo')c.innerHTML=cliVistaConsumo(bodega);
   else if(v==='ajuste')c.innerHTML=cliVistaAjuste(bodega);
+  else if(v==='ficha')c.innerHTML=cliVistaFicha(bodega);
 };
 window.cerrarMiTurnoSubbodega=function(bodega,jornada){
   if(!confirm('¿Cerrar tu turno en esta subbodega? Después de cerrar no podrás registrar más consumos/ajustes aquí hoy (salvo que la jefatura lo reabra).'))return;
@@ -14712,6 +14719,123 @@ function cliVistaStock(bodega){
   html+='</div></div>';
   return html;
 }
+
+// Carga directa de inventario propio en la subbodega (conteo inicial o algo no registrado),
+// sin pasar por una entrega de bodega central.
+function cliVistaCarga(bodega){
+  return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Registra stock físico que ya tienes en tu subbodega (conteo inicial o algo que encontraste sin registrar). No pasa por bodega central.</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
+    '<input list="cliInsList3" id="cliCarInsumo" placeholder="Busca..." style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<datalist id="cliInsList3">'+opcionesInsumos()+'</datalist>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Unidades (en tu propia forma de contar)</label>'+
+    '<input type="number" id="cliCarCant" min="0" step="any" placeholder="0" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Fecha de vencimiento (opcional)</label>'+
+    '<input type="date" id="cliCarVenc" style="width:100%;font-size:13px;padding:7px;margin-bottom:10px">'+
+    '<button class="btn-add" onclick="cliRegistrarCarga(\''+bodega+'\')" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">Cargar a mi inventario</button>'+
+    '<div class="saved" id="cliCarSaved">✓ Cargado</div></div>';
+}
+window.cliRegistrarCarga=function(bodega){
+  var cod=parseCodInsumo(document.getElementById('cliCarInsumo').value);
+  var cant=Number(document.getElementById('cliCarCant').value)||0;
+  var venc=document.getElementById('cliCarVenc').value;
+  var item=invCatalogo[cod];
+  if(!item){alert('Selecciona un insumo válido.');return;}
+  if(cant<=0){alert('Ingresa las unidades.');return;}
+  var updates={};
+  agregarLote(updates,bodega,cod,cant,venc,hoyStr());
+  var mk=Date.now();
+  updates['invMovimientos/'+mk]={tipo:'ingreso',cod:cod,desc:item.desc,bodega:bodega,unidades:cant,venc:venc,origen:'carga_subbodega',fecha:hoyStr(),ts:mk,por:curNombre};
+  db.ref('sedes/'+S).update(updates).then(function(){
+    showSaved('cliCarSaved');
+    document.getElementById('cliCarCant').value='';document.getElementById('cliCarInsumo').value='';document.getElementById('cliCarVenc').value='';
+  });
+};
+
+// Ficha técnica del producto, compartida y editable en conjunto por el encargado de la
+// subbodega y el de bodega central. Autoguardado campo por campo (al salir del campo).
+function cliVistaFicha(bodega){
+  return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Completa la ficha del insumo junto con bodega central. Se guarda sola al salir de cada campo, no hace falta botón "Guardar".</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Insumo</label>'+
+    '<input list="cliInsListF" id="cliFichaInsumo" onchange="cliMostrarFicha(\''+bodega+'\')" placeholder="Busca..." style="width:100%;font-size:13px;padding:7px;margin-bottom:10px">'+
+    '<datalist id="cliInsListF">'+opcionesInsumos()+'</datalist>'+
+    '<div id="cliFichaCampos"></div>'+
+  '</div>';
+}
+window.cliMostrarFicha=function(bodega){
+  var cod=parseCodInsumo(document.getElementById('cliFichaInsumo').value);
+  var cont=document.getElementById('cliFichaCampos');if(!cont)return;
+  if(!cod){cont.innerHTML='';return;}
+  var i=invCatalogo[cod]||{};
+  var rop=calcularROP(i);
+  var convB=(i.conversionSub||{})[bodega]||{};
+  cont.innerHTML=
+    fichaCampoAuto(cod,'Clasificación ABC','select_abc',i.abc)+
+    fichaCampoAuto(cod,'Criticidad','select_crit',i.criticidad)+
+    fichaCampoAuto(cod,'Lead time (días)','leadTime',i.leadTime,'Días que tarda en llegar del proveedor')+
+    fichaCampoAuto(cod,'Demanda diaria promedio','demandaDiaria',i.demandaDiaria,'Consumo por día (para calcular ROP)')+
+    fichaCampoAuto(cod,'Stock de seguridad','stockSeguridad',i.stockSeguridad,'Colchón mínimo')+
+    fichaCampoAuto(cod,'Stock óptimo','stockOptimo',i.stockOptimo,'Hasta cuánto reponer')+
+    fichaCampoAuto(cod,'Presentación macro','presentacion',i.presentacion,'Ej: caja, paquete, bolsa (como llega de central)')+
+    fichaCampoAuto(cod,'Unidades por '+(i.presentacion||'caja'),'unidadesPorCaja',i.unidadesPorCaja,'Cuántas unidades trae cada '+(i.presentacion||'caja'))+
+    fichaCampoAuto(cod,'Alarma vencimiento (meses)','umbralVenc',i.umbralVenc,'Avisar cuando falten estos meses')+
+    fichaCampoAuto(cod,'Costo unitario ($)','costo',i.costo,'Se puede llenar después')+
+    '<div style="background:rgba(37,99,235,.1);border-radius:8px;padding:8px 10px;margin:10px 0;font-size:12px;color:#93c5fd">ROP calculado ahora: <b>'+(rop!=null?rop+' unidades':'faltan datos (lead time + demanda)')+'</b></div>'+
+    '<div style="margin-top:6px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">'+
+      '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:4px">Factor de conversión de tu subbodega</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Si aquí cuentas distinto que central (ej. central en cajas, aquí en pares), indícalo.</div>'+
+      '<div style="display:flex;gap:6px;align-items:center">'+
+        '<input type="number" id="clifi_convFactor" value="'+(convB.factor!=null?convB.factor:'')+'" min="0" step="any" onblur="cliGuardarConversionFicha(\''+cod+'\',\''+bodega+'\')" placeholder="factor (ej: 50)" style="width:50%;font-size:12px;padding:6px">'+
+        '<input type="text" id="clifi_convUnidad" value="'+(convB.unidad?String(convB.unidad).replace(/"/g,'&quot;'):'')+'" onblur="cliGuardarConversionFicha(\''+cod+'\',\''+bodega+'\')" placeholder="unidad (ej: pares)" style="width:50%;font-size:12px;padding:6px">'+
+      '</div>'+
+    '</div>'+
+    '<div id="cliFichaSaved" style="font-size:11px;color:#6ee7b7;height:14px;margin-top:6px"></div>';
+};
+function fichaCampoAuto(cod,label,key,valor,hint){
+  valor=(valor==null?'':valor);
+  var id='clifi_'+key;
+  var input;
+  if(key==='select_abc'){
+    input='<select id="'+id+'" onchange="cliGuardarCampoFicha(\''+cod+'\',\''+key+'\')" style="width:100%;font-size:13px;padding:7px">'+
+      ['','A','B','C'].map(function(o){return '<option value="'+o+'"'+(valor===o?' selected':'')+'>'+(o||'— sin asignar —')+(o?' ('+(o==='A'?'alta':o==='B'?'media':'baja')+')':'')+'</option>';}).join('')+'</select>';
+  } else if(key==='select_crit'){
+    input='<select id="'+id+'" onchange="cliGuardarCampoFicha(\''+cod+'\',\''+key+'\')" style="width:100%;font-size:13px;padding:7px">'+
+      ['','Alta','Media','Baja'].map(function(o){return '<option value="'+o+'"'+(valor===o?' selected':'')+'>'+(o||'— sin asignar —')+'</option>';}).join('')+'</select>';
+  } else if(key==='presentacion'){
+    input='<input type="text" id="'+id+'" value="'+String(valor).replace(/"/g,'&quot;')+'" onblur="cliGuardarCampoFicha(\''+cod+'\',\''+key+'\')" style="width:100%;font-size:13px;padding:7px" placeholder="caja">';
+  } else {
+    input='<input type="number" id="'+id+'" value="'+valor+'" min="0" step="any" onblur="cliGuardarCampoFicha(\''+cod+'\',\''+key+'\')" style="width:100%;font-size:13px;padding:7px" placeholder="—">';
+  }
+  return '<div style="margin-bottom:10px">'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:3px">'+label+'</label>'+
+    input+
+    (hint?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">'+hint+'</div>':'')+
+    '</div>';
+}
+window.cliGuardarCampoFicha=function(cod,key){
+  var mapKey=(key==='select_abc')?'abc':(key==='select_crit')?'criticidad':key;
+  var el=document.getElementById('clifi_'+key);if(!el)return;
+  var val=el.value;
+  var updates={};updates[mapKey]=val;
+  var ind=document.getElementById('cliFichaSaved');if(ind)ind.textContent='Guardando…';
+  sedeRef('invCatalogo/'+cod).update(updates).then(function(){
+    if(ind)ind.textContent='✓ Guardado';
+    setTimeout(function(){if(ind)ind.textContent='';},1500);
+  });
+};
+window.cliGuardarConversionFicha=function(cod,bodega){
+  var fEl=document.getElementById('clifi_convFactor');var uEl=document.getElementById('clifi_convUnidad');
+  if(!fEl||!uEl)return;
+  var f=fEl.value,u=uEl.value;
+  var updates={};
+  updates['conversionSub/'+bodega]={factor:f!==''?Number(f):1,unidad:u||''};
+  var ind=document.getElementById('cliFichaSaved');if(ind)ind.textContent='Guardando…';
+  sedeRef('invCatalogo/'+cod).update(updates).then(function(){
+    if(ind)ind.textContent='✓ Guardado';
+    setTimeout(function(){if(ind)ind.textContent='';},1500);
+  });
+};
 
 function cliVistaConsumo(bodega){
   return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
