@@ -1918,7 +1918,12 @@ function pBtn(txt,fn){return mkBtn(txt,'flex:1;padding:10px;font-size:13px;font-
 var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;cobHorEl.appendChild(o);});
 
 // ── STATE ──
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia'];
+// 'ausencias' vive a nivel de SEDE (no por semana): un permiso o vacación es un hecho de calendario
+// con fecha real, no algo que deba depender de qué "semana" esté abierta en la app en ese momento.
+// Antes estaba fuera de esta lista, así que una vacación pedida hoy para noviembre quedaba guardada
+// dentro de la semana activa de HOY (la única que existía en ese momento) y por eso aparecía como si
+// fuera de la semana actual — y lo mismo le pasaría a cualquier permiso pedido para semanas futuras.
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -3618,8 +3623,33 @@ window.setSede=function(sede){
     renderSemanasList();
     renderSemanasAdminList();
     if(!W)mostrarConfirmacionSemana();
+    migrarAusenciasLegacy();
   });
 };
+// Migración de una sola vez: recupera permisos/vacaciones que quedaron guardados dentro de una
+// semana específica (formato antiguo) y los copia al nuevo lugar único a nivel de sede. Las claves
+// vienen de Firebase push() así que son únicas entre semanas — no hay riesgo de pisarse. Queda
+// marcada con 'ausenciasMigradas' para no repetir el barrido cada vez que cambian las semanas.
+var _migracionAusenciasEnCurso=false;
+function migrarAusenciasLegacy(){
+  if(_migracionAusenciasEnCurso||!S)return;
+  _migracionAusenciasEnCurso=true;
+  sedeRef('ausenciasMigradas').once('value').then(function(flagS){
+    if(flagS.val()){_migracionAusenciasEnCurso=false;return;}
+    var idsSemanas=Object.keys(semanas||{});
+    if(!idsSemanas.length){sedeRef('ausenciasMigradas').set(true);_migracionAusenciasEnCurso=false;return;}
+    Promise.all(idsSemanas.map(function(wId){
+      return db.ref('sedes/'+S+'/semanas/'+wId+'/ausencias').once('value').then(function(s){return s.val()||{};});
+    })).then(function(resultados){
+      var updates={};var n=0;
+      resultados.forEach(function(mapa){
+        Object.keys(mapa).forEach(function(k){updates['ausencias/'+k]=mapa[k];n++;});
+      });
+      updates['ausenciasMigradas']=true;
+      db.ref('sedes/'+S).update(updates).then(function(){_migracionAusenciasEnCurso=false;});
+    });
+  });
+}
 
 function mostrarConfirmacionSemana(){
   // Si semanas está vacío, forzar carga desde Firebase antes de mostrar
@@ -5237,9 +5267,9 @@ window.formDiaLibreGanador=function(){
     row.appendChild(pBtn('Enviar solicitud',function(){
       var diaElegido=sel.value;
       var fechaDia=fechaDeDiaEnSemana(diaElegido,semSig);
-      // Se guarda directo en la semana SIGUIENTE (no en la semana activa ahora), para que
-      // aparezca en "Ausencias" de la jefatura justo cuando cargue esa semana para planificarla.
-      db.ref('sedes/'+S+'/semanas/'+semSigId+'/ausencias').push({nombre:sol,tipo:'dia_libre_ganador',tipoLabel:'🏆 Día libre (premio semanal)',inicio:fechaDia,fin:fechaDia,motivo:'Premio por ganar la semana anterior · '+diaElegido,estado:'pendiente',semanaId:semSigId,ts:Date.now()}).then(function(){
+      // 'ausencias' ahora vive a nivel de sede (no por semana), así que esto se guarda ahí directo.
+      // Igual queda 'semanaId' guardado por referencia, para saber para qué semana era el premio.
+      sedeRef('ausencias').push({nombre:sol,tipo:'dia_libre_ganador',tipoLabel:'🏆 Día libre (premio semanal)',inicio:fechaDia,fin:fechaDia,motivo:'Premio por ganar la semana anterior · '+diaElegido,estado:'pendiente',semanaId:semSigId,ts:Date.now()}).then(function(){
         window._diaLibreSolicitado=semSigId+'_'+sol;
         m.remove();
         alert('✓ Solicitud enviada. Quedará pendiente para que la jefatura la revise cuando cargue la semana '+(semSig.nombre||semSig.ini+' al '+semSig.fin)+'.');
