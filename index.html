@@ -1935,7 +1935,7 @@ var bibliotecaAdmin={},fichaProgresoAdmin={},produccionAdmin={},rankingAdmin={},
 // rango horario) + la rotativa semanal de cada persona (qué turno le toca cada día). Al asignar solo
 // se elige la letra y el horario se resuelve automáticamente desde la plantilla.
 var DIAS_ROTATIVA_ADMIN=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-var turnosAdminPlantillas={},rotativaAdmin={};
+var turnosAdminPlantillas={},horarioPropioAdmin={};
 // Catálogo de métricas administrativas. ambito: 'individual'|'grupal'|'persona'. dir: 'mas'(más=mejor)|'menos'(menos=mejor).
 // asignada: nombre exacto si ambito='persona'. cadencia: 'diaria'|'quincenal'.
 var METRICAS_ADMIN_DEFAULT={
@@ -2186,7 +2186,7 @@ window.abrirPanelJefaOperaciones=function(){
     sedeRef('cumpleanos').once('value'),
     sedeRef('fichaProgresoAdmin').once('value'),
     sedeRef('turnosAdminPlantillas').once('value'),
-    sedeRef('rotativaAdmin').once('value')
+    sedeRef('horarioPropioAdmin').once('value')
   ]).then(function(snaps){
     secretarias=snaps[0].val()||{};
     produccionAdmin=snaps[1].val()||{};
@@ -2197,10 +2197,10 @@ window.abrirPanelJefaOperaciones=function(){
     cumpleanosAdmin=snaps[6].val()||{};
     fichaProgresoAdmin=snaps[7].val()||{};
     turnosAdminPlantillas=snaps[8].val()||{};
-    rotativaAdmin=snaps[9].val()||{};
+    horarioPropioAdmin=snaps[9].val()||{};
     sedeRef('secretarias').on('value',function(s){secretarias=s.val()||{};});
     sedeRef('turnosAdminPlantillas').on('value',function(s){turnosAdminPlantillas=s.val()||{};if(document.getElementById('tabJO_turnos')&&document.getElementById('tabJO_turnos').style.background.indexOf('34,211,238')>-1)renderMapaTurnosAdmin();});
-    sedeRef('rotativaAdmin').on('value',function(s){rotativaAdmin=s.val()||{};if(document.getElementById('tabJO_turnos')&&document.getElementById('tabJO_turnos').style.background.indexOf('34,211,238')>-1)renderMapaTurnosAdmin();});
+    sedeRef('horarioPropioAdmin').on('value',function(s){horarioPropioAdmin=s.val()||{};if(document.getElementById('tabJO_turnos')&&document.getElementById('tabJO_turnos').style.background.indexOf('34,211,238')>-1)renderMapaTurnosAdmin();});
     sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();if(document.getElementById('jefaOpContenido')&&document.querySelector('#tabJO_cump')&&document.querySelector('#tabJO_cump').style.background.indexOf('34,211,238')>-1)renderCumplimientoAdmin();});
     sedeRef('fichaProgresoAdmin').on('value',function(s){fichaProgresoAdmin=s.val()||{};if(document.getElementById('jefaOpContenido')&&document.querySelector('#tabJO_cump')&&document.querySelector('#tabJO_cump').style.background.indexOf('34,211,238')>-1)renderCumplimientoAdmin();});
     sedeRef('metricasAdmin').on('value',function(s){metricasAdmin=s.val()||{};});
@@ -2627,83 +2627,121 @@ window.quitarSecretaria=function(key){
 };
 
 // ══════════════ MAPA DE TURNOS (equipo administrativo) ══════════════
-// 1) Plantillas Turno A/B/C: cada una define un rango horario (ej. Turno A = 08:00–14:00). Se
-//    guardan una sola vez y se reutilizan para todo el equipo.
-// 2) Rotativa: por cada persona y día (Lunes a Sábado) se elige la LETRA del turno que le toca ese
-//    día — el horario se resuelve automáticamente desde la plantilla, sin tener que tipearlo cada vez.
+// OJO: los turnos reales que pasó Marcela NO son un rango horario único — cada Turno (1/2/3) tiene
+// un horario DISTINTO por día (ej. Turno 1: Lun-Mar 07:45-17:00, Mié-Jue 07:45-16:00, Vie 07:45-14:45,
+// Sáb 09:00-14:00). Por eso cada plantilla guarda un horario POR DÍA, no un solo ini/fin.
+// Además Bodega y Mantención no usan estas plantillas compartidas: cada uno (Luis Cereceda, Alfredo
+// Torres) tiene su propio horario semanal individual — por eso cada persona puede además tener un
+// horario "Personalizado" en vez de un Turno 1/2/3.
+var TURNOS_ADMIN_IDS=['1','2','3'];
+// Datos reales pasados por Marcela Fernández (28-09-2026) — quedan precargados como sugerencia la
+// primera vez que se abre esta pestaña; hay que presionar "Guardar" en cada turno para confirmarlos.
+var TURNOS_ADMIN_DEFAULT={
+  '1':{Lunes:{ini:'07:45',fin:'17:00'},Martes:{ini:'07:45',fin:'17:00'},Miércoles:{ini:'07:45',fin:'16:00'},Jueves:{ini:'07:45',fin:'16:00'},Viernes:{ini:'07:45',fin:'14:45'},Sábado:{ini:'09:00',fin:'14:00'}},
+  '2':{Lunes:{ini:'10:00',fin:'20:00'},Martes:{ini:'10:00',fin:'20:00'},Miércoles:{ini:'11:00',fin:'20:00'},Jueves:{ini:'11:00',fin:'20:00'},Viernes:{ini:'10:30',fin:'19:30'},Sábado:null},
+  '3':{Lunes:{ini:'07:45',fin:'18:00'},Martes:{ini:'07:45',fin:'17:00'},Miércoles:{ini:'07:45',fin:'17:00'},Jueves:{ini:'07:45',fin:'17:00'},Viernes:{ini:'07:45',fin:'16:45'},Sábado:null}
+};
+// Horario individual de Bodega (Luis Cereceda) y Mantención (Alfredo Torres) — se ofrecen como
+// sugerencia precargada al elegir "Personalizado" para una persona con ese cargo; no se asignan solos.
+var HORARIO_SUGERIDO_CARGO={
+  Bodega:{Lunes:{ini:'09:00',fin:'19:00'},Martes:{ini:'09:00',fin:'19:00'},Miércoles:{ini:'10:00',fin:'19:00'},Jueves:{ini:'10:00',fin:'19:00'},Viernes:{ini:'10:00',fin:'19:00'},Sábado:null},
+  'Mantención':{Lunes:{ini:'08:00',fin:'18:00'},Martes:{ini:'08:00',fin:'18:00'},Miércoles:{ini:'08:00',fin:'18:00'},Jueves:{ini:'08:00',fin:'17:00'},Viernes:{ini:'08:00',fin:'16:00'},Sábado:null}
+};
+function _turnoInputVal(obj,dia,campo){return (obj&&obj[dia]&&obj[dia][campo])||'';}
+function _leerHorarioForm(prefijo){
+  var h={};
+  DIAS_ROTATIVA_ADMIN.forEach(function(d){
+    var ini=document.getElementById(prefijo+'_ini_'+d),fin=document.getElementById(prefijo+'_fin_'+d);
+    if(ini&&fin&&ini.value&&fin.value)h[d]={ini:ini.value,fin:fin.value};
+    else h[d]=null;
+  });
+  return h;
+}
+function _filaHorarioHTML(prefijo,datosPrefill){
+  return '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:10px">'+
+    '<tr>'+DIAS_ROTATIVA_ADMIN.map(function(d){return '<th style="padding:3px;color:rgba(255,255,255,.5);font-weight:600">'+d.slice(0,3)+'</th>';}).join('')+'</tr>'+
+    '<tr>'+DIAS_ROTATIVA_ADMIN.map(function(d){
+      return '<td style="padding:2px"><input type="time" id="'+prefijo+'_ini_'+d+'" value="'+_turnoInputVal(datosPrefill,d,'ini')+'" style="width:100%;font-size:10px;padding:4px">'+
+        '<input type="time" id="'+prefijo+'_fin_'+d+'" value="'+_turnoInputVal(datosPrefill,d,'fin')+'" style="width:100%;font-size:10px;padding:4px;margin-top:2px"></td>';
+    }).join('')+'</tr>'+
+    '<tr>'+DIAS_ROTATIVA_ADMIN.map(function(){return '<td style="padding:0 2px 2px;font-size:8px;color:rgba(255,255,255,.3);text-align:center">deja vacío = no asiste</td>';}).join('')+'</tr>'+
+  '</table></div>';
+}
 function renderMapaTurnosAdmin(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
-  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'')};}).filter(function(p){return p.nombre;});
-  var LETRAS=['A','B','C'];
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:''),turno:(typeof v==='object'?(v.turno||''):'')};}).filter(function(p){return p.nombre;});
+  var hayPlantillas=TURNOS_ADMIN_IDS.some(function(t){return turnosAdminPlantillas[t];});
   var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
-    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:4px">🕐 Plantillas de turno</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Define una vez el horario de cada turno. Al asignar la rotativa abajo, solo eliges la letra.</div>';
-  LETRAS.forEach(function(L){
-    var t=turnosAdminPlantillas[L]||{};
-    html+='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px">'+
-      '<div style="width:36px;text-align:center;font-size:14px;font-weight:800;color:#22d3ee;padding-bottom:8px">'+L+'</div>'+
-      '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.5)">Inicio</label>'+
-        '<input type="time" id="turnoIni_'+L+'" value="'+(t.ini||'')+'" style="width:100%;font-size:13px;padding:7px"></div>'+
-      '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.5)">Término</label>'+
-        '<input type="time" id="turnoFin_'+L+'" value="'+(t.fin||'')+'" style="width:100%;font-size:13px;padding:7px"></div>'+
-      '<button onclick="guardarPlantillaTurno(\''+L+'\')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:8px 12px;font-family:inherit;font-size:11px;cursor:pointer;white-space:nowrap">Guardar</button>'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:4px">🕐 Plantillas de turno (equipo administrativo)</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Cada turno puede tener un horario distinto por día. Al asignar a una persona más abajo, solo eliges Turno 1/2/3.</div>';
+  if(!hayPlantillas)html+='<div style="font-size:11px;color:#93c5fd;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:8px;margin-bottom:10px">📋 Prellenado con el horario que enviaste — revisa y presiona "Guardar" en cada turno para confirmarlo.</div>';
+  TURNOS_ADMIN_IDS.forEach(function(t){
+    var datos=turnosAdminPlantillas[t]||TURNOS_ADMIN_DEFAULT[t];
+    html+='<div style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.06)">'+
+      '<div style="font-size:12px;font-weight:700;color:#22d3ee;margin-bottom:6px">Turno '+t+'</div>'+
+      _filaHorarioHTML('pt'+t,datos)+
+      '<button onclick="guardarPlantillaTurno(\''+t+'\')" style="width:100%;margin-top:6px;background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:7px;font-family:inherit;font-size:11px;cursor:pointer">Guardar Turno '+t+'</button>'+
     '</div>';
   });
   html+='</div>';
   html+='<div style="background:#16233d;border-radius:12px;padding:16px">'+
-    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">🗓️ Rotativa semanal</div>';
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">🗓️ Asignación por persona</div>';
   if(!lista.length){
     html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Agrega personas en la pestaña Equipo primero.</div>';
   } else {
-    var sinPlantillas=LETRAS.every(function(L){return !turnosAdminPlantillas[L]||!turnosAdminPlantillas[L].ini;});
-    if(sinPlantillas)html+='<div style="font-size:11px;color:#fcd34d;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:8px;margin-bottom:10px">⚠ Define primero el horario de los turnos arriba.</div>';
-    html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
-      '<tr><th style="text-align:left;padding:6px 8px;color:rgba(255,255,255,.5);font-weight:600">Persona</th>'+
-      DIAS_ROTATIVA_ADMIN.map(function(d){return '<th style="padding:6px 4px;color:rgba(255,255,255,.5);font-weight:600">'+d.slice(0,3)+'</th>';}).join('')+
-      '</tr>';
     html+=lista.map(function(p){
-      var fila=rotativaAdmin[p.key]||{};
-      return '<tr style="border-top:1px solid rgba(255,255,255,.05)">'+
-        '<td style="padding:6px 8px;color:#fff;white-space:nowrap">'+esc(p.nombre)+'</td>'+
-        DIAS_ROTATIVA_ADMIN.map(function(d){
-          var val=fila[d]||'';
-          return '<td style="padding:3px"><select onchange="asignarTurnoDia(\''+p.key+'\',\''+d+'\',this.value)" style="width:100%;font-size:11px;padding:4px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:5px">'+
-            '<option value="">—</option>'+
-            LETRAS.map(function(L){return '<option value="'+L+'"'+(val===L?' selected':'')+'>'+L+'</option>';}).join('')+
-          '</select></td>';
-        }).join('')+
-      '</tr>';
+      var esPersonalizado=p.turno==='personalizado';
+      var sugerido=HORARIO_SUGERIDO_CARGO[p.cargo]||HORARIO_SUGERIDO_CARGO[labelCargo(p.cargo)]||null;
+      var datosPropios=(horarioPropioAdmin[p.key])||sugerido;
+      return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,.03);border-radius:8px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">'+
+          '<span style="font-size:12px;color:#fff;font-weight:600">'+esc(p.nombre)+' <span style="font-size:9px;color:rgba(255,255,255,.4)">· '+esc(labelCargo(p.cargo))+'</span></span>'+
+          '<select onchange="asignarTurnoPersona(\''+p.key+'\',this.value)" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+            '<option value=""'+(!p.turno?' selected':'')+'>Sin asignar</option>'+
+            TURNOS_ADMIN_IDS.map(function(t){return '<option value="'+t+'"'+(p.turno===t?' selected':'')+'>Turno '+t+'</option>';}).join('')+
+            '<option value="personalizado"'+(esPersonalizado?' selected':'')+'>Horario personalizado</option>'+
+          '</select>'+
+        '</div>'+
+        (esPersonalizado?
+          '<div id="wrapPersonalizado_'+p.key+'">'+_filaHorarioHTML('hp'+p.key,datosPropios)+
+          '<button onclick="guardarHorarioPersonalizado(\''+p.key+'\')" style="width:100%;margin-top:4px;background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:6px;font-family:inherit;font-size:11px;cursor:pointer">Guardar horario de '+esc(p.nombre)+'</button></div>'
+          :
+          (p.turno?'<div style="font-size:10px;color:rgba(255,255,255,.4)">'+resumenTurnoTexto(p.turno,p.key)+'</div>':'')
+        )+
+      '</div>';
     }).join('');
-    html+='</table></div>';
-    html+='<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:10px">'+LETRAS.map(function(L){var t=turnosAdminPlantillas[L];return t&&t.ini?('Turno '+L+': '+t.ini+'–'+t.fin):null;}).filter(Boolean).join(' · ')+'</div>';
   }
   html+='</div>';
   cont.innerHTML=html;
 }
-window.guardarPlantillaTurno=function(letra){
-  var ini=document.getElementById('turnoIni_'+letra).value;
-  var fin=document.getElementById('turnoFin_'+letra).value;
-  if(!ini||!fin){alert('Ingresa hora de inicio y término.');return;}
-  if(minutosEntre(ini,fin)<=0){alert('La hora de término debe ser posterior al inicio.');return;}
-  turnosAdminPlantillas[letra]={ini:ini,fin:fin};
-  sedeRef('turnosAdminPlantillas/'+letra).set({ini:ini,fin:fin}).then(function(){renderMapaTurnosAdmin();});
+function resumenTurnoTexto(turno,key){
+  var datos=turno==='personalizado'?horarioPropioAdmin[key]:turnosAdminPlantillas[turno];
+  if(!datos)return 'Sin horario definido aún.';
+  return DIAS_ROTATIVA_ADMIN.map(function(d){return d.slice(0,3)+' '+(datos[d]?datos[d].ini+'–'+datos[d].fin:'libre');}).join(' · ');
+}
+window.guardarPlantillaTurno=function(turno){
+  var h=_leerHorarioForm('pt'+turno);
+  turnosAdminPlantillas[turno]=h;
+  sedeRef('turnosAdminPlantillas/'+turno).set(h).then(function(){renderMapaTurnosAdmin();});
 };
-window.asignarTurnoDia=function(key,dia,valor){
-  if(!rotativaAdmin[key])rotativaAdmin[key]={};
-  if(valor){
-    rotativaAdmin[key][dia]=valor;
-    sedeRef('rotativaAdmin/'+key+'/'+dia).set(valor);
-  } else {
-    delete rotativaAdmin[key][dia];
-    sedeRef('rotativaAdmin/'+key+'/'+dia).remove();
-  }
+window.asignarTurnoPersona=function(key,valor){
+  if(!secretarias[key])return;
+  if(typeof secretarias[key]!=='object')secretarias[key]={nombre:secretarias[key]};
+  secretarias[key].turno=valor;
+  sedeRef('secretarias/'+key+'/turno').set(valor||null).then(function(){renderMapaTurnosAdmin();});
 };
-// Resuelve el turno (letra + horario) que le corresponde a una persona un día dado, para usarlo
-// donde haga falta mostrar "tu turno hoy" (ej. dashboard del colaborador administrativo).
+window.guardarHorarioPersonalizado=function(key){
+  var h=_leerHorarioForm('hp'+key);
+  horarioPropioAdmin[key]=h;
+  sedeRef('horarioPropioAdmin/'+key).set(h).then(function(){renderMapaTurnosAdmin();});
+};
+// Resuelve el horario que le corresponde a una persona un día dado (según su Turno 1/2/3 asignado o
+// su horario personalizado), para usarlo donde haga falta mostrar "tu turno hoy".
 function turnoDelDia(key,dia){
-  var letra=(rotativaAdmin[key]||{})[dia];if(!letra)return null;
-  var t=turnosAdminPlantillas[letra];if(!t||!t.ini)return {letra:letra,ini:null,fin:null};
-  return {letra:letra,ini:t.ini,fin:t.fin};
+  var v=secretarias[key];var turno=(v&&typeof v==='object')?v.turno:'';if(!turno)return null;
+  var datos=turno==='personalizado'?horarioPropioAdmin[key]:turnosAdminPlantillas[turno];
+  if(!datos||!datos[dia])return {turno:turno,ini:null,fin:null};
+  return {turno:turno,ini:datos[dia].ini,fin:datos[dia].fin};
 }
 
 // ── Ingreso diario de producción ──
