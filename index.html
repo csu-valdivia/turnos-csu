@@ -2648,6 +2648,23 @@ var TURNOS_ADMIN_DEFAULT={
 };
 // Horario individual de Bodega (Luis Cereceda) y Mantención (Alfredo Torres) — se ofrecen como
 // sugerencia precargada al elegir "Personalizado" para una persona con ese cargo; no se asignan solos.
+// Función/rol específico dentro del equipo administrativo (distinto del turno horario y del cargo).
+// Es un texto libre por persona (con sugerencias) para que se pueda cambiar el día que corresponda,
+// pero por ahora se precargan las funciones reales que informó Marcela Fernández (29-09-2026).
+// El match es por nombre parcial (sirve aunque el nombre completo en el sistema tenga más palabras).
+var FUNCIONES_ADMIN_SUGERIDAS=['Ejecutiva de convenios','Ejecutiva de atención a clientes','Supervisora de Caja y ejecutiva de atención a clientes'];
+var FUNCION_SUGERIDA_NOMBRE={
+  'Ainhoa':'Ejecutiva de convenios',
+  'Marilyn':'Ejecutiva de atención a clientes',
+  'Carla':'Ejecutiva de atención a clientes',
+  'Fabiola':'Supervisora de Caja y ejecutiva de atención a clientes'
+};
+function funcionSugerida(nombre){
+  if(!nombre)return '';
+  var n=nombre.toLowerCase();
+  for(var corto in FUNCION_SUGERIDA_NOMBRE){if(n.indexOf(corto.toLowerCase())>-1)return FUNCION_SUGERIDA_NOMBRE[corto];}
+  return '';
+}
 var HORARIO_SUGERIDO_CARGO={
   Bodega:{Lunes:{ini:'09:00',fin:'19:00'},Martes:{ini:'09:00',fin:'19:00'},Miércoles:{ini:'10:00',fin:'19:00'},Jueves:{ini:'10:00',fin:'19:00'},Viernes:{ini:'10:00',fin:'19:00'},Sábado:null},
   'Mantención':{Lunes:{ini:'08:00',fin:'18:00'},Martes:{ini:'08:00',fin:'18:00'},Miércoles:{ini:'08:00',fin:'18:00'},Jueves:{ini:'08:00',fin:'17:00'},Viernes:{ini:'08:00',fin:'16:00'},Sábado:null}
@@ -2674,8 +2691,9 @@ function _filaHorarioHTML(prefijo,datosPrefill){
 }
 function renderMapaTurnosAdmin(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
-  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:''),turno:(typeof v==='object'?(v.turno||''):'')};}).filter(function(p){return p.nombre;});
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:''),turno:(typeof v==='object'?(v.turno||''):''),funcion:(typeof v==='object'?(v.funcion||''):'')};}).filter(function(p){return p.nombre;});
   var hayPlantillas=TURNOS_ADMIN_IDS.some(function(t){return turnosAdminPlantillas[t];});
+  var hayFuncionesPendientes=lista.some(function(p){return !p.funcion&&funcionSugerida(p.nombre);});
   var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
     '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:4px">🕐 Plantillas de turno (equipo administrativo)</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Cada turno puede tener un horario distinto por día. Al asignar a una persona más abajo, solo eliges Turno 1/2/3.</div>';
@@ -2694,10 +2712,13 @@ function renderMapaTurnosAdmin(){
   if(!lista.length){
     html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Agrega personas en la pestaña Equipo primero.</div>';
   } else {
+    if(hayFuncionesPendientes)html+='<div style="font-size:11px;color:#93c5fd;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>📋 Hay funciones sugeridas (las que informó Marcela) sin cargar aún.</span><button onclick="cargarFuncionesSugeridas()" style="background:rgba(52,211,153,.2);color:#6ee7b7;border:none;border-radius:6px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer;white-space:nowrap">✨ Cargar sugeridas</button></div>';
+    html+='<datalist id="funcionesAdminList">'+FUNCIONES_ADMIN_SUGERIDAS.map(function(f){return '<option value="'+esc(f)+'">';}).join('')+'</datalist>';
     html+=lista.map(function(p){
       var esPersonalizado=p.turno==='personalizado';
       var sugerido=HORARIO_SUGERIDO_CARGO[p.cargo]||HORARIO_SUGERIDO_CARGO[labelCargo(p.cargo)]||null;
       var datosPropios=(horarioPropioAdmin[p.key])||sugerido;
+      var funcionSug=funcionSugerida(p.nombre);
       return '<div style="padding:10px;margin-bottom:8px;background:rgba(255,255,255,.03);border-radius:8px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">'+
           '<span style="font-size:12px;color:#fff;font-weight:600">'+esc(p.nombre)+' <span style="font-size:9px;color:rgba(255,255,255,.4)">· '+esc(labelCargo(p.cargo))+'</span></span>'+
@@ -2706,6 +2727,10 @@ function renderMapaTurnosAdmin(){
             TURNOS_ADMIN_IDS.map(function(t){return '<option value="'+t+'"'+(p.turno===t?' selected':'')+'>Turno '+t+'</option>';}).join('')+
             '<option value="personalizado"'+(esPersonalizado?' selected':'')+'>Horario personalizado</option>'+
           '</select>'+
+        '</div>'+
+        '<div style="margin-bottom:6px">'+
+          '<label style="font-size:9px;color:rgba(255,255,255,.4);display:block;margin-bottom:2px">🧭 Función / rol específico (editable, por si cambia)</label>'+
+          '<input list="funcionesAdminList" id="funcion_'+p.key+'" value="'+esc(p.funcion)+'" placeholder="'+esc(funcionSug||'Ej: Ejecutiva de convenios')+'" onblur="guardarFuncionPersona(\''+p.key+'\')" style="width:100%;font-size:11px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
         '</div>'+
         (esPersonalizado?
           '<div id="wrapPersonalizado_'+p.key+'">'+_filaHorarioHTML('hp'+p.key,datosPropios)+
@@ -2734,6 +2759,33 @@ window.asignarTurnoPersona=function(key,valor){
   if(typeof secretarias[key]!=='object')secretarias[key]={nombre:secretarias[key]};
   secretarias[key].turno=valor;
   sedeRef('secretarias/'+key+'/turno').set(valor||null).then(function(){renderMapaTurnosAdmin();});
+};
+// Función/rol específico de la persona (ej: "Ejecutiva de convenios") — se guarda solo al salir
+// del campo, y queda libre para cambiarla cuando corresponda.
+window.guardarFuncionPersona=function(key){
+  var el=document.getElementById('funcion_'+key);if(!el||!secretarias[key])return;
+  var valor=el.value.trim();
+  if(typeof secretarias[key]!=='object')secretarias[key]={nombre:secretarias[key]};
+  secretarias[key].funcion=valor;
+  sedeRef('secretarias/'+key+'/funcion').set(valor||null);
+};
+// Carga de una sola vez las funciones que informó Marcela para quienes aún no tengan una función
+// guardada y calcen con el nombre sugerido. No pisa una función ya cargada o editada a mano.
+window.cargarFuncionesSugeridas=function(){
+  var updates={};var n=0;
+  Object.keys(secretarias||{}).forEach(function(k){
+    var v=secretarias[k];var nombre=(typeof v==='object'?v.nombre:v);
+    var yaTiene=(typeof v==='object'&&v.funcion);
+    if(yaTiene||!nombre)return;
+    var sug=funcionSugerida(nombre);
+    if(!sug)return;
+    if(typeof secretarias[k]!=='object')secretarias[k]={nombre:nombre};
+    secretarias[k].funcion=sug;
+    updates['secretarias/'+k+'/funcion']=sug;
+    n++;
+  });
+  if(!n){alert('No hay funciones sugeridas pendientes.');return;}
+  db.ref('sedes/'+S).update(updates).then(function(){renderMapaTurnosAdmin();});
 };
 window.guardarHorarioPersonalizado=function(key){
   var h=_leerHorarioForm('hp'+key);
@@ -13389,7 +13441,7 @@ window.verRegistrosProduccion=function(tipo){
     var horario=(r.horaInicio&&r.horaTermino)?' ('+r.horaInicio+'–'+r.horaTermino+')':'';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05)">'+
       '<div>'+
-        '<div style="font-size:13px;color:#fff;font-weight:600">'+r.fecha+(cfg.sinCantidad?(horario||' (sin horario)'):(' · '+(Number(r.cantidad)||0)+' '+cfg.unidad))+'</div>'+
+        '<div style="font-size:13px;color:#fff;font-weight:600">'+r.fecha+(cfg.sinCantidad?(horario||' · ✓ registrado'):(' · '+(Number(r.cantidad)||0)+' '+cfg.unidad))+'</div>'+
         '<div style="font-size:11px;color:rgba(255,255,255,.5)">👤 '+esc(r.quien||'—')+' · '+(r.hora||'')+(cfg.sinCantidad?'':horario)+dur+'</div>'+
         (r.obs?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">📝 '+esc(r.obs)+'</div>':'')+
       '</div>'+
@@ -13397,7 +13449,7 @@ window.verRegistrosProduccion=function(tipo){
     '</div>';
   }).join('');
   var total=regs.reduce(function(a,r){return a+(Number(r.cantidad)||0);},0);
-  var resumenTotal=cfg.sinCantidad?(regs.length+' registro(s) de horario'):(regs.length+' registro(s) · '+total+' '+cfg.unidad+' en total');
+  var resumenTotal=cfg.sinCantidad?(regs.length+' registro(s)'):(regs.length+' registro(s) · '+total+' '+cfg.unidad+' en total');
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:520px;width:100%;margin-top:20px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
       '<span style="font-size:15px;font-weight:700;color:#fff">'+cfg.emoji+' '+cfg.label+' — registros</span>'+
