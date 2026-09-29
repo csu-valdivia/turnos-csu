@@ -4719,10 +4719,15 @@ function renderMisTurnos(nombre){
   // Botón de borradores pendientes — SIEMPRE visible si hay borradores (fuera del bloque de roles)
   html+=botonBorradoresPendientesBloque();
   // Badges
-  Object.values(ausencias).filter(function(a){return a.nombre===nombre&&a.estado==='aprobado';}).forEach(function(a){
+  // Ojo: antes esto mostraba CUALQUIER ausencia aprobada sin mirar la fecha, así que unas vacaciones
+  // pedidas para noviembre aparecían como si fueran de hoy. Ahora se compara contra la fecha real:
+  // ya pasada → no se muestra más; en curso → badge normal; futura → badge de "Próxima".
+  var hoyAus=hoyStr();
+  Object.values(ausencias).filter(function(a){return a.nombre===nombre&&a.estado==='aprobado'&&a.fin>=hoyAus;}).forEach(function(a){
+    var futura=a.inicio>hoyAus;
     var c=a.tipo==='licencia'?'rgba(124,58,237,.15)':a.tipo==='vacaciones'?'rgba(74,144,217,.15)':'rgba(16,185,129,.15)';
     var emo=a.tipo==='licencia'?'🏥':a.tipo==='vacaciones'?'🌴':a.tipo==='administrativo'?'📋':'📅';
-    html+='<div class="badge-row" style="background:'+c+';border:1px solid rgba(255,255,255,.1);color:#fff">'+emo+' '+(a.tipoLabel||a.tipo)+' · '+a.inicio+(a.inicio!==a.fin?' → '+a.fin:'')+'</div>';
+    html+='<div class="badge-row" style="background:'+c+';border:1px solid rgba(255,255,255,.1);color:#fff">'+emo+' '+(futura?'Próxima: ':'')+(a.tipoLabel||a.tipo)+' · '+a.inicio+(a.inicio!==a.fin?' → '+a.fin:'')+'</div>';
   });
   Object.values(llamados).filter(function(l){return l.nombre===nombre;}).forEach(function(l){html+='<div style="background:rgba(251,191,36,.06);border:1px dashed rgba(251,191,36,.25);border-radius:10px;padding:10px 14px;margin-bottom:8px"><p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px">📞 De llamado</p><p style="font-size:12px;color:rgba(255,255,255,.5)">'+l.dia+' · '+l.area+' · '+l.horario+'</p></div>';});
   Object.values(encargados).filter(function(e){return e.nombre===nombre;}).forEach(function(e){html+='<div style="background:rgba(251,191,36,.06);border:1px dashed rgba(251,191,36,.25);border-radius:10px;padding:10px 14px;margin-bottom:8px"><p style="font-size:13px;font-weight:700;color:#fcd34d">⭐ Enfermero/a a cargo · '+e.dia+'</p></div>';});
