@@ -1931,6 +1931,11 @@ var bancoActivo={}; // banco activo por sede (nuevo sistema)
 var S='',W='',bloques={},tareas={},pendientes={},nombres=[],asistencia={},notas={},visto={},cambios={},ausencias={},llamados={},correos={},encargados={},coberturas={},equipoClave={},sinServicios={},biblioteca={},fichaProgreso={},ranking={},anuncios={},anunciosCapacitacion={},induccion={},rolPersona={},planEstudio={};
 // ── MÓDULO ADMINISTRATIVO/OPERACIONES (namespaces separados, no tocan lo clínico) ──
 var bibliotecaAdmin={},fichaProgresoAdmin={},produccionAdmin={},rankingAdmin={},pesosAdmin={produccion:60,capacitacion:40},secretarias={};
+// Mapa de turnos del equipo administrativo: plantillas reutilizables (Turno A/B/C, cada una con su
+// rango horario) + la rotativa semanal de cada persona (qué turno le toca cada día). Al asignar solo
+// se elige la letra y el horario se resuelve automáticamente desde la plantilla.
+var DIAS_ROTATIVA_ADMIN=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+var turnosAdminPlantillas={},rotativaAdmin={};
 // Catálogo de métricas administrativas. ambito: 'individual'|'grupal'|'persona'. dir: 'mas'(más=mejor)|'menos'(menos=mejor).
 // asignada: nombre exacto si ambito='persona'. cadencia: 'diaria'|'quincenal'.
 var METRICAS_ADMIN_DEFAULT={
@@ -2179,7 +2184,9 @@ window.abrirPanelJefaOperaciones=function(){
     sedeRef('borradores').once('value'),
     sedeRef('metricasAdmin').once('value'),
     sedeRef('cumpleanos').once('value'),
-    sedeRef('fichaProgresoAdmin').once('value')
+    sedeRef('fichaProgresoAdmin').once('value'),
+    sedeRef('turnosAdminPlantillas').once('value'),
+    sedeRef('rotativaAdmin').once('value')
   ]).then(function(snaps){
     secretarias=snaps[0].val()||{};
     produccionAdmin=snaps[1].val()||{};
@@ -2189,7 +2196,11 @@ window.abrirPanelJefaOperaciones=function(){
     metricasAdmin=snaps[5].val()||{};
     cumpleanosAdmin=snaps[6].val()||{};
     fichaProgresoAdmin=snaps[7].val()||{};
+    turnosAdminPlantillas=snaps[8].val()||{};
+    rotativaAdmin=snaps[9].val()||{};
     sedeRef('secretarias').on('value',function(s){secretarias=s.val()||{};});
+    sedeRef('turnosAdminPlantillas').on('value',function(s){turnosAdminPlantillas=s.val()||{};if(document.getElementById('tabJO_turnos')&&document.getElementById('tabJO_turnos').style.background.indexOf('34,211,238')>-1)renderMapaTurnosAdmin();});
+    sedeRef('rotativaAdmin').on('value',function(s){rotativaAdmin=s.val()||{};if(document.getElementById('tabJO_turnos')&&document.getElementById('tabJO_turnos').style.background.indexOf('34,211,238')>-1)renderMapaTurnosAdmin();});
     sedeRef('produccionAdmin').on('value',function(s){produccionAdmin=s.val()||{};if(document.getElementById('prodAdminPanel'))renderProduccionAdmin();if(document.getElementById('jefaOpContenido')&&document.querySelector('#tabJO_cump')&&document.querySelector('#tabJO_cump').style.background.indexOf('34,211,238')>-1)renderCumplimientoAdmin();});
     sedeRef('fichaProgresoAdmin').on('value',function(s){fichaProgresoAdmin=s.val()||{};if(document.getElementById('jefaOpContenido')&&document.querySelector('#tabJO_cump')&&document.querySelector('#tabJO_cump').style.background.indexOf('34,211,238')>-1)renderCumplimientoAdmin();});
     sedeRef('metricasAdmin').on('value',function(s){metricasAdmin=s.val()||{};});
@@ -2217,6 +2228,7 @@ function renderPanelJefaOperaciones(){
       '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
       '<button onclick="tabJefaOp(\'cumplimiento\')" id="tabJO_cump" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📈 Cumplimiento</button>'+
       '<button onclick="tabJefaOp(\'metricas\')" id="tabJO_met" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">⚙️ Métricas</button>'+
+      '<button onclick="tabJefaOp(\'turnos\')" id="tabJO_turnos" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🗓️ Turnos</button>'+
     '</div>'+
     '<button onclick="abrirModuloGerencia()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">👤 Mi perfil personal (Gerencia) — Material, Preguntas y mi Logro</button>'+
     '<div id="jefaOpContenido"></div></div>';
@@ -2224,12 +2236,13 @@ function renderPanelJefaOperaciones(){
 }
 
 window.tabJefaOp=function(tab){
-  ['prod','sec','rank','cump','met'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
-  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',cumplimiento:'tabJO_cump',metricas:'tabJO_met'};
+  ['prod','sec','rank','cump','met','turnos'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',cumplimiento:'tabJO_cump',metricas:'tabJO_met',turnos:'tabJO_turnos'};
   var activo=document.getElementById(map[tab]);
   if(activo){activo.style.background='rgba(34,211,238,.3)';activo.style.color='#fff';}
   if(tab==='produccion')renderProduccionAdmin();
   else if(tab==='secretarias')renderSecretariasAdmin();
+  else if(tab==='turnos')renderMapaTurnosAdmin();
   else if(tab==='ranking')renderRankingAdmin('jefaOpContenido');
   else if(tab==='cumplimiento')renderCumplimientoAdmin();
   else renderEditorMetricas();
@@ -2516,6 +2529,9 @@ window.quitarMetrica=function(id){
 };
 
 // ── Gestión del equipo administrativo (secretarias + bodega + mantención) ──
+// "Secretaria" queda como valor histórico guardado en Firebase (no se migra), pero en pantalla
+// siempre se muestra como "Administrativo/a" — término neutro, ya que ahora ingresan hombres también.
+function labelCargo(c){return (c==='Secretaria')?'Administrativo/a':(c||'Administrativo/a');}
 function renderSecretariasAdmin(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
   var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
@@ -2524,7 +2540,7 @@ function renderSecretariasAdmin(){
     '<input type="text" id="nuevaSecretaria" placeholder="Nombre completo" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
     '<div style="display:flex;gap:8px">'+
       '<select id="nuevoCargo" style="flex:1;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px">'+
-        '<option value="Secretaria">Secretaria</option>'+
+        '<option value="Administrativo/a">Administrativo/a</option>'+
         '<option value="Bodega">Bodega</option>'+
         '<option value="Mantención">Mantención</option>'+
       '</select>'+
@@ -2537,14 +2553,14 @@ function renderSecretariasAdmin(){
     '</div>';
   if(!lista.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no hay personas. Agrégalas arriba.</div>';}
   else{
-    var emoji={Secretaria:'🗂️',Bodega:'📦',Mantención:'🔧'};
+    var emoji={Secretaria:'🗂️','Administrativo/a':'🗂️',Bodega:'📦',Mantención:'🔧'};
     html+=lista.map(function(s){
       var ck=s.nombre.replace(/\s/g,'_');
       var cump=(cumpleanosAdmin&&cumpleanosAdmin[ck])||{};
       var mesActual=cump.fecha?cump.fecha.slice(0,2):'';
       var diaActual=cump.fecha?cump.fecha.slice(3,5):'';
       return '<div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;color:#fff">'+(emoji[s.cargo]||'👤')+' '+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+esc(s.cargo)+'</span></span><button onclick="quitarSecretaria(\''+s.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;color:#fff">'+(emoji[s.cargo]||'👤')+' '+esc(s.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+esc(labelCargo(s.cargo))+'</span></span><button onclick="quitarSecretaria(\''+s.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button></div>'+
         '<div style="display:flex;gap:6px;align-items:center">'+
           '<span style="font-size:10px;color:rgba(255,255,255,.4)">🎂</span>'+
           '<select id="cumpMes_'+ck+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
@@ -2610,6 +2626,86 @@ window.quitarSecretaria=function(key){
   sedeRef('secretarias/'+key).remove().then(function(){renderSecretariasAdmin();});
 };
 
+// ══════════════ MAPA DE TURNOS (equipo administrativo) ══════════════
+// 1) Plantillas Turno A/B/C: cada una define un rango horario (ej. Turno A = 08:00–14:00). Se
+//    guardan una sola vez y se reutilizan para todo el equipo.
+// 2) Rotativa: por cada persona y día (Lunes a Sábado) se elige la LETRA del turno que le toca ese
+//    día — el horario se resuelve automáticamente desde la plantilla, sin tener que tipearlo cada vez.
+function renderMapaTurnosAdmin(){
+  var cont=document.getElementById('jefaOpContenido');if(!cont)return;
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'')};}).filter(function(p){return p.nombre;});
+  var LETRAS=['A','B','C'];
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:4px">🕐 Plantillas de turno</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Define una vez el horario de cada turno. Al asignar la rotativa abajo, solo eliges la letra.</div>';
+  LETRAS.forEach(function(L){
+    var t=turnosAdminPlantillas[L]||{};
+    html+='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px">'+
+      '<div style="width:36px;text-align:center;font-size:14px;font-weight:800;color:#22d3ee;padding-bottom:8px">'+L+'</div>'+
+      '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.5)">Inicio</label>'+
+        '<input type="time" id="turnoIni_'+L+'" value="'+(t.ini||'')+'" style="width:100%;font-size:13px;padding:7px"></div>'+
+      '<div style="flex:1"><label style="font-size:10px;color:rgba(255,255,255,.5)">Término</label>'+
+        '<input type="time" id="turnoFin_'+L+'" value="'+(t.fin||'')+'" style="width:100%;font-size:13px;padding:7px"></div>'+
+      '<button onclick="guardarPlantillaTurno(\''+L+'\')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:8px 12px;font-family:inherit;font-size:11px;cursor:pointer;white-space:nowrap">Guardar</button>'+
+    '</div>';
+  });
+  html+='</div>';
+  html+='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">🗓️ Rotativa semanal</div>';
+  if(!lista.length){
+    html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Agrega personas en la pestaña Equipo primero.</div>';
+  } else {
+    var sinPlantillas=LETRAS.every(function(L){return !turnosAdminPlantillas[L]||!turnosAdminPlantillas[L].ini;});
+    if(sinPlantillas)html+='<div style="font-size:11px;color:#fcd34d;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:8px;margin-bottom:10px">⚠ Define primero el horario de los turnos arriba.</div>';
+    html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+      '<tr><th style="text-align:left;padding:6px 8px;color:rgba(255,255,255,.5);font-weight:600">Persona</th>'+
+      DIAS_ROTATIVA_ADMIN.map(function(d){return '<th style="padding:6px 4px;color:rgba(255,255,255,.5);font-weight:600">'+d.slice(0,3)+'</th>';}).join('')+
+      '</tr>';
+    html+=lista.map(function(p){
+      var fila=rotativaAdmin[p.key]||{};
+      return '<tr style="border-top:1px solid rgba(255,255,255,.05)">'+
+        '<td style="padding:6px 8px;color:#fff;white-space:nowrap">'+esc(p.nombre)+'</td>'+
+        DIAS_ROTATIVA_ADMIN.map(function(d){
+          var val=fila[d]||'';
+          return '<td style="padding:3px"><select onchange="asignarTurnoDia(\''+p.key+'\',\''+d+'\',this.value)" style="width:100%;font-size:11px;padding:4px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:5px">'+
+            '<option value="">—</option>'+
+            LETRAS.map(function(L){return '<option value="'+L+'"'+(val===L?' selected':'')+'>'+L+'</option>';}).join('')+
+          '</select></td>';
+        }).join('')+
+      '</tr>';
+    }).join('');
+    html+='</table></div>';
+    html+='<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:10px">'+LETRAS.map(function(L){var t=turnosAdminPlantillas[L];return t&&t.ini?('Turno '+L+': '+t.ini+'–'+t.fin):null;}).filter(Boolean).join(' · ')+'</div>';
+  }
+  html+='</div>';
+  cont.innerHTML=html;
+}
+window.guardarPlantillaTurno=function(letra){
+  var ini=document.getElementById('turnoIni_'+letra).value;
+  var fin=document.getElementById('turnoFin_'+letra).value;
+  if(!ini||!fin){alert('Ingresa hora de inicio y término.');return;}
+  if(minutosEntre(ini,fin)<=0){alert('La hora de término debe ser posterior al inicio.');return;}
+  turnosAdminPlantillas[letra]={ini:ini,fin:fin};
+  sedeRef('turnosAdminPlantillas/'+letra).set({ini:ini,fin:fin}).then(function(){renderMapaTurnosAdmin();});
+};
+window.asignarTurnoDia=function(key,dia,valor){
+  if(!rotativaAdmin[key])rotativaAdmin[key]={};
+  if(valor){
+    rotativaAdmin[key][dia]=valor;
+    sedeRef('rotativaAdmin/'+key+'/'+dia).set(valor);
+  } else {
+    delete rotativaAdmin[key][dia];
+    sedeRef('rotativaAdmin/'+key+'/'+dia).remove();
+  }
+};
+// Resuelve el turno (letra + horario) que le corresponde a una persona un día dado, para usarlo
+// donde haga falta mostrar "tu turno hoy" (ej. dashboard del colaborador administrativo).
+function turnoDelDia(key,dia){
+  var letra=(rotativaAdmin[key]||{})[dia];if(!letra)return null;
+  var t=turnosAdminPlantillas[letra];if(!t||!t.ini)return {letra:letra,ini:null,fin:null};
+  return {letra:letra,ini:t.ini,fin:t.fin};
+}
+
 // ── Ingreso diario de producción ──
 // Métricas activas (las guardadas o el default)
 function metricasActivas(){
@@ -2668,7 +2764,7 @@ window.renderFilasProdAdmin=function(){
   lista.forEach(function(s){
     var reg=(produccionAdmin[s.key]&&produccionAdmin[s.key][fecha]&&produccionAdmin[s.key][fecha][mid]);
     html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.05)">'+
-      '<span style="font-size:12px;color:#fff;flex:1">'+esc(s.nombre)+'<span style="font-size:9px;color:rgba(255,255,255,.35);display:block">'+esc(s.cargo||'')+'</span></span>'+
+      '<span style="font-size:12px;color:#fff;flex:1">'+esc(s.nombre)+'<span style="font-size:9px;color:rgba(255,255,255,.35);display:block">'+esc(labelCargo(s.cargo))+'</span></span>'+
       '<input type="number" min="0" id="pa_'+s.key+'_'+mid+'" value="'+(reg!=null?reg:'')+'" placeholder="0" style="width:80px;font-size:14px;padding:7px;text-align:center;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
     '</div>';
   });
@@ -2799,11 +2895,11 @@ window.renderRankingAdmin=function(contId){
     return {nombre:p.nombre,rol:p.rol,final:pf.final,prod:pf.prod,cap:pf.cap,tiempoSeg:tProm};
   }).filter(function(x){return x.final!==null;}).sort(function(a,b){return (b.final-a.final)||(a.tiempoSeg-b.tiempoSeg);});
   function btnP(val,lab){return '<button onclick="window._rankAdminPeriodo=\''+val+'\';renderRankingAdmin(\''+contId+'\')" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;background:'+(periodo===val?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
-  var emoji={Secretaria:'🗂️',Bodega:'📦',Mantención:'🔧'};
+  var emoji={Secretaria:'🗂️','Administrativo/a':'🗂️',Bodega:'📦',Mantención:'🔧'};
   var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
     '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">🏆 Ranking equipo administrativo</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:10px">'+btnP('semana','Semana actual')+btnP('mes','Mes actual')+'</div>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+etiqueta+' · Secretarias, Bodega y Mantención. Producción ('+(pesosAdmin.produccion||60)+'%) + capacitación ('+(pesosAdmin.capacitacion||40)+'%). Sin premios asociados.</div>';
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+etiqueta+' · Administrativos/as, Bodega y Mantención. Producción ('+(pesosAdmin.produccion||60)+'%) + capacitación ('+(pesosAdmin.capacitacion||40)+'%). Sin premios asociados.</div>';
   if(!filas.length){
     html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Aún no hay datos suficientes en este período.</div>';
   } else {
@@ -2813,7 +2909,7 @@ window.renderRankingAdmin=function(contId){
       html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.05)">'+
         '<span style="font-size:15px;min-width:28px;text-align:center">'+medalla+'</span>'+
         '<div style="flex:1"><div style="font-size:13px;color:#fff;font-weight:600">'+(emoji[x.rol]||'👤')+' '+esc(x.nombre)+'</div>'+
-          '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+x.rol+' · '+(x.prod!=null?'Prod '+x.prod+'%':'sin prod')+' · '+(x.cap!=null?'Capac '+x.cap+'%':'sin capac')+'</div></div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+esc(labelCargo(x.rol))+' · '+(x.prod!=null?'Prod '+x.prod+'%':'sin prod')+' · '+(x.cap!=null?'Capac '+x.cap+'%':'sin capac')+'</div></div>'+
         '<span style="font-size:16px;font-weight:800;color:'+color+'">'+x.final+'</span>'+
       '</div>';
     });
@@ -2963,7 +3059,7 @@ function renderAdminNombreSel(){
     '<div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:8px">📝 Registrarme por primera vez</div>'+
     '<input type="text" id="adminAutoNombre" placeholder="Tu nombre completo" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
     '<select id="adminAutoCargo" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
-      '<option value="Secretaria">🗂️ Secretaria</option>'+
+      '<option value="Administrativo/a">🗂️ Administrativo/a</option>'+
       '<option value="Bodega">📦 Bodega</option>'+
       '<option value="Mantención">🔧 Mantención</option>'+
     '</select>'+
@@ -3289,7 +3385,7 @@ window.entrarRolSimple=function(rol){
   var labels={administrativo:'🗂️ Administrativo',jefaOperaciones:'📋 Jefa de Operaciones',docente:'🎓 Docente',gerencia:'💼 Gerencia'};
   var descripciones={
     administrativo:'Aquí responderás las preguntas de protocolo administrativo (lunes a viernes).',
-    jefaOperaciones:'Aquí ingresarás la producción diaria de las secretarias y verás la sección de Operaciones del dashboard.',
+    jefaOperaciones:'Aquí ingresarás la producción diaria del equipo administrativo y verás la sección de Operaciones del dashboard.',
     docente:'Aquí verás la biblioteca y responderás las preguntas de protocolo asignadas a tu carrera.',
     gerencia:'Aquí responderás las preguntas de protocolo. Los reportes se habilitan cuando el Enfermero Jefe lo autorice.'
   };
@@ -11026,7 +11122,7 @@ function renderGruposList(){
   Object.keys(gerenciaEquipo||{}).forEach(function(k){var g=gerenciaEquipo[k];if(g&&g.nombre&&lista.indexOf(g.nombre)<0)lista.push(g.nombre);});
   var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:12px">'+
     '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">Crear grupo</div>'+
-    '<input type="text" id="nuevoGrupoNombre" placeholder="Nombre (ej: Secretarias, Carrera Enfermería)" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
+    '<input type="text" id="nuevoGrupoNombre" placeholder="Nombre (ej: Administrativos, Carrera Enfermería)" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
     '<select id="nuevoGrupoModulo" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+Object.keys(MODULOS_PROTOCOLO).map(function(m){return '<option value="'+m+'">'+MODULOS_PROTOCOLO[m]+'</option>';}).join('')+'</select>'+
     '<button onclick="crearGrupoModulo()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">+ Crear grupo</button></div>';
   var grupos=Object.entries(gruposModulo||{});
