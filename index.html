@@ -1925,6 +1925,11 @@ var supervisores={},pinSupervisor='',conductividad={};
 var supervisorActivo='',supervisorAreas=[];
 var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={},regPedido={},regPabellonAsig={},regLecturaTareas={},historialGanadores={};
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={};
+// Custodia diaria de subbodegas: quién queda a cargo de cada una hoy, por jornada AM/PM.
+// custodiaSubbodega[fecha][bodegaId][jornada] = {nombre,activo,abierta,aperturaTs,cierreTs,resumen}
+// Reemplaza el uso de invAsignaciones (encargado fijo) para efectos de mostrar el botón de gestión.
+var custodiaSubbodega={};
+var JORNADAS_CUSTODIA=['am','pm'];
 var internos={}; // {key: {nombre, ini, fin}} internos de enfermería
 var bancoConfig={docIds:[],maxPreg:3}; // configuración banco de preguntas semanal
 var bancoActivo={}; // banco activo por sede (nuevo sistema)
@@ -3458,6 +3463,21 @@ window.setSede=function(sede){
   sedeRef('invMovimientos').on('value',function(s){invMovimientos=s.val()||{};});
   sedeRef('invAsignaciones').on('value',function(s){invAsignaciones=s.val()||{};});
   sedeRef('invLotes').on('value',function(s){invLotes=s.val()||{};});
+  sedeRef('custodiaSubbodega').on('value',function(s){
+    custodiaSubbodega=s.val()||{};
+    if(curNombre)renderMisTurnos(curNombre);
+    if(document.getElementById('bodContenido')&&document.querySelector('.bod-tab[data-v="asignaciones"]')&&document.querySelector('.bod-tab[data-v="asignaciones"]').classList.contains('active'))bodTab('asignaciones');
+    // Si alguien está esperando a que su compañero de AM cierre, reintenta abrir su panel solo.
+    if(window._esperandoAM){
+      var hoyE=hoyStr();var bE=window._esperandoAM.bodega;
+      var amE=((custodiaSubbodega[hoyE]||{})[bE]||{}).am;
+      if(!amE||!amE.activo||!amE.abierta){
+        var bloq=document.getElementById('subHoyOv');if(bloq)bloq.remove();
+        window._esperandoAM=null;
+        abrirSubbodegaHoy(bE,'pm');
+      }
+    }
+  });
   sedeRef('invReas').on('value',function(s){invReas=s.val()||{};});
   sedeRef('supervisores').on('value',function(s){supervisores=s.val()||{};if(document.getElementById('superLista'))initConfigSupervisores();});
   sedeRef('pinSupervisor').on('value',function(s){pinSupervisor=s.val()||'';});
@@ -4590,12 +4610,18 @@ function renderMisTurnos(nombre){
     d.innerHTML=html+'<div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:10px">Durante el receso, las tareas clínicas normales están en pausa.</div>';
     return;
   }
-  // Botón de gestión de subbodega (si es encargado de alguna)
-  var misBodegas=Object.keys(invAsignaciones||{}).filter(function(b){return invAsignaciones[b]===nombre;});
-  if(misBodegas.length){
+  // Botón de gestión de subbodega — SOLO si la jefatura activó hoy a esta persona en Custodia diaria
+  // (no es un encargado fijo; se prende y apaga cada día, por jornada AM/PM).
+  var misCustodias=misCustodiasHoy(nombre);
+  if(misCustodias.length){
     html+='<div style="background:linear-gradient(135deg,rgba(217,119,6,.15),rgba(251,191,36,.08));border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
-      '<p style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px">📦 '+(misBodegas.length>1?'Mis subbodegas':'Mi subbodega')+'</p>'+
-      misBodegas.map(function(b){return '<button onclick="abrirGestionClinico(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+BODEGAS[b].nombre+' ›</button>';}).join('')+
+      '<p style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px">📦 '+(misCustodias.length>1?'Mis subbodegas hoy':'Mi subbodega hoy')+'</p>'+
+      misCustodias.map(function(c){
+        var lbl=BODEGAS[c.bodega]?BODEGAS[c.bodega].nombre:c.bodega;
+        var jTxt=c.jornada==='am'?'🌅 AM':'🌇 PM';
+        var estTxt=c.estado.abierta?'':' · <span style="color:#93c5fd">cerrado</span>';
+        return '<button onclick="abrirSubbodegaHoy(\''+c.bodega+'\',\''+c.jornada+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer">'+lbl+' · '+jTxt+estTxt+' ›</button>';
+      }).join('')+
       '</div>';
   }
   // Botón "Ver bodega central" (todos los colaboradores; solo lectura de cantidades, fichas editables)
@@ -14508,6 +14534,124 @@ window.guardarConductividad=function(){
   });
 };
 
+// ══════════════ CUSTODIA DIARIA DE SUBBODEGAS (AM/PM) ══════════════
+// Reemplaza la asignación fija de "Encargado" (invAsignaciones): cada día, la jefatura activa desde
+// el panel de Bodega quién queda a cargo de cada subbodega, por jornada (mañana/tarde). El de PM no
+// puede registrar nada hasta que el de AM cierre su turno (salvo que sea la misma persona en ambas).
+function misCustodiasHoy(nombre){
+  var hoy=hoyStr();var reg=custodiaSubbodega[hoy]||{};var out=[];
+  Object.keys(reg).forEach(function(bod){
+    JORNADAS_CUSTODIA.forEach(function(j){
+      var c=(reg[bod]||{})[j];
+      if(c&&c.activo&&c.nombre===nombre)out.push({bodega:bod,jornada:j,estado:c});
+    });
+  });
+  return out;
+}
+// Resumen de lo hecho por una persona en una subbodega, desde que abrió su turno hasta ahora.
+function calcularResumenCustodia(bodega,fecha,nombre,desdeTs){
+  var movs=Object.keys(invMovimientos||{}).map(function(k){return invMovimientos[k];})
+    .filter(function(m){return m.bodega===bodega&&m.fecha===fecha&&m.por===nombre&&(!desdeTs||m.ts>=desdeTs);});
+  var consumos=movs.filter(function(m){return m.tipo==='consumo';});
+  var ajustes=movs.filter(function(m){return m.tipo==='ajuste';});
+  return {
+    totalMovs:movs.length,
+    consumos:consumos.map(function(m){return {desc:m.desc,unidades:m.unidades};}),
+    ajustes:ajustes.length,
+    ts:Date.now()
+  };
+}
+function resumenCustodiaTexto(r){
+  if(!r)return 'Sin movimientos registrados.';
+  if(!r.totalMovs)return 'Sin movimientos registrados.';
+  var partes=[r.totalMovs+' movimiento(s)'];
+  if(r.consumos&&r.consumos.length)partes.push(r.consumos.length+' consumo(s): '+r.consumos.slice(0,4).map(function(c){return esc(c.desc)+' ('+c.unidades+')';}).join(', ')+(r.consumos.length>4?'…':''));
+  if(r.ajustes)partes.push(r.ajustes+' ajuste(s)');
+  return partes.join(' · ');
+}
+// Cierra el turno de una persona en una subbodega hoy: calcula y guarda el resumen, marca cerrada.
+function cerrarCustodia(bodega,jornada,fecha){
+  var reg=((custodiaSubbodega[fecha]||{})[bodega]||{})[jornada];
+  if(!reg)return;
+  var resumen=calcularResumenCustodia(bodega,fecha,reg.nombre,reg.aperturaTs);
+  sedeRef('custodiaSubbodega/'+fecha+'/'+bodega+'/'+jornada).update({abierta:false,cierreTs:Date.now(),resumen:resumen}).then(function(){
+    var ov=document.getElementById('subHoyOv');if(ov)ov.remove();
+    if(curNombre)renderMisTurnos(curNombre);
+  });
+}
+// Punto de entrada del colaborador: abre su subbodega de hoy, respetando el candado AM→PM.
+window.abrirSubbodegaHoy=function(bodega,jornada){
+  var hoy=hoyStr();
+  var reg=(custodiaSubbodega[hoy]||{})[bodega]||{};
+  var mia=reg[jornada];
+  if(!mia||!mia.activo){alert('No tienes esta subbodega activada hoy.');return;}
+  if(jornada==='pm'){
+    var am=reg.am;
+    // Si es una persona DISTINTA en AM y aún no cierra, queda bloqueado. Si es la misma persona
+    // (sigue de turno), no tiene sentido esperarse a sí misma.
+    if(am&&am.activo&&am.abierta&&am.nombre!==mia.nombre){renderBloqueoSubbodega(bodega,am);return;}
+  }
+  renderPanelSubbodegaHoy(bodega,jornada,reg);
+};
+function renderBloqueoSubbodega(bodega,am){
+  var ov=document.getElementById('subHoyOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='subHoyOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML='<div style="max-width:420px;background:#16233d;border-radius:16px;padding:22px;text-align:center">'+
+    '<div style="font-size:30px;margin-bottom:10px">🔒</div>'+
+    '<div style="font-size:14px;color:#fff;font-weight:700;margin-bottom:6px">Aún no puedes trabajar aquí</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px">'+esc(am.nombre)+' (jornada AM) todavía no cierra su turno en esta subbodega. En cuanto lo cierre, se abre solo.</div>'+
+    '<button onclick="document.getElementById(\'subHoyOv\').remove();window._esperandoAM=null;" style="width:100%;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:10px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+  '</div>';
+  document.body.appendChild(ov);
+  window._esperandoAM={bodega:bodega};
+}
+function renderPanelSubbodegaHoy(bodega,jornada,reg){
+  var ov=document.getElementById('subHoyOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='subHoyOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  var mia=reg[jornada];
+  var puedoEditar=mia.abierta;
+  var amInfo='';
+  if(jornada==='pm'&&reg.am&&reg.am.resumen&&reg.am.nombre!==mia.nombre){
+    amInfo='<div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px">'+
+      '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:3px">📋 Resumen de la mañana ('+esc(reg.am.nombre)+')</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6)">'+resumenCustodiaTexto(reg.am.resumen)+'</div>'+
+    '</div>';
+  }
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<span style="font-size:16px;font-weight:800;color:#fbbf24">📦 '+BODEGAS[bodega].nombre+' · '+(jornada==='am'?'🌅 AM':'🌇 PM')+'</span>'+
+      '<button onclick="document.getElementById(\'subHoyOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button>'+
+    '</div>'+
+    (puedoEditar?'':'<div style="font-size:11px;color:#93c5fd;background:rgba(96,165,250,.08);border-radius:8px;padding:8px;margin-bottom:10px">Ya cerraste tu turno aquí hoy. Vista de solo lectura.</div>')+
+    amInfo+
+    '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'+
+      '<button class="cli-tab active" data-v="stock" onclick="subHoyTab(\''+bodega+'\',\''+jornada+'\',\'stock\')">📊 Mi stock</button>'+
+      (puedoEditar?'<button class="cli-tab" data-v="consumo" onclick="subHoyTab(\''+bodega+'\',\''+jornada+'\',\'consumo\')">📤 Consumo</button>':'')+
+      (puedoEditar?'<button class="cli-tab" data-v="ajuste" onclick="subHoyTab(\''+bodega+'\',\''+jornada+'\',\'ajuste\')">✏️ Ajuste</button>':'')+
+    '</div>'+
+    '<div id="subHoyContenido"></div>'+
+    (puedoEditar?'<button onclick="cerrarMiTurnoSubbodega(\''+bodega+'\',\''+jornada+'\')" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#dc2626,#f87171);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔒 Cerrar mi turno en esta subbodega</button>':'')+
+    '<style>#subHoyOv .cli-tab{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;cursor:pointer}#subHoyOv .cli-tab.active{background:linear-gradient(135deg,#d97706,#fbbf24);color:#1a1a1a;font-weight:700}</style>'+
+  '</div>';
+  document.body.appendChild(ov);
+  subHoyTab(bodega,jornada,'stock');
+}
+window.subHoyTab=function(bodega,jornada,v){
+  document.querySelectorAll('#subHoyOv .cli-tab').forEach(function(t){t.classList.toggle('active',t.dataset.v===v);});
+  var c=document.getElementById('subHoyContenido');if(!c)return;
+  if(v==='stock')c.innerHTML=cliVistaStock(bodega);
+  else if(v==='consumo')c.innerHTML=cliVistaConsumo(bodega);
+  else if(v==='ajuste')c.innerHTML=cliVistaAjuste(bodega);
+};
+window.cerrarMiTurnoSubbodega=function(bodega,jornada){
+  if(!confirm('¿Cerrar tu turno en esta subbodega? Después de cerrar no podrás registrar más consumos/ajustes aquí hoy (salvo que la jefatura lo reabra).'))return;
+  cerrarCustodia(bodega,jornada,hoyStr());
+};
+
+// (Función antigua, ya no se usa para dar acceso — el acceso ahora se decide arriba por custodia
+// diaria — pero se mantiene por si se llama desde algún lugar viejo del código.)
 window.abrirGestionClinico=function(bodega){
   var ov=document.getElementById('gestionClinicoOv');
   if(ov)ov.remove();
@@ -15354,7 +15498,7 @@ function renderSinAsignar(){
     var tieneTurno=turnosPersona.length>0;
     var tareasPersona=Object.values(tareas||{}).filter(function(t){return t.nombre===n;});
     var tieneTarea=tareasPersona.length>0;
-    var misBod=Object.keys(invAsignaciones||{}).filter(function(b){return invAsignaciones[b]===n;});
+    var misBod=misCustodiasHoy(n).map(function(c){return c.bodega;});
     var tieneBodega=misBod.length>0;
     var faltantes=[];
     if(!tieneTurno)faltantes.push('turno');
@@ -15999,7 +16143,7 @@ function abrirPanelBodega(){
       '<button class="bod-tab" data-v="stock" onclick="bodTab(\'stock\')">📊 Stock por bodega</button>'+
       '<button class="bod-tab" data-v="catalogo" onclick="bodTab(\'catalogo\')">📋 Catálogo</button>'+
       '<button class="bod-tab" data-v="movimiento" onclick="bodTab(\'movimiento\')">↔️ Movimientos</button>'+
-      '<button class="bod-tab" data-v="asignaciones" onclick="bodTab(\'asignaciones\')">👥 Encargados</button>'+
+      '<button class="bod-tab" data-v="asignaciones" onclick="bodTab(\'asignaciones\')">👥 Custodia diaria</button>'+
     '</div>'+
     '<div id="bodContenido"></div></div>'+
     '<style>.bod-tab{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:none;border-radius:8px;padding:8px 12px;font-family:inherit;font-size:12px;cursor:pointer}.bod-tab.active{background:linear-gradient(135deg,#d97706,#fbbf24);color:#1a1a1a;font-weight:700}</style>';
@@ -16017,30 +16161,61 @@ window.bodTab=function(v){
   else if(v==='asignaciones')c.innerHTML=vistaAsignaciones();
 };
 
+// Reemplaza la asignación fija de "Encargado": cada día, para cada subbodega y jornada (AM/PM), se
+// activa quién queda a cargo. El de PM no puede trabajar hasta que el de AM cierre su turno.
 function vistaAsignaciones(){
+  var fecha=window._custodiaFecha||hoyStr();
   var subs=Object.keys(BODEGAS).filter(function(b){return BODEGAS[b].tipo==='sub';});
   var personas=nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';});
-  var html='<div style="background:#16233d;border-radius:12px;padding:14px">'+
-    '<div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:4px">Encargado de cada subbodega</div>'+
-    '<p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">La persona asignada podrá gestionar esa subbodega desde su vista normal de la app, sin PIN.</p>';
+  var reg=(custodiaSubbodega[fecha])||{};
+  var html='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px">'+
+    '<div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:8px">Activa quién queda a cargo de cada subbodega hoy, por jornada. El de PM no podrá registrar nada hasta que el de AM cierre su turno (salvo que sea la misma persona en ambas).</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.5)">Fecha</label>'+
+    '<input type="date" value="'+fecha+'" onchange="cambiarFechaCustodia(this.value)" style="width:100%;font-size:13px;padding:7px">'+
+  '</div>';
+  if(!personas.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Agrega nombres al equipo primero.</div>';return html;}
   subs.forEach(function(b){
-    var actual=invAsignaciones[b]||'';
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
-      '<span style="font-size:13px;color:#fff;flex:1">'+BODEGAS[b].nombre+'</span>'+
-      '<select onchange="asignarEncargado(\''+b+'\',this.value)" style="font-size:12px;padding:6px;max-width:200px">'+
-        '<option value="">— sin asignar —</option>'+
-        personas.map(function(n){return '<option value="'+esc(n)+'"'+(actual===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')+
-      '</select>'+
-    '</div>';
+    html+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px">'+
+      '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">'+BODEGAS[b].nombre+'</div>';
+    JORNADAS_CUSTODIA.forEach(function(j){
+      var c=(reg[b]||{})[j]||{};
+      var estadoTxt=!c.activo?'<span style="color:rgba(255,255,255,.35)">sin activar</span>'
+        :c.abierta?'<span style="color:#6ee7b7">🟢 abierto</span>'
+        :'<span style="color:#93c5fd">🔒 cerrado</span>';
+      html+='<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid rgba(255,255,255,.05);flex-wrap:wrap">'+
+        '<span style="width:36px;font-size:11px;color:rgba(255,255,255,.5)">'+(j==='am'?'🌅 AM':'🌇 PM')+'</span>'+
+        '<select id="custSel_'+b+'_'+j+'" style="flex:1;min-width:140px;font-size:12px;padding:6px">'+
+          '<option value="">— sin asignar —</option>'+
+          personas.map(function(n){return '<option value="'+esc(n)+'"'+(c.nombre===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')+
+        '</select>'+
+        '<button onclick="activarCustodia(\''+b+'\',\''+j+'\')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer;white-space:nowrap">'+(c.activo?'Actualizar':'Activar')+'</button>'+
+        (c.activo?'<button onclick="desactivarCustodia(\''+b+'\',\''+j+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:11px;cursor:pointer">✕</button>':'')+
+        '<span style="font-size:11px;white-space:nowrap">'+estadoTxt+'</span>'+
+      '</div>';
+      if(c.activo&&c.resumen)html+='<div style="font-size:10px;color:rgba(255,255,255,.4);padding:2px 0 0 42px">'+resumenCustodiaTexto(c.resumen)+'</div>';
+      if(c.activo&&c.abierta)html+='<div style="padding:2px 0 0 42px"><button onclick="cerrarCustodiaAdmin(\''+b+'\',\''+j+'\')" style="font-size:10px;background:none;border:none;color:#fca5a5;text-decoration:underline;cursor:pointer;padding:0">Cerrar manualmente (por si olvidó cerrar)</button></div>';
+    });
+    html+='</div>';
   });
-  html+='<div class="saved" id="asigSaved" style="margin-top:8px">✓ Asignación guardada</div></div>';
   return html;
 }
-
-window.asignarEncargado=function(bodega,nombre){
-  sedeRef('invAsignaciones/'+bodega).set(nombre||null).then(function(){
-    showSaved('asigSaved');
-  });
+window.cambiarFechaCustodia=function(f){window._custodiaFecha=f;bodTab('asignaciones');};
+window.activarCustodia=function(bodega,jornada){
+  var fecha=window._custodiaFecha||hoyStr();
+  var sel=document.getElementById('custSel_'+bodega+'_'+jornada);
+  var nombre=sel?sel.value:'';
+  if(!nombre){alert('Elige una persona.');return;}
+  var reg={nombre:nombre,activo:true,abierta:true,aperturaTs:Date.now(),cierreTs:null,resumen:null};
+  sedeRef('custodiaSubbodega/'+fecha+'/'+bodega+'/'+jornada).set(reg).then(function(){bodTab('asignaciones');});
+};
+window.desactivarCustodia=function(bodega,jornada){
+  if(!confirm('¿Desactivar esta asignación? La persona ya no verá el botón de esta subbodega.'))return;
+  var fecha=window._custodiaFecha||hoyStr();
+  sedeRef('custodiaSubbodega/'+fecha+'/'+bodega+'/'+jornada+'/activo').set(false).then(function(){bodTab('asignaciones');});
+};
+window.cerrarCustodiaAdmin=function(bodega,jornada){
+  if(!confirm('¿Cerrar manualmente este turno? Se generará el resumen con lo registrado hasta ahora.'))return;
+  cerrarCustodia(bodega,jornada,window._custodiaFecha||hoyStr());
 };
 
 function vistaAlarmas(){
@@ -16264,6 +16439,7 @@ window.abrirFichaInsumo=function(cod){
     fichaCampo('Alarma vencimiento (meses)','umbralVenc',i.umbralVenc,'Avisar cuando falten estos meses (por defecto 3)')+
     fichaCampo('Costo unitario ($)','costo',i.costo,'Se puede llenar después')+
     '<div style="background:rgba(37,99,235,.1);border-radius:8px;padding:8px 10px;margin:10px 0;font-size:12px;color:#93c5fd">ROP calculado ahora: <b>'+(rop!=null?rop+' unidades':'faltan datos (lead time + demanda)')+'</b></div>'+
+    fichaConversionSub(i)+
     '<button class="btn-add" onclick="guardarFichaInsumo(\''+cod+'\')" style="background:linear-gradient(135deg,#d97706,#fbbf24)">💾 Guardar ficha</button>'+
     '<button onclick="document.getElementById(\'fichaInsumoOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
     '</div>';
@@ -16291,6 +16467,25 @@ function fichaCampo(label,key,valor,hint){
     '</div>';
 }
 
+// Conversión de unidades central → subbodega. Ej: en central 1 "caja" de guantes, pero en
+// Dispensario 2 se cuenta en "pares" (50 por caja) — el factor se aplica solo al entregar.
+function fichaConversionSub(i){
+  var subs=Object.keys(BODEGAS).filter(function(b){return BODEGAS[b].tipo==='sub';});
+  var conv=i.conversionSub||{};
+  var html='<div style="margin:14px 0;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">'+
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:4px">Conversión al entregar a subbodega</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Deja el factor en 1 (o vacío) si la subbodega cuenta igual que central. Solo cámbialo si allá se cuenta distinto (ej. central = cajas, subbodega = pares).</div>';
+  subs.forEach(function(b){
+    var c=conv[b]||{};
+    html+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'+
+      '<span style="flex:1;font-size:11px;color:rgba(255,255,255,.6)">'+BODEGAS[b].nombre+'</span>'+
+      '<input type="number" id="fi_conv_'+b+'_factor" value="'+(c.factor!=null?c.factor:'')+'" min="0" step="any" placeholder="factor (ej: 50)" style="width:110px;font-size:12px;padding:6px">'+
+      '<input type="text" id="fi_conv_'+b+'_unidad" value="'+(c.unidad?String(c.unidad).replace(/"/g,'&quot;'):'')+'" placeholder="unidad (ej: pares)" style="width:110px;font-size:12px;padding:6px">'+
+    '</div>';
+  });
+  html+='</div>';
+  return html;
+}
 window.guardarFichaInsumo=function(cod){
   var g=function(k){var el=document.getElementById('fi_'+k);return el?el.value:'';};
   var updates={
@@ -16299,6 +16494,12 @@ window.guardarFichaInsumo=function(cod){
     ropManual:g('ropManual'),stockOptimo:g('stockOptimo'),costo:g('costo'),
     presentacion:g('presentacion'),unidadesPorCaja:g('unidadesPorCaja'),umbralVenc:g('umbralVenc')
   };
+  var conversionSub={};
+  Object.keys(BODEGAS).filter(function(b){return BODEGAS[b].tipo==='sub';}).forEach(function(b){
+    var factor=g('conv_'+b+'_factor');var unidad=g('conv_'+b+'_unidad');
+    if(factor!==''||unidad!=='')conversionSub[b]={factor:factor!==''?Number(factor):1,unidad:unidad||''};
+  });
+  updates.conversionSub=conversionSub;
   sedeRef('invCatalogo/'+cod).update(updates).then(function(){
     document.getElementById('fichaInsumoOv').remove();
     if(document.getElementById('bodBuscar'))filtrarCatalogo(document.getElementById('bodBuscar').value);
@@ -16491,7 +16692,7 @@ function formEntrega(){
     '<input list="movInsumosList" id="entInsumo" onchange="actualizarInfoEntrega()" placeholder="Busca por nombre o código" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
     '<datalist id="movInsumosList">'+opcionesInsumos()+'</datalist>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Subbodega destino</label>'+
-    '<select id="entDestino" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+opcionesSubbodegas()+'</select>'+
+    '<select id="entDestino" onchange="actualizarInfoEntrega()" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+opcionesSubbodegas()+'</select>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.6)">Cantidad a entregar (en unidades)</label>'+
     '<input type="number" id="entCantidad" min="0" step="any" oninput="actualizarInfoEntrega()" placeholder="0" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px">'+
     '<div id="entInfo" style="font-size:12px;color:#93c5fd;margin-bottom:10px"></div>'+
@@ -16510,6 +16711,13 @@ window.actualizarInfoEntrega=function(){
   if(info){
     var txt='Stock en central: <b>'+stockC+' u.</b>';
     if(proximoVenc)txt+=' · próximo a vencer: '+proximoVenc+' ('+lotes[0].unidades+' u.)';
+    var destino=document.getElementById('entDestino')?document.getElementById('entDestino').value:'';
+    var conv=destino&&item.conversionSub?item.conversionSub[destino]:null;
+    var cant=Number(document.getElementById('entCantidad').value)||0;
+    if(conv&&conv.factor&&conv.factor!==1){
+      txt+='<div style="margin-top:4px;color:#fbbf24">⚠ '+BODEGAS[destino].nombre+' cuenta distinto: 1 u. central = '+conv.factor+' '+(conv.unidad||'u.')+' allá.</div>';
+      if(cant>0)txt+='<div style="color:#fbbf24">Se entregarán '+cant+' u. de central → equivalen a <b>'+(Math.round(cant*conv.factor*100)/100)+' '+(conv.unidad||'u.')+'</b> en '+BODEGAS[destino].nombre+'.</div>';
+    }
     info.innerHTML=txt;
   }
 };
@@ -16528,17 +16736,23 @@ window.registrarEntrega=function(){
     forzar=true;cant=Math.min(cant,stockC);
     if(cant<=0){alert('No hay stock en central.');return;}
   }
+  // Factor de conversión central→subbodega (ej. 1 caja central = 50 pares en Dispensario 2)
+  var conv=item.conversionSub?item.conversionSub[destino]:null;
+  var factor=(conv&&conv.factor)?Number(conv.factor):1;
   // FEFO: sacar de central los lotes que vencen primero
   var res=descontarFEFO('central',cod,cant,forzar);
   if(!res){alert('No hay stock suficiente en central.');return;}
   var updates=res.updates;
-  // Los mismos lotes (con su venc) entran a la subbodega
+  // Los mismos lotes (con su venc) entran a la subbodega, convertidos a SU propia unidad si corresponde
   res.afectados.forEach(function(af){
-    agregarLote(updates,destino,cod,af.quitado,af.venc,hoyStr());
+    var cantSub=factor!==1?Math.round(af.quitado*factor*100)/100:af.quitado;
+    agregarLote(updates,destino,cod,cantSub,af.venc,hoyStr());
   });
+  var cantSubTotal=factor!==1?Math.round(cant*factor*100)/100:cant;
   var mk=Date.now();
   updates['invMovimientos/'+mk]={tipo:'entrega',cod:cod,desc:item.desc,origen:'central',destino:destino,
-    unidades:cant,lotes:res.afectados,fecha:hoyStr(),ts:mk,por:'bodega'};
+    unidades:cantSubTotal,unidadesCentral:cant,factorConversion:factor,unidadSub:(conv&&conv.unidad)||'',
+    lotes:res.afectados,fecha:hoyStr(),ts:mk,por:'bodega'};
   db.ref('sedes/'+S).update(updates).then(function(){
     showSaved('entSaved');
     document.getElementById('entCantidad').value='';document.getElementById('entInsumo').value='';
