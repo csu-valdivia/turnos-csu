@@ -5297,10 +5297,21 @@ function renderAusenciasAdmin(){
 window.aprAus=function(k){
   var a=ausencias[k];if(!a)return;
   sRef('ausencias/'+k+'/estado').set('aprobado').then(function(){
-    var fechas=fechasRango(a.inicio,a.fin);
-    var dias=fechas.map(function(f){return diaDeDate(f);});
-    var del=Object.entries(bloques).filter(function(e){return e[1].nombre===a.nombre&&dias.indexOf(e[1].dia)!==-1;});
-    Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});
+    // Ojo: 'bloques' son los turnos de la semana que está abierta AHORA (W). Antes esto borraba
+    // turnos solo por coincidir el NOMBRE del día (ej. "Lunes"), sin revisar si esa fecha caía
+    // realmente dentro de la semana abierta — así que aprobar unas vacaciones de noviembre podía
+    // borrar de una los turnos de esta semana (septiembre) por tener también un "Lunes".
+    // Ahora solo se tocan los bloques de los días que de verdad caen dentro de la semana abierta
+    // Y dentro del rango de la ausencia; si la ausencia es de otra semana, no se toca nada aquí.
+    var semActual=semanas[W];
+    if(semActual&&semActual.ini&&semActual.fin&&a.fin>=semActual.ini&&a.inicio<=semActual.fin){
+      var iniInterseccion=a.inicio>semActual.ini?a.inicio:semActual.ini;
+      var finInterseccion=a.fin<semActual.fin?a.fin:semActual.fin;
+      var fechas=fechasRango(iniInterseccion,finInterseccion);
+      var dias=fechas.map(function(f){return diaDeDate(f);});
+      var del=Object.entries(bloques).filter(function(e){return e[1].nombre===a.nombre&&dias.indexOf(e[1].dia)!==-1;});
+      Promise.all(del.map(function(e){return sRef('bloques/'+e[0]).remove();})).then(function(){setTimeout(function(){genPendientes(function(){});},500);});
+    }
     // Notify via mailto
     var emailP=correos[a.nombre.replace(/\s/g,'_')]||'';
     if(emailP){
@@ -10105,7 +10116,8 @@ window.renderGestionDocentes=function(tab){
       '<span style="font-size:18px;font-weight:800;color:#34d399">🎓 Docentes y carreras</span>'+
       '<button onclick="document.getElementById(\'gestDocOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
-    '<div style="display:flex;gap:8px;margin-bottom:16px">'+tb('inscribir','➕ Inscribir')+tb('reporte','📊 Reporte')+'</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:10px">'+tb('inscribir','➕ Inscribir')+tb('reporte','📊 Reporte')+'</div>'+
+    '<button onclick="abrirCentroProtocolos()" style="width:100%;margin-bottom:16px;background:rgba(124,58,237,.12);border:1px solid rgba(167,139,250,.3);color:#c4b5fd;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">✏️ Editar las preguntas de los protocolos de docentes →</button>'+
     '<div id="gestDocContenido"></div></div>';
   if(tab==='inscribir')renderInscribirDocentes();else renderReporteDocentes();
 };
@@ -10176,7 +10188,7 @@ function renderReporteDocentes(){
     var car=regs[0].carrera;var nom=regs[0].nombre;
     if(!carreras[car])carreras[car]={docentes:{},total:0};
     var prom=Math.round(regs.reduce(function(a,r){return a+r.pct;},0)/regs.length);
-    carreras[car].docentes[nom]={pct:prom,evals:regs.length};
+    carreras[car].docentes[nom]={pct:prom,evals:regs.length,key:k};
   });
   // Total de docentes inscritos por carrera (para cumplimiento)
   var inscritosPorCarrera={};
@@ -10201,11 +10213,59 @@ function renderReporteDocentes(){
       '</div>';
     Object.keys(c.docentes).sort(function(a,b){return c.docentes[b].pct-c.docentes[a].pct;}).forEach(function(nom){
       var d=c.docentes[nom];var col=d.pct>=80?'#6ee7b7':d.pct>=60?'#fcd34d':'#fca5a5';
-      html+='<div style="display:flex;justify-content:space-between;padding:5px 8px;font-size:12px"><span style="color:rgba(255,255,255,.8)">'+esc(nom)+'</span><span style="color:'+col+';font-weight:700">'+d.pct+'% ('+d.evals+' ev.)</span></div>';
+      html+='<div onclick="verFichaDocenteAdmin(\''+d.key+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;font-size:12px;border-radius:6px;cursor:pointer" onmouseover="this.style.background=\'rgba(255,255,255,.04)\'" onmouseout="this.style.background=\'\'">'+
+        '<span style="color:rgba(255,255,255,.8)">'+esc(nom)+'</span>'+
+        '<span style="display:flex;align-items:center;gap:6px"><span style="color:'+col+';font-weight:700">'+d.pct+'% ('+d.evals+' ev.)</span><span style="color:rgba(255,255,255,.3);font-size:11px">›</span></span>'+
+      '</div>';
     });
     html+='</div>';
   });
+  html+='<div style="font-size:10px;color:rgba(255,255,255,.35);text-align:center;margin-top:4px">Toca a un/a docente para ver su detalle sin tener que entrar a su perfil.</div>';
   cont.innerHTML=html;
+};
+// Ficha de UN docente para la jefatura: última evaluación + áreas débiles + historial del mes.
+// Evita tener que entrar al perfil propio del docente solo para ver cómo le ha ido.
+window.verFichaDocenteAdmin=function(key){
+  var d=docentes[key];if(!d)return;
+  var ov=document.getElementById('fichaDocAdminOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='fichaDocAdminOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var ultimo=fichaProgresoDocente[key];
+  var mes=hoyStr().slice(0,7);
+  var historialMes=Object.values((rankingDocente[key]||{})[mes]||{}).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+  var html='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'+
+      '<span style="font-size:16px;font-weight:800;color:#34d399">🎓 '+esc(d.nombre)+'</span>'+
+      '<button onclick="document.getElementById(\'fichaDocAdminOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+esc(d.carrera||'')+'</div>';
+  if(ultimo){
+    var col=ultimo.pct>=80?'#6ee7b7':ultimo.pct>=60?'#fcd34d':'#fca5a5';
+    var areas=ultimo.fallosPorTema?Object.keys(ultimo.fallosPorTema):[];
+    html+='<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:12px;margin-bottom:14px">'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:4px">Última evaluación · '+esc(ultimo.fecha||'')+'</div>'+
+      '<div style="font-size:13px;color:#fff;font-weight:600;margin-bottom:6px">'+esc(ultimo.protocolo||'')+'</div>'+
+      '<div style="font-size:20px;font-weight:800;color:'+col+'">'+ultimo.correctas+'/'+ultimo.total+' <span style="font-size:13px;font-weight:600">('+ultimo.pct+'%)</span></div>'+
+      (areas.length?'<div style="font-size:11px;color:#fcd34d;margin-top:8px">📚 Áreas a reforzar: '+areas.map(esc).join(', ')+'</div>':'')+
+    '</div>';
+  } else {
+    html+='<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:14px;text-align:center;color:rgba(255,255,255,.5);font-size:12px;margin-bottom:14px">Aún no ha respondido ningún protocolo.</div>';
+  }
+  html+='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px">Historial de '+mes+' ('+historialMes.length+')</div>';
+  if(!historialMes.length){
+    html+='<div style="font-size:12px;color:rgba(255,255,255,.4)">Sin evaluaciones este mes.</div>';
+  } else {
+    html+='<div style="max-height:260px;overflow-y:auto">'+historialMes.map(function(r){
+      var col=r.pct>=80?'#6ee7b7':r.pct>=60?'#fcd34d':'#fca5a5';
+      return '<div style="display:flex;justify-content:space-between;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px">'+
+        '<span style="color:rgba(255,255,255,.7)">'+esc(r.fecha||'')+'</span>'+
+        '<span style="color:'+col+';font-weight:700">'+r.pct+'%</span>'+
+      '</div>';
+    }).join('')+'</div>';
+  }
+  html+='</div>';
+  ov.innerHTML=html;
+  document.body.appendChild(ov);
 };
 window.exportarReporteDocentesPDF=function(){
   var jsPDFlib=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
@@ -10701,10 +10761,17 @@ function renderDocNombreSel(){
   Object.values(docentes||{}).forEach(function(d){if(d.carrera&&carreras.indexOf(d.carrera)<0)carreras.push(d.carrera);});
   var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">';
   if(lista.length){
+    // Agrupados por carrera (con <optgroup>) para que la lista no se vuelva imposible de recorrer
+    // a medida que se suman docentes — antes era una sola lista plana ordenada por orden de ingreso.
+    var porCarreraSel={};
+    lista.forEach(function(d){var car=d.carrera||'Sin carrera';if(!porCarreraSel[car])porCarreraSel[car]=[];porCarreraSel[car].push(d);});
+    var selectOpts=Object.keys(porCarreraSel).sort().map(function(car){
+      return '<optgroup label="'+esc(car)+'">'+porCarreraSel[car].sort(function(a,b){return a.nombre.localeCompare(b.nombre);}).map(function(d){return '<option value="'+d.key+'">'+esc(d.nombre)+'</option>';}).join('')+'</optgroup>';
+    }).join('');
     html+='<label style="font-size:12px;color:rgba(255,255,255,.7);display:block;margin-bottom:6px">¿Quién eres?</label>'+
       '<select id="docNombre" onchange="cargarDocente()" style="width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px">'+
         '<option value="">Selecciona tu nombre</option>'+
-        lista.map(function(d){return '<option value="'+d.key+'">'+esc(d.nombre)+' — '+esc(d.carrera)+'</option>';}).join('')+
+        selectOpts+
       '</select>'+
       '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4);margin:8px 0">— o si es tu primera vez —</div>';
   } else {
@@ -11003,12 +11070,20 @@ window.editarProtocoloAdmin=function(id){
 function renderPreguntasEditorAdmin(){
   var cont=document.getElementById('protPreguntasEditor');if(!cont)return;
   var pregs=window._protPreguntas||{};
-  var html='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin:10px 0 8px">Preguntas ('+Object.keys(pregs).length+')</div>';
+  var html='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin:10px 0 8px">Preguntas ('+Object.keys(pregs).length+')</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Puedes editar el texto, las opciones y marcar cuál es la correcta — se guarda junto con el resto al presionar "Guardar protocolo" más abajo.</div>';
   Object.keys(pregs).forEach(function(pid){
     var p=pregs[pid];
+    var ops=p.opciones||[];
     html+='<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:8px">'+
-      '<div style="font-size:12px;color:#fff;margin-bottom:4px">'+esc(p.pregunta||'(sin texto)')+'</div>'+
-      '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+((p.opciones||[]).length)+' opciones · correcta: '+esc((p.opciones&&p.opciones[p.correcta])||'?')+'</div>'+
+      '<textarea class="epaTexto" data-pid="'+pid+'" rows="2" placeholder="Texto de la pregunta" style="width:100%;font-size:12px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;margin-bottom:6px">'+esc(p.pregunta||'')+'</textarea>'+
+      [0,1,2,3].map(function(i){
+        var v=ops[i]||'';
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+          '<input type="radio" name="epaCorrecta_'+pid+'" class="epaCorrecta" data-pid="'+pid+'" value="'+i+'"'+(Number(p.correcta)===i?' checked':'')+' style="width:15px;height:15px;flex-shrink:0;accent-color:#34d399">'+
+          '<input type="text" class="epaOpcion" data-pid="'+pid+'" data-idx="'+i+'" value="'+String(v).replace(/"/g,'&quot;')+'" placeholder="Opción '+(i+1)+(i>1?' (opcional)':'')+'" style="flex:1;font-size:12px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+        '</div>';
+      }).join('')+
       '<button onclick="quitarPreguntaAdmin(\''+pid+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:5px;padding:3px 8px;font-family:inherit;font-size:10px;cursor:pointer;margin-top:4px">Quitar</button>'+
     '</div>';
   });
@@ -11020,6 +11095,19 @@ function renderPreguntasEditorAdmin(){
     '<button onclick="agregarPreguntaAdmin()" style="width:100%;margin-top:6px;background:rgba(96,165,250,.2);color:#93c5fd;border:none;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">+ Agregar esta pregunta</button>'+
   '</div>';
   cont.innerHTML=html;
+  // Los cambios en las preguntas existentes se guardan en vivo en window._protPreguntas (no hay
+  // botón "Guardar" por pregunta) — todo se persiste junto al resto al tocar "Guardar protocolo".
+  cont.querySelectorAll('.epaTexto').forEach(function(el){el.addEventListener('input',function(){
+    var p=window._protPreguntas[this.dataset.pid];if(p)p.pregunta=this.value;
+  });});
+  cont.querySelectorAll('.epaOpcion').forEach(function(el){el.addEventListener('input',function(){
+    var p=window._protPreguntas[this.dataset.pid];if(!p)return;
+    if(!p.opciones)p.opciones=[];
+    p.opciones[Number(this.dataset.idx)]=this.value;
+  });});
+  cont.querySelectorAll('.epaCorrecta').forEach(function(el){el.addEventListener('change',function(){
+    var p=window._protPreguntas[this.dataset.pid];if(p)p.correcta=Number(this.value);
+  });});
 }
 window.agregarPreguntaAdmin=function(){
   var preg=document.getElementById('npPregunta').value.trim();
@@ -11042,6 +11130,15 @@ window.guardarProtocoloAdmin=function(id){
   if(!titulo){alert('Ponle un título.');return;}
   var dirigidoA=Array.from(document.querySelectorAll('.protGrupo:checked')).map(function(cb){return cb.value;});
   var dirigidoPersonas=Array.from(document.querySelectorAll('.protPersona:checked')).map(function(cb){return cb.value;});
+  // Limpia opciones vacías que hayan quedado al editar en vivo (ej: dejar en blanco la opción 4),
+  // re-mapeando cuál queda como la correcta para que no se desordene.
+  Object.keys(window._protPreguntas||{}).forEach(function(pid){
+    var p=window._protPreguntas[pid];
+    var ops=(p.opciones||[]).map(function(v,i){return {txt:(v||'').trim(),idx:i};}).filter(function(o){return o.txt;});
+    var nuevaCorrecta=ops.findIndex(function(o){return o.idx===Number(p.correcta);});
+    p.opciones=ops.map(function(o){return o.txt;});
+    p.correcta=nuevaCorrecta>=0?nuevaCorrecta:0;
+  });
   var doc={titulo:titulo,modulo:document.getElementById('protModulo').value,link:document.getElementById('protLink').value.trim(),contenido:document.getElementById('protContenido').value,obligatoria:true,bancoCerrado:true,visible:true,preguntas:window._protPreguntas||{},dirigidoA:dirigidoA,dirigidoPersonas:dirigidoPersonas};
   var pid=id||('protA_'+Date.now());
   bibliotecaAdmin[pid]=doc;
