@@ -10117,7 +10117,7 @@ window.renderGestionDocentes=function(tab){
       '<button onclick="document.getElementById(\'gestDocOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
     '<div style="display:flex;gap:8px;margin-bottom:10px">'+tb('inscribir','➕ Inscribir')+tb('reporte','📊 Reporte')+'</div>'+
-    '<button onclick="abrirCentroProtocolos()" style="width:100%;margin-bottom:16px;background:rgba(124,58,237,.12);border:1px solid rgba(167,139,250,.3);color:#c4b5fd;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">✏️ Editar las preguntas de los protocolos de docentes →</button>'+
+    '<button onclick="abrirBancoPreguntas()" style="width:100%;margin-bottom:16px;background:rgba(124,58,237,.12);border:1px solid rgba(167,139,250,.3);color:#c4b5fd;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">🗃️ Banco de preguntas →</button>'+
     '<div id="gestDocContenido"></div></div>';
   if(tab==='inscribir')renderInscribirDocentes();else renderReporteDocentes();
 };
@@ -10998,7 +10998,8 @@ function renderProtocolosList(){
   var protosAdmin=Object.entries(bibliotecaAdmin||{}).map(function(e){return {id:e[0],doc:e[1],origen:'admin'};});
   var protosClinicos=Object.entries(biblioteca||{}).map(function(e){return {id:e[0],doc:e[1],origen:'clinico'};});
   var todos=protosAdmin.concat(protosClinicos);
-  var html='<button onclick="nuevoProtocoloAdmin()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-bottom:12px">+ Nuevo protocolo</button>';
+  var html='<button onclick="nuevoProtocoloAdmin()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-bottom:8px">+ Nuevo protocolo</button>'+
+    '<button onclick="abrirBancoPreguntas()" style="width:100%;margin-bottom:12px;background:rgba(124,58,237,.12);border:1px solid rgba(167,139,250,.3);color:#c4b5fd;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">🗃️ Banco de preguntas (editar todas)</button>';
   if(!todos.length){html+='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Aún no hay protocolos. Crea el primero arriba.</div>';}
   else{
     // Protocolos clínicos existentes (solo lectura desde aquí)
@@ -11149,6 +11150,136 @@ window.borrarProtocoloAdmin=function(id){
   delete bibliotecaAdmin[id];
   sedeRef('bibliotecaAdmin/'+id).remove().then(function(){renderProtocolosList();});
 };
+// ══════════════ BANCO DE PREGUNTAS (todas las preguntas de todos los protocolos, en un solo lugar) ══════════════
+// Reúne, en una sola pantalla, las preguntas ya cargadas de TODOS los protocolos de bibliotecaAdmin
+// (y de los nuevos que se vayan creando, porque se lee directo de bibliotecaAdmin cada vez que se abre),
+// sin pasar por el formulario completo de "editar protocolo".
+window._bancoExpandido=null;
+window._bancoProtPreguntas={};
+window.abrirBancoPreguntas=function(){
+  var ov=document.getElementById('bancoPregOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='bancoPregOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9002;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  window._bancoExpandido=null;window._bancoProtPreguntas={};
+  sedeRef('bibliotecaAdmin').once('value').then(function(s){
+    bibliotecaAdmin=s.val()||{};
+    renderBancoPreguntas();
+  });
+};
+window.renderBancoPreguntas=function(){
+  var ov=document.getElementById('bancoPregOv');if(!ov)return;
+  var protos=Object.entries(bibliotecaAdmin||{}).sort(function(a,b){return (a[1].titulo||'').localeCompare(b[1].titulo||'');});
+  var html='<div style="max-width:640px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:18px;font-weight:800;color:#c4b5fd">🗃️ Banco de preguntas</span>'+
+      '<button onclick="document.getElementById(\'bancoPregOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Todas las preguntas ya cargadas, de todos los protocolos, en un solo lugar. Los protocolos nuevos que crees aparecerán aquí automáticamente.</div>';
+  if(!protos.length){
+    html+='<div style="background:#16233d;border-radius:10px;padding:20px;text-align:center;color:rgba(255,255,255,.5);font-size:13px">Todavía no hay protocolos creados. Créalos desde el Centro de protocolos.</div>';
+  }else{
+    protos.forEach(function(e){
+      var id=e[0],doc=e[1];
+      var nPreg=doc.preguntas?Object.keys(doc.preguntas).length:0;
+      var mod=MODULOS_PROTOCOLO[doc.modulo]||'Sin módulo';
+      var abierto=window._bancoExpandido===id;
+      html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="bancoAbrirProtocolo(\''+id+'\')">'+
+          '<div><div style="font-size:14px;font-weight:700;color:#fff">'+esc(doc.titulo||'(sin título)')+'</div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">'+mod+' · '+nPreg+' preguntas</div></div>'+
+          '<span style="font-size:16px;color:#c4b5fd">'+(abierto?'▲':'▼')+'</span>'+
+        '</div>'+
+        (abierto?'<div id="bancoPreguntasEditor_'+id+'" style="margin-top:12px"></div>':'')+
+      '</div>';
+    });
+  }
+  html+='</div>';
+  ov.innerHTML=html;
+  if(window._bancoExpandido&&bibliotecaAdmin[window._bancoExpandido]){
+    renderBancoPreguntasEditor(window._bancoExpandido);
+  }
+};
+window.bancoAbrirProtocolo=function(id){
+  if(window._bancoExpandido===id){window._bancoExpandido=null;renderBancoPreguntas();return;}
+  window._bancoExpandido=id;
+  var doc=bibliotecaAdmin[id]||{};
+  window._bancoProtPreguntas[id]=doc.preguntas?JSON.parse(JSON.stringify(doc.preguntas)):{};
+  renderBancoPreguntas();
+};
+function renderBancoPreguntasEditor(id){
+  var cont=document.getElementById('bancoPreguntasEditor_'+id);if(!cont)return;
+  var pregs=window._bancoProtPreguntas[id]||{};
+  var html='<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">Edita el texto, las opciones o cuál es la correcta — toca "Guardar cambios" al final para que quede guardado.</div>';
+  Object.keys(pregs).forEach(function(pid){
+    var p=pregs[pid];
+    var ops=p.opciones||[];
+    html+='<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:8px">'+
+      '<textarea class="bpTexto" data-pid="'+pid+'" rows="2" placeholder="Texto de la pregunta" style="width:100%;font-size:12px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;margin-bottom:6px">'+esc(p.pregunta||'')+'</textarea>'+
+      [0,1,2,3].map(function(i){
+        var v=ops[i]||'';
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+          '<input type="radio" name="bpCorrecta_'+id+'_'+pid+'" class="bpCorrecta" data-pid="'+pid+'" value="'+i+'"'+(Number(p.correcta)===i?' checked':'')+' style="width:15px;height:15px;flex-shrink:0;accent-color:#34d399">'+
+          '<input type="text" class="bpOpcion" data-pid="'+pid+'" data-idx="'+i+'" value="'+String(v).replace(/"/g,'&quot;')+'" placeholder="Opción '+(i+1)+(i>1?' (opcional)':'')+'" style="flex:1;font-size:12px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+        '</div>';
+      }).join('')+
+      '<button onclick="bancoQuitarPregunta(\''+id+'\',\''+pid+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:5px;padding:3px 8px;font-family:inherit;font-size:10px;cursor:pointer;margin-top:4px">Quitar</button>'+
+    '</div>';
+  });
+  html+='<div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:12px;margin-top:4px">'+
+    '<input type="text" id="bancoNpPregunta_'+id+'" placeholder="Escribe la pregunta" style="width:100%;font-size:13px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;margin-bottom:8px">'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px">Opciones (marca la correcta):</div>'+
+    [0,1,2,3].map(function(i){return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><input type="radio" name="bancoNpCorrecta_'+id+'" value="'+i+'"'+(i===0?' checked':'')+' style="width:16px;height:16px;accent-color:#34d399"><input type="text" id="bancoNpOp'+i+'_'+id+'" placeholder="Opción '+(i+1)+(i>1?' (opcional)':'')+'" style="flex:1;font-size:12px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px"></div>';}).join('')+
+    '<button onclick="bancoAgregarPregunta(\''+id+'\')" style="width:100%;margin-top:6px;background:rgba(96,165,250,.2);color:#93c5fd;border:none;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">+ Agregar esta pregunta</button>'+
+  '</div>'+
+  '<button onclick="bancoGuardarProtocolo(\''+id+'\')" class="btn-add" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:10px">💾 Guardar cambios</button>';
+  cont.innerHTML=html;
+  cont.querySelectorAll('.bpTexto').forEach(function(el){el.addEventListener('input',function(){
+    var p=window._bancoProtPreguntas[id][this.dataset.pid];if(p)p.pregunta=this.value;
+  });});
+  cont.querySelectorAll('.bpOpcion').forEach(function(el){el.addEventListener('input',function(){
+    var p=window._bancoProtPreguntas[id][this.dataset.pid];if(!p)return;
+    if(!p.opciones)p.opciones=[];
+    p.opciones[Number(this.dataset.idx)]=this.value;
+  });});
+  cont.querySelectorAll('.bpCorrecta').forEach(function(el){el.addEventListener('change',function(){
+    var p=window._bancoProtPreguntas[id][this.dataset.pid];if(p)p.correcta=Number(this.value);
+  });});
+}
+window.bancoQuitarPregunta=function(id,pid){delete window._bancoProtPreguntas[id][pid];renderBancoPreguntasEditor(id);};
+window.bancoAgregarPregunta=function(id){
+  var preg=document.getElementById('bancoNpPregunta_'+id).value.trim();
+  if(!preg){alert('Escribe la pregunta.');return;}
+  var ops=[];
+  [0,1,2,3].forEach(function(i){var v=document.getElementById('bancoNpOp'+i+'_'+id).value.trim();if(v)ops.push({txt:v,idx:i});});
+  if(ops.length<2){alert('Necesitas al menos 2 opciones.');return;}
+  var correctaRadio=document.querySelector('input[name="bancoNpCorrecta_'+id+'"]:checked');
+  var correctaIdx=correctaRadio?Number(correctaRadio.value):0;
+  var opcionesFinal=ops.map(function(o){return o.txt;});
+  var correctaFinal=ops.findIndex(function(o){return o.idx===correctaIdx;});
+  if(correctaFinal<0){alert('Marcaste como correcta una opción que dejaste vacía. Escribe el texto de esa opción o marca otra como correcta antes de guardar.');return;}
+  if(!window._bancoProtPreguntas[id])window._bancoProtPreguntas[id]={};
+  window._bancoProtPreguntas[id]['p'+Date.now()]={pregunta:preg,opciones:opcionesFinal,correcta:correctaFinal,tema:'General'};
+  renderBancoPreguntasEditor(id);
+};
+window.bancoGuardarProtocolo=function(id){
+  var pregs=window._bancoProtPreguntas[id]||{};
+  Object.keys(pregs).forEach(function(pid){
+    var p=pregs[pid];
+    var ops=(p.opciones||[]).map(function(v,i){return {txt:(v||'').trim(),idx:i};}).filter(function(o){return o.txt;});
+    var nuevaCorrecta=ops.findIndex(function(o){return o.idx===Number(p.correcta);});
+    p.opciones=ops.map(function(o){return o.txt;});
+    p.correcta=nuevaCorrecta>=0?nuevaCorrecta:0;
+  });
+  if(!bibliotecaAdmin[id])return;
+  bibliotecaAdmin[id].preguntas=pregs;
+  sedeRef('bibliotecaAdmin/'+id+'/preguntas').set(pregs).then(function(){
+    alert('Preguntas guardadas.');
+    window._bancoExpandido=null;
+    renderBancoPreguntas();
+  });
+};
 // ── Activación de protocolos por persona (control individual gradual) ──
 window._persActivacion='';
 window.renderActivacionPorPersona=function(){
@@ -11218,11 +11349,12 @@ window.renderActivacionPorPersona=function(){
       var puedeClick=activo&&puedeYa;
       var etiqueta=pregOn?'✓ Preguntas activas':(!activo?'📝 Preguntas (activa el material primero)':(!puedeYa?'⏳ Disponible en '+diasFaltan+' día'+(diasFaltan===1?'':'s'):'📝 Activar preguntas'));
       var bg=pregOn?'rgba(96,165,250,.25);color:#93c5fd;border:1px solid rgba(96,165,250,.4)':((activo&&!puedeYa)?'rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.3)':'rgba(255,255,255,.05);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1)');
-      html+='<div style="margin-top:6px;display:flex;justify-content:flex-end">'+
+      html+='<div style="margin-top:6px;display:flex;justify-content:flex-end;gap:6px;align-items:center">'+
+        (activo&&!pregOn&&!puedeYa?'<button onclick="togglePreguntasPersonaRol(\''+id+'\',true)" style="background:none;border:none;color:rgba(255,255,255,.4);text-decoration:underline;font-family:inherit;font-size:10px;cursor:pointer">forzar ahora</button>':'')+
         '<button '+(puedeClick?'onclick="togglePreguntasPersonaRol(\''+id+'\')"':'disabled')+' style="background:'+bg+';border-radius:16px;padding:5px 14px;font-family:inherit;font-size:11px;font-weight:700;cursor:'+(puedeClick?'pointer':'not-allowed')+'">'+etiqueta+'</button>'+
       '</div>';
       if(activo&&!pregOn&&!puedeYa){
-        html+='<div style="text-align:right;font-size:9px;color:rgba(251,191,36,.7);margin-top:2px">Regla: las preguntas se habilitan recién 7 días después de activar el protocolo.</div>';
+        html+='<div style="text-align:right;font-size:9px;color:rgba(251,191,36,.7);margin-top:2px">Regla: las preguntas se habilitan recién 7 días después de activar el protocolo (puedes forzarlo arriba si no quieres esperar).</div>';
       }
     }
     // Temas del protocolo (solo si está activo y tiene más de un tema)
@@ -11284,14 +11416,14 @@ function diasParaActivarPreguntas(doc,persona){
   var restante=DIAS_ESPERA_PREGUNTAS-((Date.now()-fecha)/(1000*60*60*24));
   return restante>0?Math.ceil(restante):0;
 }
-window.togglePreguntasPersonaRol=function(protId){
+window.togglePreguntasPersonaRol=function(protId,forzar){
   var persona=window._persActivacion;if(!persona)return;
   var origen=bibliotecaAdmin[protId]?'bibliotecaAdmin':(biblioteca[protId]?'biblioteca':null);
   if(!origen)return;
   var doc=(origen==='bibliotecaAdmin'?bibliotecaAdmin:biblioteca)[protId];
   if(!doc.preguntasActivasPersonas)doc.preguntasActivasPersonas=[];
   var idx=doc.preguntasActivasPersonas.indexOf(persona);
-  if(idx<0&&!puedeActivarPreguntas(doc,persona)){
+  if(idx<0&&!forzar&&!puedeActivarPreguntas(doc,persona)){
     var faltan=diasParaActivarPreguntas(doc,persona);
     alert('Todavía no se puede: deben pasar 7 días desde que se activó el protocolo para '+persona+'. Faltan '+faltan+' día'+(faltan===1?'':'s')+'.');
     return;
