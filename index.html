@@ -12235,6 +12235,7 @@ window.abrirDashMaestro=function(){
     dashNavBtn('📊','Gestión para gerencia','Desempeño, participación, supervisión','#2563eb','abrirDashboardGestion')+
     dashNavBtn('📦','Inventario','Stock, vencimientos, clasificación','#d97706','abrirDashboardInventario')+
     dashNavBtn('💼','Rendimiento de dotación','Costo vs carga (confidencial)','#b45309','abrirRendimiento')+
+    dashNavBtn('🏅','Resumen para acreditación','Las 4 cifras clave, listas para una presentación','#059669','abrirResumenAcreditacion')+
   '</div>';
 
   html+='</div>';
@@ -12665,6 +12666,112 @@ function procesarMetricas(datosSemanas){
   };
 }
 
+// ══════════════ RESUMEN PARA ACREDITACIÓN (las 4 cifras para la presentación) ══════════════
+window.abrirResumenAcreditacion=function(){
+  var ov=document.getElementById('resumenAcredOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='resumenAcredOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.96);z-index:9998;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:620px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+      '<span style="font-size:16px;font-weight:700;color:#fff">🏅 Resumen para acreditación</span>'+
+      '<button onclick="document.getElementById(\'resumenAcredOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button>'+
+    '</div>'+
+    '<div id="resumenAcredContenido" style="background:#fff;border-radius:12px;padding:24px;color:#1a1a2e;text-align:center">'+
+      '<p style="color:#666;padding:40px">Calculando las cifras…</p>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+  calcularResumenAcreditacion();
+};
+function calcularResumenAcreditacion(){
+  Promise.all([
+    sedeRef('semanas').once('value'),
+    sedeRef('supervision').once('value'),
+    sedeRef('bibliotecaAdmin').once('value'),
+    sedeRef('biblioteca').once('value'),
+    sedeRef('rankingDocente').once('value'),
+    sedeRef('rankingGerencia').once('value'),
+    sedeRef('docentes').once('value'),
+    sedeRef('secretarias').once('value'),
+    sedeRef('gerenciaEquipo').once('value'),
+    sedeRef('nombres').once('value')
+  ]).then(function(r){
+    var semanasAll=r[0].val()||{};
+    var supAll=r[1].val()||{};
+    var bibAdmin=r[2].val()||{};
+    var bibClin=r[3].val()||{};
+    var rankDoc=r[4].val()||{};
+    var rankGer=r[5].val()||{};
+    var docentesObj=r[6].val()||{};
+    var secretariasObj=r[7].val()||{};
+    var gerenciaObj=r[8].val()||{};
+    var nombresObj=r[9].val()||[];
+
+    var idsSem=Object.keys(semanasAll);
+    Promise.all(idsSem.map(function(id){
+      return sedeRef('semanas/'+id+'/ranking').once('value').then(function(s){
+        return {id:id,sem:semanasAll[id],ranking:s.val()||{}};
+      });
+    })).then(function(datosSemanas){
+      var m=procesarMetricas(datosSemanas);
+      var sup=procesarSupervision(supAll);
+
+      // 1) Protocolos institucionales cargados y CON preguntas (clínicos + de otros roles)
+      var nProtocolos=0;
+      Object.values(bibAdmin).forEach(function(d){if(d&&d.preguntas&&Object.keys(d.preguntas).length>0)nProtocolos++;});
+      Object.values(bibClin).forEach(function(d){if(d&&d.preguntas&&Object.keys(d.preguntas).length>0)nProtocolos++;});
+
+      // 2) Evaluaciones diarias registradas desde el inicio (clínico + docentes + gerencia)
+      var nEvalDoc=0;
+      Object.keys(rankDoc).forEach(function(k){
+        Object.keys(rankDoc[k]||{}).forEach(function(mes){nEvalDoc+=Object.keys(rankDoc[k][mes]||{}).length;});
+      });
+      var nEvalGer=0;
+      Object.keys(rankGer).forEach(function(k){
+        Object.keys(rankGer[k]||{}).forEach(function(mes){nEvalGer+=Object.keys(rankGer[k][mes]||{}).length;});
+      });
+      var nEvaluaciones=m.totalEval+nEvalDoc+nEvalGer;
+
+      // 3) % cumplimiento promedio en supervisión ponderada (AHP)
+      var pctCumplimiento=sup&&sup.promedioBase!=null?sup.promedioBase:null;
+
+      // 4) Colaboradores y docentes activos en la plataforma (personas únicas registradas)
+      var nombresSet={};
+      (Array.isArray(nombresObj)?nombresObj:Object.values(nombresObj)).forEach(function(n){
+        var nom=(n&&n.nombre)||n;if(nom)nombresSet[String(nom).trim().toLowerCase()]=true;
+      });
+      Object.values(secretariasObj).forEach(function(v){var nom=(typeof v==='object'?v.nombre:v);if(nom)nombresSet[String(nom).trim().toLowerCase()]=true;});
+      Object.values(docentesObj).forEach(function(v){if(v&&v.nombre)nombresSet[String(v.nombre).trim().toLowerCase()]=true;});
+      Object.values(gerenciaObj).forEach(function(v){if(v&&v.nombre)nombresSet[String(v.nombre).trim().toLowerCase()]=true;});
+      var nActivos=Object.keys(nombresSet).length;
+
+      renderResumenAcreditacion({
+        nProtocolos:nProtocolos,
+        nEvaluaciones:nEvaluaciones,
+        pctCumplimiento:pctCumplimiento,
+        nActivos:nActivos
+      });
+    });
+  });
+}
+function renderResumenAcreditacion(d){
+  var cont=document.getElementById('resumenAcredContenido');if(!cont)return;
+  var items=[
+    {n:d.nProtocolos,label:'protocolos institucionales cargados y con preguntas'},
+    {n:d.nEvaluaciones,label:'evaluaciones diarias registradas desde el inicio'},
+    {n:(d.pctCumplimiento!=null?d.pctCumplimiento+'%':'Sin datos'),label:'cumplimiento promedio en supervisión ponderada'},
+    {n:d.nActivos,label:'colaboradores y docentes activos en la plataforma'}
+  ];
+  var texto='Resultados a la fecha\\n'+items.map(function(it){return it.n+' '+it.label;}).join('\\n');
+  var html='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px">'+
+    items.map(function(it){
+      return '<div style="background:#f3f4f6;border-radius:10px;padding:18px"><div style="font-size:34px;font-weight:800;color:#059669">'+it.n+'</div><div style="font-size:12px;color:#4b5563;margin-top:4px">'+esc(it.label)+'</div></div>';
+    }).join('')+
+  '</div>'+
+  '<textarea id="resumenAcredTexto" readonly style="width:100%;min-height:120px;font-family:inherit;font-size:13px;color:#1a1a2e;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#fafafa">'+esc(texto)+'</textarea>'+
+  '<button onclick="var t=document.getElementById(\'resumenAcredTexto\');t.select();document.execCommand(\'copy\');this.textContent=\'✓ Copiado\';" style="width:100%;margin-top:10px;background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;border-radius:8px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📋 Copiar texto</button>'+
+  '<p style="font-size:11px;color:#9ca3af;margin-top:10px">Calculado en vivo desde los datos actuales de GESTHOR (todas las semanas, protocolos, evaluaciones y supervisión registrados).</p>';
+  cont.innerHTML=html;
+}
 function renderDashboardContenido(m){
   var cont=document.getElementById('dashContenido');
   if(!cont)return;
