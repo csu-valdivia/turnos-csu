@@ -12554,25 +12554,31 @@ function anexarResumenGerenciaADashboard(){
 }
 
 // Lee TODAS las semanas de Firebase y calcula las métricas de gestión
+// OJO: 'supervision' vive por semana (sedes/S/semanas/W/supervision, igual que 'ranking'), no a
+// nivel de sede — así que el historial completo se arma recorriendo cada semana, nunca leyendo
+// sedeRef('supervision') directo (eso apunta a un nodo que nadie escribe y siempre viene vacío).
 function calcularYMostrarGestion(){
   Promise.all([
     sedeRef('semanas').once('value'),
-    sedeRef('supervision').once('value'),
     sedeRef('kpiSemanal').once('value')
   ]).then(function(results){
     var semanasAll=results[0].val()||{};
-    var supAll=results[1].val()||{};
-    var kpiAll=results[2].val()||{};
+    var kpiAll=results[1].val()||{};
     var ids=Object.keys(semanasAll).sort(function(a,b){
       return (semanasAll[a].ini||'').localeCompare(semanasAll[b].ini||'');
     });
     var promesas=ids.map(function(id){
-      return sedeRef('semanas/'+id+'/ranking').once('value').then(function(s){
-        return {id:id,sem:semanasAll[id],ranking:s.val()||{}};
+      return Promise.all([
+        sedeRef('semanas/'+id+'/ranking').once('value'),
+        sedeRef('semanas/'+id+'/supervision').once('value')
+      ]).then(function(s){
+        return {id:id,sem:semanasAll[id],ranking:s[0].val()||{},supervision:s[1].val()||{}};
       });
     });
     Promise.all(promesas).then(function(datosSemanas){
       var metricas=procesarMetricas(datosSemanas);
+      var supAll={};
+      datosSemanas.forEach(function(d){Object.keys(d.supervision||{}).forEach(function(k){supAll[d.id+'_'+k]=d.supervision[k];});});
       metricas.supervision=procesarSupervision(supAll);
       metricas.kpi=procesarKpiSemanal(kpiAll);
       renderDashboardContenido(metricas);
@@ -12666,110 +12672,118 @@ function procesarMetricas(datosSemanas){
   };
 }
 
-// ══════════════ RESUMEN PARA ACREDITACIÓN (las 4 cifras para la presentación) ══════════════
+// ══════════════ RESUMEN PARA ACREDITACIÓN (narrativa de trabajo conjunto y avance) ══════════════
 window.abrirResumenAcreditacion=function(){
   var ov=document.getElementById('resumenAcredOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='resumenAcredOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.96);z-index:9998;overflow-y:auto;padding:16px';
-  ov.innerHTML='<div style="max-width:620px;margin:0 auto">'+
+  ov.innerHTML='<div style="max-width:680px;margin:0 auto">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
       '<span style="font-size:16px;font-weight:700;color:#fff">🏅 Resumen para acreditación</span>'+
       '<button onclick="document.getElementById(\'resumenAcredOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button>'+
     '</div>'+
     '<div id="resumenAcredContenido" style="background:#fff;border-radius:12px;padding:24px;color:#1a1a2e;text-align:center">'+
-      '<p style="color:#666;padding:40px">Calculando las cifras…</p>'+
+      '<p style="color:#666;padding:40px">Calculando…</p>'+
     '</div></div>';
   document.body.appendChild(ov);
   calcularResumenAcreditacion();
 };
+// OJO: 'supervision' vive por semana (igual que 'ranking'), no a nivel de sede — se recorre cada
+// semana (ver nota en calcularYMostrarGestion) para que el cumplimiento histórico sea real.
 function calcularResumenAcreditacion(){
   Promise.all([
     sedeRef('semanas').once('value'),
-    sedeRef('supervision').once('value'),
     sedeRef('bibliotecaAdmin').once('value'),
     sedeRef('biblioteca').once('value'),
     sedeRef('rankingDocente').once('value'),
     sedeRef('rankingGerencia').once('value'),
-    sedeRef('docentes').once('value'),
-    sedeRef('secretarias').once('value'),
-    sedeRef('gerenciaEquipo').once('value'),
-    sedeRef('nombres').once('value')
+    sedeRef('docentes').once('value')
   ]).then(function(r){
     var semanasAll=r[0].val()||{};
-    var supAll=r[1].val()||{};
-    var bibAdmin=r[2].val()||{};
-    var bibClin=r[3].val()||{};
-    var rankDoc=r[4].val()||{};
-    var rankGer=r[5].val()||{};
-    var docentesObj=r[6].val()||{};
-    var secretariasObj=r[7].val()||{};
-    var gerenciaObj=r[8].val()||{};
-    var nombresObj=r[9].val()||[];
+    var bibAdmin=r[1].val()||{};
+    var bibClin=r[2].val()||{};
+    var rankDoc=r[3].val()||{};
+    var rankGer=r[4].val()||{};
+    var docentesObj=r[5].val()||{};
 
-    var idsSem=Object.keys(semanasAll);
+    var idsSem=Object.keys(semanasAll).sort(function(a,b){return (semanasAll[a].ini||'').localeCompare(semanasAll[b].ini||'');});
     Promise.all(idsSem.map(function(id){
-      return sedeRef('semanas/'+id+'/ranking').once('value').then(function(s){
-        return {id:id,sem:semanasAll[id],ranking:s.val()||{}};
+      return Promise.all([
+        sedeRef('semanas/'+id+'/ranking').once('value'),
+        sedeRef('semanas/'+id+'/supervision').once('value')
+      ]).then(function(s){
+        return {id:id,sem:semanasAll[id],ranking:s[0].val()||{},supervision:s[1].val()||{}};
       });
     })).then(function(datosSemanas){
       var m=procesarMetricas(datosSemanas);
+      var supAll={};
+      datosSemanas.forEach(function(d){Object.keys(d.supervision||{}).forEach(function(k){supAll[d.id+'_'+k]=d.supervision[k];});});
       var sup=procesarSupervision(supAll);
 
-      // 1) Protocolos institucionales cargados y CON preguntas (clínicos + de otros roles)
-      var nProtocolos=0;
-      Object.values(bibAdmin).forEach(function(d){if(d&&d.preguntas&&Object.keys(d.preguntas).length>0)nProtocolos++;});
-      Object.values(bibClin).forEach(function(d){if(d&&d.preguntas&&Object.keys(d.preguntas).length>0)nProtocolos++;});
+      // 1) Semanas de trabajo conjunto con el equipo clínico y administrativo, con rango de fechas real
+      var nSemanas=idsSem.length;
+      var fechaIni=idsSem.length?(semanasAll[idsSem[0]].ini||''):'';
+      var fechaFin=idsSem.length?(semanasAll[idsSem[idsSem.length-1]].fin||''):'';
 
-      // 2) Evaluaciones diarias registradas desde el inicio (clínico + docentes + gerencia)
-      var nEvalDoc=0;
+      // 2) Docentes en capacitación activa: con al menos una evaluación respondida en el banco de preguntas
+      var nDocentesTotal=Object.keys(docentesObj).length;
+      var nDocentesActivos=Object.keys(docentesObj).filter(function(k){
+        var meses=rankDoc[k]||{};
+        return Object.keys(meses).some(function(mes){return Object.keys(meses[mes]||{}).length>0;});
+      }).length;
+
+      // 3) Avance de la documentación institucional: protocolos cargados vs con seguimiento de evaluación activo
+      var protosAdmin=Object.values(bibAdmin);
+      var protosClin=Object.values(bibClin);
+      var nProtocolosTotal=protosAdmin.length+protosClin.length;
+      var nProtocolosConSeguimiento=protosAdmin.concat(protosClin).filter(function(d){return d&&d.preguntas&&Object.keys(d.preguntas).length>0;}).length;
+      var pctAvanceDoc=nProtocolosTotal?Math.round(nProtocolosConSeguimiento/nProtocolosTotal*100):null;
+
+      // 4) Respuestas y logros: evaluaciones respondidas en total, y cuántas con cumplimiento alto (≥80%)
+      var nEvalDoc=0,nEvalDocAltos=0;
       Object.keys(rankDoc).forEach(function(k){
-        Object.keys(rankDoc[k]||{}).forEach(function(mes){nEvalDoc+=Object.keys(rankDoc[k][mes]||{}).length;});
+        Object.keys(rankDoc[k]||{}).forEach(function(mes){
+          Object.values(rankDoc[k][mes]||{}).forEach(function(e){nEvalDoc++;if(e&&e.pct>=80)nEvalDocAltos++;});
+        });
       });
       var nEvalGer=0;
       Object.keys(rankGer).forEach(function(k){
         Object.keys(rankGer[k]||{}).forEach(function(mes){nEvalGer+=Object.keys(rankGer[k][mes]||{}).length;});
       });
       var nEvaluaciones=m.totalEval+nEvalDoc+nEvalGer;
-
-      // 3) % cumplimiento promedio en supervisión ponderada (AHP)
       var pctCumplimiento=sup&&sup.promedioBase!=null?sup.promedioBase:null;
 
-      // 4) Colaboradores y docentes activos en la plataforma (personas únicas registradas)
-      var nombresSet={};
-      (Array.isArray(nombresObj)?nombresObj:Object.values(nombresObj)).forEach(function(n){
-        var nom=(n&&n.nombre)||n;if(nom)nombresSet[String(nom).trim().toLowerCase()]=true;
-      });
-      Object.values(secretariasObj).forEach(function(v){var nom=(typeof v==='object'?v.nombre:v);if(nom)nombresSet[String(nom).trim().toLowerCase()]=true;});
-      Object.values(docentesObj).forEach(function(v){if(v&&v.nombre)nombresSet[String(v.nombre).trim().toLowerCase()]=true;});
-      Object.values(gerenciaObj).forEach(function(v){if(v&&v.nombre)nombresSet[String(v.nombre).trim().toLowerCase()]=true;});
-      var nActivos=Object.keys(nombresSet).length;
-
       renderResumenAcreditacion({
-        nProtocolos:nProtocolos,
-        nEvaluaciones:nEvaluaciones,
-        pctCumplimiento:pctCumplimiento,
-        nActivos:nActivos
+        nSemanas:nSemanas,fechaIni:fechaIni,fechaFin:fechaFin,
+        nDocentesActivos:nDocentesActivos,nDocentesTotal:nDocentesTotal,
+        nProtocolosTotal:nProtocolosTotal,nProtocolosConSeguimiento:nProtocolosConSeguimiento,pctAvanceDoc:pctAvanceDoc,
+        nEvaluaciones:nEvaluaciones,nEvalDocAltos:nEvalDocAltos,pctCumplimiento:pctCumplimiento
       });
     });
   });
 }
 function renderResumenAcreditacion(d){
   var cont=document.getElementById('resumenAcredContenido');if(!cont)return;
-  var items=[
-    {n:d.nProtocolos,label:'protocolos institucionales cargados y con preguntas'},
-    {n:d.nEvaluaciones,label:'evaluaciones diarias registradas desde el inicio'},
-    {n:(d.pctCumplimiento!=null?d.pctCumplimiento+'%':'Sin datos'),label:'cumplimiento promedio en supervisión ponderada'},
-    {n:d.nActivos,label:'colaboradores y docentes activos en la plataforma'}
+  function fmtFecha(f){if(!f)return'';var p=f.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:f;}
+  var rango=(d.fechaIni&&d.fechaFin)?(' ('+fmtFecha(d.fechaIni)+' → '+fmtFecha(d.fechaFin)+')'):'';
+  var cards=[
+    {big:d.nSemanas,label:'semanas de trabajo conjunto con el equipo clínico y administrativo'+rango},
+    {big:d.nDocentesActivos+(d.nDocentesTotal?'/'+d.nDocentesTotal:''),label:'docentes en capacitación activa (con evaluaciones ya respondidas)'},
+    {big:(d.pctAvanceDoc!=null?d.pctAvanceDoc+'%':'Sin datos'),label:'avance de la documentación institucional: '+d.nProtocolosConSeguimiento+' de '+d.nProtocolosTotal+' protocolos ya con seguimiento de evaluación activo'},
+    {big:d.nEvaluaciones,label:'respuestas registradas en total'+(d.pctCumplimiento!=null?' · cumplimiento promedio en supervisión: '+d.pctCumplimiento+'%':'')+(d.nEvalDocAltos?' · '+d.nEvalDocAltos+' evaluaciones de docentes con cumplimiento ≥80%':'')}
   ];
-  var texto='Resultados a la fecha\\n'+items.map(function(it){return it.n+' '+it.label;}).join('\\n');
-  var html='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px">'+
-    items.map(function(it){
-      return '<div style="background:#f3f4f6;border-radius:10px;padding:18px"><div style="font-size:34px;font-weight:800;color:#059669">'+it.n+'</div><div style="font-size:12px;color:#4b5563;margin-top:4px">'+esc(it.label)+'</div></div>';
+  var texto='Resumen GESTHOR — resultados para acreditación\\n'+cards.map(function(c){return c.big+' — '+c.label;}).join('\\n');
+  var html='<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;text-align:left">'+
+    cards.map(function(c){
+      return '<div style="background:#f3f4f6;border-radius:10px;padding:16px 18px;display:flex;align-items:center;gap:16px">'+
+        '<div style="font-size:30px;font-weight:800;color:#059669;white-space:nowrap">'+c.big+'</div>'+
+        '<div style="font-size:13px;color:#4b5563;line-height:1.4">'+esc(c.label)+'</div>'+
+      '</div>';
     }).join('')+
   '</div>'+
-  '<textarea id="resumenAcredTexto" readonly style="width:100%;min-height:120px;font-family:inherit;font-size:13px;color:#1a1a2e;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#fafafa">'+esc(texto)+'</textarea>'+
+  '<textarea id="resumenAcredTexto" readonly style="width:100%;min-height:130px;font-family:inherit;font-size:13px;color:#1a1a2e;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#fafafa">'+esc(texto)+'</textarea>'+
   '<button onclick="var t=document.getElementById(\'resumenAcredTexto\');t.select();document.execCommand(\'copy\');this.textContent=\'✓ Copiado\';" style="width:100%;margin-top:10px;background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;border-radius:8px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📋 Copiar texto</button>'+
-  '<p style="font-size:11px;color:#9ca3af;margin-top:10px">Calculado en vivo desde los datos actuales de GESTHOR (todas las semanas, protocolos, evaluaciones y supervisión registrados).</p>';
+  '<p style="font-size:11px;color:#9ca3af;margin-top:10px;text-align:left">Calculado en vivo recorriendo todas las semanas de trabajo registradas en GESTHOR, desde la primera hasta hoy.</p>';
   cont.innerHTML=html;
 }
 function renderDashboardContenido(m){
