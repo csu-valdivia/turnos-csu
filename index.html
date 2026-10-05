@@ -4565,12 +4565,23 @@ function renderEditorTurnoSemana(nombre){
     '<select id="etNuevaTareaTipo" onchange="var sb=document.getElementById(\'etNuevaTareaSector\');if(sb)sb.style.display=TIPOS_COMPARTIDOS_JORNADA[this.value]?\'block\':\'none\';" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
     '<input type="text" id="etNuevaTareaSector" placeholder="Sector (opcional — para tareas que se comparten en la misma jornada)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
     '<button onclick="agregarTareaEnEditor(\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="width:100%;margin-top:6px;background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">+ Agregar tarea/rol</button>';
+  var selSty='width:100%;font-size:12px;padding:6px;margin-bottom:6px';
+  var nuevoTurnoForm='<div style="background:rgba(37,99,235,.08);border:1px dashed rgba(96,165,250,.4);border-radius:10px;padding:10px;margin:4px 0 12px">'+
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">➕ Agregar otro turno</div>'+
+    '<select id="etNvDia" style="'+selSty+'">'+DIAS.map(function(d){return '<option value="'+d+'">'+d+'</option>';}).join('')+'</select>'+
+    '<select id="etNvArea" style="'+selSty+'">'+AREAS.map(function(a){return '<option value="'+a+'">'+a+'</option>';}).join('')+'</select>'+
+    '<select id="etNvHor" style="'+selSty+'">'+HORARIOS.map(function(h){return '<option value="'+h+'">'+h+'</option>';}).join('')+'</select>'+
+    '<select id="etNvSub" style="'+selSty+'"><option value="">— Sin subárea —</option>'+Object.keys(SUBAREAS).map(function(t){return '<option value="'+t+'">'+t+' · '+SUBAREAS[t]+'</option>';}).join('')+'</select>'+
+    '<button onclick="agregarFilaTurnoSemana(\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="width:100%;background:rgba(37,99,235,.2);color:#93c5fd;border:1px solid rgba(37,99,235,.4);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">+ Agregar este turno</button>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">¿Falta un horario? Agrégalo en Admin → Bloques horarios.</div>'+
+  '</div>';
   var nombreEsc=esc(nombre).replace(/'/g,"\\'");
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">✏️ Editar turno completo</div>'+
     '<div style="font-size:12px;color:#93c5fd;margin-bottom:14px">'+esc(nombre)+' · esta semana</div>'+
     '<p style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">📍 Días, área y horario</p>'+
     (filas||'<div style="font-size:12px;color:rgba(255,255,255,.4);padding:10px 0 14px">Sin turnos esta semana.</div>')+
+    nuevoTurnoForm+
     '<button onclick="guardarEditorTurnoSemana(\''+nombreEsc+'\')" class="btn-add" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">💾 Guardar todos los cambios</button>'+
     '<div id="etSaved" class="saved">✓ Guardado — así quedó su turno</div>'+
     tareasSection+
@@ -4601,6 +4612,30 @@ window.quitarTareaEnEditor=function(tareaKey,nombre){
   sRef('tareas/'+tareaKey).remove().then(function(){
     if(typeof renderMisTurnos==='function')renderMisTurnos(nombre);
     renderEditorTurnoSemana(nombre);
+  });
+};
+
+window.agregarFilaTurnoSemana=function(nombre){
+  var dia=document.getElementById('etNvDia').value,area=document.getElementById('etNvArea').value,
+      hor=document.getElementById('etNvHor').value,sub=document.getElementById('etNvSub').value;
+  if(!dia||!area||!hor){alert('Elige día, área y horario.');return;}
+  var dup=Object.values(bloques).some(function(b){return b.nombre===nombre&&b.dia===dia&&b.area===area&&b.horario===hor&&!b.libre;});
+  if(dup){alert('Ya tiene ese mismo turno cargado.');return;}
+  var proms=[];
+  // conserva los cambios sin guardar de las filas ya existentes antes de refrescar
+  document.querySelectorAll('.etDia').forEach(function(sel){
+    var k=sel.dataset.k,b=bloques[k];if(!b)return;
+    var areaSel=document.querySelector('.etArea[data-k="'+k+'"]'),horSel=document.querySelector('.etHor[data-k="'+k+'"]'),subSel=document.querySelector('.etSub[data-k="'+k+'"]');
+    var act=Object.assign({},b,{dia:sel.value,area:areaSel.value,horario:horSel.value});
+    if(subSel&&subSel.value)act.turno=subSel.value;else delete act.turno;
+    proms.push(sRef('bloques/'+k).set(act));
+  });
+  var nb={dia:dia,nombre:nombre,area:area,horario:hor};if(sub)nb.turno=sub;
+  proms.push(sRef('bloques').push(nb));
+  Promise.all(proms).then(function(){
+    renderPanorama();if(typeof renderMisTurnos==='function')renderMisTurnos(nombre);
+    renderEditorTurnoSemana(nombre);
+    setTimeout(function(){genPendientes(function(){});},400);
   });
 };
 
