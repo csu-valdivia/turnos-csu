@@ -1104,6 +1104,14 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           </div>
 
           <div class="asec">
+            <p class="asec-title">🕐 Bloques horarios (agregar los que falten)</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Los bloques que agregues aparecen en todos los selectores de horario para planear turnos.</p>
+            <div class="frow"><input type="time" id="heIni" style="flex:1"><input type="time" id="heFin" style="flex:1"></div>
+            <button class="btn-add" onclick="agregarBloqueHorario()">+ Agregar bloque horario</button>
+            <div class="ilist" id="horExtraList"></div>
+          </div>
+
+          <div class="asec">
             <p class="asec-title">⚠ Turno pendiente manual</p>
             <div class="frow">
               <select id="pD"><option value="">Día</option><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option></select>
@@ -1786,6 +1794,38 @@ function hacerArrastrable(el){
 
 var FRANJAS=['07:45–09:00','07:45–10:00','07:45–11:00','07:45–17:00','08:00–09:00','08:00–11:00','09:00–13:00','09:00–14:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–18:00','15:00–19:00','15:00–20:00','16:00–20:00','17:00–20:00'];
 var HORARIOS=['07:45–09:00','07:45–10:00','07:45–11:00','07:45–17:00','08:00–09:00','08:00–11:00','09:00–13:00','09:00–14:00','09:00–18:00','09:00–19:00','10:00–13:00','10:00–14:00','10:00–20:00','11:00–13:00','11:00–14:00','11:00–20:00','13:00–14:00','14:00–15:00','14:00–16:00','14:00–17:00','15:00–16:00','15:00–17:00','15:00–18:00','15:00–19:00','15:00–20:00','16:00–20:00','17:00–20:00'];
+// Bloques horarios agregados por el admin (se guardan a nivel de sede y se suman a la lista base).
+var HORARIOS_BASE=HORARIOS.slice(),FRANJAS_BASE=FRANJAS.slice(),horariosExtra=[];
+function _mezclarHorarios(base){
+  var l=base.slice();horariosExtra.forEach(function(h){if(l.indexOf(h)===-1)l.push(h);});
+  return l.sort();
+}
+function aplicarHorariosExtra(){
+  HORARIOS.length=0;_mezclarHorarios(HORARIOS_BASE).forEach(function(h){HORARIOS.push(h);});
+  FRANJAS.length=0;_mezclarHorarios(FRANJAS_BASE).forEach(function(h){FRANJAS.push(h);});
+  ['pH','llH','ssH'].forEach(function(id){
+    var sel=document.getElementById(id);if(!sel)return;var v=sel.value;
+    sel.innerHTML='<option value="">Horario</option>'+HORARIOS.map(function(h){return '<option value="'+h+'">'+h+'</option>';}).join('');
+    sel.value=v;
+  });
+  var l=document.getElementById('horExtraList');
+  if(l)l.innerHTML=horariosExtra.length?horariosExtra.slice().sort().map(function(h){return '<div class="iitem"><span>'+h+'</span><button class="del-btn" onclick="quitarBloqueHorario(\''+h+'\')">✕</button></div>';}).join(''):'<p class="empty">Sin bloques agregados.</p>';
+}
+window.agregarBloqueHorario=function(){
+  var ini=document.getElementById('heIni').value,fin=document.getElementById('heFin').value;
+  if(!ini||!fin){alert('Elige hora de inicio y de término.');return;}
+  if(fin<=ini){alert('La hora de término debe ser posterior al inicio.');return;}
+  var h=ini+'–'+fin;
+  if(HORARIOS_BASE.indexOf(h)>-1||horariosExtra.indexOf(h)>-1){alert('Ese bloque ya existe.');return;}
+  horariosExtra.push(h);aplicarHorariosExtra();
+  sedeRef('horariosExtra').set(horariosExtra);
+  document.getElementById('heIni').value='';document.getElementById('heFin').value='';
+};
+window.quitarBloqueHorario=function(h){
+  if(!confirm('¿Quitar el bloque '+h+'? Los turnos ya cargados con ese horario no se borran.'))return;
+  horariosExtra=horariosExtra.filter(function(x){return x!==h;});aplicarHorariosExtra();
+  sedeRef('horariosExtra').set(horariosExtra.length?horariosExtra:null);
+};
 
 // Cobertura horarios cada 30 min 08:00-20:00
 var COB_HOR=[];
@@ -1923,7 +1963,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // Antes estaba fuera de esta lista, así que una vacación pedida hoy para noviembre quedaba guardada
 // dentro de la semana activa de HOY (la única que existía en ese momento) y por eso aparecía como si
 // fuera de la semana actual — y lo mismo le pasaría a cualquier permiso pedido para semanas futuras.
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -2042,6 +2082,7 @@ function attach(){
   on('equipoClave',function(v){equipoClave=v||{};renderPanorama();renderClaveActual();if(curNombre)renderMisTurnos(curNombre);});
   on('ranking',function(v){ranking=v||{};renderRanking();if(document.getElementById('tc-estado')&&document.getElementById('tc-estado').style.display!=='none')renderEstado();});
   on('bancoConfig',function(v){bancoConfig=v||{docIds:[],maxPreg:3};renderBancoSel();});
+  on('horariosExtra',function(v){horariosExtra=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);aplicarHorariosExtra();});
   on('supervision',function(v){supervisionData=v||{};renderRanking();renderSupEstadoHoy();if(curNombre)renderSupervisionColaborador(curNombre);var kpiN=document.getElementById('estadoSelect')?document.getElementById('estadoSelect').value:'';if(kpiN)renderKPIDashboard(kpiN);});
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
   on('borradores',function(v){borradoresData=v||{};});
