@@ -3018,7 +3018,7 @@ function puntajeFinalAdmin(key,mes){
 // ══════════════ RANKING ADMINISTRATIVO (mismo criterio y ponderación que el clínico) ══════════════
 // Orden: 1° días respondidos · 2° puntaje (evaluación + supervisión de la Jefa + cumplimiento de tareas
 // asignadas, con RANK_PESOS, igual que el ranking clínico) · 3° menor tiempo promedio de respuesta.
-// Se muestra separado por área (cargo): Administrativos/as · Bodega · Mantención.
+// Ranking ÚNICO (todos los cargos juntos); el cargo se muestra solo como etiqueta.
 var supervisionAdmin={},tareasAdmin={};
 var SUP_ADMIN_ITEMS=[
   {id:'puntualidad',nombre:'Puntualidad',peso:25},
@@ -3027,6 +3027,7 @@ var SUP_ADMIN_ITEMS=[
   {id:'registro',nombre:'Orden y registro de su puesto',peso:15},
   {id:'equipo',nombre:'Comunicación y trabajo en equipo',peso:15}
 ];
+var PENAL_FUERA_HORARIO_PTS=10; // puntos que se descuentan por cada día en que intentó responder con el turno ya terminado
 var GRUPOS_RANK_ADMIN=[
   {id:'adm',label:'Administrativos/as',emoji:'🗂️'},
   {id:'bod',label:'Bodega',emoji:'📦'},
@@ -3075,20 +3076,24 @@ function calcularRankingAdmin(desde,hasta){
       supervisionProm:sN?Math.round(sS/sN):null,
       cumplimientoProm:tTot?(tHechas/tTot):null});
   });
-  var resultado={};
-  GRUPOS_RANK_ADMIN.forEach(function(g){
-    var lista=filas.filter(function(x){return x.grupo===g.id;});
-    var conSup=lista.filter(function(p){return p.supervisionProm!==null;});
-    var promSup=conSup.length?(conSup.reduce(function(a,p){return a+p.supervisionProm;},0)/conSup.length)/100:null;
-    var res=lista.map(function(p){return calcScorePonderado(p,habiles.length,promSup);});
-    res.sort(function(a,b){
-      if(a.veces!==b.veces)return b.veces-a.veces;
-      if(a.scoreFinal!==b.scoreFinal)return b.scoreFinal-a.scoreFinal;
-      return a.promedioDuracionMs-b.promedioDuracionMs;
-    });
-    resultado[g.id]={respondieron:res.filter(function(p){return p.veces>0;}),sinResponder:res.filter(function(p){return p.veces===0;})};
+  // UN SOLO ranking: Administrativos/as, Bodega y Mantención compiten juntos en igualdad de condiciones.
+  var conSup=filas.filter(function(p){return p.supervisionProm!==null;});
+  var promSup=conSup.length?(conSup.reduce(function(a,p){return a+p.supervisionProm;},0)/conSup.length)/100:null;
+  var res=filas.map(function(p){
+    calcScorePonderado(p,habiles.length,promSup);
+    // Descuento por intentos de responder fuera de horario (después del término de su turno)
+    var bl=(rankingAdmin&&rankingAdmin.bloqueos&&rankingAdmin.bloqueos[capKeyAdminNombre(p.nombre)])||{};
+    var nBl=Object.keys(bl).filter(function(f){return setHab[f];}).length;
+    p.bloqueos=nBl;
+    if(nBl){p.scoreSinDescuento=p.scoreFinal;p.scoreFinal=Math.max(0,p.scoreFinal-nBl*PENAL_FUERA_HORARIO_PTS);}
+    return p;
   });
-  return {grupos:resultado,diasHabiles:habiles.length};
+  res.sort(function(a,b){
+    if(a.veces!==b.veces)return b.veces-a.veces;
+    if(a.scoreFinal!==b.scoreFinal)return b.scoreFinal-a.scoreFinal;
+    return a.promedioDuracionMs-b.promedioDuracionMs;
+  });
+  return {respondieron:res.filter(function(p){return p.veces>0;}),sinResponder:res.filter(function(p){return p.veces===0;}),diasHabiles:habiles.length};
 }
 window._rankAdminPeriodo='semana';
 window.renderRankingAdmin=function(contId){
@@ -3120,30 +3125,27 @@ function pintarRankingAdmin(contId){
   var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
     '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">🏆 Ranking equipo administrativo</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:10px">'+btnP('semana','Semana actual')+btnP('mes','Mes actual')+'</div>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+etiqueta+' · Orden: días respondidos → puntaje (evaluación '+pe+'% · supervisión de la Jefa '+ps+'% · tareas asignadas '+pc+'%) → respuesta más rápida. Sin premios asociados.</div>';
-  var hayAlgo=false;
-  GRUPOS_RANK_ADMIN.forEach(function(g){
-    var G=R.grupos[g.id];
-    if(!G.respondieron.length&&!G.sinResponder.length)return;
-    hayAlgo=true;
-    html+='<div style="font-size:11px;font-weight:800;color:#22d3ee;text-transform:uppercase;letter-spacing:.6px;margin:14px 0 6px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)">'+g.emoji+' '+g.label+'</div>';
-    if(!G.respondieron.length){html+='<div style="font-size:11px;color:rgba(255,255,255,.4);padding:4px 0">Aún nadie ha respondido en este período.</div>';}
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+etiqueta+' · Orden: días respondidos → puntaje (evaluación '+pe+'% · supervisión de la Jefa '+ps+'% · tareas asignadas '+pc+'%) → respuesta más rápida. Un solo ranking: todos compiten en igualdad de condiciones. Se descuentan '+PENAL_FUERA_HORARIO_PTS+' pts por cada intento de responder con el turno terminado.</div>';
+  var hayAlgo=R.respondieron.length||R.sinResponder.length;
+  if(hayAlgo){
+    if(!R.respondieron.length){html+='<div style="font-size:11px;color:rgba(255,255,255,.4);padding:4px 0">Aún nadie ha respondido en este período.</div>';}
     var grupoPrev=null;
-    G.respondieron.forEach(function(r,i){
+    R.respondieron.forEach(function(r,i){
       var sep='';
       if(r.veces!==grupoPrev){grupoPrev=r.veces;sep='<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.32);text-transform:uppercase;letter-spacing:.5px;padding:'+(i===0?'0':'8px')+' 0 3px">Respondieron '+r.veces+' de '+R.diasHabiles+' días</div>';}
       var lider=i===0?(semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🏆 Ganador/a de la semana</span>':'<span style="color:#fcd34d;font-size:10px"> · Líder</span>'):'';
       var tiempo=r.promedioDuracionMs!==Infinity?'<span style="color:rgba(255,255,255,.45);font-size:10px"> · ⏱ '+fmtDuracion(r.promedioDuracionMs)+' prom.</span>':'';
       var supTxt=r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%';
       var cumTxt=r.comp.cumplimiento===null?'—':Math.round(r.comp.cumplimiento*100)+'%';
+      var pen=r.bloqueos?'<span style="color:#fca5a5">⛔ −'+(r.bloqueos*PENAL_FUERA_HORARIO_PTS)+' pts por responder fuera de horario ('+r.bloqueos+')</span>':'';
       html+=sep+'<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>'+(medallas[i]||(i+1)+'°')+' <strong>'+esc(r.nombre)+'</strong>'+lider+tiempo+'</span><span style="color:#7ec8f7;font-weight:700;margin-left:8px">'+r.scoreFinal+' pts</span></div>'+
-        '<div style="margin-left:24px;margin-top:2px;font-size:10px;color:rgba(255,255,255,.4);display:flex;flex-wrap:wrap;gap:8px"><span style="color:#6ee7b7">✅ Tareas '+cumTxt+'</span><span>🧠 Eval '+Math.round(r.comp.conocimiento*100)+'%</span><span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁 Superv '+supTxt+(r.supImputada?' (imputado)':'')+'</span></div></div>';
+        '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>'+(medallas[i]||(i+1)+'°')+' <strong>'+esc(r.nombre)+'</strong> <span style="font-size:9px;color:rgba(255,255,255,.45);background:rgba(255,255,255,.07);border-radius:4px;padding:1px 5px">'+esc(labelCargo(r.cargo))+'</span>'+lider+tiempo+'</span><span style="color:#7ec8f7;font-weight:700;margin-left:8px">'+r.scoreFinal+' pts</span></div>'+
+        '<div style="margin-left:24px;margin-top:2px;font-size:10px;color:rgba(255,255,255,.4);display:flex;flex-wrap:wrap;gap:8px"><span style="color:#6ee7b7">✅ Tareas '+cumTxt+'</span><span>🧠 Eval '+Math.round(r.comp.conocimiento*100)+'%</span><span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁 Superv '+supTxt+(r.supImputada?' (imputado)':'')+'</span>'+pen+'</div></div>';
     });
-    if(G.sinResponder.length&&!semanaCerrada){
-      html+='<div style="margin-top:8px;font-size:10px;color:#fcd34d">⏳ Sin responder aún: '+G.sinResponder.map(function(p){return esc(p.nombre);}).join(', ')+'</div>';
+    if(R.sinResponder.length&&!semanaCerrada){
+      html+='<div style="margin-top:8px;font-size:10px;color:#fcd34d">⏳ Sin responder aún: '+R.sinResponder.map(function(p){return esc(p.nombre)+' <span style="opacity:.6">('+esc(labelCargo(p.cargo))+')</span>';}).join(', ')+'</div>';
     }
-  });
+  }
   if(!hayAlgo)html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Aún no hay personas en el equipo administrativo.</div>';
   html+='</div>';
   cont.innerHTML=html;
@@ -3176,14 +3178,15 @@ window.cargarSupervisionTareasAdmin=function(){
   var cuerpo=document.getElementById('saCuerpo');if(!cuerpo)return;
   var k=window._saPersona,fecha=window._saFecha||hoyStr();
   if(!k){cuerpo.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4)">Elige a la persona para registrar su supervisión y sus tareas.</div>';return;}
-  Promise.all([sedeRef('supervisionAdmin/'+k+'/'+fecha).once('value'),sedeRef('tareasAdmin/'+k+'/'+fecha).once('value')]).then(function(s){
+  Promise.all([sedeRef('supervisionAdmin/'+k+'/'+fecha).once('value'),sedeRef('tareasAdmin/'+k+'/'+fecha).once('value'),sedeRef('supervisionAdminItems').once('value')]).then(function(s){
     var sup=s[0].val()||null,tareas=s[1].val()||{};
+    window._saDef=itemsDesdeDB(s[2].val());
     window._saItems=sup&&sup.items?JSON.parse(JSON.stringify(sup.items)):{};
-    var html='<div style="font-size:12px;font-weight:700;color:#c4b5fd;margin-bottom:6px">Pauta de supervisión'+(sup?' <span style="font-weight:400;color:#6ee7b7">· guardada: '+sup.puntaje+'%</span>':'')+'</div>';
-    SUP_ADMIN_ITEMS.forEach(function(it){
+    var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:700;color:#c4b5fd">Pauta de supervisión'+(sup?' <span style="font-weight:400;color:#6ee7b7">· guardada: '+sup.puntaje+'%</span>':'')+'</span><button onclick="saEditarPauta()" style="background:rgba(124,58,237,.2);color:#c4b5fd;border:1px solid rgba(124,58,237,.4);border-radius:6px;padding:3px 9px;font-family:inherit;font-size:10px;cursor:pointer">✏️ Editar pauta</button></div>';
+    window._saDef.forEach(function(it){
       var v=window._saItems[it.id];
       function b(val,lab,col){return '<button onclick="saMarcar(\''+it.id+'\','+val+')" style="flex:1;font-size:10px;padding:6px 2px;border:1px solid '+(v===val?col:'rgba(255,255,255,.12)')+';background:'+(v===val?col+'33':'rgba(255,255,255,.04)')+';color:'+(v===val?'#fff':'rgba(255,255,255,.55)')+';border-radius:6px;font-family:inherit;cursor:pointer">'+lab+'</button>';}
-      html+='<div style="margin-bottom:8px"><div style="font-size:11px;color:#fff;margin-bottom:3px">'+it.nombre+' <span style="color:rgba(255,255,255,.3)">('+it.peso+'%)</span></div><div style="display:flex;gap:4px">'+b(100,'Cumple','#10b981')+b(50,'Parcial','#f59e0b')+b(0,'No cumple','#ef4444')+'</div></div>';
+      html+='<div style="margin-bottom:8px"><div style="font-size:11px;color:#fff;margin-bottom:3px">'+esc(it.nombre)+' <span style="color:rgba(255,255,255,.3)">('+it.peso+')</span></div><div style="display:flex;gap:4px">'+b(100,'Cumple','#10b981')+b(50,'Parcial','#f59e0b')+b(0,'No cumple','#ef4444')+'</div></div>';
     });
     html+='<button onclick="guardarSupervisionAdmin()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">💾 Guardar supervisión</button><div class="saved" id="saSaved">✓ Guardado</div>';
     var ids=Object.keys(tareas);
@@ -3196,6 +3199,49 @@ window.cargarSupervisionTareasAdmin=function(){
     html+='<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="saNuevaTarea" placeholder="Nueva tarea para este día" style="flex:1;font-size:12px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px"><button onclick="saAgregarTarea()" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.4);border-radius:8px;padding:0 14px;font-family:inherit;cursor:pointer;font-weight:700">+</button></div>';
     cuerpo.innerHTML=html;
   });
+};
+// ── Pauta de supervisión EDITABLE por la Jefa (se guarda a nivel sede: supervisionAdminItems) ──
+window._saDef=SUP_ADMIN_ITEMS.slice();
+function itemsDesdeDB(v){
+  if(!v||typeof v!=='object')return SUP_ADMIN_ITEMS.map(function(x){return {id:x.id,nombre:x.nombre,peso:x.peso};});
+  return Object.keys(v).map(function(id){var o=v[id]||{};return {id:id,nombre:o.nombre||'(sin nombre)',peso:Number(o.peso)||0,orden:o.orden||0};}).sort(function(a,b){return (a.orden||0)-(b.orden||0);});
+}
+function guardarPautaItems(arr){
+  var o={};arr.forEach(function(it,i){o[it.id]={nombre:it.nombre,peso:it.peso,orden:i};});
+  return sedeRef('supervisionAdminItems').set(arr.length?o:null);
+}
+window.saEditarPauta=function(){
+  var cuerpo=document.getElementById('saCuerpo');if(!cuerpo)return;
+  sedeRef('supervisionAdminItems').once('value').then(function(sn){
+    var arr=itemsDesdeDB(sn.val());window._saEdit=arr;pintarEditorPauta();
+  });
+};
+function pintarEditorPauta(){
+  var cuerpo=document.getElementById('saCuerpo');if(!cuerpo)return;
+  var arr=window._saEdit||[];var tot=arr.reduce(function(a,x){return a+(Number(x.peso)||0);},0);
+  var h='<div style="font-size:12px;font-weight:700;color:#c4b5fd;margin-bottom:4px">⚙️ Editar pauta de supervisión</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:8px">Cambia nombres y pesos, quita o agrega ítems. Los pesos son relativos (no necesitan sumar 100: se normalizan sobre los ítems evaluados). Las supervisiones ya guardadas conservan su puntaje.</div>';
+  arr.forEach(function(it,i){
+    h+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><input type="text" value="'+esc(it.nombre)+'" onchange="window._saEdit['+i+'].nombre=this.value.trim()||\'(sin nombre)\'" style="flex:1;font-size:12px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+      '<input type="number" min="1" max="100" value="'+it.peso+'" onchange="window._saEdit['+i+'].peso=Math.max(1,Number(this.value)||1);pintarEditorPauta()" style="width:56px;font-size:12px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px"><span style="font-size:10px;color:rgba(255,255,255,.4);width:30px">'+(tot?Math.round(it.peso/tot*100):0)+'%</span>'+
+      '<button onclick="saPautaQuitar('+i+')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 8px;font-family:inherit;cursor:pointer">🗑</button></div>';
+  });
+  h+='<button onclick="saPautaAgregar()" style="width:100%;background:rgba(124,58,237,.15);color:#c4b5fd;border:1px dashed rgba(124,58,237,.5);border-radius:8px;padding:8px;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:10px">➕ Agregar ítem</button>'+
+    '<div style="display:flex;gap:6px"><button onclick="saPautaGuardar()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);flex:1">💾 Guardar pauta</button><button onclick="cargarSupervisionTareasAdmin()" style="flex:0 0 auto;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:0 14px;font-family:inherit;cursor:pointer">Cancelar</button></div>'+
+    '<div style="text-align:center;margin-top:8px"><button onclick="saPautaRestaurar()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:10px;font-family:inherit;cursor:pointer;text-decoration:underline">Restaurar pauta original</button></div>';
+  cuerpo.innerHTML=h;
+}
+window.pintarEditorPauta=pintarEditorPauta;
+window.saPautaAgregar=function(){window._saEdit.push({id:'it'+Date.now().toString(36),nombre:'Nuevo ítem',peso:10});pintarEditorPauta();};
+window.saPautaQuitar=function(i){if(!confirm('¿Quitar este ítem de la pauta?'))return;window._saEdit.splice(i,1);pintarEditorPauta();};
+window.saPautaGuardar=function(){
+  var a=window._saEdit||[];
+  if(!a.length&&!confirm('La pauta quedará vacía. ¿Seguro?'))return;
+  guardarPautaItems(a).then(function(){cargarSupervisionTareasAdmin();});
+};
+window.saPautaRestaurar=function(){
+  if(!confirm('¿Volver a los 5 ítems originales?'))return;
+  sedeRef('supervisionAdminItems').remove().then(function(){cargarSupervisionTareasAdmin();});
 };
 window.saMarcar=function(id,val){window._saItems[id]=val;pintarSupItems();};
 function pintarSupItems(){
@@ -3210,7 +3256,7 @@ function pintarSupItems(){
 window.guardarSupervisionAdmin=function(){
   var k=window._saPersona,fecha=window._saFecha||hoyStr();if(!k)return;
   var suma=0,pesos=0;
-  SUP_ADMIN_ITEMS.forEach(function(it){var v=window._saItems[it.id];if(v===undefined||v===null)return;suma+=v*it.peso;pesos+=it.peso;});
+  (window._saDef||SUP_ADMIN_ITEMS).forEach(function(it){var v=window._saItems[it.id];if(v===undefined||v===null)return;suma+=v*it.peso;pesos+=it.peso;});
   if(!pesos){alert('Marca al menos un ítem de la pauta.');return;}
   var puntaje=Math.round(suma/pesos);
   sedeRef('supervisionAdmin/'+k+'/'+fecha).set({puntaje:puntaje,items:window._saItems,ts:Date.now(),por:'Jefa de Operaciones'}).then(function(){showSaved('saSaved');cargarSupervisionTareasAdmin();});
@@ -3607,9 +3653,52 @@ function mensajeFueraHorario(){
   '</div>';
 }
 
+// ── Ventana de respuesta por turno: desde las 08:00 hasta el término del turno de la persona ──
+function _minHHMM(t){var m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?Number(m[1])*60+Number(m[2]):null;}
+function ventanaAdminHoy(nombre){
+  var d=new Date();var ahora=d.getHours()*60+d.getMinutes();
+  var key=null;
+  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var n=(typeof v==='object'?v.nombre:v);if(n===nombre)key=k;});
+  var t=key?turnoDelDia(key,diaDeDate(hoyStr())):null;
+  var INI=8*60;
+  if(!t||!t.turno)return {estado:moduloTrabajoAbierto()?'abierta':'cerrada_general',general:true};   // sin turno cargado → horario general L-V 08:00–20:00
+  if(!t.fin)return {estado:'libre'};                       // tiene turno, pero hoy no le toca
+  var fin=_minHHMM(t.fin);if(fin===null)return {estado:moduloTrabajoAbierto()?'abierta':'cerrada_general',general:true};
+  if(ahora<INI)return {estado:'antes',fin:t.fin};
+  if(ahora>=fin)return {estado:'cerrada',fin:t.fin};
+  return {estado:'abierta',fin:t.fin};
+}
+function registrarBloqueoAdmin(nombre){
+  var hoy=hoyStr();var ck=capKeyAdminNombre(nombre);
+  var f=fichaProgresoAdmin&&fichaProgresoAdmin[ck];
+  if(f&&f.fecha===hoy&&f.aprobadoHoy)return;               // ya completó hoy: no hay descuento
+  sedeRef('rankingAdmin/bloqueos/'+ck+'/'+hoy).once('value').then(function(s){if(!s.val())sedeRef('rankingAdmin/bloqueos/'+ck+'/'+hoy).set(Date.now());});
+}
+function mensajeVentanaAdmin(v,registrado){
+  var caja=function(ico,tit,txt,col){return '<div style="background:rgba('+col+',.1);border:1px solid rgba('+col+',.3);border-radius:12px;padding:20px;text-align:center"><div style="font-size:36px;margin-bottom:8px">'+ico+'</div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">'+tit+'</div><div style="font-size:12px;color:rgba(255,255,255,.7);line-height:1.5">'+txt+'</div></div>';};
+  if(v.estado==='cerrada')return caja('🔒','Tu turno ya terminó','Tu turno terminó a las '+v.fin+', por lo que ya no puedes responder hasta mañana.'+(registrado?'<br><span style="color:#fca5a5">Esto se descuenta de tu puntaje ('+PENAL_FUERA_HORARIO_PTS+' pts).</span>':''),'239,68,68');
+  if(v.estado==='antes')return caja('⏰','Aún no se abren las preguntas','Se habilitan a las 08:00 y puedes responder hasta el término de tu turno ('+v.fin+').','96,165,250');
+  if(v.estado==='libre')return caja('🌿','Hoy no tienes turno','Según tu horario cargado hoy es tu día libre. Nos vemos en tu próximo turno.','52,211,153');
+  return mensajeFueraHorario();
+}
 function renderPreguntasAdminTab(cont){
   if(!cont)return;
-  if(!moduloTrabajoAbierto()){cont.innerHTML=mensajeFueraHorario();return;}
+  cont.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.5);font-size:12px;padding:20px">Cargando…</div>';
+  Promise.all([sedeRef('secretarias').once('value'),sedeRef('turnosAdminPlantillas').once('value'),sedeRef('horarioPropioAdmin').once('value'),sedeRef('fichaProgresoAdmin').once('value')]).then(function(sn){
+    secretarias=sn[0].val()||{};turnosAdminPlantillas=sn[1].val()||{};horarioPropioAdmin=sn[2].val()||{};fichaProgresoAdmin=sn[3].val()||{};
+    var nombre=window._adminNombre;
+    var v=ventanaAdminHoy(nombre);
+    if(v.estado!=='abierta'){
+      var ck0=capKeyAdminNombre(nombre);var f0=fichaProgresoAdmin[ck0];
+      var yaHizo=f0&&f0.fecha===hoyStr()&&f0.aprobadoHoy;
+      if(v.estado==='cerrada'&&!yaHizo){registrarBloqueoAdmin(nombre);cont.innerHTML=mensajeVentanaAdmin(v,true);return;}
+      if(v.estado==='cerrada'&&yaHizo){cont.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-size:16px;font-weight:700;color:#6ee7b7">¡Ya completaste hoy!</div></div>';return;}
+      cont.innerHTML=mensajeVentanaAdmin(v,false);return;
+    }
+    _renderPreguntasAdminTabAbierta(cont);
+  });
+}
+function _renderPreguntasAdminTabAbierta(cont){
   var nombre=window._adminNombre;
   var protocolos=Object.entries(bibliotecaAdmin||{}).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&visibleParaPersonaSegunRol(e[1],nombre)&&preguntasActivasParaRol(e[1],nombre);});
   // Sumar protocolos de la biblioteca clínica marcados para administrativos que tengan preguntas
@@ -3663,6 +3752,8 @@ window.selAdminOpcion=function(preg,op){
 };
 
 window.enviarPreguntasAdmin=function(){
+  var vv=ventanaAdminHoy(window._adminNombre);
+  if(vv.estado==='cerrada'){registrarBloqueoAdmin(window._adminNombre);var vw=document.getElementById('adminContenido');if(vw)vw.innerHTML=mensajeVentanaAdmin(vv,true);return;}
   var total=window._adminPreguntas.length;
   var respondidas=Object.keys(window._adminRespuestas).length;
   if(respondidas<total){alert('Responde todas las preguntas antes de enviar.');return;}
