@@ -1963,7 +1963,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // Antes estaba fuera de esta lista, así que una vacación pedida hoy para noviembre quedaba guardada
 // dentro de la semana activa de HOY (la única que existía en ese momento) y por eso aparecía como si
 // fuera de la semana actual — y lo mismo le pasaría a cualquier permiso pedido para semanas futuras.
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -2276,6 +2276,7 @@ function renderPanelJefaOperaciones(){
     '<div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">'+
       '<button onclick="tabJefaOp(\'produccion\')" id="tabJO_prod" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(34,211,238,.3);color:#fff">📊 Producción</button>'+
       '<button onclick="tabJefaOp(\'secretarias\')" id="tabJO_sec" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👥 Equipo</button>'+
+      '<button onclick="tabJefaOp(\'supervision\')" id="tabJO_sup" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">👁 Supervisión</button>'+
       '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
       '<button onclick="tabJefaOp(\'cumplimiento\')" id="tabJO_cump" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📈 Cumplimiento</button>'+
       '<button onclick="tabJefaOp(\'metricas\')" id="tabJO_met" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">⚙️ Métricas</button>'+
@@ -2287,14 +2288,15 @@ function renderPanelJefaOperaciones(){
 }
 
 window.tabJefaOp=function(tab){
-  ['prod','sec','rank','cump','met','turnos'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
-  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',cumplimiento:'tabJO_cump',metricas:'tabJO_met',turnos:'tabJO_turnos'};
+  ['prod','sec','rank','sup','cump','met','turnos'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',supervision:'tabJO_sup',cumplimiento:'tabJO_cump',metricas:'tabJO_met',turnos:'tabJO_turnos'};
   var activo=document.getElementById(map[tab]);
   if(activo){activo.style.background='rgba(34,211,238,.3)';activo.style.color='#fff';}
   if(tab==='produccion')renderProduccionAdmin();
   else if(tab==='secretarias')renderSecretariasAdmin();
   else if(tab==='turnos')renderMapaTurnosAdmin();
   else if(tab==='ranking')renderRankingAdmin('jefaOpContenido');
+  else if(tab==='supervision')renderSupervisionTareasAdmin();
   else if(tab==='cumplimiento')renderCumplimientoAdmin();
   else renderEditorMetricas();
 };
@@ -3013,14 +3015,96 @@ function puntajeFinalAdmin(key,mes){
   return {final:Math.round(prod*pP+cap*pC),prod:prod,cap:cap};
 }
 
-// Render del ranking admin. contId = id del contenedor donde pintar.
+// ══════════════ RANKING ADMINISTRATIVO (mismo criterio y ponderación que el clínico) ══════════════
+// Orden: 1° días respondidos · 2° puntaje (evaluación + supervisión de la Jefa + cumplimiento de tareas
+// asignadas, con RANK_PESOS, igual que el ranking clínico) · 3° menor tiempo promedio de respuesta.
+// Se muestra separado por área (cargo): Administrativos/as · Bodega · Mantención.
+var supervisionAdmin={},tareasAdmin={};
+var SUP_ADMIN_ITEMS=[
+  {id:'puntualidad',nombre:'Puntualidad',peso:25},
+  {id:'presentacion',nombre:'Presentación personal / uniforme',peso:20},
+  {id:'trato',nombre:'Trato al usuario',peso:25},
+  {id:'registro',nombre:'Orden y registro de su puesto',peso:15},
+  {id:'equipo',nombre:'Comunicación y trabajo en equipo',peso:15}
+];
+var GRUPOS_RANK_ADMIN=[
+  {id:'adm',label:'Administrativos/as',emoji:'🗂️'},
+  {id:'bod',label:'Bodega',emoji:'📦'},
+  {id:'man',label:'Mantención',emoji:'🔧'}
+];
+function grupoRankAdmin(cargo){return cargo==='Bodega'?'bod':cargo==='Mantención'?'man':'adm';}
+function capKeyAdminNombre(n){return (n||'').replace(/[.#$/\[\]\s]/g,'_');}
+function fechasHabilesAdmin(desde,hasta){
+  var tope=hoyStr()<hasta?hoyStr():hasta;
+  if(tope<desde)return [];
+  return fechasRango(desde,tope).filter(function(f){
+    var dow=new Date(f+'T12:00:00').getDay();
+    return dow!==0&&dow!==6&&!esFeriado(diaDeDate(f));
+  });
+}
+// Devuelve las filas del ranking (ya ordenadas) por área. Requiere los datos ya cargados en memoria.
+function calcularRankingAdmin(desde,hasta){
+  var habiles=fechasHabilesAdmin(desde,hasta);
+  var setHab={};habiles.forEach(function(f){setHab[f]=true;});
+  var filas=[];
+  Object.keys(secretarias||{}).forEach(function(k){
+    var v=secretarias[k];var nombre=(typeof v==='object'?v.nombre:v);if(!nombre)return;
+    var cargo=(typeof v==='object'?v.cargo:'')||'Administrativo/a';
+    var ck=capKeyAdminNombre(nombre);
+    // Evaluación: una entrada por día (la última), como en el ranking clínico
+    var porDia={};
+    var meses=(rankingAdmin.capacitacion&&rankingAdmin.capacitacion[ck])||{};
+    Object.keys(meses).forEach(function(mes){
+      Object.keys(meses[mes]||{}).forEach(function(ts){
+        var e=meses[mes][ts];if(!e||!e.fecha||!setHab[e.fecha])return;
+        if(!porDia[e.fecha]||Number(ts)>porDia[e.fecha].ts)porDia[e.fecha]={ts:Number(ts),pct:e.pct||0,tiempoSeg:e.tiempoSeg};
+      });
+    });
+    var dias=Object.keys(porDia);
+    var puntos=0,tSum=0,tN=0;
+    dias.forEach(function(f){puntos+=(porDia[f].pct/100)*10;if(porDia[f].tiempoSeg!=null){tSum+=porDia[f].tiempoSeg;tN++;}});
+    // Supervisión de la Jefa (promedio de los días supervisados del período, 0-100)
+    var sd=(supervisionAdmin&&supervisionAdmin[k])||{};var sS=0,sN=0;
+    Object.keys(sd).forEach(function(f){if(setHab[f]&&sd[f]&&typeof sd[f].puntaje==='number'){sS+=sd[f].puntaje;sN++;}});
+    // Cumplimiento de tareas asignadas por la Jefa (hechas / asignadas)
+    var td=(tareasAdmin&&tareasAdmin[k])||{};var tTot=0,tHechas=0;
+    Object.keys(td).forEach(function(f){if(!setHab[f])return;Object.values(td[f]||{}).forEach(function(t){if(!t)return;tTot++;if(t.hecha)tHechas++;});});
+    filas.push({key:k,nombre:nombre,cargo:cargo,grupo:grupoRankAdmin(cargo),
+      veces:dias.length,puntos:puntos,
+      promedioDuracionMs:tN?Math.round(tSum/tN*1000):Infinity,
+      supervisionProm:sN?Math.round(sS/sN):null,
+      cumplimientoProm:tTot?(tHechas/tTot):null});
+  });
+  var resultado={};
+  GRUPOS_RANK_ADMIN.forEach(function(g){
+    var lista=filas.filter(function(x){return x.grupo===g.id;});
+    var conSup=lista.filter(function(p){return p.supervisionProm!==null;});
+    var promSup=conSup.length?(conSup.reduce(function(a,p){return a+p.supervisionProm;},0)/conSup.length)/100:null;
+    var res=lista.map(function(p){return calcScorePonderado(p,habiles.length,promSup);});
+    res.sort(function(a,b){
+      if(a.veces!==b.veces)return b.veces-a.veces;
+      if(a.scoreFinal!==b.scoreFinal)return b.scoreFinal-a.scoreFinal;
+      return a.promedioDuracionMs-b.promedioDuracionMs;
+    });
+    resultado[g.id]={respondieron:res.filter(function(p){return p.veces>0;}),sinResponder:res.filter(function(p){return p.veces===0;})};
+  });
+  return {grupos:resultado,diasHabiles:habiles.length};
+}
 window._rankAdminPeriodo='semana';
 window.renderRankingAdmin=function(contId){
   var cont=document.getElementById(contId);if(!cont)return;
+  Promise.all([sedeRef('secretarias').once('value'),sedeRef('rankingAdmin').once('value'),sedeRef('supervisionAdmin').once('value'),sedeRef('tareasAdmin').once('value'),sedeRef('fichaProgresoAdmin').once('value'),sedeRef('feriados').once('value')]).then(function(s){
+    secretarias=s[0].val()||{};rankingAdmin=s[1].val()||{};supervisionAdmin=s[2].val()||{};tareasAdmin=s[3].val()||{};fichaProgresoAdmin=s[4].val()||{};
+    var fer=s[5].val();if(fer&&typeof fer==='object')feriados=fer;
+    pintarRankingAdmin(contId);
+  });
+};
+function pintarRankingAdmin(contId){
+  var cont=document.getElementById(contId);if(!cont)return;
   var periodo=window._rankAdminPeriodo||'semana';
   var hoy=new Date(hoyStr()+'T12:00:00');
-  var desde,hasta,etiqueta;
   function f(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  var desde,hasta,etiqueta;
   if(periodo==='semana'){
     var lun=new Date(hoy);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
     var dom=new Date(lun);dom.setDate(dom.getDate()+6);
@@ -3028,39 +3112,117 @@ window.renderRankingAdmin=function(contId){
   } else {
     var mesN=hoyStr().slice(0,7);desde=mesN+'-01';hasta=mesN+'-31';etiqueta='Mes '+mesN;
   }
-  var participantes=[];
-  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var nom=(typeof v==='object'?v.nombre:v);participantes.push({key:k,capKey:(nom||'').replace(/[.#$/\[\]\s]/g,'_'),nombre:nom,rol:(typeof v==='object'?v.cargo:'Secretaria')});});
-  var filas=participantes.map(function(p){
-    var pf=puntajeFinalAdminRango(p.key,desde,hasta,p.capKey);
-    var tProm=tiempoPromedioCapacitacion(p.capKey,desde,hasta);
-    return {nombre:p.nombre,rol:p.rol,final:pf.final,prod:pf.prod,cap:pf.cap,tiempoSeg:tProm};
-  }).filter(function(x){return x.final!==null;}).sort(function(a,b){return (b.final-a.final)||(a.tiempoSeg-b.tiempoSeg);});
+  var R=calcularRankingAdmin(desde,hasta);
+  var semanaCerrada=periodo==='semana'&&hoyStr()>hasta;
+  var medallas=['🥇','🥈','🥉'];
   function btnP(val,lab){return '<button onclick="window._rankAdminPeriodo=\''+val+'\';renderRankingAdmin(\''+contId+'\')" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;background:'+(periodo===val?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+lab+'</button>';}
-  var emoji={Secretaria:'🗂️','Administrativo/a':'🗂️',Bodega:'📦',Mantención:'🔧'};
+  var pe=Math.round(RANK_PESOS.conocimiento*100),ps=Math.round(RANK_PESOS.supervision*100),pc=Math.round(RANK_PESOS.cumplimiento*100);
   var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
     '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">🏆 Ranking equipo administrativo</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:10px">'+btnP('semana','Semana actual')+btnP('mes','Mes actual')+'</div>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+etiqueta+' · Administrativos/as, Bodega y Mantención. Producción ('+(pesosAdmin.produccion||60)+'%) + capacitación ('+(pesosAdmin.capacitacion||40)+'%). Sin premios asociados.</div>';
-  if(!filas.length){
-    html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Aún no hay datos suficientes en este período.</div>';
-  } else {
-    filas.forEach(function(x,i){
-      var medalla=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'°';
-      var color=x.final>=80?'#6ee7b7':x.final>=60?'#fcd34d':'#fca5a5';
-      html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.05)">'+
-        '<span style="font-size:15px;min-width:28px;text-align:center">'+medalla+'</span>'+
-        '<div style="flex:1"><div style="font-size:13px;color:#fff;font-weight:600">'+(emoji[x.rol]||'👤')+' '+esc(x.nombre)+'</div>'+
-          '<div style="font-size:10px;color:rgba(255,255,255,.4)">'+esc(labelCargo(x.rol))+' · '+(x.prod!=null?'Prod '+x.prod+'%':'sin prod')+' · '+(x.cap!=null?'Capac '+x.cap+'%':'sin capac')+'</div></div>'+
-        '<span style="font-size:16px;font-weight:800;color:'+color+'">'+x.final+'</span>'+
-      '</div>';
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:12px">'+etiqueta+' · Orden: días respondidos → puntaje (evaluación '+pe+'% · supervisión de la Jefa '+ps+'% · tareas asignadas '+pc+'%) → respuesta más rápida. Sin premios asociados.</div>';
+  var hayAlgo=false;
+  GRUPOS_RANK_ADMIN.forEach(function(g){
+    var G=R.grupos[g.id];
+    if(!G.respondieron.length&&!G.sinResponder.length)return;
+    hayAlgo=true;
+    html+='<div style="font-size:11px;font-weight:800;color:#22d3ee;text-transform:uppercase;letter-spacing:.6px;margin:14px 0 6px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)">'+g.emoji+' '+g.label+'</div>';
+    if(!G.respondieron.length){html+='<div style="font-size:11px;color:rgba(255,255,255,.4);padding:4px 0">Aún nadie ha respondido en este período.</div>';}
+    var grupoPrev=null;
+    G.respondieron.forEach(function(r,i){
+      var sep='';
+      if(r.veces!==grupoPrev){grupoPrev=r.veces;sep='<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.32);text-transform:uppercase;letter-spacing:.5px;padding:'+(i===0?'0':'8px')+' 0 3px">Respondieron '+r.veces+' de '+R.diasHabiles+' días</div>';}
+      var lider=i===0?(semanaCerrada?'<span style="color:#fcd34d;font-size:10px"> · 🏆 Ganador/a de la semana</span>':'<span style="color:#fcd34d;font-size:10px"> · Líder</span>'):'';
+      var tiempo=r.promedioDuracionMs!==Infinity?'<span style="color:rgba(255,255,255,.45);font-size:10px"> · ⏱ '+fmtDuracion(r.promedioDuracionMs)+' prom.</span>':'';
+      var supTxt=r.comp.supervision===null?'—':Math.round(r.comp.supervision*100)+'%';
+      var cumTxt=r.comp.cumplimiento===null?'—':Math.round(r.comp.cumplimiento*100)+'%';
+      html+=sep+'<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>'+(medallas[i]||(i+1)+'°')+' <strong>'+esc(r.nombre)+'</strong>'+lider+tiempo+'</span><span style="color:#7ec8f7;font-weight:700;margin-left:8px">'+r.scoreFinal+' pts</span></div>'+
+        '<div style="margin-left:24px;margin-top:2px;font-size:10px;color:rgba(255,255,255,.4);display:flex;flex-wrap:wrap;gap:8px"><span style="color:#6ee7b7">✅ Tareas '+cumTxt+'</span><span>🧠 Eval '+Math.round(r.comp.conocimiento*100)+'%</span><span style="color:'+(r.supImputada?'#fcd34d':'#a78bfa')+'">👁 Superv '+supTxt+(r.supImputada?' (imputado)':'')+'</span></div></div>';
     });
-    if(periodo==='semana'){
-      html+='<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px;margin-top:10px;font-size:12px;color:#6ee7b7;text-align:center">🏅 Líder de la semana: <b>'+esc(filas[0].nombre)+'</b> ('+filas[0].final+' pts)</div>';
+    if(G.sinResponder.length&&!semanaCerrada){
+      html+='<div style="margin-top:8px;font-size:10px;color:#fcd34d">⏳ Sin responder aún: '+G.sinResponder.map(function(p){return esc(p.nombre);}).join(', ')+'</div>';
     }
-  }
+  });
+  if(!hayAlgo)html+='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Aún no hay personas en el equipo administrativo.</div>';
   html+='</div>';
   cont.innerHTML=html;
+}
+window.abrirRankingAdminOverlay=function(){
+  var ov=document.getElementById('rankAdminOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='rankAdminOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.97);z-index:9998;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="document.getElementById(\'rankAdminOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div><div id="rankAdminOvCont"></div></div>';
+  document.body.appendChild(ov);
+  renderRankingAdmin('rankAdminOvCont');
 };
+
+// ── Supervisión y tareas (las carga la Jefa de Operaciones; alimentan el ranking administrativo) ──
+window._saPersona='';window._saFecha='';window._saItems={};
+window.renderSupervisionTareasAdmin=function(){
+  var cont=document.getElementById('jefaOpContenido');if(!cont)return;
+  if(!window._saFecha)window._saFecha=hoyStr();
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v)};}).filter(function(p){return p.nombre;});
+  var html='<div style="background:#16233d;border-radius:12px;padding:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:4px">👁 Supervisión y tareas del día</div>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px">Lo que registres aquí pondera el ranking administrativo (supervisión '+Math.round(RANK_PESOS.supervision*100)+'% · tareas '+Math.round(RANK_PESOS.cumplimiento*100)+'%).</div>'+
+    '<select id="saPersona" onchange="window._saPersona=this.value;cargarSupervisionTareasAdmin()" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px"><option value="">— Selecciona la persona —</option>'+lista.map(function(p){return '<option value="'+p.key+'"'+(p.key===window._saPersona?' selected':'')+'>'+esc(p.nombre)+'</option>';}).join('')+'</select>'+
+    '<input type="date" id="saFecha" value="'+window._saFecha+'" max="'+hoyStr()+'" onchange="window._saFecha=this.value;cargarSupervisionTareasAdmin()" style="width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:12px">'+
+    '<div id="saCuerpo"></div></div>';
+  cont.innerHTML=html;
+  cargarSupervisionTareasAdmin();
+};
+window.cargarSupervisionTareasAdmin=function(){
+  var cuerpo=document.getElementById('saCuerpo');if(!cuerpo)return;
+  var k=window._saPersona,fecha=window._saFecha||hoyStr();
+  if(!k){cuerpo.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4)">Elige a la persona para registrar su supervisión y sus tareas.</div>';return;}
+  Promise.all([sedeRef('supervisionAdmin/'+k+'/'+fecha).once('value'),sedeRef('tareasAdmin/'+k+'/'+fecha).once('value')]).then(function(s){
+    var sup=s[0].val()||null,tareas=s[1].val()||{};
+    window._saItems=sup&&sup.items?JSON.parse(JSON.stringify(sup.items)):{};
+    var html='<div style="font-size:12px;font-weight:700;color:#c4b5fd;margin-bottom:6px">Pauta de supervisión'+(sup?' <span style="font-weight:400;color:#6ee7b7">· guardada: '+sup.puntaje+'%</span>':'')+'</div>';
+    SUP_ADMIN_ITEMS.forEach(function(it){
+      var v=window._saItems[it.id];
+      function b(val,lab,col){return '<button onclick="saMarcar(\''+it.id+'\','+val+')" style="flex:1;font-size:10px;padding:6px 2px;border:1px solid '+(v===val?col:'rgba(255,255,255,.12)')+';background:'+(v===val?col+'33':'rgba(255,255,255,.04)')+';color:'+(v===val?'#fff':'rgba(255,255,255,.55)')+';border-radius:6px;font-family:inherit;cursor:pointer">'+lab+'</button>';}
+      html+='<div style="margin-bottom:8px"><div style="font-size:11px;color:#fff;margin-bottom:3px">'+it.nombre+' <span style="color:rgba(255,255,255,.3)">('+it.peso+'%)</span></div><div style="display:flex;gap:4px">'+b(100,'Cumple','#10b981')+b(50,'Parcial','#f59e0b')+b(0,'No cumple','#ef4444')+'</div></div>';
+    });
+    html+='<button onclick="guardarSupervisionAdmin()" class="btn-add" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">💾 Guardar supervisión</button><div class="saved" id="saSaved">✓ Guardado</div>';
+    var ids=Object.keys(tareas);
+    html+='<div style="font-size:12px;font-weight:700;color:#6ee7b7;margin:16px 0 6px">Tareas asignadas'+(ids.length?' <span style="font-weight:400;color:rgba(255,255,255,.4)">· '+ids.filter(function(i){return tareas[i].hecha;}).length+'/'+ids.length+' cumplidas</span>':'')+'</div>';
+    if(!ids.length)html+='<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px">Sin tareas para este día.</div>';
+    ids.forEach(function(id){
+      var t=tareas[id];
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:5px"><input type="checkbox" '+(t.hecha?'checked ':'')+'onchange="saToggleTarea(\''+id+'\',this.checked)" style="width:18px;height:18px;accent-color:#10b981"><span style="flex:1;font-size:12px;color:'+(t.hecha?'#6ee7b7':'#fff')+'">'+esc(t.texto)+'</span><button onclick="saQuitarTarea(\''+id+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:2px 8px;font-family:inherit;cursor:pointer;font-size:11px">🗑</button></div>';
+    });
+    html+='<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="saNuevaTarea" placeholder="Nueva tarea para este día" style="flex:1;font-size:12px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px"><button onclick="saAgregarTarea()" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.4);border-radius:8px;padding:0 14px;font-family:inherit;cursor:pointer;font-weight:700">+</button></div>';
+    cuerpo.innerHTML=html;
+  });
+};
+window.saMarcar=function(id,val){window._saItems[id]=val;pintarSupItems();};
+function pintarSupItems(){
+  var btns=document.querySelectorAll('#saCuerpo button[onclick^="saMarcar("]');
+  btns.forEach(function(bt){
+    var m=bt.getAttribute('onclick').match(/saMarcar\('([^']+)',(\d+)\)/);if(!m)return;
+    var activo=window._saItems[m[1]]===Number(m[2]);
+    var col=Number(m[2])===100?'#10b981':Number(m[2])===50?'#f59e0b':'#ef4444';
+    bt.style.borderColor=activo?col:'rgba(255,255,255,.12)';bt.style.background=activo?col+'33':'rgba(255,255,255,.04)';bt.style.color=activo?'#fff':'rgba(255,255,255,.55)';
+  });
+}
+window.guardarSupervisionAdmin=function(){
+  var k=window._saPersona,fecha=window._saFecha||hoyStr();if(!k)return;
+  var suma=0,pesos=0;
+  SUP_ADMIN_ITEMS.forEach(function(it){var v=window._saItems[it.id];if(v===undefined||v===null)return;suma+=v*it.peso;pesos+=it.peso;});
+  if(!pesos){alert('Marca al menos un ítem de la pauta.');return;}
+  var puntaje=Math.round(suma/pesos);
+  sedeRef('supervisionAdmin/'+k+'/'+fecha).set({puntaje:puntaje,items:window._saItems,ts:Date.now(),por:'Jefa de Operaciones'}).then(function(){showSaved('saSaved');cargarSupervisionTareasAdmin();});
+};
+window.saAgregarTarea=function(){
+  var k=window._saPersona,fecha=window._saFecha||hoyStr();var inp=document.getElementById('saNuevaTarea');
+  var txt=(inp&&inp.value||'').trim();if(!k||!txt)return;
+  sedeRef('tareasAdmin/'+k+'/'+fecha).push({texto:txt,hecha:false,ts:Date.now()}).then(function(){cargarSupervisionTareasAdmin();});
+};
+window.saToggleTarea=function(id,hecha){sedeRef('tareasAdmin/'+window._saPersona+'/'+(window._saFecha||hoyStr())+'/'+id+'/hecha').set(!!hecha).then(function(){cargarSupervisionTareasAdmin();});};
+window.saQuitarTarea=function(id){if(!confirm('¿Quitar esta tarea?'))return;sedeRef('tareasAdmin/'+window._saPersona+'/'+(window._saFecha||hoyStr())+'/'+id).remove().then(function(){cargarSupervisionTareasAdmin();});};
+
 function puntajeFinalAdminRango(key,desde,hasta,capKey){
   var prod=puntajeProduccionRango(key,desde,hasta);
   var cap=puntajeCapacitacionRango(capKey||key,desde,hasta);
@@ -12311,6 +12473,7 @@ window.abrirDashMaestro=function(){
     dashNavBtn('📊','Gestión para gerencia','Desempeño, participación, supervisión','#2563eb','abrirDashboardGestion')+
     dashNavBtn('📦','Inventario','Stock, vencimientos, clasificación','#d97706','abrirDashboardInventario')+
     dashNavBtn('💼','Rendimiento de dotación','Costo vs carga (confidencial)','#b45309','abrirRendimiento')+
+    dashNavBtn('🏆','Ranking administrativo','Posiciones por área, con tiempo, supervisión y tareas','#0891b2','abrirRankingAdminOverlay')+
     dashNavBtn('🏅','Resumen para acreditación','Las 4 cifras clave, listas para una presentación','#059669','abrirResumenAcreditacion')+
   '</div>';
 
