@@ -2587,8 +2587,23 @@ window.quitarMetrica=function(id){
 function labelCargo(c){return (c==='Secretaria')?'Administrativo/a':(c||'Administrativo/a');}
 function renderSecretariasAdmin(){
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
-  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
-  var html='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
+  var todos=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria'),turno:(typeof v==='object'?v.turno:'')};});
+  var lista=todos.filter(function(p){return p.nombre;});
+  var fantasmas=todos.filter(function(p){return !p.nombre;});
+  var html='';
+  if(fantasmas.length){
+    html+='<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);border-radius:12px;padding:16px;margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:4px">⚠️ Fichas sin nombre ('+fantasmas.length+')</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.55);margin-bottom:10px">Son personas quitadas del equipo a las que después se les guardó un turno o función, y quedó la ficha sin nombre. Asígnales el nombre exacto para recuperarlas (conservan su turno) o bórralas. Los nombres sugeridos son los que tienen resultados guardados.</div><datalist id="orfList"></datalist>';
+    fantasmas.forEach(function(f){
+      html+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap"><input type="text" list="orfList" id="fan_'+f.key+'" placeholder="Nombre completo" style="flex:1;min-width:140px;font-size:12px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px">'+
+        '<select id="fanCargo_'+f.key+'" style="font-size:11px;padding:6px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px"><option>Administrativo/a</option><option>Bodega</option><option>Mantención</option></select>'+
+        '<button onclick="asignarNombreFantasma(\''+f.key+'\')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer">Asignar</button>'+
+        '<button onclick="borrarFantasma(\''+f.key+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer">🗑</button>'+
+        (f.turno?'<span style="font-size:9px;color:rgba(255,255,255,.4);width:100%">Turno guardado: '+esc(f.turno)+' · '+esc(resumenTurnoTexto(f.turno,f.key))+'</span>':'')+'</div>';
+    });
+    html+='</div>';
+  }
+  html+='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px">'+
     '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px">Agregar al equipo administrativo</div>'+
     '<input type="text" id="nuevaSecretaria" placeholder="Nombre completo" style="width:100%;font-size:14px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px">'+
     '<div style="display:flex;gap:8px">'+
@@ -2674,6 +2689,26 @@ window.limpiarDuplicadosEquipo=function(){
     renderSecretariasAdmin();
   });
 };
+window.asignarNombreFantasma=function(key){
+  var n=(document.getElementById('fan_'+key).value||'').trim();var cargo=document.getElementById('fanCargo_'+key).value;
+  if(!n){alert('Escribe el nombre exacto.');return;}
+  var dup=Object.keys(secretarias||{}).some(function(k){var v=secretarias[k];return k!==key&&v&&typeof v==='object'&&v.nombre&&v.nombre.trim().toLowerCase()===n.toLowerCase();});
+  if(dup){alert('"'+n+'" ya está en el equipo.');return;}
+  var upd={};upd['secretarias/'+key+'/nombre']=n;upd['secretarias/'+key+'/cargo']=cargo;
+  db.ref('sedes/'+S).update(upd).then(function(){
+    if(typeof secretarias[key]!=='object')secretarias[key]={};secretarias[key].nombre=n;secretarias[key].cargo=cargo;renderSecretariasAdmin();});
+};
+window.borrarFantasma=function(key){
+  if(!confirm('¿Borrar esta ficha sin nombre?'))return;
+  delete secretarias[key];sedeRef('secretarias/'+key).remove().then(function(){renderSecretariasAdmin();});
+};
+// Escribe un campo de la ficha SOLO si la persona sigue existiendo (evita recrear fichas sin nombre)
+function escribirCampoSecretaria(key,campo,valor,despues){
+  sedeRef('secretarias/'+key+'/nombre').once('value').then(function(sn){
+    if(!sn.val()){alert('Esa persona ya no está en el equipo (quizá la quitaron desde otro dispositivo). Recarga la pantalla.');return;}
+    return sedeRef('secretarias/'+key+'/'+campo).set(valor||null).then(function(){if(despues)despues();});
+  });
+}
 window.quitarSecretaria=function(key){
   var v=secretarias[key];var nom=(v&&typeof v==='object')?v.nombre:(v||'');
   if(!confirm('¿Quitar a "'+nom+'" del equipo administrativo?\n\nSus resultados NO se borran y puedes restaurarla/o desde "♻️ Recuperar personas".'))return;
@@ -2710,6 +2745,7 @@ function cargarRecuperacionEquipo(){
     var activos={};Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var n=(typeof v==='object'?v.nombre:v);if(n)activos[capKeyAdminNombre(n)]=true;});
     var huer={};Object.keys(cap).concat(Object.keys(fich)).forEach(function(ck){if(!activos[ck])huer[ck]=true;});
     var archKeys=Object.keys(arch);var hk=Object.keys(huer);
+    var dl=document.getElementById('orfList');if(dl)dl.innerHTML=hk.map(function(ck){return '<option value="'+esc(ck.replace(/_/g,' '))+'">';}).join('');
     if(!archKeys.length&&!hk.length){box.innerHTML='';return;}
     var h='<div style="background:#16233d;border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:16px;margin-top:14px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:4px">♻️ Recuperar personas</div>'+
       '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:10px">Los resultados se guardan por nombre, así que no se borran al quitar a alguien del equipo: solo dejan de aparecer en el ranking. Al restaurar a la persona, vuelven.</div>';
@@ -2853,7 +2889,7 @@ window.asignarTurnoPersona=function(key,valor){
   if(!secretarias[key])return;
   if(typeof secretarias[key]!=='object')secretarias[key]={nombre:secretarias[key]};
   secretarias[key].turno=valor;
-  sedeRef('secretarias/'+key+'/turno').set(valor||null).then(function(){renderMapaTurnosAdmin();});
+  escribirCampoSecretaria(key,'turno',valor,function(){renderMapaTurnosAdmin();});
 };
 // Función/rol específico de la persona (ej: "Ejecutiva de convenios") — se guarda solo al salir
 // del campo, y queda libre para cambiarla cuando corresponda.
@@ -2862,7 +2898,7 @@ window.guardarFuncionPersona=function(key){
   var valor=el.value.trim();
   if(typeof secretarias[key]!=='object')secretarias[key]={nombre:secretarias[key]};
   secretarias[key].funcion=valor;
-  sedeRef('secretarias/'+key+'/funcion').set(valor||null);
+  escribirCampoSecretaria(key,'funcion',valor);
 };
 // Carga de una sola vez las funciones que informó Marcela para quienes aún no tengan una función
 // guardada y calcen con el nombre sugerido. No pisa una función ya cargada o editada a mano.
@@ -2931,7 +2967,7 @@ window.renderFilasProdAdmin=function(){
   var mid=window._metricaSel;var m=METRICAS[mid];
   if(!m){cont.innerHTML='';return;}
   var fecha=document.getElementById('prodAdminFecha').value||hoyStr();
-  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};});
+  var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'Secretaria')};}).filter(function(p){return p.nombre;});
   if(!lista.length){cont.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.5);padding:10px">Agrega personas primero (pestaña Equipo).</div>';return;}
   var dirTxt=m.dir==='menos'?'📉 Menos es mejor':'📈 Más es mejor';
   var html='<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px">'+dirTxt+' · '+(m.ambito==='grupal'?'Valor único del equipo':m.ambito==='persona'?'Solo '+esc(m.asignada||''):'Por cada persona')+'</div>';
