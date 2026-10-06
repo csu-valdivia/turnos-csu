@@ -3659,10 +3659,14 @@ function ventanaAdminHoy(nombre){
   var d=new Date();var ahora=d.getHours()*60+d.getMinutes();
   var key=null;
   Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var n=(typeof v==='object'?v.nombre:v);if(n===nombre)key=k;});
-  var t=key?turnoDelDia(key,diaDeDate(hoyStr())):null;
   var INI=8*60;
-  if(!t||!t.turno)return {estado:moduloTrabajoAbierto()?'abierta':'cerrada_general',general:true};   // sin turno cargado → horario general L-V 08:00–20:00
-  if(!t.fin)return {estado:'libre'};                       // tiene turno, pero hoy no le toca
+  var v0=key?secretarias[key]:null;var turno=(v0&&typeof v0==='object')?v0.turno:'';
+  var datos=turno?(turno==='personalizado'?horarioPropioAdmin[key]:turnosAdminPlantillas[turno]):null;
+  var celda=datos?datos[diaDeDate(hoyStr())]:undefined;
+  // Sin turno, o turno sin horario guardado para ese día → horario general (NO se asume día libre)
+  if(!turno||!datos||celda===undefined)return {estado:moduloTrabajoAbierto()?'abierta':'cerrada_general',general:true};
+  if(celda===null)return {estado:'libre'};                 // día marcado explícitamente como libre
+  var t={fin:celda.fin};
   var fin=_minHHMM(t.fin);if(fin===null)return {estado:moduloTrabajoAbierto()?'abierta':'cerrada_general',general:true};
   if(ahora<INI)return {estado:'antes',fin:t.fin};
   if(ahora>=fin)return {estado:'cerrada',fin:t.fin};
