@@ -2629,8 +2629,9 @@ function renderSecretariasAdmin(){
         '</div></div>';
     }).join('');
   }
-  html+='</div>';
+  html+='</div><div id="recuperarEquipo"></div>';
   cont.innerHTML=html;
+  cargarRecuperacionEquipo();
 }
 window.guardarCumpleAdmin=function(ck){
   var mes=document.getElementById('cumpMes_'+ck).value;
@@ -2667,17 +2668,63 @@ window.limpiarDuplicadosEquipo=function(){
   if(!aBorrar.length){alert('No hay duplicados que limpiar.');return;}
   if(!confirm('Se encontraron '+aBorrar.length+' entradas duplicadas. ¿Eliminarlas? Se conservará una de cada persona.'))return;
   var updates={};
-  aBorrar.forEach(function(k){updates['secretarias/'+k]=null;delete secretarias[k];});
+  aBorrar.forEach(function(k){archivarSecretaria(k);updates['secretarias/'+k]=null;delete secretarias[k];});
   db.ref('sedes/'+S).update(updates).then(function(){
     alert('✓ Se eliminaron '+aBorrar.length+' duplicados.');
     renderSecretariasAdmin();
   });
 };
 window.quitarSecretaria=function(key){
-  if(!confirm('¿Quitar esta secretaria?'))return;
+  var v=secretarias[key];var nom=(v&&typeof v==='object')?v.nombre:(v||'');
+  if(!confirm('¿Quitar a "'+nom+'" del equipo administrativo?\n\nSus resultados NO se borran y puedes restaurarla/o desde "♻️ Recuperar personas".'))return;
+  archivarSecretaria(key);
   delete secretarias[key];
   sedeRef('secretarias/'+key).remove().then(function(){renderSecretariasAdmin();});
 };
+// Copia de seguridad: toda persona que se quita queda en secretariasArchivo para poder restaurarla con su misma clave
+function archivarSecretaria(key){
+  var v=secretarias[key];if(!v)return;
+  var o=(typeof v==='object')?JSON.parse(JSON.stringify(v)):{nombre:v};
+  o.quitadaTs=Date.now();
+  sedeRef('secretariasArchivo/'+key).set(o);
+}
+window.restaurarSecretariaArchivada=function(key){
+  sedeRef('secretariasArchivo/'+key).once('value').then(function(sn){
+    var o=sn.val();if(!o)return;delete o.quitadaTs;
+    secretarias[key]=o;
+    sedeRef('secretarias/'+key).set(o).then(function(){return sedeRef('secretariasArchivo/'+key).remove();}).then(function(){renderSecretariasAdmin();});
+  });
+};
+window.restaurarSecretariaHuerfana=function(ck,i){
+  var sel=document.getElementById('huerCargo_'+i);var cargo=sel?sel.value:'Administrativo/a';
+  var nombre=ck.replace(/_/g,' ');
+  if(!confirm('¿Agregar de nuevo a "'+nombre+'" ('+cargo+')? Sus resultados guardados volverán a aparecer.'))return;
+  var key='sec_'+Date.now();var o={nombre:nombre,cargo:cargo,ts:Date.now()};
+  secretarias[key]=o;
+  sedeRef('secretarias/'+key).set(o).then(function(){renderSecretariasAdmin();});
+};
+function cargarRecuperacionEquipo(){
+  var box=document.getElementById('recuperarEquipo');if(!box)return;
+  Promise.all([sedeRef('secretariasArchivo').once('value'),sedeRef('rankingAdmin/capacitacion').once('value'),sedeRef('fichaProgresoAdmin').once('value')]).then(function(sn){
+    var arch=sn[0].val()||{},cap=sn[1].val()||{},fich=sn[2].val()||{};
+    var activos={};Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var n=(typeof v==='object'?v.nombre:v);if(n)activos[capKeyAdminNombre(n)]=true;});
+    var huer={};Object.keys(cap).concat(Object.keys(fich)).forEach(function(ck){if(!activos[ck])huer[ck]=true;});
+    var archKeys=Object.keys(arch);var hk=Object.keys(huer);
+    if(!archKeys.length&&!hk.length){box.innerHTML='';return;}
+    var h='<div style="background:#16233d;border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:16px;margin-top:14px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:4px">♻️ Recuperar personas</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:10px">Los resultados se guardan por nombre, así que no se borran al quitar a alguien del equipo: solo dejan de aparecer en el ranking. Al restaurar a la persona, vuelven.</div>';
+    if(archKeys.length){
+      h+='<div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:6px">Quitadas desde ahora (se restauran completas, con su turno)</div>';
+      archKeys.forEach(function(k){var o=arch[k]||{};h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#fff">'+esc(o.nombre||k)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+esc(labelCargo(o.cargo))+'</span></span><button onclick="restaurarSecretariaArchivada(\''+k+'\')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">Restaurar</button></div>';});
+    }
+    if(hk.length){
+      h+='<div style="font-size:11px;font-weight:700;color:#93c5fd;margin:10px 0 6px">Con resultados guardados pero fuera del equipo</div>';
+      hk.forEach(function(ck,i){h+='<div style="display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="flex:1;font-size:12px;color:#fff">'+esc(ck.replace(/_/g,' '))+'</span><select id="huerCargo_'+i+'" style="font-size:11px;padding:5px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px"><option>Administrativo/a</option><option>Bodega</option><option>Mantención</option></select><button onclick="restaurarSecretariaHuerfana(\''+ck.replace(/'/g,"\\'")+'\','+i+')" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">Restaurar</button></div>';});
+      h+='<div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:6px">Al restaurar de esta lista la persona vuelve con su nombre, pero hay que reasignarle turno y función.</div>';
+    }
+    box.innerHTML=h+'</div>';
+  });
+}
 
 // ══════════════ MAPA DE TURNOS (equipo administrativo) ══════════════
 // OJO: los turnos reales que pasó Marcela NO son un rango horario único — cada Turno (1/2/3) tiene
