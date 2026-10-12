@@ -5699,25 +5699,39 @@ function bannerPremiosPersona(nombre){
     mios.map(function(p){return '<p style="font-size:12px;color:rgba(255,255,255,.85);margin-bottom:3px">🎁 '+esc(fechaBonita(p.fecha))+' · <b>'+esc(textoPremio(p))+'</b></p>';}).join('')+'</div>';
 }
 window._premioGan=null;
+// Semana ganada = la semana (lunes a sábado) inmediatamente anterior a la semana de la fecha del premio
+function semanaGanadaDesde(fecha){
+  var d=new Date(fecha+'T12:00:00');
+  while(d.getDay()!==1)d.setDate(d.getDate()-1);
+  d.setDate(d.getDate()-7);
+  var ini=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  d.setDate(d.getDate()+5);
+  var fin=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  return {ini:ini,fin:fin};
+}
+function ddmm(f){return f.slice(8,10)+'-'+f.slice(5,7);}
 window.abrirPremioGanador=function(){
   var ov=document.getElementById('premioOv');if(ov)ov.remove();
   var ult=Object.entries(historialGanadores||{}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);})[0];
   var g=ult?ult[1]:null;
-  var desdeIso=g&&g.semFin?(function(){var d=new Date(g.semFin+'T12:00:00');d.setDate(d.getDate()+1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());})():hoyStr();
+  var desdeIso=(function(){var d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());})();
   window._premioGan={ganador:g,semanaId:ult?ult[0]:''};
   var lista=(nombres||[]).slice().sort();
-  var nomSel=g&&g.nombre?g.nombre:'';
+  // El historial de ganadores solo se actualiza cuando alguien abre el cierre de semana, así que puede estar atrasado:
+  // por eso NO se preselecciona; se muestra como referencia y la semana ganada se calcula desde la fecha del premio.
+  var nomSel='';
   ov=document.createElement('div');ov.id='premioOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9300;overflow-y:auto;padding:16px';
   var inp='width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px;font-family:inherit';
   var inicios=inicioFranjasPremio();
   ov.innerHTML='<div style="max-width:480px;margin:0 auto;background:#16233d;border-radius:14px;padding:18px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:16px;font-weight:800;color:#fcd34d">🏆 Premio de la semana</span><button onclick="document.getElementById(\'premioOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button></div>'+
-    (g?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Última ganadora/or registrada: <b style="color:#fff">'+esc(g.nombre)+'</b> · semana '+esc(g.semIni||'')+' al '+esc(g.semFin||'')+'. Puedes elegir a otra persona abajo.</div>':'<div style="font-size:11px;color:#fbbf24;margin-bottom:10px">Aún no hay una ganadora registrada: elige a la persona.</div>')+
+    (g?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Última ganadora registrada en el historial: <b style="color:#fff">'+esc(g.nombre)+'</b> (semana '+esc(g.semIni||'')+' al '+esc(g.semFin||'')+'). Ojo: ese historial puede estar atrasado, verifica en el ranking quién ganó la semana pasada y elígela abajo.</div>':'<div style="font-size:11px;color:#fbbf24;margin-bottom:10px">No hay ganadoras en el historial: elige a la persona.</div>')+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">Persona</label>'+
     '<select id="prNombre" onchange="premioCargarContacto()" style="'+inp+'"><option value="">— Elegir —</option>'+lista.map(function(n){return '<option value="'+esc(n)+'"'+(n===nomSel?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">Fecha del premio</label>'+
-    '<input type="date" id="prFecha" min="'+desdeIso+'" value="'+desdeIso+'" style="'+inp+'">'+
+    '<input type="date" id="prFecha" min="'+hoyStr()+'" value="'+desdeIso+'" onchange="premioTipoCambio()" style="'+inp+'">'+
+    '<div id="prSemTxt" style="font-size:11px;color:#fcd34d;margin:-4px 0 8px"></div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">Qué se concede</label>'+
     '<select id="prTipo" onchange="premioTipoCambio()" style="'+inp+'"><option value="dia">Día completo libre</option><option value="am">Jornada AM libre</option><option value="pm">Jornada PM libre</option><option value="horas">Franja de horas libre</option></select>'+
     '<div id="prHorasBox" style="display:none"><div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.5)">Desde</label><select id="prIni" onchange="premioTipoCambio()" style="'+inp+'">'+inicios.map(function(h){return '<option value="'+h+'">'+h+'</option>';}).join('')+'</select></div>'+
@@ -5734,6 +5748,8 @@ window.abrirPremioGanador=function(){
   premioTipoCambio();premioCargarContacto();pintarPremiosLista();
 };
 window.premioTipoCambio=function(){
+  var ff=document.getElementById('prFecha').value;
+  if(ff){var sg=semanaGanadaDesde(ff);document.getElementById('prSemTxt').textContent='Semana ganada: del '+ddmm(sg.ini)+' al '+ddmm(sg.fin)+' (la semana anterior a la fecha del premio)';}
   var t=document.getElementById('prTipo').value;
   document.getElementById('prHorasBox').style.display=t==='horas'?'block':'none';
   if(t==='horas'){
@@ -5755,8 +5771,8 @@ function normalizarFonoCL(v){
 }
 function mensajePremio(p){
   var g=window._premioGan&&window._premioGan.ganador;
-  var semTxt=p.semIni?(' (semana del '+p.semIni+' al '+p.semFin+')'):'';
-  return 'Hola '+p.nombre.split(' ')[0]+', ¡felicitaciones! 🏆\n\nPor haber ganado la semana'+semTxt+' en GESTHOR, tu premio será efectivo el '+fechaBonita(p.fecha)+': '+textoPremio(p)+'.\n\nCualquier duda, conversa con la jefatura.\n\nPatricio Baeza Aguilar · CSU Valdivia';
+  var semTxt=p.semIni?(' del '+ddmm(p.semIni)+' al '+ddmm(p.semFin)):'';
+  return 'Hola '+p.nombre.split(' ')[0]+', ¡felicitaciones!\n\nPor haber ganado la semana'+semTxt+' en GESTHOR, tu premio será efectivo el '+fechaBonita(p.fecha)+': '+textoPremio(p)+'.\n\nCualquier duda, conversa con la jefatura.\n\nPatricio Baeza Aguilar · CSU Valdivia';
 }
 window.guardarPremioGanador=function(){
   var nombre=document.getElementById('prNombre').value;
@@ -5765,9 +5781,7 @@ window.guardarPremioGanador=function(){
   if(!nombre){alert('Elige a la persona.');return;}
   if(!fecha){alert('Elige la fecha del premio.');return;}
   var p={nombre:nombre,fecha:fecha,dia:diaDeDate(fecha),tipo:tipo,ts:Date.now(),
-    semanaGanadaId:(window._premioGan&&window._premioGan.semanaId)||'',
-    semIni:(window._premioGan&&window._premioGan.ganador&&window._premioGan.ganador.semIni)||'',
-    semFin:(window._premioGan&&window._premioGan.ganador&&window._premioGan.ganador.semFin)||'',
+    semIni:semanaGanadaDesde(fecha).ini,semFin:semanaGanadaDesde(fecha).fin,
     registradoPor:'Jefatura'};
   if(tipo==='horas'){
     var ini=_hmMin(document.getElementById('prIni').value),dur=Number(document.getElementById('prDur').value)||1;
