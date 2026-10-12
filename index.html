@@ -1145,6 +1145,12 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="ilist" id="cambiosAdminList"></div>
           </div>
 
+          <div class="asec" style="border-color:rgba(245,158,11,.35)">
+            <p class="asec-title" style="color:#fcd34d">🏆 Premio de la semana (día / jornada / horas libres)</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px">Marca lo que se le concede a quien ganó la semana anterior. Queda registrado como respaldo, le aparece en Mis Turnos y puedes avisarle por WhatsApp y correo.</p>
+            <button class="btn-add" onclick="abrirPremioGanador()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">🎁 Registrar premio</button>
+          </div>
+
           <div class="asec">
             <p class="asec-title">📅 Ausencias activas</p>
             <div class="ilist" id="ausActivasList"></div>
@@ -1977,7 +1983,7 @@ var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
 var supervisorActivo='',supervisorAreas=[];
-var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={},regPedido={},regPabellonAsig={},regLecturaTareas={},historialGanadores={};
+var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={},regPedido={},regPabellonAsig={},regLecturaTareas={},historialGanadores={},premiosGanadores={},telefonosEquipo={};
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={};
 // Custodia diaria de subbodegas: quién queda a cargo de cada una hoy, por jornada AM/PM.
 // custodiaSubbodega[fecha][bodegaId][jornada] = {nombre,activo,abierta,aperturaTs,cierreTs,resumen}
@@ -3936,6 +3942,8 @@ window.setSede=function(sede){
   sedeRef('regPedido').on('value',function(s){regPedido=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('regPabellonAsig').on('value',function(s){regPabellonAsig=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('regLecturaTareas').on('value',function(s){regLecturaTareas=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
+  sedeRef('premiosGanadores').on('value',function(s){premiosGanadores=s.val()||{};if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none')renderMisTurnos(curNombre);if(document.getElementById('premioOvLista'))pintarPremiosLista();});
+  sedeRef('telefonosEquipo').on('value',function(s){telefonosEquipo=s.val()||{};});
   sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
   sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();sembrarRolDEA();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
@@ -5118,6 +5126,7 @@ function renderMisTurnos(nombre){
     d.innerHTML=html+'<div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:10px">Durante el receso, las tareas clínicas normales están en pausa.</div>';
     return;
   }
+  html+=bannerPremiosPersona(nombre);
   // Botón de gestión de subbodega — SOLO si la jefatura activó hoy a esta persona en Custodia diaria
   // (no es un encargado fijo; se prende y apaga cada día, por jornada AM/PM).
   var misCustodias=misCustodiasHoy(nombre);
@@ -5666,6 +5675,143 @@ function renderAusencias(){
   if(!rel.length){d.innerHTML='<p class="empty" style="padding:1rem">Sin solicitudes.</p>';return;}
   d.innerHTML=rel.sort(function(a,b){return(b[1].ts||0)-(a[1].ts||0);}).map(function(e){var k=e[0],a=e[1];var fs=a.inicio===a.fin?a.inicio:a.inicio+' → '+a.fin;return '<div class="cambio-card"><div class="cambio-hdr">'+(a.tipoLabel||a.tipo)+' <span class="ebdg '+a.estado+'">'+a.estado+'</span></div><div class="cambio-sub">'+a.nombre+' · '+fs+(a.motivo?' · '+a.motivo:'')+'</div></div>';}).join('');
 }
+
+
+// ══════════════ PREMIO DE LA SEMANA: día / jornada / franja horaria libre ══════════════
+// Registro de respaldo en premiosGanadores/{id}; aviso al trabajador por WhatsApp (wa.me) y correo (mailto),
+// y banner en su Mis Turnos. Franjas de 1 hora desde 07:45 / 08:00 hasta las 20:00.
+function _hm(min){return pad(Math.floor(min/60))+':'+pad(min%60);}
+function _hmMin(t){var m=/^(\d{1,2}):(\d{2})$/.exec(t||'');return m?Number(m[1])*60+Number(m[2]):null;}
+function inicioFranjasPremio(){var a=['07:45'];for(var h=8;h<=19;h++)a.push(pad(h)+':00');return a;}
+function textoPremio(p){
+  if(p.tipo==='dia')return 'día completo libre';
+  if(p.tipo==='am')return 'jornada de la mañana (AM) libre';
+  if(p.tipo==='pm')return 'jornada de la tarde (PM) libre';
+  return 'libre de '+p.ini+' a '+p.fin+' hrs';
+}
+function fechaBonita(f){var d=new Date(f+'T12:00:00');return diaDeDate(f)+' '+pad(d.getDate())+'-'+pad(d.getMonth()+1)+'-'+d.getFullYear();}
+function bannerPremiosPersona(nombre){
+  var hoy=hoyStr();
+  var mios=Object.values(premiosGanadores||{}).filter(function(p){return p&&p.nombre===nombre&&p.fecha>=hoy&&!p.anulado;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+  if(!mios.length)return '';
+  return '<div style="background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(217,119,6,.08));border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
+    '<p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:6px">🏆 ¡Tu premio por ganar la semana!</p>'+
+    mios.map(function(p){return '<p style="font-size:12px;color:rgba(255,255,255,.85);margin-bottom:3px">🎁 '+esc(fechaBonita(p.fecha))+' · <b>'+esc(textoPremio(p))+'</b></p>';}).join('')+'</div>';
+}
+window._premioGan=null;
+window.abrirPremioGanador=function(){
+  var ov=document.getElementById('premioOv');if(ov)ov.remove();
+  var ult=Object.entries(historialGanadores||{}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);})[0];
+  var g=ult?ult[1]:null;
+  var desdeIso=g&&g.semFin?(function(){var d=new Date(g.semFin+'T12:00:00');d.setDate(d.getDate()+1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());})():hoyStr();
+  window._premioGan={ganador:g,semanaId:ult?ult[0]:''};
+  var lista=(nombres||[]).slice().sort();
+  var nomSel=g&&g.nombre?g.nombre:'';
+  ov=document.createElement('div');ov.id='premioOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.95);z-index:9300;overflow-y:auto;padding:16px';
+  var inp='width:100%;font-size:13px;padding:9px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px;font-family:inherit';
+  var inicios=inicioFranjasPremio();
+  ov.innerHTML='<div style="max-width:480px;margin:0 auto;background:#16233d;border-radius:14px;padding:18px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:16px;font-weight:800;color:#fcd34d">🏆 Premio de la semana</span><button onclick="document.getElementById(\'premioOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button></div>'+
+    (g?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Última ganadora/or registrada: <b style="color:#fff">'+esc(g.nombre)+'</b> · semana '+esc(g.semIni||'')+' al '+esc(g.semFin||'')+'. Puedes elegir a otra persona abajo.</div>':'<div style="font-size:11px;color:#fbbf24;margin-bottom:10px">Aún no hay una ganadora registrada: elige a la persona.</div>')+
+    '<label style="font-size:11px;color:rgba(255,255,255,.5)">Persona</label>'+
+    '<select id="prNombre" onchange="premioCargarContacto()" style="'+inp+'"><option value="">— Elegir —</option>'+lista.map(function(n){return '<option value="'+esc(n)+'"'+(n===nomSel?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.5)">Fecha del premio</label>'+
+    '<input type="date" id="prFecha" min="'+desdeIso+'" value="'+desdeIso+'" style="'+inp+'">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.5)">Qué se concede</label>'+
+    '<select id="prTipo" onchange="premioTipoCambio()" style="'+inp+'"><option value="dia">Día completo libre</option><option value="am">Jornada AM libre</option><option value="pm">Jornada PM libre</option><option value="horas">Franja de horas libre</option></select>'+
+    '<div id="prHorasBox" style="display:none"><div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.5)">Desde</label><select id="prIni" onchange="premioTipoCambio()" style="'+inp+'">'+inicios.map(function(h){return '<option value="'+h+'">'+h+'</option>';}).join('')+'</select></div>'+
+    '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.5)">Duración</label><select id="prDur" onchange="premioTipoCambio()" style="'+inp+'">'+[1,2,3,4,5,6,8,10,12].map(function(h){return '<option value="'+h+'">'+h+' hora'+(h>1?'s':'')+'</option>';}).join('')+'</select></div></div>'+
+    '<div id="prHorasTxt" style="font-size:12px;color:#7ec8f7;margin-bottom:8px"></div></div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.5)">Correo (se guarda para la próxima)</label>'+
+    '<input type="email" id="prCorreo" placeholder="correo@..." style="'+inp+'">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.5)">WhatsApp (ej: +56 9 1234 5678, se guarda para la próxima)</label>'+
+    '<input type="tel" id="prFono" placeholder="+56 9 ..." style="'+inp+'">'+
+    '<button onclick="guardarPremioGanador()" class="btn-add" style="background:linear-gradient(135deg,#d97706,#fbbf24)">💾 Guardar premio y registrar</button>'+
+    '<div id="premioAvisos"></div>'+
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin:16px 0 6px">Premios registrados</div><div id="premioOvLista"></div></div>';
+  document.body.appendChild(ov);
+  premioTipoCambio();premioCargarContacto();pintarPremiosLista();
+};
+window.premioTipoCambio=function(){
+  var t=document.getElementById('prTipo').value;
+  document.getElementById('prHorasBox').style.display=t==='horas'?'block':'none';
+  if(t==='horas'){
+    var ini=_hmMin(document.getElementById('prIni').value),dur=Number(document.getElementById('prDur').value)||1;
+    var fin=Math.min(ini+dur*60,20*60);
+    document.getElementById('prHorasTxt').textContent='Libre de '+_hm(ini)+' a '+_hm(fin)+' hrs'+(ini+dur*60>20*60?' (se corta a las 20:00)':'');
+  }
+};
+window.premioCargarContacto=function(){
+  var n=document.getElementById('prNombre').value;var k=(n||'').replace(/\s/g,'_');
+  document.getElementById('prCorreo').value=correos[k]||'';
+  document.getElementById('prFono').value=telefonosEquipo[k]||'';
+};
+function normalizarFonoCL(v){
+  var d=(v||'').replace(/[^0-9]/g,'');
+  if(!d)return '';
+  if(d.length===9&&d.charAt(0)==='9')d='56'+d;
+  return d;
+}
+function mensajePremio(p){
+  var g=window._premioGan&&window._premioGan.ganador;
+  var semTxt=p.semIni?(' (semana del '+p.semIni+' al '+p.semFin+')'):'';
+  return 'Hola '+p.nombre.split(' ')[0]+', ¡felicitaciones! 🏆\n\nPor haber ganado la semana'+semTxt+' en GESTHOR, tu premio será efectivo el '+fechaBonita(p.fecha)+': '+textoPremio(p)+'.\n\nCualquier duda, conversa con la jefatura.\n\nPatricio Baeza Aguilar · CSU Valdivia';
+}
+window.guardarPremioGanador=function(){
+  var nombre=document.getElementById('prNombre').value;
+  var fecha=document.getElementById('prFecha').value;
+  var tipo=document.getElementById('prTipo').value;
+  if(!nombre){alert('Elige a la persona.');return;}
+  if(!fecha){alert('Elige la fecha del premio.');return;}
+  var p={nombre:nombre,fecha:fecha,dia:diaDeDate(fecha),tipo:tipo,ts:Date.now(),
+    semanaGanadaId:(window._premioGan&&window._premioGan.semanaId)||'',
+    semIni:(window._premioGan&&window._premioGan.ganador&&window._premioGan.ganador.semIni)||'',
+    semFin:(window._premioGan&&window._premioGan.ganador&&window._premioGan.ganador.semFin)||'',
+    registradoPor:'Jefatura'};
+  if(tipo==='horas'){
+    var ini=_hmMin(document.getElementById('prIni').value),dur=Number(document.getElementById('prDur').value)||1;
+    p.ini=_hm(ini);p.fin=_hm(Math.min(ini+dur*60,20*60));
+  }
+  p.texto=textoPremio(p);
+  var k=nombre.replace(/\s/g,'_');
+  var correo=document.getElementById('prCorreo').value.trim();
+  var fono=normalizarFonoCL(document.getElementById('prFono').value);
+  var tareas2=[];
+  if(correo&&correo!==correos[k]){correos[k]=correo;tareas2.push(sedeRef('correos/'+k).set(correo));}
+  if(fono&&fono!==telefonosEquipo[k]){telefonosEquipo[k]=fono;tareas2.push(sedeRef('telefonosEquipo/'+k).set(fono));}
+  var ref=sedeRef('premiosGanadores').push();
+  p.id=ref.key;
+  tareas2.push(ref.set(p));
+  Promise.all(tareas2).then(function(){
+    var msg=mensajePremio(p);
+    var asunto='GESTHOR — Tu premio por ganar la semana';
+    var html='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px;margin-top:10px"><div style="font-size:12px;color:#6ee7b7;margin-bottom:8px">✓ Premio registrado ('+esc(p.texto)+', '+esc(fechaBonita(p.fecha))+'). Ahora avísale:</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      (fono?'<a href="https://wa.me/'+fono+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener" onclick="marcarAvisoPremio(\''+p.id+'\',\'wsp\')" style="flex:1;text-align:center;background:#25d366;color:#0b1220;text-decoration:none;font-weight:700;font-size:13px;padding:10px;border-radius:8px">📱 WhatsApp</a>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin WhatsApp: agrega el número arriba y guarda de nuevo.</span>')+
+      (correo?'<a href="mailto:'+encodeURIComponent(correo)+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(msg)+'" onclick="marcarAvisoPremio(\''+p.id+'\',\'correo\')" style="flex:1;text-align:center;background:#60a5fa;color:#0b1220;text-decoration:none;font-weight:700;font-size:13px;padding:10px;border-radius:8px">✉️ Correo</a>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin correo: agrégalo arriba y guarda de nuevo.</span>')+
+      '</div><div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:6px">Se abre tu WhatsApp / correo con el mensaje listo; tú presionas enviar.</div></div>';
+    document.getElementById('premioAvisos').innerHTML=html;
+    pintarPremiosLista();
+  });
+};
+window.marcarAvisoPremio=function(id,canal){
+  var o={};o[canal]=Date.now();
+  sedeRef('premiosGanadores/'+id+'/avisado/'+canal).set(Date.now());
+};
+function pintarPremiosLista(){
+  var c=document.getElementById('premioOvLista');if(!c)return;
+  var en=Object.entries(premiosGanadores||{}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);}).slice(0,15);
+  if(!en.length){c.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4)">Sin premios registrados.</div>';return;}
+  c.innerHTML=en.map(function(e){var p=e[1];var av=p.avisado||{};
+    return '<div style="padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:5px;'+(p.anulado?'opacity:.45':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span style="font-size:12px;color:#fff"><b>'+esc(p.nombre)+'</b> · '+esc(fechaBonita(p.fecha))+'</span>'+
+      (p.anulado?'<span style="font-size:10px;color:#fca5a5">anulado</span>':'<button onclick="anularPremio(\''+e[0]+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-family:inherit;cursor:pointer">Anular</button>')+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.55)">'+esc(p.texto||'')+' · avisado: '+(av.wsp?'📱✓ ':'📱— ')+(av.correo?'✉️✓':'✉️—')+'</div></div>';}).join('');
+}
+window.anularPremio=function(id){
+  if(!confirm('¿Anular este premio? Deja de aparecerle a la persona y queda marcado como anulado en el registro.'))return;
+  sedeRef('premiosGanadores/'+id+'/anulado').set(true);
+};
 
 // ── Solicitud de día libre del ganador de la semana (requiere aprobación de jefatura) ──
 window.formDiaLibreGanador=function(){
