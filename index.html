@@ -1072,10 +1072,10 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pabellon_asig">🏥 Pabellón (asignado pre/post)</option><option value="pedido">🟠 Pedido de bodega (semanal · corte 13:00)</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Recepción de contaminado</option><option value="inst_lavado">🧼 Lavado de instrumental</option><option value="inst_empaque">📦 Empaque de instrumental</option><option value="inst_secado">💨 Secado de instrumental</option><option value="entrega_esteril">📤 Entrega de material estéril</option><option value="almacen_ester">🗄️ Almacenamiento de material</option><option value="clinica_privada">🏷️ Clínica privada</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pabellon_asig">🏥 Pabellón (asignado pre/post)</option><option value="pedido">🟠 Pedido semanal de su servicio (corte 13:00)</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Recepción de contaminado</option><option value="inst_lavado">🧼 Lavado de instrumental</option><option value="inst_empaque">📦 Empaque de instrumental</option><option value="inst_secado">💨 Secado de instrumental</option><option value="entrega_esteril">📤 Entrega de material estéril</option><option value="almacen_ester">🗄️ Almacenamiento de material</option><option value="clinica_privada">🏷️ Clínica privada</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
-            <input type="text" id="tSector" placeholder="Sector (opcional — solo para tareas que se comparten en la misma jornada)" style="display:none">
+            <input type="text" id="tSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige el servicio de la lista o escribe otro)" style="display:none">
             <textarea class="atxt" id="tTxt" placeholder="Descripción (opcional)..."></textarea>
             <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.6);cursor:pointer;margin:-4px 0 8px"><input type="checkbox" id="tTxtOblig" style="accent-color:var(--accent2)"> El colaborador debe leer esto sí o sí antes de continuar</label>
             <div id="tPabHorario" style="display:none;gap:8px;margin-bottom:8px">
@@ -1482,6 +1482,7 @@ setInterval(function(){if(W)renderRanking();},60000);
 var SEDES={'Valdivia':'2715','Patagonia':'1234','Bellavista':'5678','Los Leones':'9012','Concepción':'3456'};
 var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var AREAS=['Esterilización','Rayos','Pabellón','Dispensario 1','Dispensario 2'];
+(function(){try{var dl=document.createElement('datalist');dl.id='dlServicios';dl.innerHTML=AREAS.map(function(a){return '<option value="'+a+'">';}).join('');document.body.appendChild(dl);}catch(e){}})();
 var COLACION={'07:45':'13:00–14:00','08:00':'13:00–14:00','09:00':'13:00–14:00','10:00':'14:00–15:00','11:00':'14:00–15:00'};
 // Colaciones manuales por persona/día (sobrescriben el cálculo automático). colacionManual[nombre_dia]='HH:MM–HH:MM'
 var colacionManual={};
@@ -1550,7 +1551,7 @@ function jornadaLabel(j){
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pabellon_asig:{e:'🏥',l:'Pabellón (asignado pre/post)'},pedido:{e:'🟠',l:'Pedido de bodega (semanal)'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Recepción de contaminado'},inst_lavado:{e:'🧼',l:'Lavado de instrumental'},inst_empaque:{e:'📦',l:'Empaque de instrumental'},inst_secado:{e:'💨',l:'Secado de instrumental'},entrega_esteril:{e:'📤',l:'Entrega de material estéril'},almacen_ester:{e:'🗄️',l:'Almacenamiento de material'},clinica_privada:{e:'🏷️',l:'Clínica privada'},apoyo_clinico:{e:'🩺',l:'Apoyo clínico'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pabellon_asig:{e:'🏥',l:'Pabellón (asignado pre/post)'},pedido:{e:'🟠',l:'Pedido semanal de su servicio'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Recepción de contaminado'},inst_lavado:{e:'🧼',l:'Lavado de instrumental'},inst_empaque:{e:'📦',l:'Empaque de instrumental'},inst_secado:{e:'💨',l:'Secado de instrumental'},entrega_esteril:{e:'📤',l:'Entrega de material estéril'},almacen_ester:{e:'🗄️',l:'Almacenamiento de material'},clinica_privada:{e:'🏷️',l:'Clínica privada'},apoyo_clinico:{e:'🩺',l:'Apoyo clínico'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Config visual de un tipo de tarea: predefinido, rol técnico personalizado (ej. DEA) o 'tarea especial'
 function cfgTipo(k){
   if(TIPOS[k])return TIPOS[k];
@@ -1576,7 +1577,7 @@ var ROLES_TECNICOS_BASE={
   // y TIPOS_SIN_MEDICION los excluye del cálculo de cumplimiento (ver más abajo).
   almacen_ester:{emoji:'🗄️',label:'Almacenamiento de material',desc:'Material que sale del autoclave y se guarda en gabetas de estudiantes (diario · T1)',fn:'abrirRegProduccion'},
   pabellon_asig:{emoji:'🏥',label:'Pabellón (asignado)',desc:'Pre-cx: espacio y material ok · Post-cx: recibe, lava y seca el instrumental (según asignación puntual)',fn:'abrirRegPabellonAsig'},
-  pedido:{emoji:'🟠',label:'Pedido de bodega',desc:'1 vez a la semana, debe registrarse antes de las 13:00 AM',fn:'abrirRegPedido'},
+  pedido:{emoji:'🟠',label:'Pedido semanal de su servicio',desc:'1 vez a la semana, debe registrarse antes de las 13:00 AM',fn:'abrirRegPedido'},
   clinica_privada:{emoji:'🏷️',label:'Clínica privada',desc:'Tarea general de apoyo a clínica privada (diario, puede tocarle a cualquiera)',fn:'abrirRegProduccion'},
   apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',desc:'Pacientes contactados y agendados (meta 4 diarios)',fn:'abrirRegApoyoClinico'},
   aseo:{emoji:'🧹',label:'Aseo semanal',desc:'Aseo esterilización y pabellón (semanal)',fn:'abrirRegAseo'}
@@ -4921,7 +4922,7 @@ function renderEditorTurnoSemana(nombre){
       '<select id="etNuevaTareaJornada" style="width:auto;font-size:12px;padding:6px"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>'+
     '</div>'+
     '<select id="etNuevaTareaTipo" onchange="var sb=document.getElementById(\'etNuevaTareaSector\');if(sb)sb.style.display=TIPOS_COMPARTIDOS_JORNADA[this.value]?\'block\':\'none\';" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
-    '<input type="text" id="etNuevaTareaSector" placeholder="Sector (opcional — para tareas que se comparten en la misma jornada)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
+    '<input type="text" id="etNuevaTareaSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
     '<button onclick="agregarTareaEnEditor(\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="width:100%;margin-top:6px;background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">+ Agregar tarea/rol</button>';
   var selSty='width:100%;font-size:12px;padding:6px;margin-bottom:6px';
   var nuevoTurnoForm='<div style="background:rgba(37,99,235,.08);border:1px dashed rgba(96,165,250,.4);border-radius:10px;padding:10px;margin:4px 0 12px">'+
@@ -4953,6 +4954,7 @@ window.agregarTareaEnEditor=function(nombre){
   var tipo=document.getElementById('etNuevaTareaTipo').value;
   var sector=(document.getElementById('etNuevaTareaSector').value||'').trim();
   if(!tipo){alert('Elige qué tarea o rol quieres asignar.');return;}
+  if(tipo==='pedido'&&!sector){alert('Indica para qué servicio es el pedido semanal (campo Servicio / sector).');return;}
   if(TIPOS_MEDIBLES[tipo]){
     var conflicto=tareaYaAsignada(tipo,dia,jornada,nombre);
     if(conflicto){alert('⛔ "'+cfgTipo(tipo).l+'" ya está asignada ese día/jornada a '+conflicto.nombre+'. Elige otro día, jornada o quítasela primero a esa persona.');return;}
@@ -5595,9 +5597,10 @@ window.aprCambio=function(k){
     var emailCon=correos[cam.con.replace(/\s/g,'_')]||'';
     var destinatarios=[emailSol,emailCon].filter(Boolean).join(',');
     if(destinatarios){
-      window.open('mailto:'+destinatarios+'?subject='+asunto+'&body='+cuerpo,'_blank');
+      abrirCorreo(destinatarios,decodeURIComponent(asunto),decodeURIComponent(cuerpo));
+    }else{
+      alert('✓ Cambio aprobado. Ninguna de las dos personas tiene correo guardado, no hay a quién avisar por correo.');
     }
-    alert('✓ Cambio aprobado. Se ha abierto el correo para notificar a '+cam.solicitante+' y '+cam.con+'.');
   });
 };
 
@@ -5800,15 +5803,17 @@ window.guardarPremioGanador=function(){
   Promise.all(tareas2).then(function(){
     var msg=mensajePremio(p);
     var asunto='GESTHOR — Tu premio por ganar la semana';
+    window._premioCorreo={para:correo,asunto:asunto,msg:msg};
     var html='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px;margin-top:10px"><div style="font-size:12px;color:#6ee7b7;margin-bottom:8px">✓ Premio registrado ('+esc(p.texto)+', '+esc(fechaBonita(p.fecha))+'). Ahora avísale:</div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
       (fono?'<a href="https://wa.me/'+fono+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener" onclick="marcarAvisoPremio(\''+p.id+'\',\'wsp\')" style="flex:1;text-align:center;background:#25d366;color:#0b1220;text-decoration:none;font-weight:700;font-size:13px;padding:10px;border-radius:8px">📱 WhatsApp</a>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin WhatsApp: agrega el número arriba y guarda de nuevo.</span>')+
-      (correo?'<a href="mailto:'+encodeURIComponent(correo)+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(msg)+'" onclick="marcarAvisoPremio(\''+p.id+'\',\'correo\')" style="flex:1;text-align:center;background:#60a5fa;color:#0b1220;text-decoration:none;font-weight:700;font-size:13px;padding:10px;border-radius:8px">✉️ Correo</a>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin correo: agrégalo arriba y guarda de nuevo.</span>')+
+      (correo?'<button onclick="premioCorreo(\''+p.id+'\')" style="flex:1;text-align:center;background:#60a5fa;color:#0b1220;font-weight:700;font-size:13px;padding:10px;border-radius:8px;border:none;font-family:inherit;cursor:pointer">✉️ Correo</button>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin correo: agrégalo arriba y guarda de nuevo.</span>')+
       '</div><div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:6px">Se abre tu WhatsApp / correo con el mensaje listo; tú presionas enviar.</div></div>';
     document.getElementById('premioAvisos').innerHTML=html;
     pintarPremiosLista();
   });
 };
+window.premioCorreo=function(id){var c=window._premioCorreo;if(!c)return;abrirCorreo(c.para,c.asunto,c.msg,function(){marcarAvisoPremio(id,'correo');});};
 window.marcarAvisoPremio=function(id,canal){
   var o={};o[canal]=Date.now();
   sedeRef('premiosGanadores/'+id+'/avisado/'+canal).set(Date.now());
@@ -5903,7 +5908,7 @@ window.aprAus=function(k){
     if(emailP){
       var asunto=encodeURIComponent('TurnosCSU — '+( a.tipoLabel||a.tipo)+' aprobado/a');
       var cuerpo=encodeURIComponent('Hola '+a.nombre+',\n\nTu solicitud de '+(a.tipoLabel||a.tipo)+' ha sido APROBADA.\n\nFecha: '+a.inicio+(a.inicio!==a.fin?' al '+a.fin:'')+'.\n\nTurnosCSU — USS Red de Salud');
-      window.open('mailto:'+emailP+'?subject='+asunto+'&body='+cuerpo,'_blank');
+      abrirCorreo(emailP,decodeURIComponent(asunto),decodeURIComponent(cuerpo));
     }
   });
 };
@@ -9240,7 +9245,7 @@ function renderItemPedidoCondicional(){
   if(tareaPedido){
     html+='<div class="sup-item" data-key="pedido_bodega" style="flex-direction:column;align-items:stretch;gap:0">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">'+
-      '<span style="flex:1;font-size:13px">🟠 Realiza pedido de bodega en día, horario y forma correcta '+jornadaLabel(tareaPedido.jornada)+'</span>'+
+      '<span style="flex:1;font-size:13px">🟠 Realiza pedido semanal de su servicio'+(tareaPedido.sector?' ('+esc(tareaPedido.sector)+')':'')+' en día, horario y forma correcta '+jornadaLabel(tareaPedido.jornada)+'</span>'+
       '<div class="sup-toggle"><button class="sup-btn sup-yes" data-val="1">✓</button><button class="sup-btn sup-no" data-val="0">✗</button><button class="sup-btn sup-ne" data-val="ne">NE</button></div>'+
       '</div></div>';
   }
@@ -15004,7 +15009,42 @@ window.guardarRegAseo=function(){
   });
 };
 
-// ── REGISTRO DE PEDIDO DE BODEGA (1 vez/semana, corte estricto 13:00) ──
+
+// ── CORREO: ofrece Outlook web, Gmail web, app de correo y copiar (mailto solo no siempre abre nada) ──
+window.abrirCorreo=function(para,asunto,cuerpo,alUsar){
+  var to=String(para||'').replace(/\s/g,'');
+  var q=function(x){return encodeURIComponent(x);};
+  var urls={
+    outlook:'https://outlook.office.com/mail/deeplink/compose?to='+q(to)+'&subject='+q(asunto)+'&body='+q(cuerpo),
+    gmail:'https://mail.google.com/mail/?view=cm&fs=1&to='+q(to)+'&su='+q(asunto)+'&body='+q(cuerpo),
+    app:'mailto:'+to+'?subject='+q(asunto)+'&body='+q(cuerpo)
+  };
+  window._corrUrls=urls;window._corrTxt='Para: '+to+'\nAsunto: '+asunto+'\n\n'+cuerpo;window._corrCb=alUsar||null;
+  var ov=document.getElementById('correoOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='correoOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9600;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var b='display:block;width:100%;text-align:center;box-sizing:border-box;font-weight:700;font-size:14px;padding:12px;border-radius:10px;margin-top:8px;text-decoration:none;border:none;font-family:inherit;cursor:pointer;';
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:400px;width:100%;margin-top:30px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff">✉️ Enviar correo</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin:4px 0 6px;overflow-wrap:anywhere">Para: '+esc(to)+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4)">Elige con qué abrirlo; el mensaje va escrito y tú presionas enviar.</div>'+
+    '<a href="'+urls.outlook.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener" onclick="correoUsado()" style="'+b+'background:#0a64c8;color:#fff">Outlook web (correo institucional)</a>'+
+    '<a href="'+urls.gmail.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener" onclick="correoUsado()" style="'+b+'background:#ea4335;color:#fff">Gmail web</a>'+
+    '<a href="'+urls.app.replace(/&/g,'&amp;')+'" onclick="correoUsado()" style="'+b+'background:rgba(255,255,255,.1);color:#fff">App de correo del equipo</a>'+
+    '<button onclick="copiarCorreo(this)" style="'+b+'background:#fbbf24;color:#0b1220">📋 Copiar mensaje</button>'+
+    '<button onclick="document.getElementById(\'correoOv\').remove()" style="'+b+'background:rgba(255,255,255,.06);color:#fff;font-weight:500">Cerrar</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+};
+window.correoUsado=function(){var f=window._corrCb;window._corrCb=null;if(f)try{f();}catch(e){}};
+window.copiarCorreo=function(btn){
+  var t=window._corrTxt||'';
+  var ok=function(){btn.textContent='✓ Copiado';};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,function(){prompt('Copia el mensaje:',t);});}
+  else{prompt('Copia el mensaje:',t);}
+};
+
+// ── REGISTRO DE PEDIDO SEMANAL DE SU SERVICIO (1 vez/semana, corte estricto 13:00) ──
 window.abrirRegPedido=function(){
   var ov=document.getElementById('regPedidoOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regPedidoOv';
@@ -15013,13 +15053,16 @@ window.abrirRegPedido=function(){
   var yaHoy=Object.values(regPedido||{}).some(function(r){return r.fecha===hoy;});
   var minAh=minAhora();
   var fueraPlazo=minAh>hhmmAMin('13:00');
+  var tPed=Object.values(tareas||{}).filter(function(t){return t.tipo==='pedido'&&t.nombre===curNombre&&t.dia===diaDeDate(hoyStr());})[0];
+  window._pedServ=(tPed&&tPed.sector)||'';
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
-    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🟠 Pedido de bodega</div>'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🟠 Pedido semanal de su servicio</div>'+
+    (window._pedServ?'<div style="font-size:13px;color:#fbbf24;margin-bottom:6px">📍 Servicio: <b>'+esc(window._pedServ)+'</b></div>':'<div style="margin-bottom:8px"><label style="font-size:12px;color:rgba(255,255,255,.7)">¿De qué servicio es el pedido?</label><input type="text" id="pedidoServ" list="dlServicios" placeholder="Elige o escribe el servicio" style="width:100%;font-size:13px;padding:8px;box-sizing:border-box"></div>')+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">1 vez a la semana · '+hoy+'</div>'+
     (fueraPlazo&&!yaHoy?'<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px;font-size:12px;color:#fca5a5;margin-bottom:12px">⏰ Ya pasaron las 13:00. Si registras ahora, quedará marcado como <b>fuera de plazo</b> e incumplido en tu puntaje del día y de la semana.</div>':
       '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">Debe registrarse antes de las 13:00 para contar como cumplido.</div>')+
     (yaHoy?'<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px;font-size:12px;color:#6ee7b7;margin-bottom:12px">✓ Ya registraste el pedido hoy.</div>':'')+
-    '<label style="font-size:13px;color:#fff;cursor:pointer;display:block;margin-bottom:12px"><input type="checkbox" id="pedidoHecho" style="vertical-align:middle"> Realicé el pedido de bodega en día, horario y forma correcta</label>'+
+    '<label style="font-size:13px;color:#fff;cursor:pointer;display:block;margin-bottom:12px"><input type="checkbox" id="pedidoHecho" style="vertical-align:middle"> Realicé el pedido semanal de mi servicio en día, horario y forma correcta</label>'+
     '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
     '<textarea id="pedidoObs" rows="2" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
     '<button class="btn-add" onclick="guardarRegPedido()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">💾 Guardar</button>'+
@@ -15032,7 +15075,10 @@ window.guardarRegPedido=function(){
   if(!document.getElementById('pedidoHecho').checked){alert('Marca que realizaste el pedido antes de guardar.');return;}
   var ahora=new Date();
   var hora=('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2);
-  var reg={obs:document.getElementById('pedidoObs').value.trim(),quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  var servIn=document.getElementById('pedidoServ');
+  var serv=window._pedServ||(servIn?servIn.value.trim():'');
+  if(!serv){alert('Indica de qué servicio es el pedido.');return;}
+  var reg={obs:document.getElementById('pedidoObs').value.trim(),quien:curNombre||'—',servicio:serv,hora:hora,fecha:hoyStr(),ts:Date.now()};
   sedeRef('regPedido/'+reg.ts).set(reg).then(function(){
     showSaved('regPedidoSaved');
     setTimeout(function(){var o=document.getElementById('regPedidoOv');if(o)o.remove();},1000);
@@ -18503,6 +18549,7 @@ document.getElementById('addTareaBtn').addEventListener('click',function(){
   var sector=(document.getElementById('tSector').value||'').trim();
   var oblig=document.getElementById('tTxtOblig')&&document.getElementById('tTxtOblig').checked;
   if(!n||!dias.length||!t){alert('Selecciona persona, al menos un día y tipo.');return;}
+  if(t==='pedido'&&!sector){alert('Indica para qué servicio es el pedido semanal (campo Servicio / sector).');return;}
   if(oblig&&!x){alert('Marcaste la descripción como obligatoria: escribe qué debe leer el colaborador.');return;}
   // ── VALIDACIÓN DE EXCLUSIVIDAD POR JORNADA ──
   // Solo aplica a tipos medibles (los que son "puestos" únicos). Las tareas genéricas no se bloquean.
