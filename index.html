@@ -1545,6 +1545,13 @@ function jornadaLabel(j){
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
 var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pabellon_asig:{e:'🏥',l:'Pabellón (asignado pre/post)'},pedido:{e:'🟠',l:'Pedido de bodega (semanal)'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Recepción de contaminado'},inst_lavado:{e:'🧼',l:'Lavado de instrumental'},inst_empaque:{e:'📦',l:'Empaque de instrumental'},inst_secado:{e:'💨',l:'Secado de instrumental'},entrega_esteril:{e:'📤',l:'Entrega de material estéril'},almacen_ester:{e:'🗄️',l:'Almacenamiento de material'},clinica_privada:{e:'🏷️',l:'Clínica privada'},apoyo_clinico:{e:'🩺',l:'Apoyo clínico'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+// Config visual de un tipo de tarea: predefinido, rol técnico personalizado (ej. DEA) o 'tarea especial'
+function cfgTipo(k){
+  if(TIPOS[k])return TIPOS[k];
+  var r=rolesTecnicos&&rolesTecnicos[k];
+  if(r&&r.nombre)return {e:r.emoji||'🔧',l:r.nombre};
+  return TIPOS['tarea'];
+}
 // Catálogo de roles técnicos: cada uno abre una funcionalidad de registro en Mis Turnos.
 // tipo = valor de la tarea; fn = función que abre el registro. Ampliable por el admin vía rolesTecnicos.
 var ROLES_TECNICOS_BASE={
@@ -3931,7 +3938,7 @@ window.setSede=function(sede){
   sedeRef('regLecturaTareas').on('value',function(s){regLecturaTareas=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
-  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
+  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();sembrarRolDEA();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
   sedeRef('regCustom').on('value',function(s){regCustom=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
     anunciosCapacitacion=s.val()||{};
@@ -4897,6 +4904,7 @@ function renderEditorTurnoSemana(nombre){
   }).join('');
   var opcDiasTarea=DIAS.map(function(d){return '<option value="'+d+'">'+d+'</option>';}).join('');
   var opcTiposTarea=Object.keys(TIPOS).map(function(k){return '<option value="'+k+'">'+TIPOS[k].e+' '+TIPOS[k].l+(TIPOS_SIN_MEDICION[k]?' (solo asignación)':'')+'</option>';}).join('');
+  Object.keys(rolesTecnicos||{}).filter(function(k){return rolesTecnicos[k]&&rolesTecnicos[k].nombre;}).forEach(function(k){var r=rolesTecnicos[k];opcTiposTarea+='<option value="'+k+'">'+esc(r.emoji||'🔧')+' '+esc(r.nombre)+(r.frecuencia==='semanal'?' (semanal)':'')+'</option>';});
   var tareasSection='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">🔧 Tareas / dónde debe trabajar</p>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Esto asigna el PUESTO donde trabaja ese día. Las que dicen "solo asignación" no piden cantidad — el desempeño se mide con métricas aparte, independientes de la actividad.</div>'+
     (filasTareas||'<div style="font-size:12px;color:rgba(255,255,255,.4);padding:6px 0 8px">Sin tareas asignadas esta semana.</div>')+
@@ -4939,7 +4947,7 @@ window.agregarTareaEnEditor=function(nombre){
   if(!tipo){alert('Elige qué tarea o rol quieres asignar.');return;}
   if(TIPOS_MEDIBLES[tipo]){
     var conflicto=tareaYaAsignada(tipo,dia,jornada,nombre);
-    if(conflicto){alert('⛔ "'+(TIPOS[tipo]||{l:tipo}).l+'" ya está asignada ese día/jornada a '+conflicto.nombre+'. Elige otro día, jornada o quítasela primero a esa persona.');return;}
+    if(conflicto){alert('⛔ "'+cfgTipo(tipo).l+'" ya está asignada ese día/jornada a '+conflicto.nombre+'. Elige otro día, jornada o quítasela primero a esa persona.');return;}
   }
   var nuevaTarea={dia:dia,nombre:nombre,tipo:tipo,texto:'',jornada:jornada};
   if(sector)nuevaTarea.sector=sector;
@@ -5210,7 +5218,7 @@ function renderMisTurnos(nombre){
     html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">📅</span><span class="day-name">'+dia+'</span>'+(cobDia?'<span style="font-size:11px;background:rgba(239,68,68,.1);color:#991b1b;padding:2px 8px;border-radius:4px;margin-left:auto">Cubre '+cobDia.destino+'</span>':'')+'</div>';
     ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?renderSubareaTareas(b.turno,b.nombre,dia):null;var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,b.area,b.horario):null;var editBtn=claveB?'<button onclick="abrirEditarTurnoSemana(\''+nombre.replace(/'/g,"\\'")+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'';html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+editBtn+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
     if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span>'+(adminUnlocked?'<button onclick="editarColacion(\''+colKey+'\',\''+col+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'')+'</div></div>';
-    tds.forEach(function(t){var cfg=TIPOS[t.tipo]||TIPOS['tarea'];var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';var sectorT=t.sector?'<span style="font-size:10px;color:#94a3b8;margin-left:5px">📍'+esc(t.sector)+'</span>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+' '+jornadaLabel(t.jornada||'dia')+sectorT+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
+    tds.forEach(function(t){var cfg=cfgTipo(t.tipo);var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';var sectorT=t.sector?'<span style="font-size:10px;color:#94a3b8;margin-left:5px">📍'+esc(t.sector)+'</span>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+' '+jornadaLabel(t.jornada||'dia')+sectorT+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
     notaLista.forEach(function(nt){
       var respuestas=nt.respuestas?Object.values(nt.respuestas).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
       var respHtml=respuestas.map(function(rp){return '<div style="margin-top:6px;padding:6px 10px;background:rgba(96,165,250,.1);border-left:2px solid #60a5fa;border-radius:4px;font-size:12px;color:rgba(255,255,255,.85)"><b style="color:#93c5fd">↳ '+esc(rp.quien||'Jefatura')+':</b> '+esc(rp.texto)+'</div>';}).join('');
@@ -8649,7 +8657,7 @@ window.borrarBloquesDia=function(dia){
 };
 window.marcarBSA=function(k){var b=bloques[k];if(!b)return;sRef('bloques/'+k+'/sinAtencion').set(true).then(function(){sRef('bloques/'+k+'/nomOrig').set(b.nombre);setTimeout(function(){genPendientes(function(){});},300);});};
 window.restaurar=function(k){sRef('bloques/'+k+'/sinAtencion').remove().then(function(){sRef('bloques/'+k+'/nomOrig').remove();setTimeout(function(){genPendientes(function(){});},300);});};
-function renderTareasList(){var d=document.getElementById('tareasList');if(!d)return;var en=Object.entries(tareas);if(!en.length){d.innerHTML='<p class="empty">Sin tareas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],t=e[1];var cfg=TIPOS[t.tipo]||TIPOS['tarea'];return '<div class="iitem"><div class="iitem-info">'+cfg.e+' <strong>'+t.nombre+'</strong> — '+t.dia+' '+jornadaLabel(t.jornada)+' ('+cfg.l+')<div class="iitem-sub">'+t.texto+'</div></div><button class="del-btn" onclick="sRef(\'tareas/'+k+'\').remove()">🗑</button></div>';}).join('');}
+function renderTareasList(){var d=document.getElementById('tareasList');if(!d)return;var en=Object.entries(tareas);if(!en.length){d.innerHTML='<p class="empty">Sin tareas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],t=e[1];var cfg=cfgTipo(t.tipo);return '<div class="iitem"><div class="iitem-info">'+cfg.e+' <strong>'+t.nombre+'</strong> — '+t.dia+' '+jornadaLabel(t.jornada)+' ('+cfg.l+')<div class="iitem-sub">'+t.texto+'</div></div><button class="del-btn" onclick="sRef(\'tareas/'+k+'\').remove()">🗑</button></div>';}).join('');}
 
 // ── BULK ──
 function buildNombresCheckboxes(rowId){
@@ -9390,6 +9398,18 @@ var PLANTILLA_DEA={emoji:'🫀',nombre:'Inspección semanal del DEA',tipoRegistr
     'Revisar visualmente que el DEA no tenga golpes, suciedad, humedad o cables sueltos.',
     'Confirmar que la bolsa de accesorios esté junto al DEA y contenga: tijeras, rasuradora, mascarilla de RCP, guantes y toallitas.',
     'Mirar a través de la ventana del empaque de los parches que la fecha de vencimiento siga vigente.']};
+// Deja el rol "Inspección semanal del DEA" disponible para asignar sin pasos previos (una sola vez por sede)
+var _deaSembrando=false;
+function sembrarRolDEA(){
+  if(_deaSembrando)return;
+  var yaHay=Object.keys(rolesTecnicos||{}).some(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&/\bDEA\b/i.test(r.nombre);});
+  if(yaHay)return;
+  _deaSembrando=true;
+  sedeRef('deaPlantillaSembrada').once('value').then(function(sn){
+    if(sn.val()===true)return;
+    return sedeRef('rolesTecnicos/rol_dea').transaction(function(cur){return cur||PLANTILLA_DEA;}).then(function(){return sedeRef('deaPlantillaSembrada').set(true);});
+  }).catch(function(){}).then(function(){_deaSembrando=false;});
+}
 function sincronizarRolesSemanales(){
   Object.keys(TIPOS_SEMANALES).forEach(function(k){if(TIPOS_SEMANALES[k]==='custom')delete TIPOS_SEMANALES[k];});
   Object.keys(rolesTecnicos||{}).forEach(function(k){var r=rolesTecnicos[k];if(r&&r.frecuencia==='semanal')TIPOS_SEMANALES[k]='custom';});
@@ -18424,7 +18444,7 @@ function renderPropuestaTareas(){
     var porTipo={};propuesta.forEach(function(p){if(!porTipo[p.tipo])porTipo[p.tipo]=[];porTipo[p.tipo].push(p);});
     html+='<div style="background:#16233d;border-radius:10px;padding:14px;margin-bottom:14px">';
     Object.keys(porTipo).forEach(function(tipo){
-      var cfg=TIPOS[tipo]||{e:'📋',l:tipo};
+      var cfg=cfgTipo(tipo);
       html+='<div style="margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">'+cfg.e+' '+cfg.l+'</div>';
       porTipo[tipo].forEach(function(p){
         var idx=propuesta.indexOf(p);
