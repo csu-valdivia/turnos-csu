@@ -1365,9 +1365,11 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </div>
             <div class="frow" style="margin-bottom:4px">
               <select id="rolAddTipo" style="flex:1"><option value="valor">📊 Registro de valor + observación</option><option value="checklist">☑️ Checklist de puntos</option></select>
+              <select id="rolAddFrec" style="flex:1"><option value="diaria">📅 Diario</option><option value="semanal">🗓️ Semanal (1 vez por semana)</option></select>
             </div>
             <input type="text" id="rolAddDetalle" placeholder="Si es valor: unidad (ej: °C, %). Si es checklist: puntos separados por coma" style="width:100%;margin-bottom:4px">
             <button class="btn-add" id="rolAddBtn">+ Crear rol</button>
+            <button class="btn-add" id="rolDeaBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🫀 Cargar plantilla: Inspección semanal del DEA</button>
             <div id="rolLista" style="margin-top:8px"></div>
             <div class="saved" id="rolSaved">✓ Guardado</div>
           </div>
@@ -3929,7 +3931,7 @@ window.setSede=function(sede){
   sedeRef('regLecturaTareas').on('value',function(s){regLecturaTareas=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
-  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
+  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
   sedeRef('regCustom').on('value',function(s){regCustom=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
     anunciosCapacitacion=s.val()||{};
@@ -5132,7 +5134,7 @@ function renderMisTurnos(nombre){
     var esRol=ROLES_TECNICOS_BASE[t.tipo]||rolesTecnicos[t.tipo];
     if(!esRol||t.nombre!==nombre)return false;
     // Roles puntuales (aseo semanal, pedido semanal, pabellón por asignación puntual): solo su día. Rol diario: cualquier día.
-    if(ROLES_SEMANALES[t.tipo])return t.dia===diaHoyRol;
+    if(ROLES_SEMANALES[t.tipo]||(rolesTecnicos[t.tipo]&&rolesTecnicos[t.tipo].frecuencia==='semanal'))return t.dia===diaHoyRol;
     return true;
   });
   // Quitar duplicados por tipo
@@ -9354,6 +9356,13 @@ window.quitarRefri=function(k){sedeRef('refrigeradores/'+k).remove().then(functi
 // ── Config de roles técnicos personalizados ──
 function initConfigRoles(){
   renderRolLista();
+  var bd=document.getElementById('rolDeaBtn');
+  if(bd)bd.onclick=function(){
+    var existente=Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&/\bDEA\b/i.test(r.nombre);})[0];
+    var id=existente||('rol_dea_'+Date.now());
+    if(existente&&!confirm('Ya existe el rol "'+rolesTecnicos[existente].nombre+'". ¿Actualizarlo con el checklist semanal del DEA? Los registros anteriores se conservan.'))return;
+    sedeRef('rolesTecnicos/'+id).set(PLANTILLA_DEA).then(function(){showSaved('rolSaved');});
+  };
   var ab=document.getElementById('rolAddBtn');
   if(ab)ab.onclick=function(){
     var emoji=document.getElementById('rolAddEmoji').value.trim()||'🔧';
@@ -9362,7 +9371,7 @@ function initConfigRoles(){
     var detalle=document.getElementById('rolAddDetalle').value.trim();
     if(!nombre){alert('Escribe el nombre del rol.');return;}
     var id='rol_'+Date.now();
-    var rol={emoji:emoji,nombre:nombre,tipoRegistro:tipo};
+    var rol={emoji:emoji,nombre:nombre,tipoRegistro:tipo,frecuencia:(document.getElementById('rolAddFrec')||{}).value||'diaria'};
     if(tipo==='valor')rol.unidad=detalle||'';
     else rol.puntos=detalle?detalle.split(',').map(function(p){return p.trim();}).filter(Boolean):[];
     sedeRef('rolesTecnicos/'+id).set(rol).then(function(){
@@ -9373,6 +9382,18 @@ function initConfigRoles(){
     });
   };
 }
+// Checklist semanal de inspección del DEA (puntos cortos = clave del registro; detalles = qué revisar)
+var PLANTILLA_DEA={emoji:'🫀',nombre:'Inspección semanal del DEA',tipoRegistro:'checklist',frecuencia:'semanal',
+  puntos:['Indicador de estado','Gabinete y alarma','Integridad física','Kit de rescate','Fechas críticas'],
+  detalles:['Comprobar que la luz verde parpadee (o aparezca el símbolo "OK" / "Listo"). Si está en rojo, emite un pitido o tiene una "X", reportarlo de inmediato.',
+    'Verificar que la vitrina o caja protectora abra correctamente y que la alarma sonora (si tiene) funcione al abrirla.',
+    'Revisar visualmente que el DEA no tenga golpes, suciedad, humedad o cables sueltos.',
+    'Confirmar que la bolsa de accesorios esté junto al DEA y contenga: tijeras, rasuradora, mascarilla de RCP, guantes y toallitas.',
+    'Mirar a través de la ventana del empaque de los parches que la fecha de vencimiento siga vigente.']};
+function sincronizarRolesSemanales(){
+  Object.keys(TIPOS_SEMANALES).forEach(function(k){if(TIPOS_SEMANALES[k]==='custom')delete TIPOS_SEMANALES[k];});
+  Object.keys(rolesTecnicos||{}).forEach(function(k){var r=rolesTecnicos[k];if(r&&r.frecuencia==='semanal')TIPOS_SEMANALES[k]='custom';});
+}
 function renderRolLista(){
   var cont=document.getElementById('rolLista');
   if(!cont)return;
@@ -9380,7 +9401,7 @@ function renderRolLista(){
   if(!keys.length){cont.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.35)">Sin roles personalizados. Los predefinidos (autoclave, temperaturas, aseo) siguen disponibles.</p>';return;}
   cont.innerHTML=keys.map(function(k){
     var r=rolesTecnicos[k];
-    var det=r.tipoRegistro==='valor'?('valor'+(r.unidad?' en '+esc(r.unidad):'')):('checklist: '+(r.puntos||[]).length+' puntos');
+    var det=(r.tipoRegistro==='valor'?('valor'+(r.unidad?' en '+esc(r.unidad):'')):('checklist: '+(r.puntos||[]).length+' puntos'))+(r.frecuencia==='semanal'?' · semanal':'');
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px">'+
       '<span style="font-size:12px;color:#fff">'+esc(r.emoji)+' '+esc(r.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.35)">· '+det+'</span></span>'+
       '<button onclick="quitarRol(\''+k+'\')" style="background:rgba(239,68,68,.2);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">Quitar</button>'+
@@ -13473,7 +13494,7 @@ window.abrirRegCustom=function(rolId){
     var puntos=rol.puntos||[];
     cuerpo=puntos.map(function(p,i){
       return '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'+
-        '<span style="font-size:13px;color:#fff;flex:1">'+esc(p)+'</span>'+
+        '<span style="font-size:13px;color:#fff;flex:1">'+esc(p)+((rol.detalles&&rol.detalles[i])?'<span style="display:block;font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;line-height:1.35">'+esc(rol.detalles[i])+'</span>':'')+'</span>'+
         '<div class="custom-toggle" data-punto="'+esc(p)+'">'+
           '<button type="button" onclick="setCustomChk(this,1)" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;margin-right:4px">✓</button>'+
           '<button type="button" onclick="setCustomChk(this,0)" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#fca5a5;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer">✗</button>'+
@@ -13513,12 +13534,14 @@ window.guardarRegCustom=function(rolId){
     var checks={};var falta=false;
     document.querySelectorAll('#regCustomOv .custom-toggle').forEach(function(c){
       if(c.dataset.val===undefined)falta=true;
-      else checks[c.dataset.punto]=Number(c.dataset.val);
+      else checks[c.dataset.punto.replace(/[.#$\/\[\]]/g,'-')]=Number(c.dataset.val);
     });
     if(falta){alert('Marca todos los puntos del checklist.');return;}
     reg.checks=checks;
+    reg.alerta=Object.keys(checks).some(function(k){return checks[k]===0;});
   }
   sedeRef('regCustom/'+reg.ts).set(reg).then(function(){
+    if(reg.alerta)alert('⚠️ Marcaste un punto con problema en "'+rol.nombre+'". Repórtalo de inmediato a la jefatura.');
     showSaved('regCustomSaved');
     setTimeout(function(){var o=document.getElementById('regCustomOv');if(o)o.remove();},1000);
   });
@@ -15839,7 +15862,14 @@ function verificarCumplimiento(tipo,fecha){
     return {cumplido:false,detalle:'Sin registro (pre y post)'};
   }
   if(rolesTecnicos&&rolesTecnicos[tipo]){
-    var hay6=Object.values(regCustom||{}).some(function(r){return r.rolId===tipo&&r.fecha===fecha;});
+    var hay6;
+    if(rolesTecnicos[tipo].frecuencia==='semanal'){
+      var fd=new Date(fecha+'T12:00:00');var lun=new Date(fd);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
+      var dom=new Date(lun);dom.setDate(dom.getDate()+6);
+      function _f(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+      var l0=_f(lun),d0=_f(dom);
+      hay6=Object.values(regCustom||{}).some(function(r){return r.rolId===tipo&&r.fecha>=l0&&r.fecha<=d0;});
+    } else hay6=Object.values(regCustom||{}).some(function(r){return r.rolId===tipo&&r.fecha===fecha;});
     return {cumplido:hay6,detalle:hay6?'Registrado':'Sin registro'};
   }
   return {cumplido:false,detalle:'—'};
