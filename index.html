@@ -1595,7 +1595,7 @@ var PRODUCCION_TIPOS={
   // sinCantidad: esta persona GUARDA material, no lo cuenta — no hay que inventar una cantidad
   // ni un horario. Solo confirma que lo hizo hoy, con una novedad opcional si la hubo.
   almacen_ester:{emoji:'🗄️',label:'Almacenamiento de material',unidad:'paquetes',color:'#22d3ee',sinCantidad:true},
-  clinica_privada:{emoji:'🏷️',label:'Clínica privada',unidad:'pacientes',color:'#c084fc'},
+  clinica_privada:{emoji:'🏷️',label:'Clínica privada',unidad:'pacientes',color:'#c084fc',sinCantidad:true,checkGeneral:true},
   apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',unidad:'pacientes',color:'#ec4899',max:4}
 };
 // Tiempos reales calibrados por proceso (horas). modo: 'lote' = fijo por registro; 'unidad' = tiempo × cantidad.
@@ -14456,7 +14456,12 @@ window.abrirRegProduccion=function(tipo){
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+cfg.emoji+' '+cfg.label+'</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+(cfg.sinCantidad?('Registro diario · '+hoy+(yaRegistroHoy?' · ya registraste esto hoy':'')):('Cantidad diaria · '+hoy+(totalHoy?' · ya registrado hoy: '+totalHoy+' '+cfg.unidad:'')))+'</div>'+
     bannerBorrador(tipo,camposProd)+
-    (cfg.sinCantidad?
+    (cfg.checkGeneral?
+      '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px">Control general de hoy. Marca cada punto si está correcto; si algo falta, déjalo sin marcar y explícalo en la observación.</div>'+
+      '<label style="display:block;font-size:13px;color:#fff;margin-bottom:8px;cursor:pointer"><input type="checkbox" id="ckInstr" style="vertical-align:middle"> Cuento con <b>instrumental suficiente</b></label>'+
+      '<label style="display:block;font-size:13px;color:#fff;margin-bottom:8px;cursor:pointer"><input type="checkbox" id="ckInsumos" style="vertical-align:middle"> Cuento con <b>insumos suficientes</b></label>'+
+      '<label style="display:block;font-size:13px;color:#fff;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="ckContam" style="vertical-align:middle"> <b>No tengo material contaminado</b> pendiente de llevar a Esterilización</label>'
+    :cfg.sinCantidad?
       '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px">Este registro no pide contar material ni horario — solo confirma que lo hiciste hoy. Anota una novedad si la hubo (opcional).</div>'
       :
       '<label style="font-size:12px;color:rgba(255,255,255,.7)">Cantidad de '+cfg.unidad+'</label>'+
@@ -14547,6 +14552,12 @@ window.guardarRegProduccion=function(tipo){
   var cant=null;
   if(cfgT&&cfgT.sinCantidad){
     // No se pide cantidad ni horario: solo confirma que se hizo hoy, con novedad opcional.
+    if(cfgT.checkGeneral){
+      var cI=document.getElementById('ckInstr').checked,cS=document.getElementById('ckInsumos').checked,cC=document.getElementById('ckContam').checked;
+      var obsCk=(document.getElementById('prodObs').value||'').trim();
+      if((!cI||!cS||!cC)&&!obsCk){alert('Dejaste algún punto sin marcar: explica en la observación qué falta (instrumental, insumos o material contaminado por llevar).');return;}
+      window._ckClin={instrumental:cI,insumos:cS,sinContaminado:cC};
+    }
   } else {
     if(minutosEntre&&hIni&&hTer&&minutosEntre(hIni,hTer)<=0){alert('La hora de término debe ser posterior al inicio.');return;}
     cant=document.getElementById('prodCantidad').value;
@@ -14560,6 +14571,7 @@ window.guardarRegProduccion=function(tipo){
   var reg={tipo:tipo,obs:document.getElementById('prodObs').value.trim(),
     quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
   if(cant!==null)reg.cantidad=Number(cant);
+  if(cfgT&&cfgT.checkGeneral&&window._ckClin){reg.checks=window._ckClin;reg.alerta=!(reg.checks.instrumental&&reg.checks.insumos&&reg.checks.sinContaminado);window._ckClin=null;}
   if(hIni)reg.horaInicio=hIni;
   if(hTer)reg.horaTermino=hTer;
   if(duracion&&duracion>0)reg.duracionMin=duracion;
@@ -14585,7 +14597,7 @@ window.verRegistrosProduccion=function(tipo){
     var horario=(r.horaInicio&&r.horaTermino)?' ('+r.horaInicio+'–'+r.horaTermino+')':'';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05)">'+
       '<div>'+
-        '<div style="font-size:13px;color:#fff;font-weight:600">'+r.fecha+(cfg.sinCantidad?(horario||' · ✓ registrado'):(' · '+(Number(r.cantidad)||0)+' '+cfg.unidad))+'</div>'+
+        '<div style="font-size:13px;color:#fff;font-weight:600">'+r.fecha+(cfg.sinCantidad?((horario||' · ✓ registrado')+(r.alerta?' · <span style="color:#fbbf24">⚠ con faltantes: '+[r.checks&&!r.checks.instrumental?'instrumental':'',r.checks&&!r.checks.insumos?'insumos':'',r.checks&&!r.checks.sinContaminado?'contaminado pendiente':''].filter(Boolean).join(', ')+'</span>':'')):(' · '+(Number(r.cantidad)||0)+' '+cfg.unidad))+'</div>'+
         '<div style="font-size:11px;color:rgba(255,255,255,.5)">👤 '+esc(r.quien||'—')+' · '+(r.hora||'')+(cfg.sinCantidad?'':horario)+dur+'</div>'+
         (r.obs?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">📝 '+esc(r.obs)+'</div>':'')+
       '</div>'+
@@ -15145,12 +15157,13 @@ window.guardarRegAseo=function(){
 
 
 // ── CORREO: ofrece Outlook web, Gmail web, app de correo y copiar (mailto solo no siempre abre nada) ──
+var CORREO_REMITENTE='patricio.baeza@csuss.cl'; // cuenta desde la que se espera enviar (se pasa como sugerencia al webmail)
 window.abrirCorreo=function(para,asunto,cuerpo,alUsar){
   var to=String(para||'').replace(/\s/g,'');
   var q=function(x){return encodeURIComponent(x);};
   var urls={
-    outlook:'https://outlook.office.com/mail/deeplink/compose?to='+q(to)+'&subject='+q(asunto)+'&body='+q(cuerpo),
-    gmail:'https://mail.google.com/mail/?view=cm&fs=1&to='+q(to)+'&su='+q(asunto)+'&body='+q(cuerpo),
+    outlook:'https://outlook.office.com/mail/deeplink/compose?to='+q(to)+'&subject='+q(asunto)+'&body='+q(cuerpo)+'&login_hint='+q(CORREO_REMITENTE),
+    gmail:'https://mail.google.com/mail/?view=cm&fs=1&authuser='+q(CORREO_REMITENTE)+'&to='+q(to)+'&su='+q(asunto)+'&body='+q(cuerpo),
     app:'mailto:'+to+'?subject='+q(asunto)+'&body='+q(cuerpo)
   };
   window._corrUrls=urls;window._corrTxt='Para: '+to+'\nAsunto: '+asunto+'\n\n'+cuerpo;window._corrCb=alUsar||null;
@@ -15161,7 +15174,7 @@ window.abrirCorreo=function(para,asunto,cuerpo,alUsar){
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:400px;width:100%;margin-top:30px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff">✉️ Enviar correo</div>'+
     '<div style="font-size:12px;color:rgba(255,255,255,.55);margin:4px 0 6px;overflow-wrap:anywhere">Para: '+esc(to)+'</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,.4)">Elige con qué abrirlo; el mensaje va escrito y tú presionas enviar.</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4)">Elige con qué abrirlo; el mensaje va escrito y tú presionas enviar. Si el webmail abre con otra cuenta, revisa el "De:" o usa Copiar mensaje y pégalo en tu Outlook institucional.</div>'+
     '<a href="'+urls.outlook.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener" onclick="correoUsado()" style="'+b+'background:#0a64c8;color:#fff">Outlook web (correo institucional)</a>'+
     '<a href="'+urls.gmail.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener" onclick="correoUsado()" style="'+b+'background:#ea4335;color:#fff">Gmail web</a>'+
     '<a href="'+urls.app.replace(/&/g,'&amp;')+'" onclick="correoUsado()" style="'+b+'background:rgba(255,255,255,.1);color:#fff">App de correo del equipo</a>'+
