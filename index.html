@@ -985,6 +985,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <select id="claveN3"><option value="">Persona 3</option></select>
               <select id="claveR3" style="max-width:75px"><option value="">Rol</option><option>Rol A</option><option>Rol B</option><option>Rol C</option></select>
             </div>
+            <select id="claveJornada" style="width:100%;margin:6px 0"><option value="dia">☀️ Todo el día</option><option value="am">🌅 Solo jornada AM</option><option value="pm">🌇 Solo jornada PM</option></select>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0" id="claveDias">
                   <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Lunes" style="accent-color:var(--accent2)"> Lun</label>
                   <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" value="Martes" style="accent-color:var(--accent2)"> Mar</label>
@@ -1072,7 +1073,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <button onclick="selTodosLV('tareaDias')" style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-family:inherit;cursor:pointer">L-V</button>
             </div>
             <div class="frow">
-              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pabellon_asig">🏥 Pabellón (asignado pre/post)</option><option value="pedido">🟠 Pedido semanal de su servicio (corte 13:00)</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Recepción de contaminado</option><option value="inst_lavado">🧼 Lavado de instrumental</option><option value="inst_empaque">📦 Empaque de instrumental</option><option value="inst_secado">💨 Secado de instrumental</option><option value="entrega_esteril">📤 Entrega de material estéril</option><option value="almacen_ester">🗄️ Almacenamiento de material</option><option value="clinica_privada">🏷️ Clínica privada</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
+              <select id="tTip"><option value="">Tipo</option><option value="pabellon">🔵 Pabellón</option><option value="pabellon_asig">🏥 Pabellón (asignado pre/post)</option><option value="pedido">🟠 Pedido semanal de su servicio (corte 13:00)</option><option value="botiquin_pab">💊 Botiquín de pabellón (semanal)</option><option value="control_bio">🧬 Control biológico (semanal)</option><option value="bolso_azul">🔑 Bolso clave azul (semanal)</option><option value="reas">♻️ REAS</option><option value="conductividad">💧 Conductividad</option><option value="autoclave">🔥 Autoclave</option><option value="temp_ester">🌡️ Temp. Esterilización</option><option value="temp_pabellon">🔵 Temp. Pabellón</option><option value="temp_box">🚪 Temp. Box</option><option value="temp_refri">🧊 Temp. Refrigeradores</option><option value="radiografias">🩻 Radiografías</option><option value="dispensario_2">💊 Dispensario 2° piso</option><option value="dispensario_3">💊 Dispensario 3° piso</option><option value="inst_recibido">📥 Recepción de contaminado</option><option value="inst_lavado">🧼 Lavado de instrumental</option><option value="inst_empaque">📦 Empaque de instrumental</option><option value="inst_secado">💨 Secado de instrumental</option><option value="entrega_esteril">📤 Entrega de material estéril</option><option value="almacen_ester">🗄️ Almacenamiento de material</option><option value="clinica_privada">🏷️ Clínica privada</option><option value="apoyo_clinico">🩺 Apoyo clínico</option><option value="aseo">🧹 Aseo semanal</option><option value="consentimiento">🟣 Consentimientos</option><option value="tarea">🟢 Tarea especial</option></select>
               <select id="tJornada" style="width:auto"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>
             </div>
             <input type="text" id="tSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige el servicio de la lista o escribe otro)" style="display:none">
@@ -1376,6 +1377,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <input type="text" id="rolAddDetalle" placeholder="Si es valor: unidad (ej: °C, %). Si es checklist: puntos separados por coma" style="width:100%;margin-bottom:4px">
             <button class="btn-add" id="rolAddBtn">+ Crear rol</button>
             <button class="btn-add" id="rolDeaBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🫀 Cargar plantilla: Inspección semanal del DEA</button>
+            <button class="btn-add" onclick="abrirConfigBolso()" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa);margin-top:6px">🔑 Bolso clave azul: insumos, stock mínimo y equipos</button>
+            <button class="btn-add" onclick="abrirConfigBotiquin()" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">💊 Botiquín de pabellón: medicamentos y stock mín/óptimo</button>
+            <button class="btn-add" onclick="abrirFaltantesBotiquin()" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">🛒 Botiquín: faltantes por comprar</button>
             <div id="rolLista" style="margin-top:8px"></div>
             <div class="saved" id="rolSaved">✓ Guardado</div>
           </div>
@@ -1551,7 +1555,7 @@ function jornadaLabel(j){
   if(j==='pm')return '<span style="font-size:10px;color:#f472b6;background:rgba(244,114,182,.12);padding:1px 6px;border-radius:4px">🌇 PM</span>';
   return '<span style="font-size:10px;color:#93c5fd;background:rgba(147,197,253,.12);padding:1px 6px;border-radius:4px">☀️ Todo el día</span>';
 }
-var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pabellon_asig:{e:'🏥',l:'Pabellón (asignado pre/post)'},pedido:{e:'🟠',l:'Pedido semanal de su servicio'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Recepción de contaminado'},inst_lavado:{e:'🧼',l:'Lavado de instrumental'},inst_empaque:{e:'📦',l:'Empaque de instrumental'},inst_secado:{e:'💨',l:'Secado de instrumental'},entrega_esteril:{e:'📤',l:'Entrega de material estéril'},almacen_ester:{e:'🗄️',l:'Almacenamiento de material'},clinica_privada:{e:'🏷️',l:'Clínica privada'},apoyo_clinico:{e:'🩺',l:'Apoyo clínico'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
+var TIPOS={pabellon:{e:'🔵',l:'Pabellón'},pabellon_asig:{e:'🏥',l:'Pabellón (asignado pre/post)'},pedido:{e:'🟠',l:'Pedido semanal de su servicio'},botiquin_pab:{e:'💊',l:'Botiquín de pabellón (semanal)'},control_bio:{e:'🧬',l:'Control biológico (semanal)'},bolso_azul:{e:'🔑',l:'Bolso clave azul (semanal)'},reas:{e:'♻️',l:'REAS'},conductividad:{e:'💧',l:'Conductividad'},autoclave:{e:'🔥',l:'Autoclave'},temp_ester:{e:'🌡️',l:'Temp. Esterilización'},temp_pabellon:{e:'🔵',l:'Temp. Pabellón'},temp_box:{e:'🚪',l:'Temp. Box'},temp_refri:{e:'🧊',l:'Temp. Refrigeradores'},radiografias:{e:'🩻',l:'Radiografías'},dispensario_2:{e:'💊',l:'Dispensario 2° piso'},dispensario_3:{e:'💊',l:'Dispensario 3° piso'},inst_recibido:{e:'📥',l:'Recepción de contaminado'},inst_lavado:{e:'🧼',l:'Lavado de instrumental'},inst_empaque:{e:'📦',l:'Empaque de instrumental'},inst_secado:{e:'💨',l:'Secado de instrumental'},entrega_esteril:{e:'📤',l:'Entrega de material estéril'},almacen_ester:{e:'🗄️',l:'Almacenamiento de material'},clinica_privada:{e:'🏷️',l:'Clínica privada'},apoyo_clinico:{e:'🩺',l:'Apoyo clínico'},aseo:{e:'🧹',l:'Aseo semanal'},consentimiento:{e:'🟣',l:'Consentimientos'},tarea:{e:'🟢',l:'Tarea especial'}};
 // Config visual de un tipo de tarea: predefinido, rol técnico personalizado (ej. DEA) o 'tarea especial'
 function cfgTipo(k){
   if(TIPOS[k])return TIPOS[k];
@@ -1578,6 +1582,9 @@ var ROLES_TECNICOS_BASE={
   almacen_ester:{emoji:'🗄️',label:'Almacenamiento de material',desc:'Material que sale del autoclave y se guarda en gabetas de estudiantes (diario · T1)',fn:'abrirRegProduccion'},
   pabellon_asig:{emoji:'🏥',label:'Pabellón (asignado)',desc:'Pre-cx: espacio y material ok · Post-cx: recibe, lava y seca el instrumental (según asignación puntual)',fn:'abrirRegPabellonAsig'},
   pedido:{emoji:'🟠',label:'Pedido semanal de su servicio',desc:'1 vez a la semana, debe registrarse antes de las 13:00 AM',fn:'abrirRegPedido'},
+  botiquin_pab:{emoji:'💊',label:'Botiquín de pabellón',desc:'Semanal: stock actual de cada medicamento, receta y entrega a Operaciones',fn:'abrirRegBotiquin'},
+  bolso_azul:{emoji:'🔑',label:'Bolso clave azul',desc:'Semanal: stock de insumos, equipos y recambio de pilas',fn:'abrirRegBolso'},
+  control_bio:{emoji:'🧬',label:'Control biológico',desc:'Semanal: resultado del indicador biológico (negativo / positivo)',fn:'abrirRegControlBio'},
   clinica_privada:{emoji:'🏷️',label:'Clínica privada',desc:'Tarea general de apoyo a clínica privada (diario, puede tocarle a cualquiera)',fn:'abrirRegProduccion'},
   apoyo_clinico:{emoji:'🩺',label:'Apoyo clínico',desc:'Pacientes contactados y agendados (meta 4 diarios)',fn:'abrirRegApoyoClinico'},
   aseo:{emoji:'🧹',label:'Aseo semanal',desc:'Aseo esterilización y pabellón (semanal)',fn:'abrirRegAseo'}
@@ -1642,7 +1649,10 @@ var TIEMPOS_TRABAJO={
   almacen_ester:{h:0.033,modo:'unidad',vecesDia:15}, // 2min/paquete × ~15 que guarda
   pabellon_asig:{h:0.5,modo:'lote',vecesDia:1},       // pre + post combinados
   pedido:{h:0.25,modo:'lote',vecesDia:1},             // 1 vez/semana
-  clinica_privada:{h:0.083,modo:'unidad',vecesDia:4}
+  clinica_privada:{h:0.083,modo:'unidad',vecesDia:4},
+  botiquin_pab:{h:0.5,modo:'lote',vecesDia:1},        // semanal: contar stock + receta
+  control_bio:{h:0.25,modo:'lote',vecesDia:1},        // semanal
+  bolso_azul:{h:0.4,modo:'lote',vecesDia:1}           // semanal
 };
 var COSTO_TERCERIZAR_CARGA=200000; // $ por carga de autoclave (150 lts) tercerizada
 var factorIndirecto=0.40; // se recalcula desde horasIndirectasDia; 40% es el valor inicial de referencia
@@ -2299,6 +2309,7 @@ function renderPanelJefaOperaciones(){
       '<button onclick="tabJefaOp(\'turnos\')" id="tabJO_turnos" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🗓️ Turnos</button>'+
     '</div>'+
     '<button onclick="abrirModuloGerencia()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">👤 Mi perfil personal (Gerencia) — Material, Preguntas y mi Logro</button>'+
+    '<button onclick="abrirFaltantesBotiquin()" style="width:100%;margin-bottom:10px;background:linear-gradient(135deg,#059669,#34d399);color:#06281d;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💊 Botiquín de pabellón: faltantes por comprar</button>'+
     '<button onclick="abrirPremiosOperaciones()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#d97706,#fbbf24);color:#0b1220;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🎁 Premios del equipo administrativo<span id="premioPendBadge"></span></button>'+
     '<div id="jefaOpContenido"></div></div>';
   tabJefaOp('produccion');
@@ -3943,13 +3954,18 @@ window.setSede=function(sede){
   sedeRef('regTemperatura').on('value',function(s){regTemperatura=s.val()||{};});
   sedeRef('regAseo').on('value',function(s){regAseo=s.val()||{};});
   sedeRef('regPedido').on('value',function(s){regPedido=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
+  sedeRef('botiquinPabellon').on('value',function(s){botiquinPab=s.val()||{};});
+  sedeRef('regBotiquin').on('value',function(s){regBotiquin=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
+  sedeRef('bolsoAzulCfg').on('value',function(s){bolsoCfg=s.val()||{};});
+  sedeRef('regBolso').on('value',function(s){regBolso=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
+  sedeRef('regControlBio').on('value',function(s){regControlBio=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('regPabellonAsig').on('value',function(s){regPabellonAsig=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('regLecturaTareas').on('value',function(s){regLecturaTareas=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('premiosGanadores').on('value',function(s){premiosGanadores=s.val()||{};if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none')renderMisTurnos(curNombre);if(document.getElementById('premioOvLista'))pintarPremiosLista();actualizarBadgePremios();});
   sedeRef('telefonosEquipo').on('value',function(s){telefonosEquipo=s.val()||{};});
   sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
-  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();sembrarRolDEA();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
+  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();sembrarRolDEA();limpiarRolBolsoViejo();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
   sedeRef('regCustom').on('value',function(s){regCustom=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
     anunciosCapacitacion=s.val()||{};
@@ -4802,7 +4818,7 @@ function getChipPfx(nombre,area,dia){
   var isEnc=Object.values(encargados).some(function(e){return e.nombre===nombre&&e.dia===dia;});
   var claveE=getClaveParaDia(dia).find(function(e){return e&&e.n===nombre;});
   if(isEnc)return '⭐ ';
-  if(claveE)return '🔑 '+(claveE.r?claveE.r+' ':'');
+  if(claveE)return '🔑 '+(claveE.r?claveE.r+' ':'')+(claveE.j?claveJLabel(claveE).trim()+' ':'');
   return '';
 }
 
@@ -5150,7 +5166,7 @@ function renderMisTurnos(nombre){
   // Roles técnicos asignados a esta persona → botón de su registro en Mis Turnos
   // Los roles DIARIOS aparecen cualquier día que tenga el rol; el aseo (semanal) solo su día.
   var diaHoyRol=diaDeDate(hoyStr());
-  var ROLES_SEMANALES={aseo:true,pedido:true,pabellon_asig:true};
+  var ROLES_SEMANALES={aseo:true,pedido:true,pabellon_asig:true,botiquin_pab:true,control_bio:true,bolso_azul:true};
   var misRoles=Object.values(tareas||{}).filter(function(t){
     var esRol=ROLES_TECNICOS_BASE[t.tipo]||rolesTecnicos[t.tipo];
     if(!esRol||t.nombre!==nombre)return false;
@@ -5208,8 +5224,9 @@ function renderMisTurnos(nombre){
 
   DIAS.forEach(function(dia){
     // Clave azul badge per day
-    var claveD=getClaveParaDia(dia).find(function(e){return e&&e.n===nombre;});
-    if(claveD)html+='<div class="badge-row" style="background:rgba(37,99,235,.15);border:1px solid rgba(74,144,217,.3);color:#93c5fd">🔑 Equipo clave azul · '+dia+(claveD.r?' · '+claveD.r:'')+'</div>';
+    getClaveParaDia(dia).filter(function(e){return e&&e.n===nombre;}).forEach(function(claveD){
+      html+='<div class="badge-row" style="background:rgba(37,99,235,.15);border:1px solid rgba(74,144,217,.3);color:#93c5fd">🔑 Equipo clave azul · '+dia+(claveD.j==='am'?' · jornada AM':claveD.j==='pm'?' · jornada PM':'')+(claveD.r?' · '+claveD.r:'')+'</div>';
+    });
     var ps=Object.values(bloques).filter(function(b){return b.dia===dia&&b.nombre===nombre&&!b.sinAtencion;}).sort(function(a,b){
       var hA=a.horario?t2m(a.horario.split('–')[0].trim()):0;
       var hB=b.horario?t2m(b.horario.split('–')[0].trim()):0;
@@ -6073,6 +6090,7 @@ document.getElementById('cobDst').addEventListener('change',function(){var isPab
 function renderCobList(){var d=document.getElementById('cobList');if(!d)return;var en=Object.entries(coberturas);if(!en.length){d.innerHTML='<p class="empty">Sin coberturas.</p>';return;}d.innerHTML=en.map(function(e){var k=e[0],cv=e[1];return '<div class="iitem"><div class="iitem-info"><strong>'+cv.persona+'</strong> — '+cv.dia+'<div class="iitem-sub"><span style="color:#fca5a5">'+cv.origen+'</span> → <span style="color:#7ec8f7">'+cv.destino+'</span>'+(cv.horario?' · '+cv.horario:'')+'</div></div><button class="del-btn" onclick="sRef(\'coberturas/'+k+'\').remove()">🗑</button></div>';}).join('');}
 
 // ── CLAVE ──
+function claveJLabel(e){return e&&e.j==='am'?' (AM)':e&&e.j==='pm'?' (PM)':'';}
 function getClaveParaDia(dia){
   // New format: equipoClave[dia] = [{n,r}...]
   // Old format: equipoClave is array
@@ -6089,7 +6107,7 @@ function renderClaveActual(){
   d.innerHTML=dias.map(function(dia){
     var equipo=getClaveParaDia(dia);
     return '<div style="margin-bottom:6px"><span style="font-size:10px;color:rgba(255,255,255,.3)">'+dia+'</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px">'+
-      equipo.map(function(e){return '<span style="background:rgba(37,99,235,.2);color:#93c5fd;border:1.5px solid rgba(74,144,217,.4);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">🔑 '+e.n+(e.r?' · '+e.r:'')+'</span>';}).join('')+
+      equipo.map(function(e){return '<span style="background:rgba(37,99,235,.2);color:#93c5fd;border:1.5px solid rgba(74,144,217,.4);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">🔑 '+e.n+(e.r?' · '+e.r:'')+claveJLabel(e)+'</span>';}).join('')+
       '<button onclick="sRef(\'equipoClave/'+dia+'\').remove()" style="font-size:10px;color:#fca5a5;background:none;border:none;cursor:pointer;font-family:inherit">✕</button>'+
     '</div></div>';
   }).join('');
@@ -9697,6 +9715,331 @@ var PLANTILLA_DEA={emoji:'🫀',nombre:'Inspección semanal del DEA',tipoRegistr
     'Revisar visualmente que el DEA no tenga golpes, suciedad, humedad o cables sueltos.',
     'Confirmar que la bolsa de accesorios esté junto al DEA y contenga: tijeras, rasuradora, mascarilla de RCP, guantes y toallitas.',
     'Mirar a través de la ventana del empaque de los parches que la fecha de vencimiento siga vigente.']};
+
+// ══════════ BOTIQUÍN DE PABELLÓN (stock mín/óptimo, receta y entrega a Operaciones) + CONTROL BIOLÓGICO ══════════
+var botiquinPab={},regBotiquin={},regControlBio={},bolsoCfg={},regBolso={};
+function _fISO(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function rangoSemanaDe(fecha){
+  var d=new Date(fecha+'T12:00:00');while(d.getDay()!==1)d.setDate(d.getDate()-1);
+  var ini=_fISO(d);d.setDate(d.getDate()+6);return {ini:ini,fin:_fISO(d)};
+}
+var _ovBase='position:fixed;inset:0;background:rgba(8,15,30,.96);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;';
+var _inpB='font-size:13px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;font-family:inherit;box-sizing:border-box;';
+// ---- Menú de la jefatura: medicamentos, stock mínimo y óptimo ----
+window.abrirConfigBotiquin=function(){
+  var ov=document.getElementById('cfgBotiqOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='cfgBotiqOv';ov.style.cssText=_ovBase+'z-index:9400';
+  document.body.appendChild(ov);
+  sedeRef('botiquinPabellon').once('value').then(function(sn){
+    var v=sn.val()||{};
+    window._botiq=Object.keys(v).map(function(k){var m=v[k]||{};return {id:k,nombre:m.nombre||'',unidad:m.unidad||'',min:m.min,opt:m.opt};});
+    if(!window._botiq.length)window._botiq.push({id:'',nombre:'',unidad:'',min:'',opt:''});
+    pintarConfigBotiquin();
+  });
+};
+function pintarConfigBotiquin(){
+  var ov=document.getElementById('cfgBotiqOv');if(!ov)return;
+  var filas=window._botiq.map(function(m,i){
+    return '<div style="display:flex;gap:5px;margin-bottom:6px;align-items:center">'+
+      '<input type="text" value="'+esc(m.nombre)+'" placeholder="Medicamento" oninput="_botiq[\''+i+'\'].nombre=this.value" style="'+_inpB+'flex:1;min-width:0">'+
+      '<input type="text" value="'+esc(m.unidad)+'" placeholder="Unid." oninput="_botiq[\''+i+'\'].unidad=this.value" style="'+_inpB+'width:56px">'+
+      '<input type="number" min="0" value="'+(m.min===undefined||m.min===null?'':m.min)+'" placeholder="Mín" oninput="_botiq[\''+i+'\'].min=this.value" style="'+_inpB+'width:58px">'+
+      '<input type="number" min="0" value="'+(m.opt===undefined||m.opt===null?'':m.opt)+'" placeholder="Ópt" oninput="_botiq[\''+i+'\'].opt=this.value" style="'+_inpB+'width:58px">'+
+      '<button onclick="quitarFilaBotiq('+i+')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:7px 9px;cursor:pointer">✕</button></div>';}).join('');
+  ov.innerHTML='<div style="max-width:560px;width:100%;background:#16233d;border-radius:14px;padding:18px;margin-top:10px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:16px;font-weight:800;color:#6ee7b7">💊 Botiquín de pabellón</span><button onclick="document.getElementById(\'cfgBotiqOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button></div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Define cada medicamento con su stock <b>mínimo</b> (bajo esto es urgente) y <b>óptimo</b> (lo ideal). Al registrar, la app calcula sola: <b>a pedir = óptimo − stock actual</b>.</div>'+
+    '<div style="display:flex;gap:5px;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px"><span style="flex:1">Medicamento</span><span style="width:56px">Unidad</span><span style="width:58px">Mínimo</span><span style="width:58px">Óptimo</span><span style="width:34px"></span></div>'+
+    filas+
+    '<button onclick="agregarFilaBotiq()" style="width:100%;background:rgba(255,255,255,.08);color:#fff;border:1px dashed rgba(255,255,255,.25);border-radius:8px;padding:9px;font-family:inherit;cursor:pointer;margin-bottom:10px">+ Agregar medicamento</button>'+
+    '<button class="btn-add" onclick="guardarConfigBotiq()">💾 Guardar lista</button><div class="saved" id="cfgBotiqSaved">✓ Guardado</div></div>';
+}
+window.agregarFilaBotiq=function(){window._botiq.push({id:'',nombre:'',unidad:'',min:'',opt:''});pintarConfigBotiquin();};
+window.quitarFilaBotiq=function(i){if(!confirm('¿Quitar este medicamento de la lista?'))return;window._botiq.splice(i,1);if(!window._botiq.length)window._botiq.push({id:'',nombre:'',unidad:'',min:'',opt:''});pintarConfigBotiquin();};
+window.guardarConfigBotiq=function(){
+  var out={},err='';
+  window._botiq.forEach(function(m,i){
+    var n=(m.nombre||'').trim();if(!n&&m.min===''&&m.opt==='')return;
+    var mi=Number(m.min),op=Number(m.opt);
+    if(!n)err='Hay una fila sin nombre.';
+    else if(m.min===''||m.opt===''||isNaN(mi)||isNaN(op))err='"'+n+'": completa mínimo y óptimo.';
+    else if(op<mi)err='"'+n+'": el óptimo no puede ser menor que el mínimo.';
+    var id=m.id||('m'+Date.now()+'_'+i);
+    out[id]={nombre:n,unidad:(m.unidad||'').trim(),min:mi,opt:op};
+  });
+  if(err){alert(err);return;}
+  sedeRef('botiquinPabellon').set(Object.keys(out).length?out:null).then(function(){showSaved('cfgBotiqSaved');});
+};
+// ---- Registro del colaborador ----
+window.abrirRegBotiquin=function(){
+  var ov=document.getElementById('regBotiqOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regBotiqOv';ov.style.cssText=_ovBase+'z-index:9200';
+  var ids=Object.keys(botiquinPab||{}).filter(function(k){return botiquinPab[k]&&botiquinPab[k].nombre;});
+  window._bqIds=ids;
+  if(!ids.length){
+    ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px"><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">💊 Botiquín de pabellón</div><div style="font-size:13px;color:#fbbf24;margin-bottom:12px">La jefatura aún no ha cargado la lista de medicamentos con su stock mínimo y óptimo.</div><button onclick="document.getElementById(\'regBotiqOv\').remove()" style="width:100%;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button></div>';
+    document.body.appendChild(ov);return;
+  }
+  var filas=ids.map(function(k,i){var m=botiquinPab[k];
+    return '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:9px 10px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="font-size:13px;color:#fff;font-weight:600">'+esc(m.nombre)+'<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400">mín '+m.min+' · óptimo '+m.opt+(m.unidad?' '+esc(m.unidad):'')+'</div></div>'+
+      '<input type="number" min="0" id="bqAct'+i+'" placeholder="Stock" oninput="bqCalc()" style="'+_inpB+'width:80px;text-align:center"></div><div id="bqRes'+i+'" style="font-size:11px;margin-top:4px;min-height:14px"></div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:5px"><label style="font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap">📅 Próximo a vencer</label><input type="date" id="bqVence'+i+'" style="'+_inpB+'flex:1;padding:6px"></div></div>';}).join('');
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:440px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">💊 Botiquín de pabellón</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">Revisión semanal · '+hoyStr()+'. Cuenta lo que hay hoy de cada medicamento; la app calcula cuánto pedir.</div>'+filas+
+    '<div id="bqRepo" style="display:none;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:10px;margin:10px 0">'+
+      '<div style="font-size:12px;font-weight:700;color:#fcd34d;margin-bottom:6px">Reposición: hay faltantes</div>'+
+      '<label style="font-size:12px;color:rgba(255,255,255,.7)">Odontólogo/a con quien solicitaste la receta</label>'+
+      '<input type="text" id="bqOdonto" placeholder="Nombre del odontólogo/a" style="'+_inpB+'width:100%;margin-bottom:8px">'+
+      '<label style="font-size:12px;color:rgba(255,255,255,.7)">¿Entregaste la receta a Operaciones?</label>'+
+      '<select id="bqEntrega" style="'+_inpB+'width:100%"><option value="">— Elegir —</option><option value="si">Sí, ya la entregué</option><option value="no">No, aún no</option></select>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px">Sin la receta entregada, Operaciones no puede comprar los faltantes.</div></div>'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
+    '<textarea id="bqObs" rows="2" style="'+_inpB+'width:100%;margin-bottom:10px"></textarea>'+
+    '<button class="btn-add" onclick="guardarRegBotiquin()" style="background:linear-gradient(135deg,#059669,#34d399)">💾 Guardar revisión</button>'+
+    '<button onclick="document.getElementById(\'regBotiqOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="regBotiqSaved">✓ Registrado</div></div>';
+  document.body.appendChild(ov);
+};
+function bqPedir(m,act){return Math.max(0,m.opt-act);}
+window.bqCalc=function(){
+  var hay=false;
+  (window._bqIds||[]).forEach(function(k,i){
+    var m=botiquinPab[k],v=document.getElementById('bqAct'+i).value,r=document.getElementById('bqRes'+i);
+    if(v===''){r.innerHTML='';return;}
+    var a=Number(v),ped=bqPedir(m,a);
+    if(ped>0)hay=true;
+    r.innerHTML=ped>0?'<span style="color:'+(a<=m.min?'#fca5a5':'#fcd34d')+'">'+(a<=m.min?'⚠ Bajo el mínimo · ':'')+'Pedir <b>'+ped+'</b>'+(m.unidad?' '+esc(m.unidad):'')+'</span>':'<span style="color:#6ee7b7">✓ Stock óptimo</span>';
+  });
+  document.getElementById('bqRepo').style.display=hay?'block':'none';
+};
+window.guardarRegBotiquin=function(){
+  var items={},hay=false;
+  for(var i=0;i<window._bqIds.length;i++){
+    var k=window._bqIds[i],m=botiquinPab[k],v=document.getElementById('bqAct'+i).value;
+    if(v===''||Number(v)<0){alert('Falta el stock actual de "'+m.nombre+'".');return;}
+    var a=Number(v),ped=bqPedir(m,a);if(ped>0)hay=true;
+    var venc=document.getElementById('bqVence'+i).value;
+    if(a>0&&!venc){alert('Indica la fecha del próximo vencimiento de "'+m.nombre+'" (calendario).');return;}
+    items[k]={nombre:m.nombre,unidad:m.unidad||'',actual:a,min:m.min,opt:m.opt,pedir:ped};
+    if(venc)items[k].vence=venc;
+  }
+  var odo=(document.getElementById('bqOdonto').value||'').trim(),ent=document.getElementById('bqEntrega').value;
+  if(hay&&!odo){alert('Hay faltantes: indica con qué odontólogo/a solicitaste la receta.');return;}
+  if(hay&&!ent){alert('Hay faltantes: indica si entregaste la receta a Operaciones (sí o no).');return;}
+  var ahora=new Date();
+  var reg={quien:curNombre||'—',hora:pad(ahora.getHours())+':'+pad(ahora.getMinutes()),fecha:hoyStr(),ts:Date.now(),items:items,hayFaltantes:hay,obs:(document.getElementById('bqObs').value||'').trim()};
+  if(hay){reg.odontologo=odo;reg.entregadoOperaciones=(ent==='si');}
+  sedeRef('regBotiquin/'+reg.ts).set(reg).then(function(){
+    showSaved('regBotiqSaved');
+    setTimeout(function(){var o=document.getElementById('regBotiqOv');if(o)o.remove();},1000);
+  });
+};
+// ---- Faltantes por comprar (jefatura / Operaciones) ----
+window.abrirFaltantesBotiquin=function(){
+  var ov=document.getElementById('faltBotiqOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='faltBotiqOv';ov.style.cssText=_ovBase+'z-index:9450';
+  ov.innerHTML='<div style="max-width:560px;width:100%;background:#16233d;border-radius:14px;padding:18px;margin-top:10px"><div style="color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  Promise.all([sedeRef('regBotiquin').once('value'),sedeRef('regBolso').once('value')]).then(function(sn){
+    var ult=function(v){return Object.values(v||{}).sort(function(a,b){return (b.ts||0)-(a.ts||0);})[0];};
+    var last=ult(sn[0].val()),bol=ult(sn[1].val());
+    var hoy=hoyStr(),lim=_fISO(new Date(Date.now()+60*86400000));
+    var cab='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:16px;font-weight:800;color:#fcd34d">🛒 Faltantes por comprar</span><button onclick="document.getElementById(\'faltBotiqOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button></div>';
+    var cuerpo='<div style="font-size:13px;font-weight:700;color:#6ee7b7;margin:6px 0">💊 Botiquín de pabellón</div>',txt='';
+    if(!last){cuerpo+='<div style="font-size:13px;color:rgba(255,255,255,.5)">Aún no hay revisiones del botiquín.</div>';}
+    else{
+      var items=Object.values(last.items||{});
+      var falt=items.filter(function(m){return m.pedir>0;}).sort(function(a,b){return (a.actual<=a.min?0:1)-(b.actual<=b.min?0:1);});
+      var porV=items.filter(function(m){return m.vence&&m.vence<=lim;}).sort(function(a,b){return a.vence<b.vence?-1:1;});
+      txt+='Botiquín de pabellón (revisión '+last.fecha+'):\n'+(falt.length?falt.map(function(m){return '- '+m.nombre+': pedir '+m.pedir+(m.unidad?' '+m.unidad:'');}).join('\n'):'- sin faltantes')+(last.odontologo?'\nReceta: '+last.odontologo+(last.entregadoOperaciones?' (entregada a Operaciones)':' (NO entregada a Operaciones)'):'')+(porV.length?'\nPor vencer:\n'+porV.map(function(m){return '- '+m.nombre+': '+m.vence;}).join('\n'):'')+'\n';
+      cuerpo+='<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:8px">Última revisión: <b style="color:#fff">'+esc(last.fecha)+' '+esc(last.hora||'')+'</b> por '+esc(last.quien||'—')+'</div>'+
+        (falt.length?
+          '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px;margin-bottom:10px">'+falt.map(function(m){var cr=m.actual<=m.min;return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);color:#fff"><span>'+(cr?'⚠ ':'')+esc(m.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">(hay '+m.actual+', óptimo '+m.opt+')</span></span><b style="color:'+(cr?'#fca5a5':'#fcd34d')+'">pedir '+m.pedir+(m.unidad?' '+esc(m.unidad):'')+'</b></div>';}).join('')+'</div>'+
+          '<div style="font-size:12px;color:#93c5fd;margin-bottom:4px">Receta con: <b>'+esc(last.odontologo||'—')+'</b></div>'+
+          (last.entregadoOperaciones?'<div style="font-size:12px;color:#6ee7b7;margin-bottom:10px">✓ Receta entregada a Operaciones</div>':'<div style="font-size:12px;color:#fca5a5;margin-bottom:6px">⚠ La receta NO se ha entregado a Operaciones: sin ella no se compra.</div><button onclick="marcarEntregaBotiquin('+last.ts+')" style="background:#10b981;color:#06281d;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:10px">✓ Marcar receta entregada</button>')
+          :'<div style="font-size:13px;color:#6ee7b7;margin-bottom:8px">✓ Sin faltantes en la última revisión.</div>')+
+        (porV.length?'<div style="font-size:12px;color:#fcd34d;margin:6px 0 4px">📅 Vencen en menos de 60 días o ya vencieron</div>'+porV.map(function(m){return '<div style="font-size:12px;color:'+(m.vence<=hoy?'#fca5a5':'#fff')+'">'+esc(m.nombre)+' · '+fmtF(m.vence)+(m.vence<=hoy?' · VENCIDO':'')+'</div>';}).join(''):'');
+    }
+    cuerpo+='<div style="font-size:13px;font-weight:700;color:#93c5fd;margin:16px 0 6px">🔑 Bolso clave azul</div>';
+    if(!bol){cuerpo+='<div style="font-size:13px;color:rgba(255,255,255,.5)">Aún no hay revisiones del bolso.</div>';}
+    else{
+      var rep_=Object.values(bol.items||{}).filter(function(m){return m.reponer>0;});
+      var pil=Object.values(bol.equipos||{}).filter(function(e){return e.pilasVence&&e.pilasVence<=_fISO(new Date(Date.now()+15*86400000));});
+      txt+='\nBolso clave azul (revisión '+bol.fecha+'):\n'+(rep_.length?rep_.map(function(m){return '- '+m.nombre+': reponer '+m.reponer;}).join('\n'):'- sin faltantes')+(pil.length?'\nPilas/baterías por cambiar:\n'+pil.map(function(e){return '- '+e.nombre+': '+fmtF(e.pilasVence);}).join('\n'):'');
+      cuerpo+='<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:6px">Última revisión: <b style="color:#fff">'+esc(bol.fecha)+' '+esc(bol.hora||'')+'</b> por '+esc(bol.quien||'—')+'</div>'+
+        (rep_.length?'<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px;margin-bottom:8px">'+rep_.map(function(m){return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#fff"><span>'+esc(m.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">(hay '+m.actual+', mínimo '+m.min+')</span></span><b style="color:#fcd34d">reponer '+m.reponer+'</b></div>';}).join('')+'</div>':'<div style="font-size:13px;color:#6ee7b7;margin-bottom:6px">✓ Sin insumos por reponer.</div>')+
+        (pil.length?pil.map(function(e){return '<div style="font-size:12px;color:'+(e.pilasVence<=hoy?'#fca5a5':'#fcd34d')+'">🔋 '+esc(e.nombre)+': cambiar pilas/baterías ('+fmtF(e.pilasVence)+(e.pilasVence<=hoy?' · vencido':'')+')</div>';}).join(''):'');
+    }
+    window._faltTxt=txt;
+    cuerpo+='<button onclick="copiarFaltBotiq(this)" style="display:block;width:100%;background:#fbbf24;color:#0b1220;border:none;border-radius:8px;padding:10px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:14px">📋 Copiar lista de compra</button>';
+    document.getElementById('faltBotiqOv').firstChild.innerHTML=cab+cuerpo;
+  });
+};
+function fmtF(f){return f?f.slice(8,10)+'-'+f.slice(5,7)+'-'+f.slice(0,4):'';}
+window.marcarEntregaBotiquin=function(ts){
+  sedeRef('regBotiquin/'+ts+'/entregadoOperaciones').set(true).then(function(){abrirFaltantesBotiquin();});
+};
+window.copiarFaltBotiq=function(b){var t=window._faltTxt||'';if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){b.textContent='✓ Copiado';},function(){prompt('Copia la lista:',t);});else prompt('Copia la lista:',t);};
+
+// ══════════ BOLSO CLAVE AZUL: insumos (stock mínimo / actual / reponer) + equipos con pilas (recambio cada 3 meses) ══════════
+var EQUIPOS_BOLSO_DEF=[{id:'tensiometro',nombre:'Tensiómetro'},{id:'saturometro',nombre:'Saturómetro'}];
+function sumarMeses(f,n){var d=new Date(f+'T12:00:00');d.setMonth(d.getMonth()+n);return _fISO(d);}
+window.abrirConfigBolso=function(){
+  var ov=document.getElementById('cfgBolsoOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='cfgBolsoOv';ov.style.cssText=_ovBase+'z-index:9400';
+  document.body.appendChild(ov);
+  sedeRef('bolsoAzulCfg').once('value').then(function(sn){
+    var v=sn.val()||{};
+    var ins=v.insumos||{},eq=v.equipos||{};
+    window._bolsoC={
+      ins:Object.keys(ins).map(function(k){return {id:k,nombre:ins[k].nombre||'',min:ins[k].min};}),
+      eq:Object.keys(eq).length?Object.keys(eq).map(function(k){return {id:k,nombre:eq[k].nombre||''};}):EQUIPOS_BOLSO_DEF.map(function(e){return {id:e.id,nombre:e.nombre};})
+    };
+    if(!window._bolsoC.ins.length)window._bolsoC.ins.push({id:'',nombre:'',min:''});
+    pintarConfigBolso();
+  });
+};
+function pintarConfigBolso(){
+  var ov=document.getElementById('cfgBolsoOv');if(!ov)return;
+  var fi=window._bolsoC.ins.map(function(m,i){return '<div style="display:flex;gap:5px;margin-bottom:6px"><input type="text" value="'+esc(m.nombre)+'" placeholder="Insumo" oninput="_bolsoC.ins['+i+'].nombre=this.value" style="'+_inpB+'flex:1;min-width:0"><input type="number" min="0" value="'+(m.min===undefined||m.min===null?'':m.min)+'" placeholder="Stock mín." oninput="_bolsoC.ins['+i+'].min=this.value" style="'+_inpB+'width:84px"><button onclick="quitarBolsoFila(\'ins\','+i+')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:7px 9px;cursor:pointer">✕</button></div>';}).join('');
+  var fe=window._bolsoC.eq.map(function(m,i){return '<div style="display:flex;gap:5px;margin-bottom:6px"><input type="text" value="'+esc(m.nombre)+'" placeholder="Equipo" oninput="_bolsoC.eq['+i+'].nombre=this.value" style="'+_inpB+'flex:1;min-width:0"><button onclick="quitarBolsoFila(\'eq\','+i+')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:7px 9px;cursor:pointer">✕</button></div>';}).join('');
+  ov.innerHTML='<div style="max-width:520px;width:100%;background:#16233d;border-radius:14px;padding:18px;margin-top:10px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:16px;font-weight:800;color:#93c5fd">🔑 Bolso clave azul</span><button onclick="document.getElementById(\'cfgBolsoOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button></div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Tú defines qué se revisa. Quien lo revisa anota el <b>stock actual</b> y la app calcula <b>a reponer = mínimo − actual</b>.</div>'+
+    '<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:6px">Insumos a revisar</div>'+fi+
+    '<button onclick="agregarBolsoFila(\'ins\')" style="width:100%;background:rgba(255,255,255,.08);color:#fff;border:1px dashed rgba(255,255,255,.25);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;margin-bottom:14px">+ Agregar insumo</button>'+
+    '<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:2px">Equipos con pilas o baterías</div><div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:6px">Se registra la fecha del último cambio; el recambio se avisa a los 3 meses.</div>'+fe+
+    '<button onclick="agregarBolsoFila(\'eq\')" style="width:100%;background:rgba(255,255,255,.08);color:#fff;border:1px dashed rgba(255,255,255,.25);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;margin-bottom:12px">+ Agregar equipo</button>'+
+    '<button class="btn-add" onclick="guardarConfigBolso()">💾 Guardar</button><div class="saved" id="cfgBolsoSaved">✓ Guardado</div></div>';
+}
+window.agregarBolsoFila=function(t){window._bolsoC[t].push(t==='ins'?{id:'',nombre:'',min:''}:{id:'',nombre:''});pintarConfigBolso();};
+window.quitarBolsoFila=function(t,i){if(!confirm('¿Quitar de la lista?'))return;window._bolsoC[t].splice(i,1);pintarConfigBolso();};
+window.guardarConfigBolso=function(){
+  var ins={},eq={},err='';
+  window._bolsoC.ins.forEach(function(m,i){
+    var n=(m.nombre||'').trim();if(!n&&(m.min===''||m.min===undefined))return;
+    if(!n){err='Hay un insumo sin nombre.';return;}
+    if(m.min===''||m.min===undefined||isNaN(Number(m.min))){err='"'+n+'": falta el stock mínimo.';return;}
+    ins[m.id||('i'+Date.now()+'_'+i)]={nombre:n,min:Number(m.min)};
+  });
+  window._bolsoC.eq.forEach(function(m,i){var n=(m.nombre||'').trim();if(!n)return;eq[m.id||('e'+Date.now()+'_'+i)]={nombre:n};});
+  if(err){alert(err);return;}
+  sedeRef('bolsoAzulCfg').set({insumos:Object.keys(ins).length?ins:null,equipos:Object.keys(eq).length?eq:null}).then(function(){showSaved('cfgBolsoSaved');});
+};
+window.abrirRegBolso=function(){
+  var ov=document.getElementById('regBolsoOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regBolsoOv';ov.style.cssText=_ovBase+'z-index:9200';
+  var insO=(bolsoCfg&&bolsoCfg.insumos)||{},eqO=(bolsoCfg&&bolsoCfg.equipos)||{};
+  var iids=Object.keys(insO).filter(function(k){return insO[k]&&insO[k].nombre;});
+  var eids=Object.keys(eqO).filter(function(k){return eqO[k]&&eqO[k].nombre;});
+  var eqL=eids.length?eids.map(function(k){return {id:k,nombre:eqO[k].nombre};}):EQUIPOS_BOLSO_DEF;
+  window._bzI=iids.map(function(k){return {id:k,nombre:insO[k].nombre,min:insO[k].min};});
+  window._bzE=eqL;
+  var ultimo=Object.values(regBolso||{}).sort(function(a,b){return (b.ts||0)-(a.ts||0);})[0];
+  var fi=window._bzI.map(function(m,i){return '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-size:13px;color:#fff;font-weight:600">'+esc(m.nombre)+'<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400">stock mínimo '+m.min+'</div></div><input type="number" min="0" id="bzAct'+i+'" placeholder="Actual" oninput="bzCalc()" style="'+_inpB+'width:80px;text-align:center"></div><div id="bzRes'+i+'" style="font-size:11px;margin-top:4px;min-height:14px"></div></div>';}).join('');
+  var fe=window._bzE.map(function(e,i){
+    var prev=ultimo&&ultimo.equipos&&ultimo.equipos[e.id]&&ultimo.equipos[e.id].pilasFecha||'';
+    return '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="font-size:13px;color:#fff;font-weight:600;margin-bottom:5px">'+esc(e.nombre)+'</div>'+
+      '<label style="font-size:12px;color:#fff;display:block;margin-bottom:5px;cursor:pointer"><input type="checkbox" id="bzFunc'+i+'" style="vertical-align:middle"> Funciona correctamente</label>'+
+      '<div style="display:flex;align-items:center;gap:6px"><label style="font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap">🔋 Último cambio de pilas/baterías</label><input type="date" id="bzPila'+i+'" value="'+prev+'" max="'+hoyStr()+'" oninput="bzCalc()" style="'+_inpB+'flex:1;padding:6px"></div><div id="bzPilaRes'+i+'" style="font-size:11px;margin-top:4px;min-height:14px"></div></div>';}).join('');
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:440px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🔑 Bolso clave azul</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">Revisión semanal · '+hoyStr()+'</div>'+
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">Insumos</div>'+
+    (fi||'<div style="font-size:12px;color:#fbbf24;margin-bottom:8px">La jefatura aún no cargó los insumos a revisar.</div>')+
+    '<div style="font-size:12px;font-weight:700;color:#93c5fd;margin:12px 0 6px">Equipos y pilas</div>'+fe+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
+    '<textarea id="bzObs" rows="2" style="'+_inpB+'width:100%;margin-bottom:10px"></textarea>'+
+    '<button class="btn-add" onclick="guardarRegBolso()" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa)">💾 Guardar revisión</button>'+
+    '<button onclick="document.getElementById(\'regBolsoOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="regBolsoSaved">✓ Registrado</div></div>';
+  document.body.appendChild(ov);
+  bzCalc();
+};
+window.bzCalc=function(){
+  window._bzI.forEach(function(m,i){
+    var v=document.getElementById('bzAct'+i).value,r=document.getElementById('bzRes'+i);
+    if(v===''){r.innerHTML='';return;}
+    var rep_=Math.max(0,m.min-Number(v));
+    r.innerHTML=rep_>0?'<span style="color:#fcd34d">Reponer <b>'+rep_+'</b></span>':'<span style="color:#6ee7b7">✓ Stock suficiente</span>';
+  });
+  var hoy=hoyStr(),aviso=_fISO(new Date(Date.now()+15*86400000));
+  window._bzE.forEach(function(e,i){
+    var f=document.getElementById('bzPila'+i).value,r=document.getElementById('bzPilaRes'+i);
+    if(!f){r.innerHTML='';return;}
+    var ven=sumarMeses(f,3);
+    r.innerHTML=ven<=hoy?'<span style="color:#fca5a5">⚠ Recambio vencido desde '+fmtF(ven)+': cambia las pilas</span>':ven<=aviso?'<span style="color:#fcd34d">Recambio pronto: '+fmtF(ven)+'</span>':'<span style="color:#6ee7b7">Próximo recambio: '+fmtF(ven)+'</span>';
+  });
+};
+window.guardarRegBolso=function(){
+  var items={},equipos={},hay=false,i;
+  for(i=0;i<window._bzI.length;i++){
+    var m=window._bzI[i],v=document.getElementById('bzAct'+i).value;
+    if(v===''||Number(v)<0){alert('Falta el stock actual de "'+m.nombre+'".');return;}
+    var a=Number(v),r=Math.max(0,m.min-a);if(r>0)hay=true;
+    items[m.id]={nombre:m.nombre,min:m.min,actual:a,reponer:r};
+  }
+  for(i=0;i<window._bzE.length;i++){
+    var e=window._bzE[i],f=document.getElementById('bzPila'+i).value;
+    if(!f){alert('Indica la fecha del último cambio de pilas/baterías de "'+e.nombre+'".');return;}
+    equipos[e.id]={nombre:e.nombre,funciona:document.getElementById('bzFunc'+i).checked,pilasFecha:f,pilasVence:sumarMeses(f,3)};
+  }
+  var ahora=new Date();
+  var reg={quien:curNombre||'—',hora:pad(ahora.getHours())+':'+pad(ahora.getMinutes()),fecha:hoyStr(),ts:Date.now(),items:items,equipos:equipos,hayFaltantes:hay,obs:(document.getElementById('bzObs').value||'').trim()};
+  var noFunc=Object.values(equipos).filter(function(x){return !x.funciona;}).map(function(x){return x.nombre;});
+  if(noFunc.length)reg.alerta=true;
+  sedeRef('regBolso/'+reg.ts).set(reg).then(function(){
+    showSaved('regBolsoSaved');
+    if(noFunc.length)alert('⚠ Marcaste que no funciona: '+noFunc.join(', ')+'. Avisa a la jefatura.');
+    setTimeout(function(){var o=document.getElementById('regBolsoOv');if(o)o.remove();},1000);
+  });
+};
+
+// ---- Control biológico ----
+window.abrirRegControlBio=function(){
+  var ov=document.getElementById('regBioOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regBioOv';ov.style.cssText=_ovBase+'z-index:9200';
+  var ult=Object.values(regControlBio||{}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,4);
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:420px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🧬 Control biológico</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px">Semanal · '+hoyStr()+'</div>'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Equipo / autoclave controlado</label>'+
+    '<input type="text" id="bioEquipo" placeholder="Ej: Autoclave 1" style="'+_inpB+'width:100%;margin-bottom:8px">'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Lote del indicador biológico (opcional)</label>'+
+    '<input type="text" id="bioLote" style="'+_inpB+'width:100%;margin-bottom:8px">'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Resultado</label>'+
+    '<select id="bioRes" style="'+_inpB+'width:100%;margin-bottom:8px"><option value="">— Elegir —</option><option value="negativo">✅ Negativo (sin crecimiento)</option><option value="positivo">🔴 Positivo (hay crecimiento)</option></select>'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
+    '<textarea id="bioObs" rows="2" style="'+_inpB+'width:100%;margin-bottom:10px"></textarea>'+
+    '<button class="btn-add" onclick="guardarRegControlBio()" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">💾 Guardar resultado</button>'+
+    '<button onclick="document.getElementById(\'regBioOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="regBioSaved">✓ Registrado</div>'+
+    (ult.length?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin:12px 0 4px">Últimos controles</div>'+ult.map(function(r){return '<div style="font-size:12px;color:rgba(255,255,255,.7)">'+esc(r.fecha)+' · '+esc(r.equipo||'—')+' · '+(r.resultado==='positivo'?'<b style="color:#fca5a5">POSITIVO</b>':'<span style="color:#6ee7b7">negativo</span>')+'</div>';}).join(''):'')+
+    '</div>';
+  document.body.appendChild(ov);
+};
+window.guardarRegControlBio=function(){
+  var res=document.getElementById('bioRes').value,eq=(document.getElementById('bioEquipo').value||'').trim();
+  if(!eq){alert('Indica qué equipo o autoclave controlaste.');return;}
+  if(!res){alert('Elige el resultado: negativo o positivo.');return;}
+  var ahora=new Date();
+  var reg={quien:curNombre||'—',hora:pad(ahora.getHours())+':'+pad(ahora.getMinutes()),fecha:hoyStr(),ts:Date.now(),equipo:eq,lote:(document.getElementById('bioLote').value||'').trim(),resultado:res,obs:(document.getElementById('bioObs').value||'').trim()};
+  if(res==='positivo')reg.alerta=true;
+  sedeRef('regControlBio/'+reg.ts).set(reg).then(function(){
+    showSaved('regBioSaved');
+    if(res==='positivo')alert('🔴 Resultado POSITIVO registrado. Avisa de inmediato a la jefatura y sigue el protocolo del CSU (no usar el material de ese equipo hasta que se indique).');
+    setTimeout(function(){var o=document.getElementById('regBioOv');if(o)o.remove();},1000);
+  });
+};
+
+// Limpieza única: si quedó sembrado el checklist genérico del bolso (versión anterior) y nadie lo usa, se quita.
+function limpiarRolBolsoViejo(){
+  var r=(rolesTecnicos||{}).rol_bolso_azul;
+  if(!r||r.nombre!=='Revisión semanal del bolso clave azul')return;
+  var usado=Object.values(regCustom||{}).some(function(x){return x.rolId==='rol_bolso_azul';})||Object.values(tareas||{}).some(function(t){return t.tipo==='rol_bolso_azul';});
+  if(!usado)sedeRef('rolesTecnicos/rol_bolso_azul').remove();
+}
 // Deja el rol "Inspección semanal del DEA" disponible para asignar sin pasos previos (una sola vez por sede)
 var _deaSembrando=false;
 function sembrarRolDEA(){
@@ -16234,6 +16577,12 @@ function verificarCumplimiento(tipo,fecha){
     if(pre||post)return {cumplido:false,detalle:pre?'Falta post-cx':'Falta pre-cx'};
     return {cumplido:false,detalle:'Sin registro (pre y post)'};
   }
+  if(tipo==='botiquin_pab'||tipo==='control_bio'||tipo==='bolso_azul'){
+    var rg=rangoSemanaDe(fecha);
+    var fuente=tipo==='botiquin_pab'?regBotiquin:tipo==='bolso_azul'?regBolso:regControlBio;
+    var hayW=Object.values(fuente||{}).some(function(r){return r.fecha>=rg.ini&&r.fecha<=rg.fin;});
+    return {cumplido:hayW,detalle:hayW?'Registrado esta semana':'Pendiente'};
+  }
   if(rolesTecnicos&&rolesTecnicos[tipo]){
     var hay6;
     if(rolesTecnicos[tipo].frecuencia==='semanal'){
@@ -16257,8 +16606,8 @@ function nombreRol(tipo){
 
 // Tipos que son "medibles" (tienen registro verificable) — también se usa para exigir exclusividad
 // de puesto (una misma tarea no puede quedar asignada a 2 personas la misma jornada).
-var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario_2:1,dispensario_3:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1,apoyo_clinico:1,almacen_ester:1,pabellon_asig:1,pedido:1,clinica_privada:1};
-var TIPOS_SEMANALES={aseo:1,reas:1,pedido:1}; // tareas que se controlan 1 vez por semana, no diariamente (pedido igual se penaliza si no se hace antes de las 13:00 del día asignado)
+var TIPOS_MEDIBLES={autoclave:1,temp_ester:1,temp_pabellon:1,temp_box:1,temp_refri:1,conductividad:1,reas:1,aseo:1,radiografias:1,dispensario_2:1,dispensario_3:1,inst_recibido:1,inst_lavado:1,inst_empaque:1,inst_secado:1,entrega_esteril:1,apoyo_clinico:1,almacen_ester:1,pabellon_asig:1,pedido:1,clinica_privada:1,botiquin_pab:1,control_bio:1,bolso_azul:1};
+var TIPOS_SEMANALES={aseo:1,reas:1,pedido:1,botiquin_pab:1,control_bio:1,bolso_azul:1}; // tareas que se controlan 1 vez por semana, no diariamente (pedido igual se penaliza si no se hace antes de las 13:00 del día asignado)
 // Puestos/actividades que SÍ exigen exclusividad (van en TIPOS_MEDIBLES) pero NO se miden por cantidad
 // ni se cuentan como pendiente/cumplido en Control de Cumplimiento: son solo el lugar donde trabaja la
 // persona ese día. Las métricas reales de desempeño se asignan aparte, independientes de la actividad.
@@ -18656,8 +19005,12 @@ document.getElementById('saveClaveBtn').addEventListener('click',function(){
   var dias=Array.from(document.querySelectorAll('#claveDias input:checked')).map(function(cb){return cb.value;});
   if(!dias.length){alert('Selecciona al menos un día.');return;}
   // Save a separate equipoClave entry per day
+  // Por jornada: guardar AM no pisa lo ya cargado para PM (y viceversa); "todo el día" reemplaza ambas.
+  var J=document.getElementById('claveJornada').value||'dia';
+  var ents=entries.map(function(e){var o={n:e.n,r:e.r||''};if(J!=='dia')o.j=J;return o;});
   var saves=dias.map(function(dia){
-    return sRef('equipoClave/'+dia).set(entries);
+    var prev=getClaveParaDia(dia).filter(function(e){var ej=e.j||'dia';return J!=='dia'&&ej!=='dia'&&ej!==J;});
+    return sRef('equipoClave/'+dia).set(prev.concat(ents));
   });
   Promise.all(saves).then(function(){
     document.querySelectorAll('#claveDias input[type=checkbox]').forEach(function(cb){cb.checked=false;});
