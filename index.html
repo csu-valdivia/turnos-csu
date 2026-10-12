@@ -5171,7 +5171,11 @@ function renderMisTurnos(nombre){
     var esRol=ROLES_TECNICOS_BASE[t.tipo]||rolesTecnicos[t.tipo];
     if(!esRol||t.nombre!==nombre)return false;
     // Roles puntuales (aseo semanal, pedido semanal, pabellón por asignación puntual): solo su día. Rol diario: cualquier día.
-    if(ROLES_SEMANALES[t.tipo]||(rolesTecnicos[t.tipo]&&rolesTecnicos[t.tipo].frecuencia==='semanal'))return t.dia===diaHoyRol;
+    // Semanales con arrastre (botiquín, control biológico, bolso azul y roles semanales propios): aparecen desde el día asignado
+    // hasta el fin de la semana, para que no se pierdan si no se hicieron justo ese día.
+    var ordD=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+    if({botiquin_pab:1,control_bio:1,bolso_azul:1}[t.tipo]||(rolesTecnicos[t.tipo]&&rolesTecnicos[t.tipo].frecuencia==='semanal'))return ordD.indexOf(diaHoyRol)>=ordD.indexOf(t.dia);
+    if(ROLES_SEMANALES[t.tipo])return t.dia===diaHoyRol;
     return true;
   });
   // Quitar duplicados por tipo
