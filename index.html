@@ -1148,7 +1148,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           <div class="asec" style="border-color:rgba(245,158,11,.35)">
             <p class="asec-title" style="color:#fcd34d">🏆 Premio de la semana (día / jornada / horas libres)</p>
             <p style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px">Marca lo que se le concede a quien ganó la semana anterior. Queda registrado como respaldo, le aparece en Mis Turnos y puedes avisarle por WhatsApp y correo.</p>
-            <button class="btn-add" onclick="abrirPremioGanador()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">🎁 Registrar premio</button>
+            <button class="btn-add" onclick="abrirPremioGanador()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">🎁 Registrar premio<span id="premioPendBadge"></span></button>
           </div>
 
           <div class="asec">
@@ -2299,8 +2299,10 @@ function renderPanelJefaOperaciones(){
       '<button onclick="tabJefaOp(\'turnos\')" id="tabJO_turnos" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🗓️ Turnos</button>'+
     '</div>'+
     '<button onclick="abrirModuloGerencia()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">👤 Mi perfil personal (Gerencia) — Material, Preguntas y mi Logro</button>'+
+    '<button onclick="abrirPremiosOperaciones()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#d97706,#fbbf24);color:#0b1220;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🎁 Premios del equipo administrativo<span id="premioPendBadge"></span></button>'+
     '<div id="jefaOpContenido"></div></div>';
   tabJefaOp('produccion');
+  if(window._premiosOpListo)actualizarBadgePremios();
 }
 
 window.tabJefaOp=function(tab){
@@ -3943,7 +3945,7 @@ window.setSede=function(sede){
   sedeRef('regPedido').on('value',function(s){regPedido=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('regPabellonAsig').on('value',function(s){regPabellonAsig=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('regLecturaTareas').on('value',function(s){regLecturaTareas=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
-  sedeRef('premiosGanadores').on('value',function(s){premiosGanadores=s.val()||{};if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none')renderMisTurnos(curNombre);if(document.getElementById('premioOvLista'))pintarPremiosLista();});
+  sedeRef('premiosGanadores').on('value',function(s){premiosGanadores=s.val()||{};if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none')renderMisTurnos(curNombre);if(document.getElementById('premioOvLista'))pintarPremiosLista();actualizarBadgePremios();});
   sedeRef('telefonosEquipo').on('value',function(s){telefonosEquipo=s.val()||{};});
   sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
@@ -5695,11 +5697,23 @@ function textoPremio(p){
 function fechaBonita(f){var d=new Date(f+'T12:00:00');return diaDeDate(f)+' '+pad(d.getDate())+'-'+pad(d.getMonth()+1)+'-'+d.getFullYear();}
 function bannerPremiosPersona(nombre){
   var hoy=hoyStr();
-  var mios=Object.values(premiosGanadores||{}).filter(function(p){return p&&p.nombre===nombre&&p.fecha>=hoy&&!p.anulado;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+  var mios=Object.entries(premiosGanadores||{}).filter(function(e){var p=e[1];return p&&p.nombre===nombre&&!p.anulado&&(p.porSolicitar||(p.fecha&&p.fecha>=hoy));}).sort(function(a,b){return (a[1].fecha||'9999')<(b[1].fecha||'9999')?-1:1;});
   if(!mios.length)return '';
+  var bt='border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;margin:4px 6px 0 0;';
   return '<div style="background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(217,119,6,.08));border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
     '<p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:6px">🏆 ¡Tu premio por ganar la semana!</p>'+
-    mios.map(function(p){return '<p style="font-size:12px;color:rgba(255,255,255,.85);margin-bottom:3px">🎁 '+esc(fechaBonita(p.fecha))+' · <b>'+esc(textoPremio(p))+'</b></p>';}).join('')+'</div>';
+    mios.map(function(e){var id=e[0],p=e[1],sol=p.solicitud||{};var st=sol.estado;
+      var l='<p style="font-size:12px;color:rgba(255,255,255,.85);margin-bottom:3px">🎁 '+(p.fecha?esc(fechaBonita(p.fecha))+' · ':'')+'<b>'+esc(textoPremio(p))+'</b>'+(p.fecha?'':' · <i>fecha por definir</i>')+'</p>';
+      if(st==='pendiente'){
+        l+='<p style="font-size:12px;color:#fcd34d">⏳ Pediste '+esc(fechaBonita(sol.fecha))+'. Esperando respuesta de '+esc(esAdminPremio(p.nombre)?'la Jefa de Operaciones':'la jefatura clínica')+'.</p>';
+      }else if(st==='propuesta'){
+        l+='<p style="font-size:12px;color:#93c5fd">📅 '+esc(esAdminPremio(p.nombre)?'La Jefa de Operaciones':'La jefatura')+' te propone el <b>'+esc(fechaBonita(sol.fechaPropuesta))+'</b>'+(sol.notaJefatura?' ("'+esc(sol.notaJefatura)+'")':'')+'.</p>'+
+          '<button onclick="premioAceptarPropuesta(\''+id+'\')" style="'+bt+'background:#10b981;color:#06281d">✓ Aceptar esa fecha</button>'+
+          '<button onclick="premioSolicitar(\''+id+'\')" style="'+bt+'background:rgba(255,255,255,.12);color:#fff">Pedir otra fecha</button>';
+      }else{
+        l+='<button onclick="premioSolicitar(\''+id+'\')" style="'+bt+'background:#fbbf24;color:#0b1220">'+(p.fecha?'📅 Pedir otra fecha':'📅 Solicitar mi jornada de premio')+'</button>';
+      }
+      return l;}).join('<div style="height:8px"></div>')+'</div>';
 }
 window._premioGan=null;
 // Semana ganada = la semana (lunes a sábado) inmediatamente anterior a la semana de la fecha del premio
@@ -5734,6 +5748,7 @@ window.abrirPremioGanador=function(){
     '<select id="prNombre" onchange="premioCargarContacto()" style="'+inp+'"><option value="">— Elegir —</option>'+lista.map(function(n){return '<option value="'+esc(n)+'"'+(n===nomSel?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">Fecha del premio</label>'+
     '<input type="date" id="prFecha" min="'+hoyStr()+'" value="'+desdeIso+'" onchange="premioTipoCambio()" style="'+inp+'">'+
+    '<label style="font-size:12px;color:#fcd34d;display:block;margin:-2px 0 8px;cursor:pointer"><input type="checkbox" id="prSinFecha" onchange="premioTipoCambio()" style="vertical-align:middle"> Sin fecha: que la persona la solicite desde su app</label>'+
     '<div id="prSemTxt" style="font-size:11px;color:#fcd34d;margin:-4px 0 8px"></div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">Qué se concede</label>'+
     '<select id="prTipo" onchange="premioTipoCambio()" style="'+inp+'"><option value="dia">Día completo libre</option><option value="am">Jornada AM libre</option><option value="pm">Jornada PM libre</option><option value="horas">Franja de horas libre</option></select>'+
@@ -5751,7 +5766,8 @@ window.abrirPremioGanador=function(){
   premioTipoCambio();premioCargarContacto();pintarPremiosLista();
 };
 window.premioTipoCambio=function(){
-  var ff=document.getElementById('prFecha').value;
+  var sf=document.getElementById('prSinFecha');document.getElementById('prFecha').disabled=!!(sf&&sf.checked);
+  var ff=(sf&&sf.checked)?hoyStr():document.getElementById('prFecha').value;
   if(ff){var sg=semanaGanadaDesde(ff);document.getElementById('prSemTxt').textContent='Semana ganada: del '+ddmm(sg.ini)+' al '+ddmm(sg.fin)+' (la semana anterior a la fecha del premio)';}
   var t=document.getElementById('prTipo').value;
   document.getElementById('prHorasBox').style.display=t==='horas'?'block':'none';
@@ -5775,6 +5791,7 @@ function normalizarFonoCL(v){
 function mensajePremio(p){
   var g=window._premioGan&&window._premioGan.ganador;
   var semTxt=p.semIni?(' del '+ddmm(p.semIni)+' al '+ddmm(p.semFin)):'';
+  if(!p.fecha)return 'Hola '+p.nombre.split(' ')[0]+', ¡felicitaciones!\n\nPor haber ganado la semana'+semTxt+' en GESTHOR, tienes un premio: '+textoPremio(p)+'.\n\nEntra a GESTHOR, Mis Turnos, y presiona "Solicitar mi jornada de premio" para elegir la fecha. La jefatura la confirma o te propone otra.\n\nPatricio Baeza Aguilar · CSU Valdivia';
   return 'Hola '+p.nombre.split(' ')[0]+', ¡felicitaciones!\n\nPor haber ganado la semana'+semTxt+' en GESTHOR, tu premio será efectivo el '+fechaBonita(p.fecha)+': '+textoPremio(p)+'.\n\nCualquier duda, conversa con la jefatura.\n\nPatricio Baeza Aguilar · CSU Valdivia';
 }
 window.guardarPremioGanador=function(){
@@ -5782,10 +5799,12 @@ window.guardarPremioGanador=function(){
   var fecha=document.getElementById('prFecha').value;
   var tipo=document.getElementById('prTipo').value;
   if(!nombre){alert('Elige a la persona.');return;}
-  if(!fecha){alert('Elige la fecha del premio.');return;}
-  var p={nombre:nombre,fecha:fecha,dia:diaDeDate(fecha),tipo:tipo,ts:Date.now(),
-    semIni:semanaGanadaDesde(fecha).ini,semFin:semanaGanadaDesde(fecha).fin,
-    registradoPor:'Jefatura'};
+  var sinF=!!(document.getElementById('prSinFecha')&&document.getElementById('prSinFecha').checked);
+  if(sinF)fecha='';
+  if(!fecha&&!sinF){alert('Elige la fecha del premio o marca "Sin fecha".');return;}
+  var p={nombre:nombre,fecha:fecha,dia:fecha?diaDeDate(fecha):'',tipo:tipo,ts:Date.now(),
+    semIni:semanaGanadaDesde(fecha||hoyStr()).ini,semFin:semanaGanadaDesde(fecha||hoyStr()).fin,
+    porSolicitar:!fecha,registradoPor:'Jefatura'};
   if(tipo==='horas'){
     var ini=_hmMin(document.getElementById('prIni').value),dur=Number(document.getElementById('prDur').value)||1;
     p.ini=_hm(ini);p.fin=_hm(Math.min(ini+dur*60,20*60));
@@ -5804,7 +5823,7 @@ window.guardarPremioGanador=function(){
     var msg=mensajePremio(p);
     var asunto='GESTHOR — Tu premio por ganar la semana';
     window._premioCorreo={para:correo,asunto:asunto,msg:msg};
-    var html='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px;margin-top:10px"><div style="font-size:12px;color:#6ee7b7;margin-bottom:8px">✓ Premio registrado ('+esc(p.texto)+', '+esc(fechaBonita(p.fecha))+'). Ahora avísale:</div>'+
+    var html='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px;margin-top:10px"><div style="font-size:12px;color:#6ee7b7;margin-bottom:8px">✓ Premio registrado ('+esc(p.texto)+', '+(p.fecha?esc(fechaBonita(p.fecha)):'fecha por solicitar')+'). Ahora avísale:</div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
       (fono?'<a href="https://wa.me/'+fono+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener" onclick="marcarAvisoPremio(\''+p.id+'\',\'wsp\')" style="flex:1;text-align:center;background:#25d366;color:#0b1220;text-decoration:none;font-weight:700;font-size:13px;padding:10px;border-radius:8px">📱 WhatsApp</a>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin WhatsApp: agrega el número arriba y guarda de nuevo.</span>')+
       (correo?'<button onclick="premioCorreo(\''+p.id+'\')" style="flex:1;text-align:center;background:#60a5fa;color:#0b1220;font-weight:700;font-size:13px;padding:10px;border-radius:8px;border:none;font-family:inherit;cursor:pointer">✉️ Correo</button>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin correo: agrégalo arriba y guarda de nuevo.</span>')+
@@ -5823,9 +5842,124 @@ function pintarPremiosLista(){
   var en=Object.entries(premiosGanadores||{}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);}).slice(0,15);
   if(!en.length){c.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4)">Sin premios registrados.</div>';return;}
   c.innerHTML=en.map(function(e){var p=e[1];var av=p.avisado||{};
-    return '<div style="padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:5px;'+(p.anulado?'opacity:.45':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span style="font-size:12px;color:#fff"><b>'+esc(p.nombre)+'</b> · '+esc(fechaBonita(p.fecha))+'</span>'+
+    return '<div style="padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:5px;'+(p.anulado?'opacity:.45':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span style="font-size:12px;color:#fff"><b>'+esc(p.nombre)+'</b> · '+(p.fecha?esc(fechaBonita(p.fecha)):'sin fecha')+'</span>'+
       (p.anulado?'<span style="font-size:10px;color:#fca5a5">anulado</span>':'<button onclick="anularPremio(\''+e[0]+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-family:inherit;cursor:pointer">Anular</button>')+'</div>'+
-      '<div style="font-size:11px;color:rgba(255,255,255,.55)">'+esc(p.texto||'')+' · avisado: '+(av.wsp?'📱✓ ':'📱— ')+(av.correo?'✉️✓':'✉️—')+'</div></div>';}).join('');
+      '<div style="font-size:11px;color:rgba(255,255,255,.55)">'+esc(p.texto||'')+' · avisado: '+(av.wsp?'📱✓ ':'📱— ')+(av.correo?'✉️✓':'✉️—')+'</div>'+solicitudPremioAdminHtml(e[0],p)+'</div>';}).join('');
+}
+
+// ── Solicitud de la jornada de premio (trabajador) y respuesta de la jefatura (aceptar / proponer otra fecha) ──
+function fechaManana(){var d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+window.pedirFechaPremio=function(titulo,detalle,conNota,cb){
+  var ov=document.getElementById('fechaPremioOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='fechaPremioOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.94);z-index:9700;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var inp='width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:8px;font-family:inherit;box-sizing:border-box';
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:400px;width:100%;margin-top:40px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fcd34d;margin-bottom:4px">'+esc(titulo)+'</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">'+esc(detalle)+'</div>'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.5)">Fecha</label><input type="date" id="fpFecha" min="'+fechaManana()+'" style="'+inp+'">'+
+    '<label style="font-size:11px;color:rgba(255,255,255,.5)">'+(conNota?'Comentario (opcional)':'')+'</label>'+
+    (conNota?'<textarea id="fpNota" rows="2" placeholder="Ej: prefiero ese día por un trámite" style="'+inp+'"></textarea>':'<textarea id="fpNota" rows="2" placeholder="Comentario (opcional)" style="'+inp+'"></textarea>')+
+    '<button id="fpOk" class="btn-add" style="background:linear-gradient(135deg,#d97706,#fbbf24)">Enviar</button>'+
+    '<button onclick="document.getElementById(\'fechaPremioOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cancelar</button></div>';
+  document.body.appendChild(ov);
+  document.getElementById('fpOk').onclick=function(){
+    var f=document.getElementById('fpFecha').value;
+    if(!f){alert('Elige una fecha.');return;}
+    if(diaDeDate(f)==='Domingo'){alert('Elige un día de lunes a sábado.');return;}
+    var nota=(document.getElementById('fpNota').value||'').trim();
+    ov.remove();cb(f,nota);
+  };
+};
+window.premioSolicitar=function(id){
+  var p=(premiosGanadores||{})[id];if(!p)return;
+  pedirFechaPremio('📅 Solicitar mi jornada de premio','Premio: '+textoPremio(p)+'. Elige la fecha que prefieres; la jefatura la acepta o te propone otra.',true,function(f,nota){
+    sedeRef('premiosGanadores/'+id+'/solicitud').set({fecha:f,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){alert('✓ Solicitud enviada. La responde '+aprobadorPremio(p.nombre)+'. Avísale también por WhatsApp si es urgente.');});
+  });
+};
+window.premioAceptarPropuesta=function(id){
+  var p=(premiosGanadores||{})[id];if(!p||!p.solicitud||!p.solicitud.fechaPropuesta)return;
+  aplicarFechaPremio(id,p.solicitud.fechaPropuesta).then(function(){alert('✓ Listo, tu premio queda para el '+fechaBonita(p.solicitud.fechaPropuesta)+'.');});
+};
+function aplicarFechaPremio(id,fecha){
+  var sg=semanaGanadaDesde(fecha);
+  return sedeRef('premiosGanadores/'+id).update({fecha:fecha,dia:diaDeDate(fecha),semIni:sg.ini,semFin:sg.fin,porSolicitar:false,'solicitud/estado':'aceptada','solicitud/respondido':Date.now()});
+}
+function esAdminPremio(nombre){
+  return Object.keys(secretarias||{}).some(function(k){var v=secretarias[k];return v&&(typeof v==='object'?v.nombre:v)===nombre;});
+}
+function aprobadorPremio(nombre){return esAdminPremio(nombre)?'Jefa de Operaciones':'jefatura clínica (Patricio)';}
+function solicitudPremioAdminHtml(id,p){
+  var sol=p.solicitud;if(!sol||p.anulado)return '';
+  var mio=(esAdminPremio(p.nombre)?'jefaOperaciones':'')===(modoRol==='jefaOperaciones'?'jefaOperaciones':'');
+  if(!mio){
+    return sol.estado==='pendiente'?'<div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.5)">📩 Pide el '+esc(fechaBonita(sol.fecha))+' · lo responde la '+esc(aprobadorPremio(p.nombre))+'</div>':'';
+  }
+  var bt='border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;margin:5px 5px 0 0;';
+  if(sol.estado==='pendiente')return '<div style="margin-top:6px;background:rgba(251,191,36,.1);border-radius:6px;padding:7px 9px;font-size:11px;color:#fcd34d">📩 Pide el <b>'+esc(fechaBonita(sol.fecha))+'</b>'+(sol.nota?' · "'+esc(sol.nota)+'"':'')+
+    '<div><button onclick="premioAceptarSolicitud(\''+id+'\')" style="'+bt+'background:#10b981;color:#06281d">✓ Aceptar</button><button onclick="premioProponer(\''+id+'\')" style="'+bt+'background:#60a5fa;color:#0b1220">📅 Proponer otra fecha</button></div></div>';
+  if(sol.estado==='propuesta')return '<div style="margin-top:6px;font-size:11px;color:#93c5fd">📅 Propusiste el '+esc(fechaBonita(sol.fechaPropuesta))+' · esperando respuesta de la persona</div>';
+  if(sol.estado==='aceptada')return '<div style="margin-top:6px;font-size:11px;color:#6ee7b7">✓ Fecha acordada</div>';
+  return '';
+}
+window.premioAceptarSolicitud=function(id){
+  var p=(premiosGanadores||{})[id];if(!p||!p.solicitud)return;
+  var f=p.solicitud.fecha;
+  aplicarFechaPremio(id,f).then(function(){
+    var q=Object.assign({},p,{fecha:f,dia:diaDeDate(f),semIni:semanaGanadaDesde(f).ini,semFin:semanaGanadaDesde(f).fin});
+    avisarPremioPersona(id,q,'GESTHOR — Tu premio quedó confirmado','Hola '+p.nombre.split(' ')[0]+', aceptamos la fecha que pediste.\n\nTu premio será efectivo el '+fechaBonita(f)+': '+textoPremio(p)+'.\n\nPatricio Baeza Aguilar · CSU Valdivia');
+  });
+};
+window.premioProponer=function(id){
+  var p=(premiosGanadores||{})[id];if(!p)return;
+  pedirFechaPremio('📅 Proponer otra fecha','Para '+p.nombre+' (pidió '+(p.solicitud&&p.solicitud.fecha?fechaBonita(p.solicitud.fecha):'—')+').',true,function(f,nota){
+    sedeRef('premiosGanadores/'+id+'/solicitud').update({estado:'propuesta',fechaPropuesta:f,notaJefatura:nota,respondido:Date.now()}).then(function(){
+      avisarPremioPersona(id,p,'GESTHOR — Propuesta de fecha para tu premio','Hola '+p.nombre.split(' ')[0]+', sobre tu premio ('+textoPremio(p)+'): la jefatura te propone el '+fechaBonita(f)+(nota?' ('+nota+')':'')+'.\n\nEntra a GESTHOR, Mis Turnos, para aceptarla o pedir otra fecha.\n\nPatricio Baeza Aguilar · CSU Valdivia');
+    });
+  });
+};
+function avisarPremioPersona(id,p,asunto,msg){
+  var k=p.nombre.replace(/\s/g,'_');var fono=telefonosEquipo[k]||'';var correo=correos[k]||'';
+  window._premioCorreo={para:correo,asunto:asunto,msg:msg};
+  var ov=document.getElementById('avisoPremioOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='avisoPremioOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.94);z-index:9650;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var b='flex:1;text-align:center;font-weight:700;font-size:13px;padding:11px;border-radius:8px;border:none;font-family:inherit;cursor:pointer;text-decoration:none;';
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:400px;width:100%;margin-top:40px"><div style="font-size:15px;font-weight:700;color:#6ee7b7;margin-bottom:6px">✓ Guardado. Avísale a '+esc(p.nombre)+'</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'+
+    (fono?'<a href="https://wa.me/'+fono+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener" onclick="marcarAvisoPremio(\''+id+'\',\'wsp\')" style="'+b+'background:#25d366;color:#0b1220">📱 WhatsApp</a>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin WhatsApp guardado.</span>')+
+    (correo?'<button onclick="premioCorreo(\''+id+'\')" style="'+b+'background:#60a5fa;color:#0b1220">✉️ Correo</button>':'<span style="flex:1;font-size:11px;color:#fbbf24">Sin correo guardado.</span>')+'</div>'+
+    '<button onclick="document.getElementById(\'avisoPremioOv\').remove()" style="width:100%;margin-top:12px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button></div>';
+  document.body.appendChild(ov);
+}
+function actualizarBadgePremios(){
+  var n=Object.values(premiosGanadores||{}).filter(function(p){return p&&!p.anulado&&p.solicitud&&p.solicitud.estado==='pendiente'&&(esAdminPremio(p.nombre)===(modoRol==='jefaOperaciones'));}).length;
+  var b=document.getElementById('premioPendBadge');if(b)b.textContent=n?' ('+n+' solicitud'+(n>1?'es':'')+')':'';
+}
+
+// Panel de la Jefa de Operaciones: solicitudes de premio del equipo administrativo
+window.abrirPremiosOperaciones=function(){
+  var ov=document.getElementById('premiosOpOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='premiosOpOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9100;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:560px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span style="font-size:16px;font-weight:800;color:#fcd34d">🎁 Premios · equipo administrativo</span><button onclick="document.getElementById(\'premiosOpOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button></div><div id="premiosOpLista" style="font-size:12px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  Promise.all([sedeRef('premiosGanadores').once('value'),sedeRef('correos').once('value'),sedeRef('telefonosEquipo').once('value'),sedeRef('secretarias').once('value')]).then(function(sn){
+    premiosGanadores=sn[0].val()||{};correos=sn[1].val()||{};telefonosEquipo=sn[2].val()||{};secretarias=sn[3].val()||{};
+    window._premiosOpListo=true;
+    sedeRef('premiosGanadores').on('value',function(s){premiosGanadores=s.val()||{};pintarPremiosOp();actualizarBadgePremios();});
+    sedeRef('correos').on('value',function(s){correos=s.val()||{};});
+    sedeRef('telefonosEquipo').on('value',function(s){telefonosEquipo=s.val()||{};});
+    pintarPremiosOp();actualizarBadgePremios();
+  });
+};
+function pintarPremiosOp(){
+  var c=document.getElementById('premiosOpLista');if(!c)return;
+  var en=Object.entries(premiosGanadores||{}).filter(function(e){return e[1]&&esAdminPremio(e[1].nombre);}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);}).slice(0,20);
+  if(!en.length){c.innerHTML='Sin premios registrados para el equipo administrativo.';return;}
+  c.innerHTML=en.map(function(e){var p=e[1];
+    return '<div style="padding:9px 11px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:6px;'+(p.anulado?'opacity:.45':'')+'"><div style="font-size:13px;color:#fff"><b>'+esc(p.nombre)+'</b> · '+(p.fecha?esc(fechaBonita(p.fecha)):'sin fecha (por solicitar)')+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.55)">'+esc(p.texto||textoPremio(p))+(p.anulado?' · anulado':'')+'</div>'+solicitudPremioAdminHtml(e[0],p)+'</div>';}).join('');
 }
 window.anularPremio=function(id){
   if(!confirm('¿Anular este premio? Deja de aparecerle a la persona y queda marcado como anulado en el registro.'))return;
