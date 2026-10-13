@@ -1989,7 +1989,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // Antes estaba fuera de esta lista, así que una vacación pedida hoy para noviembre quedaba guardada
 // dentro de la semana activa de HOY (la única que existía en ese momento) y por eso aparecía como si
 // fuera de la semana actual — y lo mismo le pasaría a cualquier permiso pedido para semanas futuras.
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -2263,7 +2263,11 @@ window.abrirPanelJefaOperaciones=function(){
     sedeRef('cumpleanos').once('value'),
     sedeRef('fichaProgresoAdmin').once('value'),
     sedeRef('turnosAdminPlantillas').once('value'),
-    sedeRef('horarioPropioAdmin').once('value')
+    sedeRef('horarioPropioAdmin').once('value'),
+    sedeRef('designAdmin').once('value'),
+    sedeRef('supervisionAdmin').once('value'),
+    sedeRef('tareasAdmin').once('value'),
+    sedeRef('feriados').once('value')
   ]).then(function(snaps){
     secretarias=snaps[0].val()||{};
     produccionAdmin=snaps[1].val()||{};
@@ -2275,6 +2279,9 @@ window.abrirPanelJefaOperaciones=function(){
     fichaProgresoAdmin=snaps[7].val()||{};
     turnosAdminPlantillas=snaps[8].val()||{};
     horarioPropioAdmin=snaps[9].val()||{};
+    designAdmin=snaps[10].val()||{};supervisionAdmin=snaps[11].val()||{};tareasAdmin=snaps[12].val()||{};
+    var ferJ=snaps[13].val();if(ferJ&&typeof ferJ==='object')feriados=ferJ;
+    sedeRef('designAdmin').on('value',function(s){designAdmin=s.val()||{};});
     sedeRef('secretarias').on('value',function(s){secretarias=s.val()||{};});
     sedeRef('turnosAdminPlantillas').on('value',function(s){turnosAdminPlantillas=s.val()||{};if(document.getElementById('tabJO_turnos')&&document.getElementById('tabJO_turnos').style.background.indexOf('34,211,238')>-1)renderMapaTurnosAdmin();});
     sedeRef('horarioPropioAdmin').on('value',function(s){horarioPropioAdmin=s.val()||{};if(document.getElementById('tabJO_turnos')&&document.getElementById('tabJO_turnos').style.background.indexOf('34,211,238')>-1)renderMapaTurnosAdmin();});
@@ -2306,6 +2313,7 @@ function renderPanelJefaOperaciones(){
       '<button onclick="tabJefaOp(\'ranking\')" id="tabJO_rank" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🏆 Ranking</button>'+
       '<button onclick="tabJefaOp(\'cumplimiento\')" id="tabJO_cump" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📈 Cumplimiento</button>'+
       '<button onclick="tabJefaOp(\'metricas\')" id="tabJO_met" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">⚙️ Métricas</button>'+
+      '<button onclick="tabJefaOp(\'desig\')" id="tabJO_desig" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📌 Designaciones</button>'+
       '<button onclick="tabJefaOp(\'turnos\')" id="tabJO_turnos" class="jo-tab" style="flex:1;min-width:80px;font-size:11px;padding:9px 6px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🗓️ Turnos</button>'+
     '</div>'+
     '<button onclick="abrirModuloGerencia()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">👤 Mi perfil personal (Gerencia) — Material, Preguntas y mi Logro</button>'+
@@ -2317,13 +2325,14 @@ function renderPanelJefaOperaciones(){
 }
 
 window.tabJefaOp=function(tab){
-  ['prod','sec','rank','sup','cump','met','turnos'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
-  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',supervision:'tabJO_sup',cumplimiento:'tabJO_cump',metricas:'tabJO_met',turnos:'tabJO_turnos'};
+  ['prod','sec','rank','sup','cump','met','turnos','desig'].forEach(function(t){var b=document.getElementById('tabJO_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={produccion:'tabJO_prod',secretarias:'tabJO_sec',ranking:'tabJO_rank',supervision:'tabJO_sup',cumplimiento:'tabJO_cump',metricas:'tabJO_met',turnos:'tabJO_turnos',desig:'tabJO_desig'};
   var activo=document.getElementById(map[tab]);
   if(activo){activo.style.background='rgba(34,211,238,.3)';activo.style.color='#fff';}
   if(tab==='produccion')renderProduccionAdmin();
   else if(tab==='secretarias')renderSecretariasAdmin();
   else if(tab==='turnos')renderMapaTurnosAdmin();
+  else if(tab==='desig')renderDesignacionesAdmin();
   else if(tab==='ranking')renderRankingAdmin('jefaOpContenido');
   else if(tab==='supervision')renderSupervisionTareasAdmin();
   else if(tab==='cumplimiento')renderCumplimientoAdmin();
@@ -2331,26 +2340,90 @@ window.tabJefaOp=function(tab){
 };
 
 // ── Cumplimiento diario: gráfica por día y por persona + exportar PDF ──
-function calcCumplimientoDiaAdmin(fecha){
-  // % de personas del equipo que registraron al menos algo ese día (producción o capacitación)
-  var lista=Object.keys(secretarias||{});
-  if(!lista.length)return null;
-  var conActividad=lista.filter(function(k){
-    var prod=produccionAdmin[k]&&produccionAdmin[k][fecha];
-    var v=secretarias[k];var nom=(typeof v==='object'?v.nombre:v);
-    var capKey=(nom||'').replace(/[.#$/\[\]\s]/g,'_');
-    var capHoy=(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===fecha);
-    return prod||capHoy;
+// ── Cumplimiento diario del equipo administrativo ──
+// Por persona y día = promedio de los componentes que le corresponden ese día:
+//   · Designaciones (registros que le asignó la jefa: métricas diarias, calendario de mantenciones verificado)
+//   · Evaluación (resultado % de su respuesta del día; sin respuesta = 0)
+//   · Supervisión de la jefa (puntaje del día, solo si hubo)
+//   · Tareas puntuales de la jefa (hechas / asignadas, solo si hubo)
+// Solo cuenta los días en que la persona trabaja (según su turno; sin turno asignado = lunes a viernes no feriado).
+function _nomAdmin(key){var v=secretarias[key];return v&&(typeof v==='object'?v.nombre:v);}
+function esDiaLaboralAdmin(key,fecha){
+  var dia=diaDeDate(fecha);
+  if(esFeriado(dia))return false;
+  var t=turnoDelDia(key,dia);
+  if(t)return !!t.ini;
+  return dia!=='Sábado'&&dia!=='Domingo';
+}
+function designacionesDelDia(key,fecha){
+  var ds=(designAdmin&&designAdmin[key])||{};var dia=diaDeDate(fecha);var out=[];
+  var pr=(produccionAdmin&&produccionAdmin[key]&&produccionAdmin[key][fecha])||{};
+  var M=metricasActivas();
+  Object.keys(ds).forEach(function(id){
+    var d=ds[id];if(!d)return;
+    if(d.tipo==='metrica'){
+      if((d.dias||[]).indexOf(dia)<0)return;
+      var m=M[d.metricId];
+      out.push({id:id,tipo:'metrica',metricId:d.metricId,nombre:m?m.nombre:'Métrica',hecho:pr[d.metricId]!==undefined&&pr[d.metricId]!==null});
+    }else if(d.tipo==='calendario'){
+      var med=d.mediciones&&d.mediciones[fecha.slice(0,7)];
+      if(!med||med.fecha!==fecha)return;
+      out.push({id:id,tipo:'calendario',nombre:'Calendario de mantenciones al día',hecho:med.verificado==='si',pendiente:!med.verificado});
+    }
   });
-  return Math.round(conActividad.length/lista.length*100);
+  return out;
+}
+function cumplDiaAdminPersona(key,fecha){
+  if(!esDiaLaboralAdmin(key,fecha))return null;
+  var comps=[];
+  var ds=designacionesDelDia(key,fecha).filter(function(x){return !x.pendiente;});
+  if(ds.length)comps.push({n:'Designaciones',pct:Math.round(ds.filter(function(x){return x.hecho;}).length/ds.length*100)});
+  var ck=capKeyAdminNombre(_nomAdmin(key)||'');
+  var best=null,bts=0;
+  var meses=(rankingAdmin&&rankingAdmin.capacitacion&&rankingAdmin.capacitacion[ck])||{};
+  Object.keys(meses).forEach(function(mes){Object.keys(meses[mes]||{}).forEach(function(ts){var e=meses[mes][ts];if(e&&e.fecha===fecha&&Number(ts)>=bts){bts=Number(ts);best=e.pct||0;}});});
+  comps.push({n:'Evaluación',pct:best!==null?Math.round(best):0});
+  var sd=supervisionAdmin&&supervisionAdmin[key]&&supervisionAdmin[key][fecha];
+  if(sd&&typeof sd.puntaje==='number')comps.push({n:'Supervisión',pct:Math.round(sd.puntaje)});
+  var td=Object.values((tareasAdmin&&tareasAdmin[key]&&tareasAdmin[key][fecha])||{}).filter(Boolean);
+  if(td.length)comps.push({n:'Tareas de la jefa',pct:Math.round(td.filter(function(t){return t.hecha;}).length/td.length*100)});
+  var mapa={'Designaciones':'designaciones','Evaluación':'evaluacion','Supervisión':'supervision','Tareas de la jefa':'tareas'};
+  var sw=0,sp=0;
+  comps.forEach(function(c){var w=Number(pesosCumplAdmin[mapa[c.n]]);if(!isFinite(w)||w<0)w=PESOS_CUMPL_DEF[mapa[c.n]];sw+=w;sp+=w*c.pct;});
+  if(sw<=0)return Math.round(comps.reduce(function(a,c){return a+c.pct;},0)/comps.length);
+  return Math.round(sp/sw);
+}
+function calcCumplimientoDiaAdmin(fecha){
+  var vals=Object.keys(secretarias||{}).filter(function(k){return _nomAdmin(k);}).map(function(k){return cumplDiaAdminPersona(k,fecha);}).filter(function(v){return v!==null;});
+  if(!vals.length)return null;
+  return Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length);
+}
+function htmlPesosCumplAdmin(){
+  var P=pesosCumplAdmin,tot=['designaciones','evaluacion','supervision','tareas'].reduce(function(a,k){return a+(Number(P[k])||0);},0);
+  function inp(k,l){return '<label style="flex:1;min-width:70px;font-size:10px;color:rgba(255,255,255,.7)">'+l+'<input id="pcw_'+k+'" type="number" min="0" max="100" value="'+(Number(P[k])||0)+'" oninput="pesosCumplSuma()" style="width:100%;box-sizing:border-box;margin-top:3px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-family:inherit"></label>';}
+  return '<details style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:12px"><summary style="font-size:12px;font-weight:700;color:#93c5fd;cursor:pointer">⚖️ Ponderación del cumplimiento diario</summary>'+
+    '<div style="font-size:10px;color:rgba(255,255,255,.55);margin:8px 0">Peso de cada componente. Si un día una persona no tiene alguno (ej. sin supervisión), el resto se reajusta proporcionalmente.</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">'+inp('designaciones','Designaciones')+inp('evaluacion','Evaluación')+inp('supervision','Supervisión')+inp('tareas','Tareas jefa')+'</div>'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><span id="pcw_suma" style="font-size:11px;color:'+(tot===100?'#6ee7b7':'#fbbf24')+'">Suma: '+tot+'%</span><button onclick="guardarPesosCumplAdmin()" style="margin-left:auto;background:rgba(34,211,238,.25);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:inherit;font-size:11px;cursor:pointer">Guardar</button></div></details>';
+}
+function pesosCumplSuma(){var t=0;['designaciones','evaluacion','supervision','tareas'].forEach(function(k){t+=Number(document.getElementById('pcw_'+k).value)||0;});var e=document.getElementById('pcw_suma');if(e){e.textContent='Suma: '+t+'%';e.style.color=t===100?'#6ee7b7':'#fbbf24';}}
+function guardarPesosCumplAdmin(){
+  var n={},t=0;['designaciones','evaluacion','supervision','tareas'].forEach(function(k){var v=Number(document.getElementById('pcw_'+k).value);if(!isFinite(v)||v<0)v=0;n[k]=v;t+=v;});
+  if(t<=0){alert('Los pesos no pueden sumar 0.');return;}
+  if(t!==100&&!confirm('Los pesos suman '+t+'%, no 100%. Igual funciona (se normaliza). ¿Guardar?'))return;
+  sedeRef('pesosCumplAdmin').set(n).then(function(){pesosCumplAdmin=Object.assign({},PESOS_CUMPL_DEF,n);renderCumplimientoAdmin();}).catch(function(){alert('No se pudo guardar.');});
 }
 window.renderCumplimientoAdmin=function(){
+  if(!_pesosCumplCargados){
+    sedeRef('pesosCumplAdmin').once('value').then(function(sn){var v=sn.val();if(v&&typeof v==='object')pesosCumplAdmin=Object.assign({},PESOS_CUMPL_DEF,v);_pesosCumplCargados=true;renderCumplimientoAdmin();}).catch(function(){_pesosCumplCargados=true;renderCumplimientoAdmin();});
+    return;
+  }
   var cont=document.getElementById('jefaOpContenido');if(!cont)return;
   var periodo=window._cumplAdminPeriodo||'semana';
   var tabsHtml='<div style="display:flex;gap:6px;margin-bottom:12px">'+
     '<button onclick="window._cumplAdminPeriodo=\'semana\';renderCumplimientoAdmin()" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;font-weight:600;background:'+(periodo==='semana'?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">Semana actual</button>'+
     '<button onclick="window._cumplAdminPeriodo=\'mes\';renderCumplimientoAdmin()" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:6px;font-family:inherit;cursor:pointer;font-weight:600;background:'+(periodo==='mes'?'rgba(34,211,238,.3);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">Mes (por semana)</button>'+
-  '</div>';
+  '</div>'+htmlPesosCumplAdmin();
   if(periodo==='mes'){renderCumplimientoAdminMes(cont,tabsHtml);return;}
   // Semana actual (lunes a sábado)
   var hoy=new Date(hoyStr()+'T12:00:00');
@@ -2378,18 +2451,14 @@ window.renderCumplimientoAdmin=function(){
   html+='</div><div style="display:flex;gap:8px;margin-bottom:16px">'+dias.map(function(d){return '<div style="flex:1;text-align:center;font-size:9px;color:rgba(255,255,255,.4)">'+d.label+'</div>';}).join('')+'</div>';
   // Gráfica por persona (detalle de la semana)
   var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'')};});
-  html+='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px">Por persona (días activos de la semana)</div>';
+  html+='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px">Por persona (designaciones + evaluación + supervisión + tareas, días con turno)</div>';
   if(!lista.length){html+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Sin personas registradas.</div>';}
   lista.forEach(function(p){
-    var diasActivo=dias.filter(function(d){
-      var prod=produccionAdmin[p.key]&&produccionAdmin[p.key][d.fecha];
-      var capKey=(p.nombre||'').replace(/[.#$/\[\]\s]/g,'_');
-      var capHoy=(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===d.fecha);
-      return prod||capHoy;
-    }).length;
-    var pct=Math.round(diasActivo/6*100);
+    var pcts=dias.map(function(d){return cumplDiaAdminPersona(p.key,d.fecha);}).filter(function(v){return v!==null;});
+    var diasActivo=pcts.length;
+    var pct=pcts.length?Math.round(pcts.reduce(function(x,y){return x+y;},0)/pcts.length):0;
     var color=pct>=80?'#6ee7b7':pct>=50?'#fbbf24':'#fca5a5';
-    html+='<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#fff">'+esc(p.nombre)+'</span><span style="color:'+color+';font-weight:700">'+diasActivo+'/6 días · '+pct+'%</span></div>'+
+    html+='<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#fff">'+esc(p.nombre)+'</span><span style="color:'+color+';font-weight:700">'+pct+'% · '+diasActivo+' día'+(diasActivo===1?'':'s')+' con turno</span></div>'+
       '<div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+'"></div></div></div>';
   });
   html+='</div>';
@@ -2518,15 +2587,11 @@ window.exportarCumplimientoPDF=function(){
   doc.text('Cumplimiento por persona',40,y);y+=18;doc.setFont(undefined,'normal');
   var lista=Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v)};});
   lista.forEach(function(p){
-    var diasActivo=dias.filter(function(d){
-      var prod=produccionAdmin[p.key]&&produccionAdmin[p.key][d.fecha];
-      var capKey=(p.nombre||'').replace(/[.#$/\[\]\s]/g,'_');
-      var capHoy=(fichaProgresoAdmin[capKey]&&fichaProgresoAdmin[capKey].fecha===d.fecha);
-      return prod||capHoy;
-    }).length;
+    var pcts=dias.map(function(d){return cumplDiaAdminPersona(p.key,d.fecha);}).filter(function(v){return v!==null;});
+    var pctP=pcts.length?Math.round(pcts.reduce(function(x,y2){return x+y2;},0)/pcts.length):0;
     if(y>780){doc.addPage();y=40;}
     doc.setFontSize(10);doc.setTextColor(90,90,90);doc.text(p.nombre,50,y);
-    doc.setTextColor(20,20,20);doc.setFont(undefined,'bold');doc.text(diasActivo+'/6 días',W-40,y,{align:'right'});doc.setFont(undefined,'normal');
+    doc.setTextColor(20,20,20);doc.setFont(undefined,'bold');doc.text(pctP+'% ('+pcts.length+' días con turno)',W-40,y,{align:'right'});doc.setFont(undefined,'normal');
     y+=16;
   });
   doc.save('Cumplimiento_Semanal_Admin_'+dias[0].fecha+'.pdf');
@@ -2902,7 +2967,7 @@ function renderMapaTurnosAdmin(){
     }).join('');
   }
   html+='</div>';
-  cont.innerHTML=html;
+  cont.innerHTML=htmlGrillaTurnosEquipo()+html;
 }
 function resumenTurnoTexto(turno,key){
   var datos=turno==='personalizado'?horarioPropioAdmin[key]:turnosAdminPlantillas[turno];
@@ -2960,6 +3025,191 @@ function turnoDelDia(key,dia){
   if(!datos||!datos[dia])return {turno:turno,ini:null,fin:null};
   return {turno:turno,ini:datos[dia].ini,fin:datos[dia].fin};
 }
+
+
+// ══════════ DESIGNACIONES, TURNOS Y REGISTROS DEL EQUIPO ADMINISTRATIVO ══════════
+var METRICAS_BASE_ADMIN={
+  m_agendados:{nombre:'Pacientes agendados (conteo)',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m_atenciones:{nombre:'Atenciones realizadas (conteo)',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m_llamadas:{nombre:'Llamadas realizadas (conteo)',ambito:'individual',dir:'mas',cadencia:'diaria'},
+  m_pedidos:{nombre:'Pedidos entregados (Bodega)',ambito:'individual',dir:'mas',cadencia:'diaria'}
+};
+var _dsCss='font-size:12px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;font-family:inherit;box-sizing:border-box;';
+function personasAdmin(){
+  return Object.keys(secretarias||{}).map(function(k){var v=secretarias[k];return {key:k,nombre:(typeof v==='object'?v.nombre:v),cargo:(typeof v==='object'?v.cargo:'')||'Administrativo/a'};}).filter(function(p){return p.nombre;});
+}
+function adminKeyDe(nombre){return Object.keys(secretarias||{}).find(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v)===nombre;});}
+// Vista semanal de turnos del equipo (solo lectura) — para la jefa
+function htmlGrillaTurnosEquipo(){
+  var ps=personasAdmin();
+  var hoyD=diaDeDate(hoyStr());
+  var h='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:8px">👥 Turnos del equipo — semana</div>';
+  if(!ps.length)return h+'<div style="font-size:12px;color:rgba(255,255,255,.5)">Sin personas registradas.</div></div>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:10px;min-width:480px"><tr><th style="text-align:left;padding:4px;color:rgba(255,255,255,.4)"></th>'+DIAS_ROTATIVA_ADMIN.map(function(d){return '<th style="padding:4px;color:'+(d===hoyD?'#fbbf24':'rgba(255,255,255,.5)')+'">'+d.slice(0,3)+'</th>';}).join('')+'</tr>';
+  ps.forEach(function(p){
+    h+='<tr style="border-top:1px solid rgba(255,255,255,.06)"><td style="padding:5px 4px;color:#fff;font-weight:600;white-space:nowrap">'+esc(p.nombre.split(' ')[0])+'<div style="font-size:8px;color:rgba(255,255,255,.35);font-weight:400">'+esc(labelCargo(p.cargo))+'</div></td>';
+    DIAS_ROTATIVA_ADMIN.forEach(function(d){
+      var t=turnoDelDia(p.key,d);
+      var nD=Object.values((designAdmin&&designAdmin[p.key])||{}).filter(function(x){return x&&x.tipo==='metrica'&&(x.dias||[]).indexOf(d)>-1;}).length;
+      h+='<td style="padding:4px;text-align:center;color:'+(t&&t.ini?'#e5e7eb':'rgba(255,255,255,.25)')+'">'+(t===null?'—':t.ini?t.ini+'<br>'+t.fin:'libre')+(nD?'<div style="font-size:9px;color:#fbbf24">📌'+nD+'</div>':'')+'</td>';
+    });
+    h+='</tr>';
+  });
+  return h+'</table></div><div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:6px">— = sin turno asignado · 📌 = designaciones ese día</div></div>';
+}
+// ---- Pestaña de la jefa: asignar designaciones ----
+window.renderDesignacionesAdmin=function(){
+  var cont=document.getElementById('jefaOpContenido');if(!cont)return;
+  var M=metricasActivas();
+  var faltanBase=Object.keys(METRICAS_BASE_ADMIN).some(function(id){return !M[id];});
+  var optsM=Object.keys(M).filter(function(id){return M[id].ambito!=='grupal';}).map(function(id){return '<option value="'+id+'">'+esc(M[id].nombre)+'</option>';}).join('');
+  var hoyMes=hoyStr().slice(0,7);
+  var h='<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Cada persona ve sus designaciones en "Mis turnos" y las completa en "Mis registros". Cuentan en el cumplimiento diario y en el ranking.</div>';
+  if(faltanBase)h+='<button onclick="crearMetricasBaseAdmin()" style="width:100%;background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.35);border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:10px">➕ Crear métricas base: agendados, atenciones, llamadas y pedidos entregados</button>';
+  // Asignar a todo el equipo administrativo
+  h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:6px">👥 Asignar a todos los Administrativos/as</div>'+
+    '<select id="dsBulkM" style="'+_dsCss+'width:100%;margin-bottom:6px">'+optsM+'</select>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px" id="dsBulkDias">'+DIAS_ROTATIVA_ADMIN.map(function(d,i){return '<label style="font-size:11px;color:#fff"><input type="checkbox" value="'+d+'"'+(i<5?' checked':'')+'> '+d.slice(0,3)+'</label>';}).join('')+'</div>'+
+    '<button class="btn-add" onclick="asignarDesigBulk()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">Asignar a todos</button></div>';
+  personasAdmin().forEach(function(p){
+    var ds=(designAdmin&&designAdmin[p.key])||{};
+    var esMant=p.cargo==='Mantención';
+    h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:6px">'+esc(p.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+esc(labelCargo(p.cargo))+'</span></div>';
+    var ids=Object.keys(ds);
+    if(!ids.length)h+='<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px">Sin designaciones.</div>';
+    ids.forEach(function(id){
+      var d=ds[id];if(!d)return;
+      if(d.tipo==='metrica'){
+        var m=M[d.metricId];
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12px;color:#fff;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>📌 '+esc(m?m.nombre:'(métrica quitada)')+' <span style="font-size:10px;color:rgba(255,255,255,.45)">· '+(d.dias||[]).map(function(x){return x.slice(0,3);}).join(', ')+'</span></span><button onclick="quitarDesigAdmin(\''+p.key+'\',\''+id+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;cursor:pointer">✕</button></div>';
+      }else if(d.tipo==='calendario'){
+        h+='<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#fff"><span>🔧 Calendario de mantenciones al día <span style="font-size:10px;color:rgba(255,255,255,.45)">· mensual</span></span><button onclick="quitarDesigAdmin(\''+p.key+'\',\''+id+'\')" style="background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;cursor:pointer">✕</button></div>'+
+          '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><label style="font-size:10px;color:rgba(255,255,255,.5)">Se medirá el</label><input type="date" id="dsMed_'+id+'" value="'+(((d.mediciones||{})[hoyMes]||{}).fecha||'')+'" style="'+_dsCss+'flex:1"><button onclick="fijarMedicionCal(\''+p.key+'\',\''+id+'\')" style="background:#10b981;color:#06281d;border:none;border-radius:6px;padding:7px 10px;font-weight:700;font-family:inherit;cursor:pointer">Fijar</button></div>'+
+          Object.keys(d.mediciones||{}).sort().reverse().slice(0,3).map(function(mes){
+            var med=d.mediciones[mes];
+            var est=med.verificado==='si'?'<span style="color:#6ee7b7">✓ Cumple</span>':med.verificado==='no'?'<span style="color:#fca5a5">✗ No cumple</span>':'<span style="color:#fcd34d">⏳ Por verificar</span>';
+            return '<div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px">'+esc(mes)+' · medición '+esc(fmtF(med.fecha))+' · '+(med.declarado?'la persona lo declaró al día':'sin declarar aún')+' · '+est+
+              (med.verificado?'':' <button onclick="verificarCalMant(\''+p.key+'\',\''+id+'\',\''+mes+'\',\'si\')" style="background:#10b981;color:#06281d;border:none;border-radius:5px;padding:2px 8px;font-weight:700;cursor:pointer;margin-left:4px">Cumple</button><button onclick="verificarCalMant(\''+p.key+'\',\''+id+'\',\''+mes+'\',\'no\')" style="background:#ef4444;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-weight:700;cursor:pointer;margin-left:3px">No cumple</button>')+'</div>';}).join('')+'</div>';
+      }
+    });
+    h+='<div style="margin-top:8px"><select id="dsM_'+p.key+'" style="'+_dsCss+'width:100%;margin-bottom:6px">'+optsM+'</select>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px" id="dsD_'+p.key+'">'+DIAS_ROTATIVA_ADMIN.map(function(d){return '<label style="font-size:11px;color:#fff"><input type="checkbox" value="'+d+'"> '+d.slice(0,3)+'</label>';}).join('')+'</div>'+
+      '<div style="display:flex;gap:6px"><button onclick="asignarDesigPersona(\''+p.key+'\')" style="flex:1;background:rgba(251,191,36,.18);color:#fbbf24;border:1px solid rgba(251,191,36,.35);border-radius:6px;padding:7px;font-family:inherit;font-weight:700;cursor:pointer">+ Asignar métrica</button>'+
+      '<button onclick="asignarCalMant(\''+p.key+'\')" style="flex:1;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:6px;padding:7px;font-family:inherit;font-weight:700;cursor:pointer">+ Calendario de mantenciones'+(esMant?' (recomendado)':'')+'</button></div></div></div>';
+  });
+  cont.innerHTML=h;
+};
+window.crearMetricasBaseAdmin=function(){
+  var base=(metricasAdmin&&Object.keys(metricasAdmin).length)?JSON.parse(JSON.stringify(metricasAdmin)):JSON.parse(JSON.stringify(METRICAS_ADMIN_DEFAULT));
+  Object.keys(METRICAS_BASE_ADMIN).forEach(function(id){if(!base[id])base[id]=METRICAS_BASE_ADMIN[id];});
+  metricasAdmin=base;
+  sedeRef('metricasAdmin').set(base).then(function(){renderDesignacionesAdmin();});
+};
+function _diasMarcados(contId){return Array.from(document.querySelectorAll('#'+contId+' input:checked')).map(function(c){return c.value;});}
+window.asignarDesigBulk=function(){
+  var mid=document.getElementById('dsBulkM').value,dias=_diasMarcados('dsBulkDias');
+  if(!mid||!dias.length){alert('Elige la métrica y al menos un día.');return;}
+  var ps=personasAdmin().filter(function(p){return labelCargo(p.cargo)==='Administrativo/a';});
+  if(!confirm('¿Asignar esta métrica a '+ps.length+' administrativos/as?'))return;
+  var up={};ps.forEach(function(p,i){up['designAdmin/'+p.key+'/d'+Date.now()+'_'+i]={tipo:'metrica',metricId:mid,dias:dias};});
+  db.ref('sedes/'+S).update(up).then(function(){designAdmin=designAdmin||{};renderDesignacionesAdminRefrescar();});
+};
+function renderDesignacionesAdminRefrescar(){sedeRef('designAdmin').once('value').then(function(sn){designAdmin=sn.val()||{};renderDesignacionesAdmin();});}
+window.asignarDesigPersona=function(key){
+  var mid=document.getElementById('dsM_'+key).value,dias=_diasMarcados('dsD_'+key);
+  if(!mid||!dias.length){alert('Elige la métrica y al menos un día.');return;}
+  sedeRef('designAdmin/'+key+'/d'+Date.now()).set({tipo:'metrica',metricId:mid,dias:dias}).then(renderDesignacionesAdminRefrescar);
+};
+window.asignarCalMant=function(key){
+  var ya=Object.values((designAdmin&&designAdmin[key])||{}).some(function(d){return d&&d.tipo==='calendario';});
+  if(ya){alert('Esta persona ya tiene el calendario de mantenciones.');return;}
+  sedeRef('designAdmin/'+key+'/d'+Date.now()).set({tipo:'calendario'}).then(renderDesignacionesAdminRefrescar);
+};
+window.quitarDesigAdmin=function(key,id){if(!confirm('¿Quitar esta designación?'))return;sedeRef('designAdmin/'+key+'/'+id).remove().then(renderDesignacionesAdminRefrescar);};
+window.fijarMedicionCal=function(key,id){
+  var f=document.getElementById('dsMed_'+id).value;if(!f){alert('Elige la fecha en que se medirá.');return;}
+  sedeRef('designAdmin/'+key+'/'+id+'/mediciones/'+f.slice(0,7)+'/fecha').set(f).then(renderDesignacionesAdminRefrescar);
+};
+window.verificarCalMant=function(key,id,mes,res){
+  sedeRef('designAdmin/'+key+'/'+id+'/mediciones/'+mes).update({verificado:res,verificadoTs:Date.now()}).then(renderDesignacionesAdminRefrescar);
+};
+// ---- Pestaña del administrativo: Mis turnos ----
+window.renderMisTurnosAdmin=function(cont){
+  if(!cont)return;
+  var nombre=window._adminNombre,key=window._adminKeyActual||adminKeyDe(nombre);
+  if(!key){cont.innerHTML='<div style="color:rgba(255,255,255,.5);font-size:13px">Selecciona tu nombre primero.</div>';return;}
+  var v=secretarias[key];var funcion=(typeof v==='object'&&v.funcion)||'';
+  var hoyD=diaDeDate(hoyStr());
+  var M=metricasActivas();
+  var h='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:2px">🗓️ Mis turnos — semana</div>'+(funcion?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">🧭 '+esc(funcion)+'</div>':'<div style="margin-bottom:8px"></div>');
+  var hayTurno=false;
+  DIAS_ROTATIVA_ADMIN.forEach(function(d){
+    var t=turnoDelDia(key,d);if(t)hayTurno=true;
+    var des=Object.values((designAdmin&&designAdmin[key])||{}).filter(function(x){return x&&x.tipo==='metrica'&&(x.dias||[]).indexOf(d)>-1;}).map(function(x){return (M[x.metricId]||{}).nombre||'Registro';});
+    h+='<div style="padding:9px 10px;margin-bottom:6px;border-radius:8px;background:'+(d===hoyD?'rgba(251,191,36,.12)':'rgba(255,255,255,.04)')+';'+(d===hoyD?'border:1px solid rgba(251,191,36,.35)':'')+'">'+
+      '<div style="display:flex;justify-content:space-between;font-size:13px;color:#fff"><b>'+d+(d===hoyD?' · hoy':'')+'</b><span>'+(t===null?'<span style="color:rgba(255,255,255,.35)">sin turno asignado</span>':t.ini?t.ini+' – '+t.fin:'<span style="color:rgba(255,255,255,.4)">libre</span>')+'</span></div>'+
+      (des.length?'<div style="font-size:11px;color:#fcd34d;margin-top:4px">📌 '+des.map(esc).join(' · ')+'</div>':'')+'</div>';
+  });
+  if(!hayTurno)h+='<div style="font-size:11px;color:#93c5fd">Tu turno aún no está asignado: la jefa de operaciones lo define en su panel.</div>';
+  h+='</div>';
+  var cal=Object.values((designAdmin&&designAdmin[key])||{}).filter(function(x){return x&&x.tipo==='calendario';})[0];
+  if(cal){var med=(cal.mediciones||{})[hoyStr().slice(0,7)];
+    h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:4px">🔧 Calendario de mantenciones</div><div style="font-size:12px;color:#fff">'+(med&&med.fecha?'Este mes te lo mide la jefa el <b>'+esc(fmtF(med.fecha))+'</b>.':'La jefa aún no fija la fecha de medición de este mes.')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">Márcalo "al día" en Mis registros.</div></div>';}
+  var tds=Object.values((tareasAdmin&&tareasAdmin[key]&&tareasAdmin[key][hoyStr()])||{}).filter(Boolean);
+  if(tds.length)h+='<div style="background:#16233d;border-radius:12px;padding:14px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">📋 Tareas de la jefa para hoy</div>'+tds.map(function(t){return '<div style="font-size:12px;color:#fff;padding:3px 0">'+(t.hecha?'✅':'⬜')+' '+esc(t.texto)+'</div>';}).join('')+'</div>';
+  cont.innerHTML=h;
+};
+// ---- Pestaña del administrativo: Mis registros ----
+window.renderMisRegistrosAdmin=function(cont,fechaSel){
+  if(!cont)cont=document.getElementById('adminContenido');if(!cont)return;
+  var nombre=window._adminNombre,key=window._adminKeyActual||adminKeyDe(nombre);
+  if(!key){cont.innerHTML='<div style="color:rgba(255,255,255,.5);font-size:13px">Selecciona tu nombre primero.</div>';return;}
+  var hoy=hoyStr();var fecha=fechaSel||window._misRegFecha||hoy;window._misRegFecha=fecha;
+  var min=_fISO(new Date(Date.now()-6*86400000));
+  var ds=designacionesDelDia(key,fecha);
+  var pr=(produccionAdmin&&produccionAdmin[key]&&produccionAdmin[key][fecha])||{};
+  var h='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:13px;font-weight:700;color:#fbbf24">✍️ Mis registros</span><input type="date" id="misRegFecha" value="'+fecha+'" min="'+min+'" max="'+hoy+'" onchange="renderMisRegistrosAdmin(null,this.value)" style="'+_dsCss+'"></div>';
+  var mets=ds.filter(function(x){return x.tipo==='metrica';});
+  if(!mets.length)h+='<div style="font-size:12px;color:rgba(255,255,255,.5)">No tienes registros designados para '+diaDeDate(fecha)+'. '+(Object.keys((designAdmin&&designAdmin[key])||{}).length?'':'La jefa de operaciones aún no te asigna designaciones.')+'</div>';
+  mets.forEach(function(x){
+    var cur=pr[x.metricId];
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:13px;color:#fff;flex:1">'+esc(x.nombre)+(x.hecho?' <span style="color:#6ee7b7;font-size:11px">✓</span>':'')+'</span><input type="number" min="0" id="mrv_'+x.metricId+'" value="'+(cur===undefined?'':cur)+'" placeholder="N°" style="'+_dsCss+'width:84px;text-align:center"></div>';
+  });
+  if(mets.length)h+='<button class="btn-add" onclick="guardarMisRegistrosAdmin()" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:10px">💾 Guardar</button><div class="saved" id="misRegSaved">✓ Guardado</div>';
+  h+='</div>';
+  var cal=Object.keys((designAdmin&&designAdmin[key])||{}).map(function(id){return {id:id,d:designAdmin[key][id]};}).filter(function(x){return x.d&&x.d.tipo==='calendario';})[0];
+  if(cal){
+    var mes=hoy.slice(0,7),med=(cal.d.mediciones||{})[mes]||{};
+    h+='<div style="background:#16233d;border-radius:12px;padding:16px"><div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">🔧 Calendario de mantenciones al día</div>'+
+      '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:8px">'+(med.fecha?'La jefa lo mide el <b style="color:#fff">'+esc(fmtF(med.fecha))+'</b>.':'La jefa aún no fija la fecha de medición de este mes.')+(med.verificado?' Resultado: '+(med.verificado==='si'?'<b style="color:#6ee7b7">✓ cumple</b>':'<b style="color:#fca5a5">✗ no cumple</b>'):'')+'</div>'+
+      '<label style="font-size:13px;color:#fff;cursor:pointer"><input type="checkbox" id="mrCal" '+(med.declarado?'checked ':'')+'style="vertical-align:middle"> Mi calendario de mantenciones está al día</label>'+
+      '<button class="btn-add" onclick="guardarCalDeclarado(\''+cal.id+'\')" style="margin-top:10px;background:linear-gradient(135deg,#1d4ed8,#60a5fa)">💾 Guardar</button><div class="saved" id="misCalSaved">✓ Guardado</div></div>';
+  }
+  cont.innerHTML=h;
+};
+window.guardarMisRegistrosAdmin=function(){
+  var nombre=window._adminNombre,key=window._adminKeyActual||adminKeyDe(nombre),fecha=window._misRegFecha||hoyStr();
+  var up={},n=0;
+  designacionesDelDia(key,fecha).filter(function(x){return x.tipo==='metrica';}).forEach(function(x){
+    var el=document.getElementById('mrv_'+x.metricId);
+    if(el&&el.value!==''&&Number(el.value)>=0){up['produccionAdmin/'+key+'/'+fecha+'/'+x.metricId]=Number(el.value);n++;}
+  });
+  if(!n){alert('Ingresa al menos un valor.');return;}
+  up['produccionAdmin/'+key+'/'+fecha+'/_fecha']=fecha;
+  db.ref('sedes/'+S).update(up).then(function(){
+    Object.keys(up).forEach(function(p){var seg=p.split('/');if(seg.length===4){produccionAdmin[seg[1]]=produccionAdmin[seg[1]]||{};produccionAdmin[seg[1]][seg[2]]=produccionAdmin[seg[1]][seg[2]]||{};produccionAdmin[seg[1]][seg[2]][seg[3]]=up[p];}});
+    showSaved('misRegSaved');renderMisRegistrosAdmin(null,fecha);
+  });
+};
+window.guardarCalDeclarado=function(id){
+  var nombre=window._adminNombre,key=window._adminKeyActual||adminKeyDe(nombre);
+  var on=document.getElementById('mrCal').checked,mes=hoyStr().slice(0,7);
+  sedeRef('designAdmin/'+key+'/'+id+'/mediciones/'+mes+'/declarado').set(on?Date.now():null).then(function(){
+    designAdmin[key]=designAdmin[key]||{};designAdmin[key][id]=designAdmin[key][id]||{};
+    var d=designAdmin[key][id];d.mediciones=d.mediciones||{};d.mediciones[mes]=d.mediciones[mes]||{};d.mediciones[mes].declarado=on?Date.now():null;
+    showSaved('misCalSaved');
+  });
+};
 
 // ── Ingreso diario de producción ──
 // Métricas activas (las guardadas o el default)
@@ -3131,7 +3381,9 @@ function puntajeFinalAdmin(key,mes){
 // Orden: 1° días respondidos · 2° puntaje (evaluación + supervisión de la Jefa + cumplimiento de tareas
 // asignadas, con RANK_PESOS, igual que el ranking clínico) · 3° menor tiempo promedio de respuesta.
 // Ranking ÚNICO (todos los cargos juntos); el cargo se muestra solo como etiqueta.
-var supervisionAdmin={},tareasAdmin={};
+var supervisionAdmin={},tareasAdmin={},designAdmin={};
+var PESOS_CUMPL_DEF={designaciones:40,evaluacion:25,supervision:20,tareas:15};
+var pesosCumplAdmin=Object.assign({},PESOS_CUMPL_DEF),_pesosCumplCargados=false;
 var SUP_ADMIN_ITEMS=[
   {id:'puntualidad',nombre:'Puntualidad',peso:25},
   {id:'presentacion',nombre:'Presentación personal / uniforme',peso:20},
@@ -3182,6 +3434,11 @@ function calcularRankingAdmin(desde,hasta){
     // Cumplimiento de tareas asignadas por la Jefa (hechas / asignadas)
     var td=(tareasAdmin&&tareasAdmin[k])||{};var tTot=0,tHechas=0;
     Object.keys(td).forEach(function(f){if(!setHab[f])return;Object.values(td[f]||{}).forEach(function(t){if(!t)return;tTot++;if(t.hecha)tHechas++;});});
+    // Designaciones asignadas (métricas diarias y calendario verificado) también cuentan como cumplimiento
+    habiles.forEach(function(f){
+      if(!esDiaLaboralAdmin(k,f))return;
+      designacionesDelDia(k,f).forEach(function(x){if(x.pendiente)return;tTot++;if(x.hecho)tHechas++;});
+    });
     filas.push({key:k,nombre:nombre,cargo:cargo,grupo:grupoRankAdmin(cargo),
       veces:dias.length,puntos:puntos,
       promedioDuracionMs:tN?Math.round(tSum/tN*1000):Infinity,
@@ -3210,8 +3467,9 @@ function calcularRankingAdmin(desde,hasta){
 window._rankAdminPeriodo='semana';
 window.renderRankingAdmin=function(contId){
   var cont=document.getElementById(contId);if(!cont)return;
-  Promise.all([sedeRef('secretarias').once('value'),sedeRef('rankingAdmin').once('value'),sedeRef('supervisionAdmin').once('value'),sedeRef('tareasAdmin').once('value'),sedeRef('fichaProgresoAdmin').once('value'),sedeRef('feriados').once('value')]).then(function(s){
+  Promise.all([sedeRef('secretarias').once('value'),sedeRef('rankingAdmin').once('value'),sedeRef('supervisionAdmin').once('value'),sedeRef('tareasAdmin').once('value'),sedeRef('fichaProgresoAdmin').once('value'),sedeRef('feriados').once('value'),sedeRef('designAdmin').once('value'),sedeRef('produccionAdmin').once('value'),sedeRef('turnosAdminPlantillas').once('value'),sedeRef('horarioPropioAdmin').once('value')]).then(function(s){
     secretarias=s[0].val()||{};rankingAdmin=s[1].val()||{};supervisionAdmin=s[2].val()||{};tareasAdmin=s[3].val()||{};fichaProgresoAdmin=s[4].val()||{};
+    designAdmin=s[6].val()||{};produccionAdmin=s[7].val()||{};turnosAdminPlantillas=s[8].val()||{};horarioPropioAdmin=s[9].val()||{};
     var fer=s[5].val();if(fer&&typeof fer==='object')feriados=fer;
     pintarRankingAdmin(contId);
   });
@@ -3454,8 +3712,17 @@ window.abrirModuloAdministrativo=function(){
     sedeRef('produccionAdmin').once('value'),
     sedeRef('pesosAdmin').once('value'),
     sedeRef('gruposModulo').once('value'),
-    sedeRef('biblioteca').once('value')
+    sedeRef('biblioteca').once('value'),
+    sedeRef('designAdmin').once('value'),
+    sedeRef('turnosAdminPlantillas').once('value'),
+    sedeRef('horarioPropioAdmin').once('value'),
+    sedeRef('supervisionAdmin').once('value'),
+    sedeRef('tareasAdmin').once('value'),
+    sedeRef('metricasAdmin').once('value'),
+    sedeRef('feriados').once('value')
   ]).then(function(snaps){
+    designAdmin=snaps[8].val()||{};turnosAdminPlantillas=snaps[9].val()||{};horarioPropioAdmin=snaps[10].val()||{};supervisionAdmin=snaps[11].val()||{};tareasAdmin=snaps[12].val()||{};metricasAdmin=snaps[13].val()||{};
+    var ferA=snaps[14].val();if(ferA&&typeof ferA==='object')feriados=ferA;
     secretarias=snaps[0].val()||{};
     bibliotecaAdmin=snaps[1].val()||{};
     fichaProgresoAdmin=snaps[2].val()||{};
@@ -3489,7 +3756,9 @@ function renderModuloAdministrativo(){
       '<button onclick="location.reload()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">← Salir</button>'+
     '</div>'+
     '<div id="adminNombreSel"></div>'+
-    '<div id="adminTabs" style="display:none;gap:8px;margin-bottom:14px">'+
+    '<div id="adminTabs" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+
+      '<button onclick="tabAdmin(\'turnos\')" id="tabAD_turn" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">🗓️ Mis turnos</button>'+
+      '<button onclick="tabAdmin(\'registros\')" id="tabAD_reg" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">✍️ Mis registros</button>'+
       '<button onclick="tabAdmin(\'material\')" id="tabAD_mat" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(251,191,36,.3);color:#fff">📚 Material</button>'+
       '<button onclick="tabAdmin(\'preguntas\')" id="tabAD_preg" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📝 Preguntas</button>'+
       '<button onclick="tabAdmin(\'rendimiento\')" id="tabAD_rend" style="flex:1;min-width:70px;font-size:11px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)">📈 Rendimiento</button>'+
@@ -3627,14 +3896,16 @@ function mostrarRetroViernes(nombre,fortalezas,mejoras){
 
 window.tabAdmin=function(tab){
   window._adminTabActual=tab;
-  ['mat','preg','rend','rank'].forEach(function(t){var b=document.getElementById('tabAD_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
-  var map={material:'tabAD_mat',preguntas:'tabAD_preg',rendimiento:'tabAD_rend',ranking:'tabAD_rank'};
+  ['mat','preg','rend','rank','turn','reg'].forEach(function(t){var b=document.getElementById('tabAD_'+t);if(b){b.style.background='rgba(255,255,255,.06)';b.style.color='rgba(255,255,255,.6)';}});
+  var map={material:'tabAD_mat',preguntas:'tabAD_preg',rendimiento:'tabAD_rend',ranking:'tabAD_rank',turnos:'tabAD_turn',registros:'tabAD_reg'};
   var activo=document.getElementById(map[tab]);
   if(activo){activo.style.background='rgba(251,191,36,.3)';activo.style.color='#fff';}
   var cont=document.getElementById('adminContenido');
   if(tab==='material')renderMaterialAdmin(cont);
   else if(tab==='preguntas')renderPreguntasAdminTab(cont);
   else if(tab==='rendimiento')renderRendimientoDiarioAdmin(cont);
+  else if(tab==='turnos')renderMisTurnosAdmin(cont);
+  else if(tab==='registros')renderMisRegistrosAdmin(cont);
   else renderRankingAdmin('adminContenido');
 };
 
