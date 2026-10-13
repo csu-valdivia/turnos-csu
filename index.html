@@ -2970,7 +2970,7 @@ function renderMapaTurnosAdmin(){
   cont.innerHTML=htmlGrillaTurnosEquipo()+html;
 }
 function resumenTurnoTexto(turno,key){
-  var datos=turno==='personalizado'?horarioPropioAdmin[key]:turnosAdminPlantillas[turno];
+  var datos=datosTurnoAdmin(key);
   if(!datos)return 'Sin horario definido aún.';
   return DIAS_ROTATIVA_ADMIN.map(function(d){return d.slice(0,3)+' '+(datos[d]?datos[d].ini+'–'+datos[d].fin:'libre');}).join(' · ');
 }
@@ -3019,9 +3019,17 @@ window.guardarHorarioPersonalizado=function(key){
 };
 // Resuelve el horario que le corresponde a una persona un día dado (según su Turno 1/2/3 asignado o
 // su horario personalizado), para usarlo donde haga falta mostrar "tu turno hoy".
+function datosTurnoAdmin(key){
+  var v=secretarias[key];var turno=(v&&typeof v==='object')?v.turno:'';if(!turno)return null;
+  if(turno==='personalizado'){
+    var cargo=(typeof v==='object'?v.cargo:'');
+    return horarioPropioAdmin[key]||HORARIO_SUGERIDO_CARGO[cargo]||HORARIO_SUGERIDO_CARGO[labelCargo(cargo)]||null;
+  }
+  return turnosAdminPlantillas[turno]||TURNOS_ADMIN_DEFAULT[turno]||null;
+}
 function turnoDelDia(key,dia){
   var v=secretarias[key];var turno=(v&&typeof v==='object')?v.turno:'';if(!turno)return null;
-  var datos=turno==='personalizado'?horarioPropioAdmin[key]:turnosAdminPlantillas[turno];
+  var datos=datosTurnoAdmin(key);
   if(!datos||!datos[dia])return {turno:turno,ini:null,fin:null};
   return {turno:turno,ini:datos[dia].ini,fin:datos[dia].fin};
 }
@@ -4044,7 +4052,7 @@ function ventanaAdminHoy(nombre){
   Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];var n=(typeof v==='object'?v.nombre:v);if(n===nombre)key=k;});
   var INI=8*60;
   var v0=key?secretarias[key]:null;var turno=(v0&&typeof v0==='object')?v0.turno:'';
-  var datos=turno?(turno==='personalizado'?horarioPropioAdmin[key]:turnosAdminPlantillas[turno]):null;
+  var datos=turno?datosTurnoAdmin(key):null;
   var celda=datos?datos[diaDeDate(hoyStr())]:undefined;
   // Sin turno, o turno sin horario guardado para ese día → horario general (NO se asume día libre)
   if(!turno||!datos||celda===undefined)return {estado:moduloTrabajoAbierto()?'abierta':'cerrada_general',general:true};
