@@ -5171,10 +5171,10 @@ function renderMisTurnos(nombre){
     var esRol=ROLES_TECNICOS_BASE[t.tipo]||rolesTecnicos[t.tipo];
     if(!esRol||t.nombre!==nombre)return false;
     // Roles puntuales (aseo semanal, pedido semanal, pabellón por asignación puntual): solo su día. Rol diario: cualquier día.
-    // Semanales con arrastre (botiquín, control biológico, bolso azul y roles semanales propios): aparecen desde el día asignado
-    // hasta el fin de la semana, para que no se pierdan si no se hicieron justo ese día.
+    // Semanales (botiquín, control biológico, bolso azul y roles semanales propios): aparecen TODA la semana, con su día asignado
+    // en la etiqueta, para que se puedan registrar cuando corresponda y no se pierdan.
     var ordD=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-    if({botiquin_pab:1,control_bio:1,bolso_azul:1}[t.tipo]||(rolesTecnicos[t.tipo]&&rolesTecnicos[t.tipo].frecuencia==='semanal'))return ordD.indexOf(diaHoyRol)>=ordD.indexOf(t.dia);
+    if({botiquin_pab:1,control_bio:1,bolso_azul:1}[t.tipo]||(rolesTecnicos[t.tipo]&&rolesTecnicos[t.tipo].frecuencia==='semanal'))return true;
     if(ROLES_SEMANALES[t.tipo])return t.dia===diaHoyRol;
     return true;
   });
@@ -5196,10 +5196,11 @@ function renderMisTurnos(nombre){
         var rowStyle='display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer';
         if(ROLES_TECNICOS_BASE[t.tipo]){
           var r=ROLES_TECNICOS_BASE[t.tipo];
-          return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+'</span>'+estBadge+'</button>';
+          var dEt=(t.dia&&t.dia!==diaHoyRol&&({botiquin_pab:1,control_bio:1,bolso_azul:1}[t.tipo]))?' <span style="font-size:10px;color:#94a3b8">· asignado '+t.dia+'</span>':'';
+          return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+dEt+'</span>'+estBadge+'</button>';
         } else {
           var rc=rolesTecnicos[t.tipo];
-          return '<button onclick="abrirRegCustom(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+'</span>'+estBadge+'</button>';
+          return '<button onclick="abrirRegCustom(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+((t.dia&&t.dia!==diaHoyRol&&rc.frecuencia==='semanal')?' <span style="font-size:10px;color:#94a3b8">· asignado '+t.dia+'</span>':'')+'</span>'+estBadge+'</button>';
         }
       }).join('')+
       '<button onclick="verTodasMisGraficas()" style="display:block;width:100%;text-align:center;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px 12px;margin-top:4px;color:#93c5fd;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📊 Ver todas mis gráficas de resultados</button>'+
