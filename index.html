@@ -1354,6 +1354,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
               <select id="superAddSel" style="flex:1"><option value="">Selecciona colaborador</option></select>
               <input type="text" id="superAddPin" placeholder="PIN" style="width:90px">
             </div>
+            <input type="text" id="superAddOtro" placeholder="¿No aparece en la lista? Escribe el nombre completo aquí" style="width:100%;margin-bottom:6px;box-sizing:border-box">
             <label style="font-size:11px;color:rgba(255,255,255,.6)">Áreas que puede supervisar</label>
             <div id="superAreas" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
             <label style="font-size:11px;color:rgba(255,255,255,.6)">Días que puede supervisar</label>
@@ -9858,7 +9859,7 @@ function initConfigSupervisores(){
   renderSuperLista();
   var ab=document.getElementById('superAddBtn');
   if(ab)ab.onclick=function(){
-    var n=document.getElementById('superAddSel').value;
+    var n=(document.getElementById('superAddOtro').value||'').trim()||document.getElementById('superAddSel').value;
     var pin=document.getElementById('superAddPin').value.trim();
     if(!n){alert('Selecciona un colaborador.');return;}
     if(!pin){alert('Asigna un PIN inicial.');return;}
@@ -9872,6 +9873,7 @@ function initConfigSupervisores(){
     sedeRef('supervisores/'+claveNombre(n)).set({nombre:n,pin:pin,areas:areas,dias:dias,jornada:jor}).then(function(){
       showSaved('superConfSaved');
       document.getElementById('superAddPin').value='';
+      document.getElementById('superAddOtro').value='';
       initConfigSupervisores();
     });
   };
@@ -9883,6 +9885,8 @@ function nombresSupervisables(){
   var out=[];
   (nombres||[]).forEach(function(n){if(n&&out.indexOf(n)===-1)out.push(n);});
   Object.values(internos||{}).forEach(function(i){var n=i&&i.nombre;if(n&&out.indexOf(n)===-1)out.push(n);});
+  // Personas que figuran en el plan de turnos de la semana aunque no estén en la lista de Personal
+  Object.values(bloques||{}).forEach(function(b){var n=b&&typeof b.nombre==='string'?b.nombre.trim():'';if(n&&n.indexOf('__')!==0&&out.indexOf(n)===-1)out.push(n);});
   return out.sort(function(a,b){return a.localeCompare(b,'es');});
 }
 var SUPER_JORNADAS={dia:'Todo el día',manana:'Solo mañana',tarde:'Solo tarde'};
