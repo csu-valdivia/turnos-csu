@@ -1992,7 +1992,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // Antes estaba fuera de esta lista, así que una vacación pedida hoy para noviembre quedaba guardada
 // dentro de la semana activa de HOY (la única que existía en ese momento) y por eso aparecía como si
 // fuera de la semana actual — y lo mismo le pasaría a cualquier permiso pedido para semanas futuras.
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin','solicitudesMediaJornada'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -2353,7 +2353,7 @@ window.tabJefaOp=function(tab){
 function _nomAdmin(key){var v=secretarias[key];return v&&(typeof v==='object'?v.nombre:v);}
 function esDiaLaboralAdmin(key,fecha){
   var dia=diaDeDate(fecha);
-  if(esFeriado(dia))return false;
+  if(!window._sinFeriadoAdm&&esFeriado(dia))return false;
   var t=turnoDelDia(key,dia);
   if(t)return !!t.ini;
   return dia!=='Sábado'&&dia!=='Domingo';
@@ -3168,7 +3168,8 @@ window.renderMisTurnosAdmin=function(cont){
     h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:4px">🔧 Calendario de mantenciones</div><div style="font-size:12px;color:#fff">'+(med&&med.fecha?'Este mes te lo mide la jefa el <b>'+esc(fmtF(med.fecha))+'</b>.':'La jefa aún no fija la fecha de medición de este mes.')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">Márcalo "al día" en Mis registros.</div></div>';}
   var tds=Object.values((tareasAdmin&&tareasAdmin[key]&&tareasAdmin[key][hoyStr()])||{}).filter(Boolean);
   if(tds.length)h+='<div style="background:#16233d;border-radius:12px;padding:14px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">📋 Tareas de la jefa para hoy</div>'+tds.map(function(t){return '<div style="font-size:12px;color:#fff;padding:3px 0">'+(t.hecha?'✅':'⬜')+' '+esc(t.texto)+'</div>';}).join('')+'</div>';
-  cont.innerHTML=h;
+  cont.innerHTML=h+'<div id="mjCard"></div>';
+  pintarMediaJornadaAdmin(key);
 };
 // ---- Pestaña del administrativo: Mis registros ----
 window.renderMisRegistrosAdmin=function(cont,fechaSel){
@@ -3220,6 +3221,127 @@ window.guardarCalDeclarado=function(id){
     var d=designAdmin[key][id];d.mediciones=d.mediciones||{};d.mediciones[mes]=d.mediciones[mes]||{};d.mediciones[mes].declarado=on?Date.now():null;
     showSaved('misCalSaved');
   });
+};
+
+// ══════════ MEDIA JORNADA LIBRE POR CUMPLIMIENTO DE METAS (equipo administrativo) ══════════
+// solicitudesMediaJornada/{id} = {key,nombre,semIni,semFin,cumplPct,diasCump,jornada:'am'|'pm',fecha,nota,estado:'pendiente'|'aprobada'|'rechazada',
+//   fechaAprobada,motivo,ts,respondido,correoTs}
+function _sumaDias(f,n){var d=new Date(f+'T12:00:00');d.setDate(d.getDate()+n);return _fISO(d);}
+function cumplSemanaAdminPersona(key,lunes){
+  var esActual=(lunes===rangoSemanaDe(hoyStr()).ini);
+  var hoy=hoyStr();var vals=[];
+  window._sinFeriadoAdm=!esActual; // los feriados cargados son solo de la semana en curso
+  try{
+    for(var i=0;i<6;i++){
+      var f=_sumaDias(lunes,i);if(f>hoy)break;
+      var v=cumplDiaAdminPersona(key,f);if(v!==null)vals.push(v);
+    }
+  }finally{window._sinFeriadoAdm=false;}
+  return {pct:vals.length?Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length):null,dias:vals.length};
+}
+function textoJornadaMJ(j){return j==='am'?'mañana (AM)':'tarde (PM)';}
+function estadoMJHtml(sol){
+  if(sol.estado==='pendiente')return '<span style="color:#fcd34d">⏳ Pendiente de la Jefa de Operaciones</span>';
+  if(sol.estado==='aprobada')return '<span style="color:#6ee7b7">✅ Aprobada para el <b>'+esc(fechaBonita(sol.fechaAprobada||sol.fecha))+'</b></span>';
+  if(sol.estado==='rechazada')return '<span style="color:#fca5a5">✖ No aprobada'+(sol.motivo?': '+esc(sol.motivo):'')+'</span>';
+  return '';
+}
+function pintarMediaJornadaAdmin(key){
+  var c=document.getElementById('mjCard');if(!c)return;
+  var render=function(){
+    var mias=Object.entries(solicitudesMediaJ||{}).filter(function(e){return e[1]&&e[1].key===key;}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);}).slice(0,6);
+    var lunAct=rangoSemanaDe(hoyStr()).ini,lunAnt=_sumaDias(lunAct,-7);
+    var cA=cumplSemanaAdminPersona(key,lunAnt),cB=cumplSemanaAdminPersona(key,lunAct);
+    var inp='width:100%;'+_dsCss+'margin-bottom:6px;';
+    var h='<div style="background:#16233d;border-radius:12px;padding:14px;margin-top:12px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:2px">🎯 Media jornada libre por cumplimiento de metas</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Si cumpliste tus metas de la semana, puedes solicitar media jornada libre. La responde la Jefa de Operaciones.</div>';
+    if(mias.length)h+=mias.map(function(e){var x=e[1];return '<div style="padding:7px 9px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:5px;font-size:12px;color:#fff">Semana '+esc(fmtF(x.semIni))+' al '+esc(fmtF(x.semFin))+(x.cumplPct!=null?' · '+x.cumplPct+'%':'')+' · '+esc(textoJornadaMJ(x.jornada))+'<div style="font-size:11px;margin-top:2px">'+estadoMJHtml(x)+'</div></div>';}).join('');
+    h+='<div style="margin-top:8px"><label style="font-size:11px;color:rgba(255,255,255,.55)">Semana por la que solicitas</label>'+
+      '<select id="mjSem" onchange="mjAjustarFecha()" style="'+inp+'"><option value="'+lunAnt+'">Semana pasada ('+esc(fmtF(lunAnt))+' al '+esc(fmtF(_sumaDias(lunAnt,5)))+') · cumplimiento '+(cA.pct!=null?cA.pct+'%':'sin datos')+'</option>'+
+      '<option value="'+lunAct+'">Esta semana ('+esc(fmtF(lunAct))+' al '+esc(fmtF(_sumaDias(lunAct,5)))+') · va en '+(cB.pct!=null?cB.pct+'%':'sin datos')+'</option></select>'+
+      '<label style="font-size:11px;color:rgba(255,255,255,.55)">Media jornada</label>'+
+      '<select id="mjJor" style="'+inp+'"><option value="am">🌅 Mañana (AM)</option><option value="pm">🌆 Tarde (PM)</option></select>'+
+      '<label style="font-size:11px;color:rgba(255,255,255,.55)">Fecha que prefieres <span id="mjRango" style="color:#fcd34d"></span></label>'+
+      '<input type="date" id="mjFecha" style="'+inp+'">'+
+      '<textarea id="mjNota" rows="2" placeholder="Comentario (opcional)" style="'+inp+'"></textarea>'+
+      '<button class="btn-add" onclick="solicitarMediaJornada(\''+key+'\')" style="background:linear-gradient(135deg,#d97706,#fbbf24)">📩 Solicitar media jornada</button></div></div>';
+    c.innerHTML=h;
+    mjAjustarFecha();
+  };
+  sedeRef('solicitudesMediaJornada').once('value').then(function(sn){solicitudesMediaJ=sn.val()||{};render();}).catch(render);
+}
+// La media jornada solo se puede tomar en la semana siguiente a la semana por la que se solicita (lunes a sábado)
+function mjRangoFecha(lunes){
+  var ini=_sumaDias(lunes,7),fin=_sumaDias(lunes,12),man=fechaManana();
+  return {min:(ini>man?ini:man),max:fin,ini:ini,fin:fin};
+}
+window.mjAjustarFecha=function(){
+  var sel=document.getElementById('mjSem'),inp=document.getElementById('mjFecha'),tx=document.getElementById('mjRango');
+  if(!sel||!inp)return;
+  var r=mjRangoFecha(sel.value);
+  inp.min=r.min;inp.max=r.max;
+  if(inp.value&&(inp.value<r.min||inp.value>r.max))inp.value='';
+  if(tx)tx.textContent='(solo la semana siguiente: '+fmtF(r.ini)+' al '+fmtF(r.fin)+')';
+};
+window.solicitarMediaJornada=function(key){
+  var v=secretarias[key];var nombre=(typeof v==='object'?v.nombre:v)||'';
+  var lun=document.getElementById('mjSem').value,jor=document.getElementById('mjJor').value;
+  var fecha=document.getElementById('mjFecha').value,nota=(document.getElementById('mjNota').value||'').trim();
+  if(!fecha){alert('Elige la fecha que prefieres.');return;}
+  if(diaDeDate(fecha)==='Domingo'){alert('Elige un día de lunes a sábado.');return;}
+  var _r=mjRangoFecha(lun);
+  if(fecha<_r.ini||fecha>_r.fin){alert('Solo puedes tomarla en la semana siguiente a la semana por la que solicitas ('+fmtF(_r.ini)+' al '+fmtF(_r.fin)+').');return;}
+  if(fecha<fechaManana()){alert('Elige una fecha desde mañana.');return;}
+  var dup=Object.values(solicitudesMediaJ||{}).some(function(x){return x&&x.key===key&&x.semIni===lun&&x.estado!=='rechazada';});
+  if(dup){alert('Ya tienes una solicitud para esa semana.');return;}
+  var c=cumplSemanaAdminPersona(key,lun);
+  sedeRef('solicitudesMediaJornada').push({key:key,nombre:nombre,semIni:lun,semFin:_sumaDias(lun,5),cumplPct:c.pct,diasCump:c.dias,jornada:jor,fecha:fecha,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){
+    alert('✓ Solicitud enviada a la Jefa de Operaciones.');pintarMediaJornadaAdmin(key);
+  }).catch(function(){alert('No se pudo enviar. Revisa tu conexión.');});
+};
+// ---- Jefa de Operaciones: responder solicitudes y enviar correo de respaldo ----
+function pintarMediaJornadaOp(){
+  var c=document.getElementById('mediaJornadaOpLista');if(!c)return;
+  var en=Object.entries(solicitudesMediaJ||{}).filter(function(e){return e[1];}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);}).slice(0,20);
+  var h='<div style="font-size:13px;font-weight:700;color:#fbbf24;margin:4px 0 8px">🎯 Media jornada por cumplimiento de metas</div>';
+  if(!en.length){c.innerHTML=h+'<div style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:14px">Sin solicitudes.</div>';return;}
+  var bt='border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;margin:6px 6px 0 0;';
+  h+=en.map(function(e){var id=e[0],x=e[1];
+    var acc='';
+    if(x.estado==='pendiente')acc='<div><button onclick="mjAprobar(\''+id+'\',false)" style="'+bt+'background:#10b981;color:#06281d">✓ Aprobar ese día</button><button onclick="mjAprobar(\''+id+'\',true)" style="'+bt+'background:#60a5fa;color:#0b1220">📅 Aprobar otro día</button><button onclick="mjRechazar(\''+id+'\')" style="'+bt+'background:rgba(239,68,68,.2);color:#fca5a5">✖ No aprobar</button></div>';
+    else if(x.estado==='aprobada')acc='<div><button onclick="mjCorreo(\''+id+'\')" style="'+bt+'background:#fbbf24;color:#0b1220">✉️ Enviar correo de respaldo</button>'+(x.correoTs?'<span style="font-size:11px;color:#6ee7b7"> ✓ correo abierto</span>':'')+'</div>';
+    return '<div style="padding:9px 11px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:6px"><div style="font-size:13px;color:#fff"><b>'+esc(x.nombre)+'</b> · '+esc(textoJornadaMJ(x.jornada))+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6)">Semana '+esc(fmtF(x.semIni))+' al '+esc(fmtF(x.semFin))+' · cumplimiento '+(x.cumplPct!=null?x.cumplPct+'% ('+x.diasCump+' días con turno)':'sin datos')+' · pide el '+esc(fechaBonita(x.fecha))+(x.nota?' · "'+esc(x.nota)+'"':'')+'</div>'+
+      '<div style="font-size:11px;margin-top:3px">'+estadoMJHtml(x)+'</div>'+acc+'</div>';}).join('')+'<div style="height:10px"></div>';
+  c.innerHTML=h;
+}
+window.mjAprobar=function(id,otraFecha){
+  var x=(solicitudesMediaJ||{})[id];if(!x)return;
+  var f=x.fecha;
+  var fin=function(){
+    sedeRef('solicitudesMediaJornada/'+id).update({estado:'aprobada',fechaAprobada:f,respondido:Date.now()}).then(function(){solicitudesMediaJ[id]=Object.assign({},x,{estado:'aprobada',fechaAprobada:f});pintarMediaJornadaOp();mjCorreo(id);});
+  };
+  if(otraFecha){
+    pedirFechaPremio('📅 Aprobar otro día','Para '+x.nombre+' (pidió '+fechaBonita(x.fecha)+').',false,function(nf){f=nf;fin();});
+  }else fin();
+};
+window.mjRechazar=function(id){
+  var m=prompt('Motivo (opcional, lo verá la persona):');if(m===null)return;
+  sedeRef('solicitudesMediaJornada/'+id).update({estado:'rechazada',motivo:(m||'').trim(),respondido:Date.now()});
+};
+window.mjCorreo=function(id){
+  var x=(solicitudesMediaJ||{})[id];if(!x)return;
+  var f=x.fechaAprobada||x.fecha;
+  var k=String(x.nombre||'').replace(/\s/g,'_');
+  var correo=(correos||{})[k]||'';
+  if(!correo){
+    correo=(prompt('No tengo el correo de '+x.nombre+'. Escríbelo (se guardará):')||'').trim();
+    if(!correo)return;
+    correos[k]=correo;sedeRef('correos/'+k).set(correo);
+  }
+  var asunto='GESTHOR — Media jornada libre por cumplimiento de metas';
+  var msg='Hola '+String(x.nombre).split(' ')[0]+',\n\nSe te adjudicó media jornada libre ('+textoJornadaMJ(x.jornada)+') por cumplimiento de metas de la semana del '+fmtF(x.semIni)+' al '+fmtF(x.semFin)+(x.cumplPct!=null?' (cumplimiento '+x.cumplPct+'%)':'')+'.\n\nSerá efectiva el '+fechaBonita(f)+'.\n\nEste correo queda como respaldo.\n\nRosa Marcela Fernández Valderas\nJefa de Operaciones · CSU Valdivia';
+  abrirCorreo(correo,asunto,msg,function(){sedeRef('solicitudesMediaJornada/'+id+'/correoTs').set(Date.now());});
 };
 
 // ── Ingreso diario de producción ──
@@ -3392,7 +3514,7 @@ function puntajeFinalAdmin(key,mes){
 // Orden: 1° días respondidos · 2° puntaje (evaluación + supervisión de la Jefa + cumplimiento de tareas
 // asignadas, con RANK_PESOS, igual que el ranking clínico) · 3° menor tiempo promedio de respuesta.
 // Ranking ÚNICO (todos los cargos juntos); el cargo se muestra solo como etiqueta.
-var supervisionAdmin={},tareasAdmin={},designAdmin={};
+var supervisionAdmin={},tareasAdmin={},designAdmin={},solicitudesMediaJ={};
 var PESOS_CUMPL_DEF={designaciones:40,evaluacion:25,supervision:20,tareas:15};
 var pesosCumplAdmin=Object.assign({},PESOS_CUMPL_DEF),_pesosCumplCargados=false;
 var SUP_ADMIN_ITEMS=[
@@ -4245,6 +4367,7 @@ window.setSede=function(sede){
   sedeRef('regLecturaTareas').on('value',function(s){regLecturaTareas=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('premiosGanadores').on('value',function(s){premiosGanadores=s.val()||{};if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none')renderMisTurnos(curNombre);if(document.getElementById('premioOvLista'))pintarPremiosLista();actualizarBadgePremios();});
   sedeRef('telefonosEquipo').on('value',function(s){telefonosEquipo=s.val()||{};});
+  sedeRef('solicitudesMediaJornada').on('value',function(s){solicitudesMediaJ=s.val()||{};if(typeof actualizarBadgePremios==='function')actualizarBadgePremios();});
   sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
   sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();sembrarRolDEA();limpiarRolBolsoViejo();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
@@ -6238,6 +6361,7 @@ function avisarPremioPersona(id,p,asunto,msg){
 }
 function actualizarBadgePremios(){
   var n=Object.values(premiosGanadores||{}).filter(function(p){return p&&!p.anulado&&p.solicitud&&p.solicitud.estado==='pendiente'&&(esAdminPremio(p.nombre)===(modoRol==='jefaOperaciones'));}).length;
+  if(modoRol==='jefaOperaciones')n+=Object.values(solicitudesMediaJ||{}).filter(function(x){return x&&x.estado==='pendiente';}).length;
   var b=document.getElementById('premioPendBadge');if(b)b.textContent=n?' ('+n+' solicitud'+(n>1?'es':'')+')':'';
 }
 
@@ -6246,8 +6370,10 @@ window.abrirPremiosOperaciones=function(){
   var ov=document.getElementById('premiosOpOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='premiosOpOv';
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9100;overflow-y:auto;padding:16px';
-  ov.innerHTML='<div style="max-width:560px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span style="font-size:16px;font-weight:800;color:#fcd34d">🎁 Premios · equipo administrativo</span><button onclick="document.getElementById(\'premiosOpOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button></div><div id="premiosOpLista" style="font-size:12px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  ov.innerHTML='<div style="max-width:560px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span style="font-size:16px;font-weight:800;color:#fcd34d">🎁 Premios · equipo administrativo</span><button onclick="document.getElementById(\'premiosOpOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer">✕</button></div><div id="mediaJornadaOpLista"></div><div style="font-size:13px;font-weight:700;color:#fbbf24;margin:4px 0 8px">🏆 Premios por ganar la semana</div><div id="premiosOpLista" style="font-size:12px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
   document.body.appendChild(ov);
+  sedeRef('solicitudesMediaJornada').once('value').then(function(sn){solicitudesMediaJ=sn.val()||{};pintarMediaJornadaOp();actualizarBadgePremios();sedeRef('solicitudesMediaJornada').on('value',function(s2){solicitudesMediaJ=s2.val()||{};pintarMediaJornadaOp();actualizarBadgePremios();});});
+  sedeRef('correos').once('value').then(function(sn){correos=sn.val()||correos;});
   Promise.all([sedeRef('premiosGanadores').once('value'),sedeRef('correos').once('value'),sedeRef('telefonosEquipo').once('value'),sedeRef('secretarias').once('value')]).then(function(sn){
     premiosGanadores=sn[0].val()||{};correos=sn[1].val()||{};telefonosEquipo=sn[2].val()||{};secretarias=sn[3].val()||{};
     window._premiosOpListo=true;
