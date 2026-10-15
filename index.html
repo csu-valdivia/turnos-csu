@@ -1358,6 +1358,8 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div id="superAreas" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
             <label style="font-size:11px;color:rgba(255,255,255,.6)">Días que puede supervisar</label>
             <div id="superDias" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
+            <label style="font-size:11px;color:rgba(255,255,255,.6)">Momento en que supervisa</label>
+            <select id="superJornada" style="width:100%;margin-bottom:8px"><option value="dia">🕗 Todo el día (mañana y tarde)</option><option value="manana">🌅 Una vez en la mañana</option><option value="tarde">🌆 Una vez en la tarde</option></select>
             <button class="btn-add" id="superAddBtn">+ Autorizar</button>
             <div id="superLista" style="margin-top:8px"></div>
             <div class="saved" id="superConfSaved">✓ Guardado</div>
@@ -8542,7 +8544,7 @@ function renderSupervisionColaborador(nombre){
   if(puntaje===null){el.innerHTML='';return;}
   var pct=Math.round(puntaje*100);
   var color=pct>=80?'#6ee7b7':pct>=60?'#fcd34d':'#fca5a5';
-  el.innerHTML='<div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:10px 12px;margin-top:8px"><p style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:4px">👁 Tu supervisión de hoy</p><p style="font-size:20px;font-weight:900;color:'+color+'">'+pct+'%</p></div>';
+  el.innerHTML='<div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:10px 12px;margin-top:8px"><p style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:4px">👁 Tu supervisión de hoy</p><p style="font-size:20px;font-weight:900;color:'+color+'">'+pct+'%</p>'+'</div>';
 }
 
 // Interruptor de ponderación: controla si las evaluaciones cuentan para las notas oficiales
@@ -9836,7 +9838,7 @@ function initConfigSupervisores(){
   var sel=document.getElementById('superAddSel');
   if(sel){
     sel.innerHTML='<option value="">Selecciona colaborador</option>'+
-      nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza'&&!supervisores[claveNombre(n)];})
+      nombresSupervisables().filter(function(n){return n.trim().toLowerCase()!=='patricio baeza'&&!supervisores[claveNombre(n)];})
       .map(function(n){return '<option>'+esc(n)+'</option>';}).join('');
   }
   // Poblar checkboxes de áreas (estaciones)
@@ -9866,7 +9868,8 @@ function initConfigSupervisores(){
     var dias=Array.from(document.querySelectorAll('.super-dia:checked')).map(function(c){return c.value;});
     if(!areas.length){alert('Marca al menos un área que pueda supervisar.');return;}
     if(!dias.length){alert('Marca al menos un día.');return;}
-    sedeRef('supervisores/'+claveNombre(n)).set({nombre:n,pin:pin,areas:areas,dias:dias}).then(function(){
+    var jor=(document.getElementById('superJornada')||{}).value||'dia';
+    sedeRef('supervisores/'+claveNombre(n)).set({nombre:n,pin:pin,areas:areas,dias:dias,jornada:jor}).then(function(){
       showSaved('superConfSaved');
       document.getElementById('superAddPin').value='';
       initConfigSupervisores();
@@ -9875,6 +9878,21 @@ function initConfigSupervisores(){
 }
 
 function claveNombre(n){return n.replace(/[.#$/\[\]]/g,'_');}
+// Todos los colaboradores (equipo + internos) que se pueden autorizar como supervisores
+function nombresSupervisables(){
+  var out=[];
+  (nombres||[]).forEach(function(n){if(n&&out.indexOf(n)===-1)out.push(n);});
+  Object.values(internos||{}).forEach(function(i){var n=i&&i.nombre;if(n&&out.indexOf(n)===-1)out.push(n);});
+  return out.sort(function(a,b){return a.localeCompare(b,'es');});
+}
+var SUPER_JORNADAS={dia:'Todo el día',manana:'Solo mañana',tarde:'Solo tarde'};
+function jornadaSupervisorActivo(){
+  if(!supervisorActivo)return 'dia';
+  var k=Object.keys(supervisores||{}).filter(function(x){return supervisores[x]&&supervisores[x].nombre===supervisorActivo;})[0];
+  var j=k?supervisores[k].jornada:'';
+  return (j==='manana'||j==='tarde')?j:'dia';
+}
+window.cambiarJornadaSupervisor=function(key,j){sedeRef('supervisores/'+key+'/jornada').set(j);};
 
 function renderSuperLista(){
   var cont=document.getElementById('superLista');
@@ -9892,6 +9910,7 @@ function renderSuperLista(){
       '</div>'+
       '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">Áreas: '+esc(areasTxt)+'</div>'+
       '<div style="font-size:10px;color:rgba(255,255,255,.4)">Días: '+esc(diasTxt)+'</div>'+
+      '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">Momento: <select onchange="cambiarJornadaSupervisor(\''+k.replace(/'/g,"\\'")+'\',this.value)" style="font-size:10px;padding:2px 4px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:5px">'+Object.keys(SUPER_JORNADAS).map(function(j){return '<option value="'+j+'"'+((s.jornada||'dia')===j?' selected':'')+'>'+SUPER_JORNADAS[j]+'</option>';}).join('')+'</select></div>'+
     '</div>';
   }).join('');
 }
@@ -10456,6 +10475,13 @@ function initSupervisionAdmin(excluir){
     supEst.onchange=function(){renderItemsEstacion(this.value);};
     renderItemsEstacion(supEst.value);
   }
+  // Jornada autorizada del supervisor: restringe la ronda que puede registrar
+  var supRon=document.getElementById('supRonda');
+  if(supRon){
+    var jor=jornadaSupervisorActivo();
+    Array.from(supRon.options).forEach(function(o){o.disabled=(jor!=='dia'&&o.value!==jor);});
+    if(jor!=='dia')supRon.value=jor;
+  }
 
   // Toggle buttons
   document.querySelectorAll('.sup-btn').forEach(function(btn){
@@ -10517,6 +10543,8 @@ if(_gbs)_gbs.addEventListener('click',function(){guardarBorradorSupervision(fals
 document.getElementById('guardarSupBtn').addEventListener('click',function(){
   var nombre=document.getElementById('supNombre').value;
   var ronda=document.getElementById('supRonda').value;
+  var _jor=jornadaSupervisorActivo();
+  if(_jor!=='dia'&&ronda!==_jor){alert('Tu autorización es solo para la '+(_jor==='manana'?'mañana':'tarde')+'.');return;}
   var estacion=document.getElementById('supEstacion')?document.getElementById('supEstacion').value:'';
   if(!nombre){alert('Selecciona un colaborador.');return;}
   var items={};var todosRespondidos=true;
@@ -19228,7 +19256,7 @@ function abrirPanelSupervisor(){
       '<span style="font-size:16px;font-weight:800;color:#c4b5fd">📋 Supervisión</span>'+
       '<button onclick="cerrarPanelSupervisor()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
-    '<div style="font-size:12px;color:#6ee7b7;margin-bottom:12px">Supervisa: <b>'+esc(supervisorActivo)+'</b></div>'+
+    '<div style="font-size:12px;color:#6ee7b7;margin-bottom:12px">Supervisa: <b>'+esc(supervisorActivo)+'</b>'+(jornadaSupervisorActivo()!=='dia'?' · '+esc(SUPER_JORNADAS[jornadaSupervisorActivo()]):'')+'</div>'+
     '<div id="superPautaHost"></div></div>';
   document.body.appendChild(ov);
   // Mover la sección de supervisión al panel
