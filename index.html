@@ -16330,12 +16330,19 @@ window.abrirCorreo=function(para,asunto,cuerpo,alUsar,cco){
     '<a href="'+urls.outlook.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener" onclick="correoUsado()" style="'+b+'background:#0a64c8;color:#fff">Outlook web (correo institucional)</a>'+
     '<a href="'+urls.gmail.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener" onclick="correoUsado()" style="'+b+'background:#ea4335;color:#fff">Gmail web</a>'+
     '<a href="'+urls.app.replace(/&/g,'&amp;')+'" onclick="correoUsado()" style="'+b+'background:rgba(255,255,255,.1);color:#fff">App de correo del equipo</a>'+
+    (bcc?'<button onclick="copiarCco(this)" style="'+b+'background:#34d399;color:#06281d">📋 Copiar lista Cco ('+bcc.split(",").length+")</button>":'')+
     '<button onclick="copiarCorreo(this)" style="'+b+'background:#fbbf24;color:#0b1220">📋 Copiar mensaje</button>'+
     '<button onclick="document.getElementById(\'correoOv\').remove()" style="'+b+'background:rgba(255,255,255,.06);color:#fff;font-weight:500">Cerrar</button>'+
     '</div>';
   document.body.appendChild(ov);
 };
 window.correoUsado=function(){var f=window._corrCb;window._corrCb=null;if(f)try{f();}catch(e){}};
+window.copiarCco=function(btn){
+  var t=String((window._corrUrls&&window._corrUrls.app||'').match(/[?&]bcc=([^&]*)/)?decodeURIComponent(RegExp.$1):'').replace(/,/g,'; ');
+  var ok=function(){btn.textContent='✓ Copiado: pégalo en el campo Cco';};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,function(){prompt('Copia los correos:',t);});}
+  else{prompt('Copia los correos:',t);}
+};
 window.copiarCorreo=function(btn){
   var t=window._corrTxt||'';
   var ok=function(){btn.textContent='✓ Copiado';};
