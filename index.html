@@ -596,7 +596,8 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           <p style="font-size:17px;font-weight:700;margin-bottom:8px">👋 Bienvenido/a</p>
           <p style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:18px;line-height:1.5">Selecciona tu nombre para continuar. El correo es opcional, solo se usa para notificaciones.</p>
           <select id="emailNom" style="margin-bottom:10px"><option value="">— Selecciona tu nombre —</option></select>
-          <input type="email" id="emailIn" placeholder="nombre@uss.cl (opcional)" style="margin-bottom:14px">
+          <input type="email" id="emailIn" placeholder="nombre@uss.cl (opcional)" style="margin-bottom:10px">
+          <input type="tel" id="emailFono" placeholder="WhatsApp, ej: 9 1234 5678 (opcional, para avisos)" style="margin-bottom:14px">
           <button class="btn-add" id="saveEmailBtn">Guardar y continuar →</button>
           <p style="font-size:11px;color:rgba(255,255,255,.25);margin-top:12px;cursor:pointer" onclick="skipEmail()">Continuar sin correo</p>
         </div>
@@ -731,6 +732,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="abrirBorradoresBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);margin-top:6px">📝 Borradores del equipo sin terminar</button>
             <button class="btn-add" id="abrirCentroProtocolosBtn" style="background:linear-gradient(135deg,#7c3aed,#c4b5fd);margin-top:6px">📚 Centro de protocolos (otros roles)</button>
             <button class="btn-add" id="abrirPendientesHoyBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🔔 Quién no ha respondido hoy</button>
+            <button class="btn-add" id="abrirAvisosWspBtn" onclick="abrirAvisosWsp()" style="background:linear-gradient(135deg,#16a34a,#4ade80);color:#06281d;margin-top:6px">📣 Avisos por WhatsApp (lunes y material nuevo)</button>
             <button class="btn-add" id="abrirSinPreguntasBtn" style="background:linear-gradient(135deg,#b45309,#fbbf24);margin-top:6px">📋 Quién no tiene preguntas activadas</button>
             <button class="btn-add" id="abrirGestionDocentesBtn" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">🎓 Docentes y carreras</button>
             <button class="btn-add" id="abrirGestionGerenciaBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">💼 Equipo de Gerencia</button>
@@ -2863,8 +2865,8 @@ function cargarRecuperacionEquipo(){
 // OJO: los turnos reales que pasó Marcela NO son un rango horario único — cada Turno (1/2/3) tiene
 // un horario DISTINTO por día (ej. Turno 1: Lun-Mar 07:45-17:00, Mié-Jue 07:45-16:00, Vie 07:45-14:45,
 // Sáb 09:00-14:00). Por eso cada plantilla guarda un horario POR DÍA, no un solo ini/fin.
-// Además Bodega y Mantención no usan estas plantillas compartidas: cada uno (Luis Cereceda, Alfredo
-// Torres) tiene su propio horario semanal individual — por eso cada persona puede además tener un
+// Además Bodega y Mantención no usan estas plantillas compartidas: cada uno (Alfredo Torres = Bodega,
+// Luis Cereceda = Mantención) tiene su propio horario semanal individual — por eso cada persona puede además tener un
 // horario "Personalizado" en vez de un Turno 1/2/3.
 var TURNOS_ADMIN_IDS=['1','2','3'];
 // Datos reales pasados por Marcela Fernández (28-09-2026) — quedan precargados como sugerencia la
@@ -2874,7 +2876,7 @@ var TURNOS_ADMIN_DEFAULT={
   '2':{Lunes:{ini:'10:00',fin:'20:00'},Martes:{ini:'10:00',fin:'20:00'},Miércoles:{ini:'11:00',fin:'20:00'},Jueves:{ini:'11:00',fin:'20:00'},Viernes:{ini:'10:30',fin:'19:30'},Sábado:null},
   '3':{Lunes:{ini:'07:45',fin:'18:00'},Martes:{ini:'07:45',fin:'17:00'},Miércoles:{ini:'07:45',fin:'17:00'},Jueves:{ini:'07:45',fin:'17:00'},Viernes:{ini:'07:45',fin:'16:45'},Sábado:null}
 };
-// Horario individual de Bodega (Luis Cereceda) y Mantención (Alfredo Torres) — se ofrecen como
+// Horario individual de Bodega (Alfredo Torres) y Mantención (Luis Cereceda) — se ofrecen como
 // sugerencia precargada al elegir "Personalizado" para una persona con ese cargo; no se asignan solos.
 // Función/rol específico dentro del equipo administrativo (distinto del turno horario y del cargo).
 // Es un texto libre por persona (con sugerencias) para que se pueda cambiar el día que corresponda,
@@ -3168,8 +3170,9 @@ window.renderMisTurnosAdmin=function(cont){
     h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:4px">🔧 Calendario de mantenciones</div><div style="font-size:12px;color:#fff">'+(med&&med.fecha?'Este mes te lo mide la jefa el <b>'+esc(fmtF(med.fecha))+'</b>.':'La jefa aún no fija la fecha de medición de este mes.')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">Márcalo "al día" en Mis registros.</div></div>';}
   var tds=Object.values((tareasAdmin&&tareasAdmin[key]&&tareasAdmin[key][hoyStr()])||{}).filter(Boolean);
   if(tds.length)h+='<div style="background:#16233d;border-radius:12px;padding:14px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">📋 Tareas de la jefa para hoy</div>'+tds.map(function(t){return '<div style="font-size:12px;color:#fff;padding:3px 0">'+(t.hecha?'✅':'⬜')+' '+esc(t.texto)+'</div>';}).join('')+'</div>';
-  cont.innerHTML=h+'<div id="mjCard"></div>';
+  cont.innerHTML=h+'<div id="mjCard"></div><div id="miFonoCard"></div>';
   pintarMediaJornadaAdmin(key);
+  pintarMiWhatsApp(nombre);
 };
 // ---- Pestaña del administrativo: Mis registros ----
 window.renderMisRegistrosAdmin=function(cont,fechaSel){
@@ -3342,6 +3345,327 @@ window.mjCorreo=function(id){
   var asunto='GESTHOR — Media jornada libre por cumplimiento de metas';
   var msg='Hola '+String(x.nombre).split(' ')[0]+',\n\nSe te adjudicó media jornada libre ('+textoJornadaMJ(x.jornada)+') por cumplimiento de metas de la semana del '+fmtF(x.semIni)+' al '+fmtF(x.semFin)+(x.cumplPct!=null?' (cumplimiento '+x.cumplPct+'%)':'')+'.\n\nSerá efectiva el '+fechaBonita(f)+'.\n\nEste correo queda como respaldo.\n\nRosa Marcela Fernández Valderas\nJefa de Operaciones · CSU Valdivia';
   abrirCorreo(correo,asunto,msg,function(){sedeRef('solicitudesMediaJornada/'+id+'/correoTs').set(Date.now());});
+};
+
+// ══════════ AVISOS POR WHATSAPP (directorio + detector de los lunes + material nuevo) ══════════
+// Base de contactos: telefonosEquipo/{Nombre_con_guiones} = '569XXXXXXXX' (se llena al inscribirse, desde el perfil
+// o a mano en el Directorio). Registro de avisos: avisosWsp/{Nombre_con_guiones}/{tag} = timestamp.
+function normFonoCL(v){
+  var d=String(v||'').replace(/\D/g,'');
+  if(!d)return '';
+  if(d.indexOf('56')===0&&d.length===11)return d;
+  if(d.length===9&&d.charAt(0)==='9')return '56'+d;
+  if(d.length===8)return '569'+d;
+  return d;
+}
+function fonoValido(f){return /^569\d{8}$/.test(f||'');}
+function pintarMiWhatsApp(nombre){
+  var c=document.getElementById('miFonoCard');if(!c||!nombre)return;
+  var k=String(nombre).replace(/\s/g,'_');
+  sedeRef('telefonosEquipo/'+k).once('value').then(function(sn){
+    var cur=sn.val()||'';
+    c.innerHTML='<div style="background:#16233d;border-radius:12px;padding:14px;margin-top:12px"><div style="font-size:12px;font-weight:700;color:#6ee7b7;margin-bottom:4px">📱 Mi WhatsApp</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">Para avisarte cuando haya una evaluación o material nuevo.</div>'+
+      '<div style="display:flex;gap:6px"><input type="tel" id="miFonoIn" value="'+esc(cur?'+'+cur:'')+'" placeholder="9 1234 5678" style="flex:1;'+_dsCss+'"><button onclick="guardarMiWhatsApp(\''+esc(String(nombre).replace(/'/g,''))+'\')" style="background:rgba(16,185,129,.25);color:#6ee7b7;border:none;border-radius:6px;padding:0 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">Guardar</button></div></div>';
+  });
+}
+window.guardarMiWhatsApp=function(nombre){
+  var f=normFonoCL(document.getElementById('miFonoIn').value);
+  if(!fonoValido(f)){alert('Escribe un celular chileno de 9 dígitos que parta con 9. Ej: 9 1234 5678');return;}
+  sedeRef('telefonosEquipo/'+String(nombre).replace(/\s/g,'_')).set(f).then(function(){alert('✓ WhatsApp guardado.');});
+};
+function normNom(n){return String(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim();}
+function mismaPersona(a,b){
+  var A=normNom(a).split(' ').filter(Boolean),B=normNom(b).split(' ').filter(Boolean);
+  if(A.length<2||B.length<2)return normNom(a)===normNom(b);
+  var inter=A.filter(function(t){return B.indexOf(t)>-1;}).length;
+  return inter>=2&&(inter===A.length||inter===B.length);
+}
+var contactosExtra={},fonoRechazado={};
+function directorioPersonas(){
+  var out=[],vistos={};
+  function add(nombre,grupo,extra){
+    nombre=String(nombre||'').trim();if(!nombre||vistos[nombre])return;
+    if(nombre.toLowerCase()==='patricio baeza'||nombre.indexOf('__')===0)return;
+    vistos[nombre]=1;
+    var k=nombre.replace(/\s/g,'_');
+    out.push(Object.assign({nombre:nombre,grupo:grupo,k:k,fono:(telefonosEquipo||{})[k]||'',correo:(correos||{})[k]||''},extra||{}));
+  }
+  (nombres||[]).forEach(function(n){add(n.nombre||n,'Clínico');});
+  Object.values(internos||{}).forEach(function(i){if(i)add(i.nombre,'Interno');});
+  Object.keys(secretarias||{}).forEach(function(k){var v=secretarias[k];add(typeof v==='object'?v.nombre:v,'Administrativo',{skey:k});});
+  Object.keys(docentes||{}).forEach(function(k){add(docentes[k]&&docentes[k].nombre,'Docente',{dkey:k});});
+  Object.keys(gerenciaEquipo||{}).forEach(function(k){add(gerenciaEquipo[k]&&gerenciaEquipo[k].nombre,'Gerencia',{gkey:k});});
+  // Contactos cargados desde planilla que aún no se inscriben en la app
+  Object.keys(contactosExtra||{}).forEach(function(k){
+    var c=contactosExtra[k];if(!c||!c.nombre)return;
+    if(out.some(function(p){return mismaPersona(p.nombre,c.nombre);}))return;
+    add(c.nombre,c.grupo||'Docente',{extra:true,carrera:c.carrera||''});
+  });
+  return out;
+}
+window.abrirAvisosWsp=function(){
+  var ov=document.getElementById('avisosWspOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='avisosWspOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:16px';
+  ov.innerHTML='<div style="max-width:640px;margin:0 auto"><div style="text-align:center;padding:40px;color:rgba(255,255,255,.5)">Cargando...</div></div>';
+  document.body.appendChild(ov);
+  var hoy=hoyStr();var lunPas=sumarDias(lunesDeSemana(hoy),-7);
+  var idPas=Object.keys(semanas||{}).filter(function(id){return semanas[id]&&semanas[id].ini===lunPas;})[0]||null;
+  Promise.all([sedeRef('nombres').once('value'),sedeRef('internos').once('value'),sedeRef('secretarias').once('value'),sedeRef('docentes').once('value'),sedeRef('gerenciaEquipo').once('value'),
+    sedeRef('telefonosEquipo').once('value'),sedeRef('correos').once('value'),sedeRef('avisosWsp').once('value'),
+    sedeRef('rankingAdmin').once('value'),sedeRef('rankingDocente').once('value'),sedeRef('rankingGerencia').once('value'),sedeRef('induccion').once('value'),
+    idPas?db.ref('sedes/'+S+'/semanas/'+idPas+'/ranking').once('value'):Promise.resolve(null),
+    sedeRef('contactosExtra').once('value'),sedeRef('fonoRechazado').once('value')
+  ]).then(function(r){
+    var nm=r[0].val();nombres=Array.isArray(nm)?nm:Object.values(nm||{});
+    internos=r[1].val()||{};secretarias=r[2].val()||{};docentes=r[3].val()||{};gerenciaEquipo=r[4].val()||{};
+    telefonosEquipo=r[5].val()||{};correos=r[6].val()||{};
+    induccion=r[11].val()||induccion;
+    contactosExtra=(r[13]&&r[13].val())||{};fonoRechazado=(r[14]&&r[14].val())||{};
+    window._avW={tab:window._avW&&window._avW.tab||'lunes',avisos:r[7].val()||{},rkAdmin:(r[8].val()||{}).capacitacion||{},rkDoc:r[9].val()||{},rkGer:r[10].val()||{},rkClinPas:r[12]?(r[12].val()||{}):null,lunPas:lunPas,tieneSemPas:!!idPas};
+    renderAvisosWsp();
+  }).catch(function(){ov.innerHTML='<div style="padding:30px;color:#fca5a5">No se pudo cargar. Revisa tu conexión.</div>';});
+};
+function avDiasRespondidos(p,fechas){
+  var W=window._avW;
+  if(p.grupo==='Administrativo'){return new Set(registrosRankingEnRango(W.rkAdmin,claveDesdeNombre(p.nombre),fechas).map(function(e){return e.fecha;})).size;}
+  if(p.grupo==='Docente'){return new Set(registrosRankingEnRango(W.rkDoc,p.dkey,fechas).map(function(e){return e.fecha;})).size;}
+  if(p.grupo==='Gerencia'){return new Set(registrosRankingEnRango(W.rkGer,p.gkey,fechas).map(function(e){return e.fecha;})).size;}
+  // Clínico / Interno: ranking de la semana anterior
+  if(W.rkClinPas===null)return null;
+  var nodo=W.rkClinPas[p.k]||{};
+  var set=new Set();
+  Object.values(nodo).forEach(function(e){if(e&&e.fechaStr&&fechas.indexOf(e.fechaStr)>-1)set.add(e.fechaStr);});
+  return set.size;
+}
+function avBotonWsp(p,msg,tag){
+  (window._avUltimoMsg=window._avUltimoMsg||{})[p.k]=msg;
+  var enviado=((window._avW.avisos||{})[p.k]||{})[tag];
+  var f=p.fono;
+  var h='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px">';
+  if(!fonoValido(f)&&(fonoRechazado||{})[p.k]){
+    h+='<span style="font-size:11px;color:rgba(255,255,255,.5)">Prefiere no dar su WhatsApp.</span>'+(p.correo?'<button onclick="avCorreoIndividual(\''+p.k+'\',\''+tag+'\')" style="background:#0a64c8;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">✉️ Avisar por correo</button>':'');
+  }else if(fonoValido(f)){
+    h+='<a href="https://wa.me/'+f+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener" onclick="avMarcar(\''+p.k+'\',\''+tag+'\')" style="background:#25d366;color:#0b1220;text-decoration:none;font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px">📱 WhatsApp</a>';
+  }else{
+    h+='<input type="tel" placeholder="Agregar WhatsApp" id="avf_'+p.k+'" style="width:140px;'+_dsCss+'"><button onclick="avGuardarFono(\''+p.k+'\',\'avf_'+p.k+'\')" style="background:rgba(251,191,36,.2);color:#fcd34d;border:none;border-radius:6px;padding:7px 10px;font-family:inherit;font-size:11px;cursor:pointer">Guardar</button>';
+  }
+  if(enviado)h+='<span style="font-size:11px;color:#6ee7b7">✓ avisado '+esc(new Date(enviado).toLocaleDateString('es-CL'))+'</span>';
+  return h+'</div>';
+}
+window.avCorreoIndividual=function(k,tag){
+  var p=directorioPersonas().filter(function(x){return x.k===k;})[0];if(!p||!p.correo)return;
+  var msg=window._avUltimoMsg&&window._avUltimoMsg[k]||'';
+  abrirCorreo(p.correo,'GESTHOR: aviso',msg,function(){avMarcar(k,tag);});
+};
+window.avMarcar=function(k,tag){
+  var ts=Date.now();
+  var W=window._avW;if(!W.avisos[k])W.avisos[k]={};W.avisos[k][tag]=ts;
+  sedeRef('avisosWsp/'+k+'/'+tag).set(ts);
+  setTimeout(renderAvisosWsp,400);
+};
+window.avGuardarFono=function(k,inputId){
+  var f=normFonoCL(document.getElementById(inputId).value);
+  if(!fonoValido(f)){alert('Celular chileno de 9 dígitos que parta con 9. Ej: 9 1234 5678');return;}
+  telefonosEquipo[k]=f;
+  sedeRef('telefonosEquipo/'+k).set(f).then(renderAvisosWsp);
+};
+window.avTab=function(t){window._avW.tab=t;renderAvisosWsp();};
+window.avGuardarCorreo=function(k){
+  var v=(document.getElementById('avc_'+k).value||'').trim();
+  if(v&&v.indexOf('@')<1){alert('Correo no válido.');return;}
+  correos[k]=v;
+  (v?sedeRef('correos/'+k).set(v):sedeRef('correos/'+k).remove()).then(renderAvisosWsp);
+};
+window.avAbrirCorreoMasivo=function(lote){
+  lote=lote||0;
+  var solo=(window._avSoloSinFono!==false);
+  var lista=directorioPersonas().filter(function(p){return (!solo||(!fonoValido(p.fono)&&!(fonoRechazado||{})[p.k]))&&p.correo&&p.correo.indexOf('@')>0;}).map(function(p){return p.correo.trim();});
+  lista=lista.slice(lote*25,lote*25+25);
+  if(!lista.length)return;
+  abrirCorreo(CORREO_REMITENTE,'GESTHOR: actualiza tu app y agrega tu WhatsApp',window._avCuerpo||'',null,lista.join(','));
+};
+function renderAvisosWsp(){
+  var ov=document.getElementById('avisosWspOv');if(!ov||!window._avW)return;
+  var W=window._avW;var tab=W.tab;
+  function tb(id,l){return '<button onclick="avTab(\''+id+'\')" style="flex:1;font-size:12px;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;cursor:pointer;font-weight:600;background:'+(tab===id?'rgba(34,197,94,.35);color:#fff':'rgba(255,255,255,.06);color:rgba(255,255,255,.6)')+'">'+l+'</button>';}
+  var personas=directorioPersonas();
+  var h='<div style="max-width:640px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:17px;font-weight:800;color:#4ade80">📣 Avisos por WhatsApp</span><button onclick="document.getElementById(\'avisosWspOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;cursor:pointer">✕</button></div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:12px">'+tb('lunes','🗓️ Lunes: ponerse al día')+tb('general','📢 Material nuevo')+tb('correo','✉️ Correo')+tb('dir','📒 Directorio')+'</div>';
+  var firma='\n\n— Patricio Baeza · CSU Valdivia';
+  if(tab==='lunes'){
+    var fechas=diasHabilesEntre(W.lunPas,sumarDias(W.lunPas,4));
+    var extra=window._avExtra||'';
+    h+='<div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:8px">Semana revisada: <b>'+fmtFechaCorta(W.lunPas)+' al '+fmtFechaCorta(sumarDias(W.lunPas,4))+'</b>. Aparece quien no respondió ningún día de esa semana. Quienes están en inducción no se incluyen.</div>'+
+      '<textarea id="avExtra" rows="2" oninput="window._avExtra=this.value" placeholder="Opcional: material nuevo que quieres mencionar (ej: protocolo de higiene de manos)" style="width:100%;box-sizing:border-box;'+_dsCss+'margin-bottom:10px">'+esc(extra)+'</textarea>';
+    var sinResp=[],parciales=[],enInd=0,sinDatos=0,ok=0;
+    personas.forEach(function(p){
+      if(typeof estaEnInduccion==='function'&&estaEnInduccion(p.nombre)){enInd++;return;}
+      var d=avDiasRespondidos(p,fechas);
+      if(d===null){sinDatos++;return;}
+      if(d===0)sinResp.push(p);else{if(d<fechas.length)parciales.push({p:p,d:d});else ok++;}
+    });
+    var tag='lun_'+W.lunPas;
+    h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:#fca5a5;margin-bottom:4px">⛔ No respondieron nada ('+sinResp.length+')</div>';
+    if(!sinResp.length)h+='<div style="font-size:12px;color:#6ee7b7">✅ Todos respondieron al menos un día.</div>';
+    sinResp.forEach(function(p){
+      var msg='Hola '+p.nombre.split(' ')[0]+', la semana pasada no registramos tus respuestas en GESTHOR. Por favor ponte al día esta semana.'+(extra.trim()?'\n\nAdemás se cargó nuevo material para estudio: '+extra.trim()+'.':'')+firma;
+      h+='<div style="padding:8px 0;border-top:1px solid rgba(255,255,255,.06)"><div style="font-size:13px;color:#fff">'+esc(p.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+p.grupo+'</span></div>'+avBotonWsp(p,msg,tag)+'</div>';
+    });
+    h+='</div>';
+    if(parciales.length)h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px">🟡 Respondieron solo algunos días ('+parciales.length+')</div><div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:6px">Solo informativo: no sé qué días tenían turno, por eso no los marco como faltantes.</div>'+
+      parciales.map(function(x){return '<div style="font-size:12px;color:#fff;padding:3px 0">'+esc(x.p.nombre)+' · '+x.d+' de '+fechas.length+' días</div>';}).join('')+'</div>';
+    h+='<div style="font-size:10px;color:rgba(255,255,255,.4)">Respondieron todos los días: '+ok+' · En inducción (omitidos): '+enInd+(sinDatos?' · Sin datos de esa semana (clínicos/internos): '+sinDatos:'')+'</div>';
+    if(!W.tieneSemPas)h+='<div style="font-size:11px;color:#fbbf24;margin-top:6px">⚠️ No encontré la semana anterior en el plan de turnos, así que no puedo revisar a clínicos ni internos.</div>';
+  } else if(tab==='general'){
+    var g=window._avG||{tipo:'evaluacion',texto:'',aud:'todos'};window._avG=g;
+    var aud=['todos','Clínico','Interno','Administrativo','Docente','Gerencia'];
+    h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px">'+
+      '<select onchange="window._avG.tipo=this.value;renderAvisosWsp()" style="width:100%;'+_dsCss+'margin-bottom:6px"><option value="evaluacion"'+(g.tipo==='evaluacion'?' selected':'')+'>📝 Nueva evaluación disponible</option><option value="protocolo"'+(g.tipo==='protocolo'?' selected':'')+'>📚 Nuevo protocolo / material de estudio</option></select>'+
+      '<input type="text" value="'+esc(g.texto)+'" oninput="window._avG.texto=this.value" onchange="renderAvisosWsp()" placeholder="Nombre (ej: Higiene de manos)" style="width:100%;box-sizing:border-box;'+_dsCss+'margin-bottom:6px">'+
+      '<select onchange="window._avG.aud=this.value;renderAvisosWsp()" style="width:100%;'+_dsCss+'">'+aud.map(function(a){return '<option value="'+a+'"'+(g.aud===a?' selected':'')+'>'+(a==='todos'?'Todos':'Solo '+a+'s')+'</option>';}).join('')+'</select></div>';
+    if(!g.texto.trim())h+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Escribe el nombre de la evaluación o del protocolo para generar los mensajes.</div>';
+    else{
+      var tagG='gen_'+hoyStr()+'_'+g.tipo+'_'+claveDesdeNombre(g.texto.trim()).slice(0,24);
+      personas.filter(function(p){return g.aud==='todos'||p.grupo===g.aud;}).forEach(function(p){
+        var cuerpo=g.tipo==='evaluacion'?'ya está disponible la evaluación "'+g.texto.trim()+'" en GESTHOR. Entra para responderla.':'se cargó un nuevo protocolo / material de estudio: "'+g.texto.trim()+'". Entra a GESTHOR para revisarlo.';
+        var msg='Hola '+p.nombre.split(' ')[0]+', '+cuerpo+firma;
+        h+='<div style="padding:9px 11px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:5px"><div style="font-size:13px;color:#fff">'+esc(p.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.4)">· '+p.grupo+'</span></div>'+avBotonWsp(p,msg,tagG)+'</div>';
+      });
+    }
+  } else if(tab==='correo'){
+    var solo=(window._avSoloSinFono!==false);
+    var esInst=function(c){return /@([a-z0-9-]+\.)*(uss|csuss)\.cl$/i.test(String(c||'').trim());};
+    var dest=personas.filter(function(p){return !solo||(!fonoValido(p.fono)&&!(fonoRechazado||{})[p.k]);});
+    var conC=dest.filter(function(p){return p.correo&&p.correo.indexOf('@')>0;});
+    var sinC=dest.filter(function(p){return !(p.correo&&p.correo.indexOf('@')>0);});
+    var noInst=conC.filter(function(p){return !esInst(p.correo);});
+    var url=location.href.split('#')[0].split('?')[0];
+    var asuntoD='GESTHOR: actualiza tu app y agrega tu WhatsApp';
+    var cuerpoD=window._avCuerpo||('Hola,\n\nPara que podamos avisarte cuando haya una evaluación o material nuevo en GESTHOR, necesitamos actualizar tus datos de contacto: tu WhatsApp y tu correo institucional.\n\n1. Cierra la app y vuelve a abrirla (si tienes la versión antigua, actualízala o recárgala).\n2. Te aparecerá la ventana "Actualiza tus datos".\n3. Escribe tu celular con el formato +56 9 XXXX XXXX y tu correo institucional (@uss.cl), y presiona Guardar.\n\nApp: '+url+'\n\nGracias.'+firma);
+    window._avCuerpo=cuerpoD;
+    h+='<label style="font-size:12px;color:rgba(255,255,255,.7);display:flex;gap:6px;align-items:center;margin-bottom:8px"><input type="checkbox" '+(solo?'checked':'')+' onchange="window._avSoloSinFono=this.checked;renderAvisosWsp()"> Solo a quienes aún no tienen WhatsApp guardado</label>'+
+      '<textarea rows="9" oninput="window._avCuerpo=this.value" style="width:100%;box-sizing:border-box;'+_dsCss+'margin-bottom:8px">'+esc(cuerpoD)+'</textarea>'+
+      (function(){var nL=Math.ceil(conC.length/25),b='';for(var i=0;i<nL;i++){var ini=i*25,fin=Math.min(conC.length,ini+25);b+='<button onclick="avAbrirCorreoMasivo('+i+')" style="width:100%;margin-bottom:6px;background:#0a64c8;color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">✉️ '+(nL>1?'Lote '+(i+1)+' de '+nL+' · ':'')+'Abrir correo (Cco a '+(fin-ini)+' personas)</button>';}return b||'<div style="font-size:12px;color:#fbbf24">Aún no hay correos cargados.</div>';})()+
+      '<div style="font-size:11px;color:rgba(255,255,255,.45);margin:6px 0 10px">Va con copia oculta: nadie ve las direcciones de los demás. Se envía en lotes de 25 para que el enlace no se corte. Tú presionas enviar desde tu Outlook institucional.</div>';
+    if(noInst.length)h+='<div style="background:rgba(251,191,36,.1);border-radius:8px;padding:8px 10px;font-size:11px;color:#fcd34d;margin-bottom:8px">⚠️ '+noInst.length+' correo(s) no parecen institucionales (uss.cl / csuss.cl): '+esc(noInst.map(function(p){return p.nombre+' ('+p.correo+')';}).join(', '))+'. Corrígelos abajo si corresponde.</div>';
+    h+='<div style="font-size:12px;font-weight:700;color:#93c5fd;margin:8px 0 4px">Correos de los destinatarios ('+dest.length+')</div>';
+    dest.forEach(function(p){
+      var ok=p.correo&&esInst(p.correo);
+      h+='<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:4px"><span style="flex:1;font-size:12px;color:#fff">'+esc(p.nombre)+'</span>'+
+        '<input type="email" id="avc_'+p.k+'" value="'+esc(p.correo||'')+'" placeholder="nombre@uss.cl" style="width:190px;'+_dsCss+'border-color:'+(ok?'rgba(52,211,153,.4)':'rgba(251,191,36,.4)')+'"><button onclick="avGuardarCorreo(\''+p.k+'\')" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:none;border-radius:6px;padding:7px 9px;font-family:inherit;font-size:11px;cursor:pointer">💾</button></div>';
+    });
+  } else {
+    var con=personas.filter(function(p){return fonoValido(p.fono);}).length;
+    h+='<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:8px">'+con+' de '+personas.length+' personas con WhatsApp válido. La lista se arma sola con quienes están inscritos; el número se completa al ingresar, desde su perfil o aquí.</div>'+
+      '<div style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px">📥 Importar planilla (CSV)</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">Columnas: Nombre completo, Grupo en GESTHOR, Carrera / Área / Cargo, Correo institucional, WhatsApp. Los que ya están inscritos se completan; los demás quedan como contactos para el correo.</div><input type="file" id="avCsvIn" accept=".csv,text/csv" style="font-size:12px;color:#fff;width:100%"></div>'+
+      '<button onclick="avImportarCSV()" style="width:100%;margin-bottom:10px;background:rgba(251,191,36,.15);color:#fcd34d;border:1px solid rgba(251,191,36,.35);border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📥 Importar el CSV elegido</button>'+
+      '<button onclick="avExportarCSV()" style="width:100%;margin-bottom:10px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">⬇️ Descargar directorio (CSV para Excel / Drive)</button>';
+    ['Clínico','Interno','Administrativo','Docente','Gerencia'].forEach(function(gr){
+      var lst=personas.filter(function(p){return p.grupo===gr;});if(!lst.length)return;
+      h+='<div style="font-size:11px;font-weight:700;color:#93c5fd;margin:10px 0 4px">'+gr+'s ('+lst.length+')</div>';
+      lst.forEach(function(p){
+        h+='<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:4px"><span style="flex:1;font-size:12px;color:#fff">'+esc(p.nombre)+'</span>'+
+          (!p.fono&&(fonoRechazado||{})[p.k]?'<span style="font-size:10px;color:rgba(255,255,255,.45)">prefiere no dar WhatsApp</span>':'')+'<input type="tel" id="avd_'+p.k+'" value="'+esc(p.fono?'+'+p.fono:'')+'" placeholder="9 1234 5678" style="width:130px;'+_dsCss+'border-color:'+(fonoValido(p.fono)?'rgba(52,211,153,.4)':'rgba(251,191,36,.4)')+'"><button onclick="avGuardarFono(\''+p.k+'\',\'avd_'+p.k+'\')" style="background:rgba(16,185,129,.2);color:#6ee7b7;border:none;border-radius:6px;padding:7px 9px;font-family:inherit;font-size:11px;cursor:pointer">💾</button></div>';
+      });
+    });
+  }
+  ov.innerHTML=h+'</div>';
+}
+function parseCSV(t){
+  t=String(t||'').replace(/^﻿/,'');
+  var first=t.split(/\r?\n/)[0]||'';var d=(first.split(';').length>first.split(',').length)?';':',';
+  var rows=[],row=[],cur='',q=false;
+  for(var i=0;i<t.length;i++){var ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
+    else if(ch==='"')q=true;
+    else if(ch===d){row.push(cur);cur='';}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(cur);cur='';if(row.some(function(x){return x.trim();}))rows.push(row);row=[];}
+    else cur+=ch;}
+  row.push(cur);if(row.some(function(x){return x.trim();}))rows.push(row);
+  return rows;
+}
+window.avImportarCSV=function(){
+  var f=document.getElementById('avCsvIn').files[0];
+  if(!f){alert('Primero elige el archivo CSV.');return;}
+  var rd=new FileReader();
+  rd.onload=function(){
+    var rows=parseCSV(rd.result);if(rows.length<2){alert('El archivo está vacío.');return;}
+    var hd=rows[0].map(function(x){return normNom(x);});
+    var ix=function(re){for(var i=0;i<hd.length;i++)if(re.test(hd[i]))return i;return -1;};
+    var iN=ix(/^nombre/),iG=ix(/grupo/),iC=ix(/carrera|area|cargo/),iM=ix(/correo/),iT=ix(/whatsapp|telefono|fono/);
+    if(iN<0||iM<0){alert('No encuentro las columnas "Nombre completo" y "Correo".');return;}
+    var reg=directorioPersonas().filter(function(p){return !p.extra;});
+    var upd={},nuevos=0,compl=0,malos=[];
+    rows.slice(1).forEach(function(r){
+      var nombre=(r[iN]||'').replace(/\s+/g,' ').trim();if(!nombre)return;
+      var cor=(r[iM]||'').trim().toLowerCase();
+      var fono=iT>=0?normFonoCL(r[iT]):'';
+      var grupo=(iG>=0&&r[iG]||'').trim()||'Docente';
+      var hit=reg.filter(function(p){return mismaPersona(p.nombre,nombre);})[0];
+      var k=(hit?hit.nombre:nombre).replace(/\s/g,'_').replace(/[.#$\/\[\]]/g,'_');
+      if(cor){if(!correoInstitucional(cor)){malos.push(nombre+' ('+cor+')');}else upd['correos/'+k]=cor;}
+      if(fono&&fonoValido(fono))upd['telefonosEquipo/'+k]=fono;
+      if(hit){compl++;}else{nuevos++;upd['contactosExtra/'+k]={nombre:nombre,grupo:grupo,carrera:(iC>=0?(r[iC]||'').trim():'')};}
+    });
+    if(!Object.keys(upd).length){alert('No había nada que importar.');return;}
+    if(!confirm('Se cargarán: '+compl+' personas ya inscritas (se completan sus datos) y '+nuevos+' contactos nuevos.'+(malos.length?'\n\nNo se cargará el correo de '+malos.length+' por no ser institucional: '+malos.join(', '):'')+'\n\n¿Continuar?'))return;
+    db.ref('sedes/'+S).update(upd).then(function(){alert('✓ Importado.');abrirAvisosWsp();}).catch(function(){alert('No se pudo importar. Revisa tu conexión.');});
+  };
+  rd.readAsText(f,'utf-8');
+};
+window.avExportarCSV=function(){
+  var q=function(x){return '"'+String(x||'').replace(/"/g,'""')+'"';};
+  var filas=[['Nombre','Grupo','WhatsApp','Correo'].map(q).join(',')].concat(directorioPersonas().map(function(p){return [p.nombre,p.grupo,p.fono?'+'+p.fono:'',p.correo].map(q).join(',');}));
+  var blob=new Blob(['﻿'+filas.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='directorio_gesthor_'+hoyStr()+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},500);
+};
+
+// Pide WhatsApp y correo institucional (una vez) a quien ingresa y aún no los tiene guardados.
+// "Más tarde" lo vuelve a pedir en 3 días.
+function correoInstitucional(c){return /^[^\s@]+@([a-z0-9-]+\.)*(uss|csuss)\.cl$/i.test(String(c||'').trim());}
+window.pedirWhatsAppSiFalta=function(nombre){
+  nombre=String(nombre||'').trim();if(!nombre||typeof S==='undefined'||!S)return;
+  var k=nombre.replace(/\s/g,'_');
+  var skipKey='tcsu_datos_skip_'+S+'_'+k;
+  try{var sk=Number(localStorage.getItem(skipKey)||0);if(sk&&Date.now()-sk<3*86400000)return;}catch(e){}
+  if(document.getElementById('pedirFonoOv'))return;
+  Promise.all([sedeRef('telefonosEquipo/'+k).once('value'),sedeRef('correos/'+k).once('value'),sedeRef('fonoRechazado/'+k).once('value')]).then(function(r){
+    var faltaFono=!fonoValido(r[0].val())&&!r[2].val();
+    var faltaCorreo=!correoInstitucional(r[1].val());
+    if(!faltaFono&&!faltaCorreo)return;
+    var inp='width:100%;box-sizing:border-box;font-size:16px;text-align:center;padding:10px;margin-bottom:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;font-family:inherit';
+    var ov=document.createElement('div');ov.id='pedirFonoOv';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.94);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+    ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:22px;max-width:360px;width:100%"><div style="font-size:30px;text-align:center;margin-bottom:6px">📱</div>'+
+      '<div style="font-size:16px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px">Actualiza tus datos</div>'+
+      '<div style="font-size:12px;color:rgba(255,255,255,.6);text-align:center;margin-bottom:12px">Hola '+esc(nombre.split(' ')[0])+', completa tus datos de contacto para avisarte cuando haya una evaluación o material nuevo.</div>'+
+      (faltaFono?'<label style="font-size:11px;color:rgba(255,255,255,.55)">WhatsApp (opcional) · formato +56 9 XXXX XXXX</label><input type="tel" id="pedirFonoIn" placeholder="+56 9 1234 5678" style="'+inp+'margin-bottom:4px"><div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:10px">Solo lo verá la jefatura y se usa únicamente para avisos de GESTHOR. Si prefieres no darlo, déjalo vacío y no se te volverá a pedir.</div>':'')+
+      (faltaCorreo?'<label style="font-size:11px;color:rgba(255,255,255,.55)">Correo institucional (@uss.cl)</label><input type="email" id="pedirCorreoIn" placeholder="nombre.apellido@uss.cl" style="'+inp+'">':'')+
+      '<button id="pedirFonoOk" class="btn-add" style="background:linear-gradient(135deg,#16a34a,#4ade80);color:#06281d">Guardar</button>'+
+      '<button id="pedirFonoLuego" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Más tarde</button></div>';
+    document.body.appendChild(ov);
+    document.getElementById('pedirFonoLuego').onclick=function(){try{localStorage.setItem(skipKey,String(Date.now()));}catch(e){}ov.remove();};
+    document.getElementById('pedirFonoOk').onclick=function(){
+      var ops=[];
+      if(faltaFono){
+        var fraw=(document.getElementById('pedirFonoIn').value||'').trim();
+        if(!fraw){ops.push(sedeRef('fonoRechazado/'+k).set(true));}
+        else{
+          var f=normFonoCL(fraw);
+          if(!fonoValido(f)){alert('Escribe un celular chileno de 9 dígitos que parta con 9. Ej: +56 9 1234 5678 (o déjalo vacío si prefieres no darlo).');return;}
+          ops.push(sedeRef('telefonosEquipo/'+k).set(f));
+        }
+      }
+      if(faltaCorreo){
+        var c=(document.getElementById('pedirCorreoIn').value||'').trim().toLowerCase();
+        if(!correoInstitucional(c)){alert('Escribe tu correo institucional, que termina en @uss.cl (o @csuss.cl).');return;}
+        ops.push(sedeRef('correos/'+k).set(c));
+      }
+      Promise.all(ops).then(function(){ov.remove();}).catch(function(){alert('No se pudo guardar. Revisa tu conexión.');});
+    };
+  }).catch(function(){});
 };
 
 // ── Ingreso diario de producción ──
@@ -3953,6 +4277,7 @@ window.autoRegistrarAdmin=function(){
   secretarias[key]={nombre:nombre,cargo:cargo,ts:Date.now()};
   sedeRef('secretarias/'+key).set({nombre:nombre,cargo:cargo,ts:Date.now()}).then(function(){
     window._adminNombre=nombre;
+    pedirWhatsAppSiFalta(nombre);
     registrarAccesoArea(nombre,'administrativo');
     document.getElementById('adminTabs').style.display='flex';
     tabAdmin('material');
@@ -3967,6 +4292,7 @@ window.cargarPreguntasAdmin=function(){
   window._adminNombre=nombre;
   window._adminKeyActual=Object.keys(secretarias||{}).find(function(k){var v=secretarias[k];return (typeof v==='object'?v.nombre:v)===nombre;});
   registrarAccesoArea(nombre,'administrativo');
+  pedirWhatsAppSiFalta(nombre);
   document.getElementById('adminTabs').style.display='flex';
   tabAdmin('material');
   setTimeout(verificarRetroViernes,600);
@@ -4606,6 +4932,7 @@ window.forzarActualizar=function(){
 
 function showApp(){
   document.getElementById('emailView').style.display='none';
+  pedirWhatsAppSiFalta(curNombre);
   renderAnuncios(); // curNombre ya está definido: filtra descartados por persona
   // NOTA: registro de marcaje de horario DESACTIVADO por requerimiento legal (control de jornada
   // no puede llevarse en esta app). No se registra hora de entrada ni se guarda en 'asistencia'.
@@ -5016,6 +5343,8 @@ document.getElementById('saveEmailBtn').addEventListener('click',function(){
   curNombre=n;
   var sel=document.getElementById('nameSelect');if(sel)sel.value=n;
   if(e)sRef('correos/'+n.replace(/\s/g,'_')).set(e);
+  var _fn=normFonoCL((document.getElementById('emailFono')||{}).value||'');
+  if(_fn)sedeRef('telefonosEquipo/'+n.replace(/\s/g,'_')).set(_fn);
   showApp();
 });
 window.skipEmail=function(){
@@ -11912,6 +12241,7 @@ window.autoRegistrarGerencia=function(){
   sedeRef('gerenciaEquipo/'+key).set({nombre:nombre,cargo:cargo,ts:Date.now()}).then(function(){
     window._gerKey=key;window._gerNombre=nombre;window._gerCargo=cargo;
     mostrarTabsGerencia();
+    pedirWhatsAppSiFalta(nombre);
     setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(nombre);},900);
   });
 };
@@ -11920,6 +12250,7 @@ window.cargarGerencia=function(){
   if(!key)return;
   window._gerKey=key;window._gerNombre=gerenciaEquipo[key].nombre;window._gerCargo=gerenciaEquipo[key].cargo;
   mostrarTabsGerencia();
+  pedirWhatsAppSiFalta(gerenciaEquipo[key].nombre);
   setTimeout(function(){verificarCumpleanos();verificarProximoCumpleanos(gerenciaEquipo[key].nombre);},900);
 };
 function mostrarTabsGerencia(){
@@ -12350,6 +12681,7 @@ window.autoRegistrarDocente=function(){
   Promise.all(seq).then(function(){
     window._docKey=dkey;window._docActual=docentes[dkey];
     registrarAccesoArea(nombre,'docente');
+    pedirWhatsAppSiFalta(nombre);
     document.getElementById('docTabs').style.display='flex';
     tabDoc('material');
   });
@@ -12360,6 +12692,7 @@ window.cargarDocente=function(){
   window._docKey=key;
   window._docActual=docentes[key];
   registrarAccesoArea(docentes[key]&&docentes[key].nombre,'docente');
+  pedirWhatsAppSiFalta(docentes[key]&&docentes[key].nombre);
   document.getElementById('docTabs').style.display='flex';
   tabDoc('material');
 };
@@ -15943,22 +16276,23 @@ window.guardarRegAseo=function(){
 
 // ── CORREO: ofrece Outlook web, Gmail web, app de correo y copiar (mailto solo no siempre abre nada) ──
 var CORREO_REMITENTE='patricio.baeza@csuss.cl'; // cuenta desde la que se espera enviar (se pasa como sugerencia al webmail)
-window.abrirCorreo=function(para,asunto,cuerpo,alUsar){
+window.abrirCorreo=function(para,asunto,cuerpo,alUsar,cco){
   var to=String(para||'').replace(/\s/g,'');
+  var bcc=String(cco||'').replace(/\s/g,'');
   var q=function(x){return encodeURIComponent(x);};
   var urls={
-    outlook:'https://outlook.office.com/mail/deeplink/compose?to='+q(to)+'&subject='+q(asunto)+'&body='+q(cuerpo)+'&login_hint='+q(CORREO_REMITENTE),
-    gmail:'https://mail.google.com/mail/?view=cm&fs=1&authuser='+q(CORREO_REMITENTE)+'&to='+q(to)+'&su='+q(asunto)+'&body='+q(cuerpo),
-    app:'mailto:'+to+'?subject='+q(asunto)+'&body='+q(cuerpo)
+    outlook:'https://outlook.office.com/mail/deeplink/compose?to='+q(to)+(bcc?'&bcc='+q(bcc):'')+'&subject='+q(asunto)+'&body='+q(cuerpo)+'&login_hint='+q(CORREO_REMITENTE),
+    gmail:'https://mail.google.com/mail/?view=cm&fs=1&authuser='+q(CORREO_REMITENTE)+'&to='+q(to)+(bcc?'&bcc='+q(bcc):'')+'&su='+q(asunto)+'&body='+q(cuerpo),
+    app:'mailto:'+to+'?subject='+q(asunto)+(bcc?'&bcc='+q(bcc):'')+'&body='+q(cuerpo)
   };
-  window._corrUrls=urls;window._corrTxt='Para: '+to+'\nAsunto: '+asunto+'\n\n'+cuerpo;window._corrCb=alUsar||null;
+  window._corrUrls=urls;window._corrTxt='Para: '+to+(bcc?'\nCco: '+bcc:'')+'\nAsunto: '+asunto+'\n\n'+cuerpo;window._corrCb=alUsar||null;
   var ov=document.getElementById('correoOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='correoOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9600;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
   var b='display:block;width:100%;text-align:center;box-sizing:border-box;font-weight:700;font-size:14px;padding:12px;border-radius:10px;margin-top:8px;text-decoration:none;border:none;font-family:inherit;cursor:pointer;';
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:400px;width:100%;margin-top:30px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff">✉️ Enviar correo</div>'+
-    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin:4px 0 6px;overflow-wrap:anywhere">Para: '+esc(to)+'</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin:4px 0 6px;overflow-wrap:anywhere">Para: '+esc(to)+(bcc?'<br>Cco: '+bcc.split(',').length+' destinatarios (nadie ve las direcciones de los demás)':'')+'</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4)">Elige con qué abrirlo; el mensaje va escrito y tú presionas enviar. Si el webmail abre con otra cuenta, revisa el "De:" o usa Copiar mensaje y pégalo en tu Outlook institucional.</div>'+
     '<a href="'+urls.outlook.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener" onclick="correoUsado()" style="'+b+'background:#0a64c8;color:#fff">Outlook web (correo institucional)</a>'+
     '<a href="'+urls.gmail.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener" onclick="correoUsado()" style="'+b+'background:#ea4335;color:#fff">Gmail web</a>'+
