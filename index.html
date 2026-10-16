@@ -3369,10 +3369,42 @@ function pintarMiWhatsApp(nombre){
       '<div style="display:flex;gap:6px"><input type="tel" id="miFonoIn" value="'+esc(cur?'+'+cur:'')+'" placeholder="9 1234 5678" style="flex:1;'+_dsCss+'"><button onclick="guardarMiWhatsApp(\''+esc(String(nombre).replace(/'/g,''))+'\')" style="background:rgba(16,185,129,.25);color:#6ee7b7;border:none;border-radius:6px;padding:0 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">Guardar</button></div></div>';
   });
 }
+
+// ── Sincronización con Google Sheets (Apps Script) ──
+// La URL y la clave se guardan en sedes/S/hojaSync {url,token}. Si no hay URL, no hace nada.
+var _hojaCfg=null;
+function hojaCfg(){
+  if(_hojaCfg)return Promise.resolve(_hojaCfg);
+  return sedeRef('hojaSync').once('value').then(function(sn){var v=sn.val()||{};if(v.url)_hojaCfg=v;return v;});
+}
+function hojaEnviar(filas){
+  try{
+    return hojaCfg().then(function(c){
+      if(!c||!c.url||!filas||!filas.length)return;
+      return fetch(c.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:c.token||'',filas:filas})});
+    }).catch(function(){});
+  }catch(e){return Promise.resolve();}
+}
+function hojaFila(o){
+  return {nombre:o.nombre||'',grupo:o.grupo||'',carrera:o.carrera||'',correo:o.correo||'',fono:o.fono?('+'+String(o.fono).replace(/^\+/,'')):'',pref:o.rechazo?'Prefiere no dar WhatsApp':'',fecha:hoyStr()};
+}
+window.hojaGuardarCfg=function(){
+  var u=(document.getElementById('hojaUrlIn').value||'').trim(),t=(document.getElementById('hojaTokIn').value||'').trim();
+  if(u&&!/^https:\/\/script\.google\.com\//.test(u)){alert('La URL debe empezar con https://script.google.com/');return;}
+  (u?sedeRef('hojaSync').set({url:u,token:t}):sedeRef('hojaSync').remove()).then(function(){_hojaCfg=null;alert(u?'✓ Conexión guardada.':'Conexión eliminada.');});
+};
+window.hojaEnviarTodo=function(){
+  var filas=directorioPersonas().map(function(p){return hojaFila({nombre:p.nombre,grupo:p.grupo,carrera:p.carrera,correo:p.correo,fono:p.fono,rechazo:!p.fono&&(fonoRechazado||{})[p.k]});});
+  _hojaCfg=null;
+  hojaCfg().then(function(c){
+    if(!c||!c.url){alert('Primero guarda la URL de la hoja.');return;}
+    hojaEnviar(filas).then(function(){alert('Se enviaron '+filas.length+' personas. Revisa tu hoja en unos segundos.');});
+  });
+};
 window.guardarMiWhatsApp=function(nombre){
   var f=normFonoCL(document.getElementById('miFonoIn').value);
   if(!fonoValido(f)){alert('Escribe un celular chileno de 9 dígitos que parta con 9. Ej: 9 1234 5678');return;}
-  sedeRef('telefonosEquipo/'+String(nombre).replace(/\s/g,'_')).set(f).then(function(){alert('✓ WhatsApp guardado.');});
+  sedeRef('telefonosEquipo/'+String(nombre).replace(/\s/g,'_')).set(f).then(function(){hojaEnviar([hojaFila({nombre:nombre,fono:f})]);alert('✓ WhatsApp guardado.');});
 };
 function normNom(n){return String(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim();}
 function mismaPersona(a,b){
@@ -3416,14 +3448,14 @@ window.abrirAvisosWsp=function(){
     sedeRef('telefonosEquipo').once('value'),sedeRef('correos').once('value'),sedeRef('avisosWsp').once('value'),
     sedeRef('rankingAdmin').once('value'),sedeRef('rankingDocente').once('value'),sedeRef('rankingGerencia').once('value'),sedeRef('induccion').once('value'),
     idPas?db.ref('sedes/'+S+'/semanas/'+idPas+'/ranking').once('value'):Promise.resolve(null),
-    sedeRef('contactosExtra').once('value'),sedeRef('fonoRechazado').once('value')
+    sedeRef('contactosExtra').once('value'),sedeRef('fonoRechazado').once('value'),sedeRef('hojaSync').once('value')
   ]).then(function(r){
     var nm=r[0].val();nombres=Array.isArray(nm)?nm:Object.values(nm||{});
     internos=r[1].val()||{};secretarias=r[2].val()||{};docentes=r[3].val()||{};gerenciaEquipo=r[4].val()||{};
     telefonosEquipo=r[5].val()||{};correos=r[6].val()||{};
     induccion=r[11].val()||induccion;
     contactosExtra=(r[13]&&r[13].val())||{};fonoRechazado=(r[14]&&r[14].val())||{};
-    window._avW={tab:window._avW&&window._avW.tab||'lunes',avisos:r[7].val()||{},rkAdmin:(r[8].val()||{}).capacitacion||{},rkDoc:r[9].val()||{},rkGer:r[10].val()||{},rkClinPas:r[12]?(r[12].val()||{}):null,lunPas:lunPas,tieneSemPas:!!idPas};
+    window._avW={tab:window._avW&&window._avW.tab||'lunes',avisos:r[7].val()||{},rkAdmin:(r[8].val()||{}).capacitacion||{},rkDoc:r[9].val()||{},rkGer:r[10].val()||{},rkClinPas:r[12]?(r[12].val()||{}):null,lunPas:lunPas,tieneSemPas:!!idPas,hoja:(r[15]&&r[15].val())||{}};
     renderAvisosWsp();
   }).catch(function(){ov.innerHTML='<div style="padding:30px;color:#fca5a5">No se pudo cargar. Revisa tu conexión.</div>';});
 };
@@ -3469,14 +3501,14 @@ window.avGuardarFono=function(k,inputId){
   var f=normFonoCL(document.getElementById(inputId).value);
   if(!fonoValido(f)){alert('Celular chileno de 9 dígitos que parta con 9. Ej: 9 1234 5678');return;}
   telefonosEquipo[k]=f;
-  sedeRef('telefonosEquipo/'+k).set(f).then(renderAvisosWsp);
+  sedeRef('telefonosEquipo/'+k).set(f).then(function(){var pp=directorioPersonas().filter(function(x){return x.k===k;})[0]||{};hojaEnviar([hojaFila({nombre:pp.nombre||k.replace(/_/g,' '),grupo:pp.grupo,correo:pp.correo,fono:f})]);renderAvisosWsp();});
 };
 window.avTab=function(t){window._avW.tab=t;renderAvisosWsp();};
 window.avGuardarCorreo=function(k){
   var v=(document.getElementById('avc_'+k).value||'').trim();
   if(v&&v.indexOf('@')<1){alert('Correo no válido.');return;}
   correos[k]=v;
-  (v?sedeRef('correos/'+k).set(v):sedeRef('correos/'+k).remove()).then(renderAvisosWsp);
+  (v?sedeRef('correos/'+k).set(v):sedeRef('correos/'+k).remove()).then(function(){var pp=directorioPersonas().filter(function(x){return x.k===k;})[0]||{};if(v)hojaEnviar([hojaFila({nombre:pp.nombre||k.replace(/_/g,' '),grupo:pp.grupo,correo:v})]);renderAvisosWsp();});
 };
 window.avAbrirCorreoMasivo=function(lote){
   lote=lote||0;
@@ -3561,6 +3593,7 @@ function renderAvisosWsp(){
     h+='<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:8px">'+con+' de '+personas.length+' personas con WhatsApp válido. La lista se arma sola con quienes están inscritos; el número se completa al ingresar, desde su perfil o aquí.</div>'+
       '<div style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px">📥 Importar planilla (CSV)</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">Columnas: Nombre completo, Grupo en GESTHOR, Carrera / Área / Cargo, Correo institucional, WhatsApp. Los que ya están inscritos se completan; los demás quedan como contactos para el correo.</div><input type="file" id="avCsvIn" accept=".csv,text/csv" style="font-size:12px;color:#fff;width:100%"></div>'+
       '<button onclick="avImportarCSV()" style="width:100%;margin-bottom:10px;background:rgba(251,191,36,.15);color:#fcd34d;border:1px solid rgba(251,191,36,.35);border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📥 Importar el CSV elegido</button>'+
+      '<div style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#4ade80;margin-bottom:4px">📊 Hoja de Google (se llena sola)</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">Pega la URL de la aplicación web de Apps Script y la clave que definiste. Cada vez que alguien guarde su correo o WhatsApp, la fila se actualiza en tu hoja.</div><input id="hojaUrlIn" placeholder="https://script.google.com/macros/s/.../exec" value="'+esc((W.hoja&&W.hoja.url)||'')+'" style="width:100%;box-sizing:border-box;'+_dsCss+'margin-bottom:6px"><input id="hojaTokIn" placeholder="Clave" value="'+esc((W.hoja&&W.hoja.token)||'')+'" style="width:100%;box-sizing:border-box;'+_dsCss+'margin-bottom:6px"><div style="display:flex;gap:6px"><button onclick="hojaGuardarCfg()" style="flex:1;background:rgba(16,185,129,.2);color:#6ee7b7;border:none;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">💾 Guardar conexión</button><button onclick="hojaEnviarTodo()" style="flex:1;background:rgba(96,165,250,.2);color:#93c5fd;border:none;border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">⬆️ Enviar todos ahora</button></div></div>'+
       '<button onclick="avExportarCSV()" style="width:100%;margin-bottom:10px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">⬇️ Descargar directorio (CSV para Excel / Drive)</button>';
     ['Clínico','Interno','Administrativo','Docente','Gerencia'].forEach(function(gr){
       var lst=personas.filter(function(p){return p.grupo===gr;});if(!lst.length)return;
@@ -3648,22 +3681,22 @@ window.pedirWhatsAppSiFalta=function(nombre){
     document.body.appendChild(ov);
     document.getElementById('pedirFonoLuego').onclick=function(){try{localStorage.setItem(skipKey,String(Date.now()));}catch(e){}ov.remove();};
     document.getElementById('pedirFonoOk').onclick=function(){
-      var ops=[];
+      var ops=[],hojaF={nombre:nombre};
       if(faltaFono){
         var fraw=(document.getElementById('pedirFonoIn').value||'').trim();
-        if(!fraw){ops.push(sedeRef('fonoRechazado/'+k).set(true));}
+        if(!fraw){ops.push(sedeRef('fonoRechazado/'+k).set(true));hojaF.rechazo=true;}
         else{
           var f=normFonoCL(fraw);
           if(!fonoValido(f)){alert('Escribe un celular chileno de 9 dígitos que parta con 9. Ej: +56 9 1234 5678 (o déjalo vacío si prefieres no darlo).');return;}
-          ops.push(sedeRef('telefonosEquipo/'+k).set(f));
+          ops.push(sedeRef('telefonosEquipo/'+k).set(f));hojaF.fono=f;
         }
       }
       if(faltaCorreo){
         var c=(document.getElementById('pedirCorreoIn').value||'').trim().toLowerCase();
         if(!correoInstitucional(c)){alert('Escribe tu correo institucional, que termina en @uss.cl (o @csuss.cl).');return;}
-        ops.push(sedeRef('correos/'+k).set(c));
+        ops.push(sedeRef('correos/'+k).set(c));hojaF.correo=c;
       }
-      Promise.all(ops).then(function(){ov.remove();}).catch(function(){alert('No se pudo guardar. Revisa tu conexión.');});
+      Promise.all(ops).then(function(){hojaEnviar([hojaFila(hojaF)]);ov.remove();}).catch(function(){alert('No se pudo guardar. Revisa tu conexión.');});
     };
   }).catch(function(){});
 };
