@@ -67,6 +67,18 @@
 @keyframes splashLoadFill{to{width:100%}}
 @keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
 #gesthorSplash.skip{display:none}
+/* Versión corta (aperturas repetidas del día): solo la palabra GESTHOR, ~1 s */
+#gesthorSplash.corto{animation:splashOut .35s 1.15s ease forwards}
+#gesthorSplash.corto::before,#gesthorSplash.corto .ghs-wrap,#gesthorSplash.corto .splash-subtitle,#gesthorSplash.corto .splash-loading{display:none}
+#gesthorSplash.corto .splash-brand{margin-top:0}
+#gesthorSplash.corto .splash-brand span{animation-duration:.35s}
+#gesthorSplash.corto .splash-brand span:nth-child(1){animation-delay:.05s!important}
+#gesthorSplash.corto .splash-brand span:nth-child(2){animation-delay:.10s!important}
+#gesthorSplash.corto .splash-brand span:nth-child(3){animation-delay:.15s!important}
+#gesthorSplash.corto .splash-brand span:nth-child(4){animation-delay:.20s!important}
+#gesthorSplash.corto .splash-brand span:nth-child(5){animation-delay:.25s!important}
+#gesthorSplash.corto .splash-brand span:nth-child(6){animation-delay:.30s!important}
+#gesthorSplash.corto .splash-brand span:nth-child(7){animation-delay:.35s!important}
 @media(prefers-reduced-motion:reduce){#gesthorSplash{animation:splashOut .3s .5s ease forwards}#gesthorSplash::before,.ghs-line,.ghs-node,.ghs-node-ring,.splash-brand span,.splash-subtitle,.splash-loading{animation-duration:.01s;animation-delay:0s;opacity:1}.ghs-gear-spin,.ghs-orbit,.ghs-counter-spin{animation:none}}
 :root{
   --bg:#0d1b3e;--bg2:#112254;--surface:#1a2e6b;--surface2:#1e3580;
@@ -20782,49 +20794,23 @@ document.getElementById('migrarBtn').addEventListener('click',function(){
 
 document.getElementById('clearBtn').addEventListener('click',function(){if(!confirm('¿Borrar todos los datos de esta semana en '+S+'? (el personal y otras semanas no se ven afectados)'))return;['bloques','tareas','pendientes','asistencia','notas','visto','cambios','llamados','encargados','coberturas','equipoClave','sinServicios'].forEach(function(p){sRef(p).remove();});document.getElementById('deficitDiv').innerHTML='';alertaMostrada=false;adminUnlocked=false;if(chartH)chartH.destroy();if(chartE)chartE.destroy();chartH=null;chartE=null;renderPendientes();});
 
-// ── Splash de arranque: permitir saltarlo al tocar, quitarlo del DOM al terminar, y repetirlo al reabrir la app ──
+// ── Splash de arranque: completo (acelerado) solo la 1ª apertura del día en este celular; las demás aperturas, solo la palabra GESTHOR ~1 s.
+//    No se repite al volver de otra app. Tocar la pantalla lo salta. ──
 (function(){
   var splash=document.getElementById('gesthorSplash');
   if(!splash)return;
-  var template=splash.cloneNode(true); // copia limpia original, para poder "reproducir" el splash de nuevo
-  var hiddenSince=null;
-  var HIDDEN_THRESHOLD_MS=30000; // si la pestaña estuvo oculta más de 30s, se considera que la app se "reabrió"
-
-  function armarSplash(el){
-    el.classList.remove('skip');
-    el.style.display='';
-    el.addEventListener('click',function(){el.classList.add('skip');});
-    // Quitar del DOM tras la animación completa (~8.4s) para liberar interacción
-    setTimeout(function(){if(el&&el.parentNode)el.style.display='none';},8400);
+  var d=new Date(),hoyL=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  var primera=true;
+  try{primera=localStorage.getItem('splashDia')!==hoyL;if(primera)localStorage.setItem('splashDia',hoyL);}catch(e){}
+  splash.addEventListener('click',function(){splash.classList.add('skip');});
+  if(primera){
+    // Completo, pero al doble de velocidad (~4 s en vez de ~8 s)
+    try{splash.getAnimations({subtree:true}).forEach(function(a){a.playbackRate=2;});}catch(e){}
+    setTimeout(function(){if(splash&&splash.parentNode)splash.style.display='none';},4400);
+  }else{
+    splash.classList.add('corto');
+    setTimeout(function(){if(splash&&splash.parentNode)splash.style.display='none';},1800);
   }
-  function reiniciarSplash(){
-    if(!splash.parentNode)return;
-    var fresh=template.cloneNode(true);
-    splash.parentNode.replaceChild(fresh,splash);
-    splash=fresh;
-    armarSplash(splash);
-  }
-
-  armarSplash(splash);
-
-  // Reproducir de nuevo si la app vuelve a primer plano tras estar oculta un buen rato (colaborador reabre la app)
-  document.addEventListener('visibilitychange',function(){
-    if(document.hidden){
-      hiddenSince=Date.now();
-    }else{
-      if(hiddenSince&&(Date.now()-hiddenSince)>=HIDDEN_THRESHOLD_MS){
-        reiniciarSplash();
-      }
-      hiddenSince=null;
-    }
-  });
-
-  // Reproducir de nuevo si la página se restaura desde el back-forward-cache del navegador
-  window.addEventListener('pageshow',function(e){
-    if(e.persisted){
-      reiniciarSplash();
-    }
-  });
 })();
 </script>
 </body>
