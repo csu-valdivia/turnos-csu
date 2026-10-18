@@ -1154,6 +1154,12 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" onclick="abrirPremioGanador()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">🎁 Registrar premio<span id="premioPendBadge"></span></button>
           </div>
 
+          <div class="asec" style="border-color:rgba(251,191,36,.35)">
+            <p class="asec-title" style="color:#fcd34d">🌅 Ronda de apertura de unidades</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px">Cada unidad confirma al comenzar que todo está listo y marca los insumos pendientes. Aquí ves quién la hizo, a qué hora, qué falló y qué insumos se repiten.</p>
+            <button class="btn-add" onclick="abrirPanelRonda()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">🌅 Ver rondas de hoy</button>
+          </div>
+
           <div class="asec">
             <p class="asec-title">📅 Ausencias activas</p>
             <div class="ilist" id="ausActivasList"></div>
@@ -1381,6 +1387,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </div>
             <input type="text" id="rolAddDetalle" placeholder="Si es valor: unidad (ej: °C, %). Si es checklist: puntos separados por coma" style="width:100%;margin-bottom:4px">
             <button class="btn-add" id="rolAddBtn">+ Crear rol</button>
+ <button class="btn-add" id="rolRondaBtn" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">🌅 Cargar rol: Ronda de apertura de unidad</button>
             <button class="btn-add" id="rolDeaBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🫀 Cargar plantilla: DEA mensual (piso 1 y 2) + tras uso</button>
             <button class="btn-add" onclick="abrirConfigBolso()" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa);margin-top:6px">🔑 Bolso clave azul: insumos, stock mínimo y equipos</button>
             <button class="btn-add" onclick="abrirConfigBotiquin()" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">💊 Botiquín de pabellón: medicamentos y stock mín/óptimo</button>
@@ -2000,7 +2007,7 @@ var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan p
 var supervisores={},pinSupervisor='',conductividad={};
 var supervisorActivo='',supervisorAreas=[];
 var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={},regPedido={},regPabellonAsig={},regLecturaTareas={},historialGanadores={},premiosGanadores={},telefonosEquipo={};
-var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={};
+var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={},rondasApertura={};
 // Custodia diaria de subbodegas: quién queda a cargo de cada una hoy, por jornada AM/PM.
 // custodiaSubbodega[fecha][bodegaId][jornada] = {nombre,activo,abierta,aperturaTs,cierreTs,resumen}
 // Reemplaza el uso de invAsignaciones (encargado fijo) para efectos de mostrar el botón de gestión.
@@ -4693,6 +4700,7 @@ window.setSede=function(sede){
   sedeRef('invMovimientos').on('value',function(s){invMovimientos=s.val()||{};});
   sedeRef('invAsignaciones').on('value',function(s){invAsignaciones=s.val()||{};});
   sedeRef('invLotes').on('value',function(s){invLotes=s.val()||{};});
+  sedeRef('rondasApertura').orderByKey().limitToLast(35).on('value',function(s){rondasApertura=s.val()||{};});
   sedeRef('custodiaSubbodega').on('value',function(s){
     custodiaSubbodega=s.val()||{};
     if(curNombre)renderMisTurnos(curNombre);
@@ -5016,7 +5024,7 @@ function chequearVentanaHoraria(){
     return jt===va.jornada||jt==='dia'||va.jornada==='dia';
   });
   if(!misTareas.length)return;
-  var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy).cumplido;});
+  var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy,t).cumplido;});
   var lsBase='tcsu_vent_'+S+'_'+hoy+'_'+va.jornada+'_'+curNombre.replace(/\s/g,'_');
   // MISIÓN CUMPLIDA: completó todo
   if(!pendientes.length){
@@ -5145,7 +5153,7 @@ function chequearPendientesMediodia(){
     return t.nombre===curNombre&&t.dia===diaHoy&&TIPOS_MEDIBLES[t.tipo]&&!TIPOS_SEMANALES[t.tipo]&&!TIPOS_SIN_MEDICION[t.tipo];
   });
   if(!misTareas.length)return; // sin tareas medibles hoy → nada
-  var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy).cumplido;});
+  var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy,t).cumplido;});
   var lsKeyOK='tcsu_aviso12ok_'+S+'_'+hoy+'_'+curNombre.replace(/\s/g,'_');
   if(pendientes.length){
     // Tiene pendientes → mostrar aviso (insiste cada vez que se chequea y no está completo)
@@ -5706,8 +5714,8 @@ function renderEditorTurnoSemana(nombre){
       '<select id="etNuevaTareaDia" style="flex:1;font-size:12px;padding:6px">'+opcDiasTarea+'</select>'+
       '<select id="etNuevaTareaJornada" style="width:auto;font-size:12px;padding:6px"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>'+
     '</div>'+
-    '<select id="etNuevaTareaTipo" onchange="var sb=document.getElementById(\'etNuevaTareaSector\');if(sb)sb.style.display=TIPOS_COMPARTIDOS_JORNADA[this.value]?\'block\':\'none\';" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
-    '<input type="text" id="etNuevaTareaSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
+    '<select id="etNuevaTareaTipo" onchange="var sb=document.getElementById(\'etNuevaTareaSector\');if(sb)var rr=rolesTecnicos[this.value],esR=rr&&rr.tipoRegistro===\'ronda\';sb.setAttribute(\'list\',esR?\'dlUnidadesRonda\':\'dlServicios\');sb.placeholder=esR?\'Unidad de la ronda (elige de la lista)\':\'Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)\';sb.style.display=(TIPOS_COMPARTIDOS_JORNADA[this.value]||esR)?\'block\':\'none\';" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
+    '<datalist id="dlUnidadesRonda">'+rondaUnidades().map(function(b){return '<option value="'+BODEGAS[b].nombre.replace(/^\S+\s/,'')+'">';}).join('')+'</datalist><input type="text" id="etNuevaTareaSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
     '<button onclick="agregarTareaEnEditor(\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="width:100%;margin-top:6px;background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">+ Agregar tarea/rol</button>';
   var selSty='width:100%;font-size:12px;padding:6px;margin-bottom:6px';
   var nuevoTurnoForm='<div style="background:rgba(37,99,235,.08);border:1px dashed rgba(96,165,250,.4);border-radius:10px;padding:10px;margin:4px 0 12px">'+
@@ -5740,6 +5748,7 @@ window.agregarTareaEnEditor=function(nombre){
   var sector=(document.getElementById('etNuevaTareaSector').value||'').trim();
   if(!tipo){alert('Elige qué tarea o rol quieres asignar.');return;}
   if(tipo==='pedido'&&!sector){alert('Indica para qué servicio es el pedido semanal (campo Servicio / sector).');return;}
+  if(rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='ronda'&&!rondaUnidadDeSector(sector)){alert('Indica la unidad de la ronda: '+rondaUnidades().map(function(b){return BODEGAS[b].nombre.replace(/^\S+\s/,'');}).join(', ')+'.');return;}
   if(TIPOS_MEDIBLES[tipo]){
     var conflicto=tareaYaAsignada(tipo,dia,jornada,nombre);
     if(conflicto){alert('⛔ "'+cfgTipo(tipo).l+'" ya está asignada ese día/jornada a '+conflicto.nombre+'. Elige otro día, jornada o quítasela primero a esa persona.');return;}
@@ -5958,7 +5967,7 @@ function renderMisTurnos(nombre){
     html+='<div style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(96,165,250,.06));border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
       '<p style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">🔧 Mis registros de hoy</p>'+
       misRoles.map(function(t){
-        var estRol=verificarCumplimiento(t.tipo,hoyLT);
+        var estRol=verificarCumplimiento(t.tipo,hoyLT,t);
         var estBadge=estRol.cumplido?'<span style="font-size:10px;color:#6ee7b7;background:rgba(16,185,129,.12);padding:2px 7px;border-radius:10px;white-space:nowrap">✓ Hecho</span>':'<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,.12);padding:2px 7px;border-radius:10px;white-space:nowrap">⏳ Pendiente</span>';
         var rowStyle='display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:9px 12px;margin-bottom:5px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer';
         if(ROLES_TECNICOS_BASE[t.tipo]){
@@ -5967,7 +5976,7 @@ function renderMisTurnos(nombre){
           return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+dEt+'</span>'+estBadge+'</button>';
         } else {
           var rc=rolesTecnicos[t.tipo];
-          return '<button onclick="abrirRegCustom(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+((t.dia&&t.dia!==diaHoyRol&&rc.frecuencia==='semanal')?' <span style="font-size:10px;color:#94a3b8">· asignado '+t.dia+'</span>':'')+'</span>'+estBadge+'</button>';
+          return '<button onclick="abrirRegCustom(\''+t.tipo+'\',\''+esc(t.sector||'').replace(/'/g,'')+'\')" style="'+rowStyle+'"><span style="flex:1">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+((t.dia&&t.dia!==diaHoyRol&&rc.frecuencia==='semanal')?' <span style="font-size:10px;color:#94a3b8">· asignado '+t.dia+'</span>':'')+'</span>'+estBadge+'</button>';
         }
       }).join('')+
       '<button onclick="verTodasMisGraficas()" style="display:block;width:100%;text-align:center;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px 12px;margin-top:4px;color:#93c5fd;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📊 Ver todas mis gráficas de resultados</button>'+
@@ -8588,7 +8597,7 @@ function calcCumplimientoSemanaPersona(nombre){
       if(t.nombre!==nombre||t.dia!==diaSem)return;
       if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
       asig++;
-      if(verificarCumplimiento(t.tipo,fechaD).cumplido)cumpl++;
+      if(verificarCumplimiento(t.tipo,fechaD,t).cumplido)cumpl++;
     });
   }
   return asig>0?(cumpl/asig):null; // null si no tiene tareas medibles asignadas
@@ -9002,7 +9011,7 @@ function calcCumplimientoTareas(nombre,fecha){
     return t.nombre===nombre&&t.dia===diaSem&&(TIPOS_MEDIBLES[t.tipo]||(rolesTecnicos&&rolesTecnicos[t.tipo]));
   });
   if(!asignadas.length)return null; // no tiene tareas medibles ese día
-  var cumplidas=asignadas.filter(function(t){return verificarCumplimiento(t.tipo,fecha).cumplido;}).length;
+  var cumplidas=asignadas.filter(function(t){return verificarCumplimiento(t.tipo,fecha,t).cumplido;}).length;
   return {pct:cumplidas/asignadas.length,cumplidas:cumplidas,total:asignadas.length};
 }
 
@@ -10507,6 +10516,12 @@ function initConfigRoles(){
     if(existente&&!confirm('Ya existe el rol "'+rolesTecnicos[existente].nombre+'". ¿Actualizarlo a revisión mensual con 2 DEA (piso 1 y piso 2) y registro tras uso? Los registros anteriores se conservan.'))return;
     sedeRef('rolesTecnicos/'+id).set(PLANTILLA_DEA).then(function(){showSaved('rolSaved');});
   };
+  var br=document.getElementById('rolRondaBtn');
+  if(br)br.onclick=function(){
+    var ex=Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.tipoRegistro==='ronda';})[0];
+    if(ex){alert('El rol "Ronda de apertura" ya existe. Ya lo puedes asignar desde el editor de turnos.');return;}
+    sedeRef('rolesTecnicos/rol_ronda_apertura').set(PLANTILLA_RONDA).then(function(){showSaved('rolSaved');});
+  };
   var ab=document.getElementById('rolAddBtn');
   if(ab)ab.onclick=function(){
     var emoji=document.getElementById('rolAddEmoji').value.trim()||'🔧';
@@ -10527,6 +10542,7 @@ function initConfigRoles(){
   };
 }
 // Checklist semanal de inspección del DEA (puntos cortos = clave del registro; detalles = qué revisar)
+var PLANTILLA_RONDA={emoji:'🌅',nombre:'Ronda de apertura de unidad',tipoRegistro:'ronda',frecuencia:'diaria',puntos:[]};
 var PLANTILLA_DEA={emoji:'🫀',nombre:'Inspección del DEA (mensual y tras uso)',tipoRegistro:'checklist',frecuencia:'mensual',unidades:['DEA piso 1','DEA piso 2'],trasUso:true,
   puntos:['Indicador de estado','Gabinete y alarma','Integridad física','Kit de rescate','Fechas críticas'],
   detalles:['Comprobar que la luz verde parpadee (o aparezca el símbolo "OK" / "Listo"). Si está en rojo, emite un pitido o tiene una "X", reportarlo de inmediato.',
@@ -14400,7 +14416,7 @@ function calcCumplimientoEquipoMes(mes){
     Object.values(tareas||{}).forEach(function(t){
       if(t.dia!==diaSem||!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
       asig++;
-      if(verificarCumplimiento(t.tipo,fechaD).cumplido)cumpl++;
+      if(verificarCumplimiento(t.tipo,fechaD,t).cumplido)cumpl++;
     });
   }
   return asig?Math.round(cumpl/asig*100):0;
@@ -14974,9 +14990,10 @@ document.getElementById('bodegaBtn').addEventListener('click',function(){abrirBo
 // ── REGISTRO DE TEMPERATURA (esterilización, pabellón, refrigeradores) ──
 // ── REGISTRO DE AUTOCLAVE (por ciclo/carga) ──
 // ── REGISTRO DE ROL PERSONALIZADO (valor o checklist) ──
-window.abrirRegCustom=function(rolId){
+window.abrirRegCustom=function(rolId,sector){
   var rol=rolesTecnicos[rolId];
   if(!rol)return;
+  if(rol.tipoRegistro==='ronda'){var ub=rondaUnidadDeSector(sector);if(ub)abrirRonda(ub);else rondaElegirUnidad();return;}
   var ov=document.getElementById('regCustomOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regCustomOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
@@ -15050,6 +15067,159 @@ window.guardarRegCustom=function(rolId){
 };
 
 // ── REGISTRO DE ROL PERSONALIZADO fin ──
+// ══════════ RONDA DE APERTURA DE UNIDAD ══════════
+// Antes de comenzar, cada unidad (las subbodegas) confirma que todo está listo: núcleo común + puntos propios + insumos pendientes
+// elegidos del catálogo de bodega. Se guarda en sedes/S/rondasApertura/{fecha}/{bodega}. Corte de puntualidad: RONDA_CORTE.
+// Ventana de la ronda según el día: lun–jue 07:45–08:00 · vie 08:00–08:15 · sáb 09:00–09:15 (domingo no aplica). Cumple si se registra hasta el fin de la ventana.
+function rondaVentana(fecha){
+  var g=new Date((fecha||hoyStr())+'T12:00:00').getDay();
+  if(g>=1&&g<=4)return {ini:'07:45',fin:'08:00'};
+  if(g===5)return {ini:'08:00',fin:'08:15'};
+  if(g===6)return {ini:'09:00',fin:'09:15'};
+  return null;
+}
+function rondaVentanaTxt(fecha){var v=rondaVentana(fecha);return v?(v.ini+' a '+v.fin):'sin ronda (domingo)';}
+var RONDA_NUCLEO=['Puesto de trabajo ordenado','Puesto de trabajo limpio','Insumos abiertos rotulados (fecha y hora de apertura)','Sin restos de insumos abiertos sin eliminar (ej. sueros, soluciones)'];
+var RONDA_EXTRA={
+  sub_dispensario1:['PC encendido y sistema abierto','Insumos listos para entregar a los estudiantes'],
+  sub_dispensario2:['PC encendido y sistema abierto','Insumos listos para entregar a los estudiantes'],
+  sub_esterilizacion:['Autoclave y equipos críticos operativos','Registros del día anterior completos'],
+  sub_pabellon:['Equipos del pabellón operativos','Registros del día anterior completos'],
+  sub_clinica:['Equipos principales funcionando','Registro del día anterior completo'],
+  sub_rayos:['Equipo operativo','Registro del día anterior completo']
+};
+function rondaNorm(t){return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+function rondaUnidadDeSector(sec){
+  var n=rondaNorm(sec);if(!n)return '';
+  var us=rondaUnidades(),ex=us.filter(function(b){return rondaNorm(BODEGAS[b].nombre)===n;});
+  if(ex.length)return ex[0];
+  var par=us.filter(function(b){var bn=rondaNorm(BODEGAS[b].nombre);return bn.indexOf(n)>-1||n.indexOf(bn)>-1;});
+  return par.length===1?par[0]:'';
+}
+window.rondaElegirUnidad=function(){
+  var ov=document.getElementById('rondaUniOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='rondaUniOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.94);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:400px;width:100%;margin-top:40px"><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:10px">🌅 ¿De qué unidad es la ronda?</div>'+
+    rondaUnidades().map(function(b){return '<button onclick="document.getElementById(\'rondaUniOv\').remove();abrirRonda(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.07);border:none;border-radius:8px;padding:11px 12px;margin-bottom:6px;color:#fff;font-family:inherit;font-size:14px;cursor:pointer">'+esc(BODEGAS[b].nombre)+'</button>';}).join('')+
+    '<button onclick="document.getElementById(\'rondaUniOv\').remove()" style="width:100%;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button></div>';
+  document.body.appendChild(ov);
+};
+function rondaUnidades(){return Object.keys(BODEGAS).filter(function(k){return BODEGAS[k].tipo==='sub';});}
+function rondaPuntos(b){return RONDA_NUCLEO.concat(RONDA_EXTRA[b]||[]);}
+window.abrirRonda=function(bodega){
+  if(!BODEGAS[bodega])return;
+  sedeRef('rondasApertura/'+hoyStr()+'/'+bodega).once('value').then(function(sn){
+    var ex=sn.val();
+    if(ex&&!confirm('Esta unidad ya registró su ronda hoy a las '+ex.hora+'. ¿Quieres actualizarla? (se conserva la hora original)'))return;
+    window._rondaEx=ex||null;window._rondaIns=Object.assign({},(ex&&ex.insumos)||{});
+    pintarRonda(bodega);
+  });
+};
+function pintarRonda(bodega){
+  var ex=window._rondaEx,ov=document.getElementById('rondaOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='rondaOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.94);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var bs='border-radius:6px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;';
+  var pts=rondaPuntos(bodega).map(function(p,i){
+    var prev=ex&&(ex.checks||[]).filter(function(c){return c.p===p;})[0];var v=prev?prev.ok:undefined;
+    return '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:13px;color:#fff;flex:1">'+esc(p)+'</span>'+
+      '<div class="custom-toggle" data-punto="'+esc(p)+'"'+(v!==undefined?' data-val="'+v+'"':'')+'>'+
+      '<button type="button" onclick="setCustomChk(this,1)" style="'+bs+'background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7;margin-right:4px;'+(v===1?'outline:2px solid #fff;':'')+'">✓</button>'+
+      '<button type="button" onclick="setCustomChk(this,0)" style="'+bs+'background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#fca5a5;margin-right:4px;'+(v===0?'outline:2px solid #fff;':'')+'">✗</button>'+
+      (i>=2?'<button type="button" onclick="setCustomChk(this,2)" style="'+bs+'background:rgba(148,163,184,.15);border:1px solid rgba(148,163,184,.35);color:#cbd5e1;'+(v===2?'outline:2px solid #fff;':'')+'">N/A</button>':'')+'</div></div>';
+  }).join('');
+  var inp='width:100%;font-size:13px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;font-family:inherit;box-sizing:border-box;margin-bottom:8px';
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff">🌅 Ronda de apertura</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">'+esc(BODEGAS[bodega].nombre)+' · '+hoyStr()+' · ventana '+rondaVentanaTxt()+'</div>'+pts+
+    '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin:10px 0 4px">Insumos pendientes</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px">Elige los que faltan o están por acabarse. Si no falta ninguno, déjalo vacío.</div>'+
+    '<div id="rdInsSel" style="margin-bottom:6px"></div>'+
+    '<input id="rdBuscar" placeholder="Buscar insumo (nombre o código)" oninput="rondaPintarIns(\''+bodega+'\')" style="'+inp+'">'+
+    '<div id="rdInsList" style="max-height:170px;overflow-y:auto;margin-bottom:10px"></div>'+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7)">Observación (opcional)</label>'+
+    '<textarea id="rdObs" rows="2" style="'+inp+'">'+esc((ex&&ex.obs)||'')+'</textarea>'+
+    '<button class="btn-add" onclick="guardarRonda(\''+bodega+'\')" style="background:linear-gradient(135deg,#d97706,#fbbf24)">💾 Guardar ronda</button>'+
+    '<button onclick="document.getElementById(\'rondaOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button></div>';
+  document.body.appendChild(ov);rondaPintarIns(bodega);
+}
+window.rondaPintarIns=function(bodega){
+  var sel=window._rondaIns||{},cat=invCatalogo||{};
+  var chips=Object.keys(sel).map(function(c){return '<span style="display:inline-block;background:rgba(251,191,36,.18);color:#fcd34d;border-radius:12px;padding:3px 9px;font-size:11px;margin:0 4px 4px 0">'+esc(sel[c])+' <b onclick="rondaQuitarIns(\''+c+'\',\''+bodega+'\')" style="cursor:pointer;margin-left:4px">✕</b></span>';}).join('');
+  document.getElementById('rdInsSel').innerHTML=chips||'<span style="font-size:11px;color:rgba(255,255,255,.35)">Ningún insumo pendiente</span>';
+  var t=(document.getElementById('rdBuscar').value||'').toLowerCase().trim(),cods;
+  if(t)cods=Object.keys(cat).filter(function(c){return (String(cat[c].desc||'')+' '+c).toLowerCase().indexOf(t)>-1;});
+  else cods=Object.keys((invLotes||{})[bodega]||{}).filter(function(c){return cat[c];});
+  cods=cods.filter(function(c){return !sel[c];}).sort(function(a,b){return String(cat[a].desc||'').localeCompare(String(cat[b].desc||''));});
+  var tot=cods.length;cods=cods.slice(0,40);
+  var h=cods.map(function(c){return '<div onclick="rondaAgregarIns(\''+c+'\',\''+bodega+'\')" style="padding:7px 9px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:3px;font-size:12px;color:#fff;cursor:pointer">+ '+esc(cat[c].desc||c)+' <span style="color:rgba(255,255,255,.35)">· '+esc(c)+'</span></div>';}).join('');
+  if(!h)h='<div style="font-size:11px;color:rgba(255,255,255,.4)">'+(t?'Sin resultados.':'Esta unidad aún no tiene insumos en su stock. Escribe para buscar en todo el catálogo.')+'</div>';
+  else if(tot>40)h+='<div style="font-size:11px;color:rgba(255,255,255,.4)">Hay '+tot+' coincidencias; escribe más para acotar.</div>';
+  document.getElementById('rdInsList').innerHTML=h;
+};
+window.rondaAgregarIns=function(c,b){window._rondaIns=window._rondaIns||{};window._rondaIns[c]=(invCatalogo[c]&&invCatalogo[c].desc)||c;rondaPintarIns(b);};
+window.rondaQuitarIns=function(c,b){delete window._rondaIns[c];rondaPintarIns(b);};
+window.guardarRonda=function(bodega){
+  var checks=[],falta=false;
+  document.querySelectorAll('#rondaOv .custom-toggle').forEach(function(c){
+    if(c.dataset.val===undefined)falta=true;else checks.push({p:c.dataset.punto,ok:Number(c.dataset.val)});
+  });
+  if(falta){alert('Marca todos los puntos con ✓, ✗ o N/A (no aplica).');return;}
+  var ex=window._rondaEx,ah=new Date(),hora=pad(ah.getHours())+':'+pad(ah.getMinutes());
+  var reg={bodega:bodega,fecha:hoyStr(),checks:checks,falla:checks.some(function(c){return c.ok===0;}),obs:(document.getElementById('rdObs').value||'').trim(),
+    quien:curNombre||'Jefatura',ts:Date.now()};
+  var ins=window._rondaIns||{};if(Object.keys(ins).length)reg.insumos=ins;
+  if(ex){reg.hora=ex.hora;reg.aTiempo=ex.aTiempo;reg.editado=true;}
+  else{reg.hora=hora;var vv=rondaVentana();reg.aTiempo=vv?(minAhora()<=hhmmAMin(vv.fin)):true;}
+  sedeRef('rondasApertura/'+reg.fecha+'/'+bodega).set(reg).then(function(){
+    var o=document.getElementById('rondaOv');if(o)o.remove();
+    alert(reg.falla?'✓ Ronda guardada. Marcaste un punto con problema: avísalo a la jefatura.':'✓ Ronda guardada.');
+    if(document.getElementById('rondaPanelOv'))abrirPanelRonda();
+  });
+};
+// Panel de la jefatura: estado de hoy por unidad + últimos 14 días
+window.abrirPanelRonda=function(fechaSel){
+  var fecha=(typeof fechaSel==='string'&&fechaSel)?fechaSel:hoyStr();
+  var ov=document.getElementById('rondaPanelOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='rondaPanelOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  ov.innerHTML='<div style="max-width:720px;margin:0 auto;color:rgba(255,255,255,.5);padding:30px;text-align:center">Cargando...</div>';
+  document.body.appendChild(ov);
+  sedeRef('rondasApertura').orderByKey().limitToLast(14).once('value').then(function(sn){
+    var all=sn.val()||{},dia=all[fecha]||{},unids=rondaUnidades();
+    var h='<div style="max-width:720px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:17px;font-weight:800;color:#fbbf24">🌅 Ronda de apertura</span><button onclick="document.getElementById(\'rondaPanelOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;cursor:pointer">✕</button></div>'+
+      '<input type="date" value="'+fecha+'" max="'+hoyStr()+'" onchange="abrirPanelRonda(this.value)" style="font-size:13px;padding:7px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-bottom:10px;font-family:inherit">';
+    var okN=0;
+    unids.forEach(function(b){
+      var r=dia[b],est;
+      if(!r)est='<span style="color:#fca5a5">✗ Sin registro</span>';
+      else{okN++;est=(r.aTiempo?'<span style="color:#6ee7b7">✓ A tiempo</span>':'<span style="color:#fcd34d">⏰ Tarde</span>')+' · '+esc(r.hora)+' · '+esc(r.quien||'')+(r.editado?' · editado':'');}
+      var fallas=r?(r.checks||[]).filter(function(c){return c.ok===0;}).map(function(c){return c.p;}):[];
+      h+='<div style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:13px;color:#fff">'+esc(BODEGAS[b].nombre)+'</b><span style="font-size:12px">'+est+'</span></div>'+
+        (fallas.length?'<div style="font-size:11px;color:#fca5a5;margin-top:4px">⚠ '+fallas.map(esc).join(' · ')+'</div>':'')+
+        (r&&r.insumos?'<div style="font-size:11px;color:#fcd34d;margin-top:4px">📦 Pendientes: '+Object.values(r.insumos).map(esc).join(', ')+'</div>':'')+
+        (r&&r.obs?'<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:3px">“'+esc(r.obs)+'”</div>':'')+
+        (fecha===hoyStr()?'<button onclick="abrirRonda(\''+b+'\')" style="margin-top:6px;background:rgba(251,191,36,.15);color:#fcd34d;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">'+(r?'✏️ Actualizar':'➕ Registrar')+'</button>':'')+'</div>';
+    });
+    h+='<div style="font-size:12px;color:rgba(255,255,255,.55);margin:6px 0 14px">Ese día: <b style="color:#fff">'+okN+' de '+unids.length+'</b> unidades registraron su ronda. Ventana de ese día: '+rondaVentanaTxt(fecha)+'.</div>';
+    // Resumen 14 días: solo días hábiles (lun–vie) hasta hoy
+    var dias=[];for(var i=0;i<14;i++){var d=new Date();d.setDate(d.getDate()-i);var g=d.getDay();if(g>0)dias.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));}
+    h+='<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">Últimos 14 días (lunes a sábado: '+dias.length+' días)</div>';
+    var cnt={};
+    unids.forEach(function(b){
+      var reg=0,tmp=0;dias.forEach(function(f){var r=(all[f]||{})[b];if(r){reg++;if(r.aTiempo)tmp++;if(r.insumos)Object.keys(r.insumos).forEach(function(c){(cnt[c]=cnt[c]||{d:r.insumos[c],n:0,u:{}}).n++;cnt[c].u[BODEGAS[b].nombre]=1;});}});
+      var p1=dias.length?Math.round(reg/dias.length*100):0,p2=dias.length?Math.round(tmp/dias.length*100):0;
+      h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:4px;color:#fff"><span>'+esc(BODEGAS[b].nombre)+'</span><span>Registró <b>'+p1+'%</b> · A tiempo <b>'+p2+'%</b></span></div>';
+    });
+    var top=Object.keys(cnt).sort(function(a,b){return cnt[b].n-cnt[a].n;}).slice(0,10);
+    h+='<div style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 6px">Insumos que más se reportan pendientes</div>'+
+      (top.length?top.map(function(c){return '<div style="font-size:12px;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:4px;color:#fff">'+esc(cnt[c].d)+' <span style="color:#fcd34d">· '+cnt[c].n+' vez'+(cnt[c].n>1?'es':'')+'</span> <span style="color:rgba(255,255,255,.4)">('+Object.keys(cnt[c].u).map(esc).join(', ')+')</span></div>';}).join(''):'<div style="font-size:12px;color:rgba(255,255,255,.4)">Aún no hay insumos reportados.</div>')+
+      '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:12px">El porcentaje cuenta cada unidad contra todos los días hábiles del período, incluidos los días en que no se haya abierto. A tiempo = registrada hasta el fin de la ventana (lun–jue 08:00 · vie 08:15 · sáb 09:15).</div></div>';
+    ov.innerHTML=h;
+  });
+};
+
 // Parámetros por tipo de carga: [temperatura °C, presión bar, tolerancia presión mín]
 var AUTOCLAVE_PARAMS={
   instrumental:{temp:134,presion:2.2,presionMin:2.1,label:'🔧 Instrumental'},
@@ -17366,7 +17536,7 @@ window.cliRegistrarAjuste=function(bodega){
 function diaDeFecha(fechaStr){return diaDeDate(fechaStr);}
 
 // ¿Se cumplió el registro de este rol en esta fecha? Devuelve {cumplido, detalle}
-function verificarCumplimiento(tipo,fecha){
+function verificarCumplimiento(tipo,fecha,tarea){
   if(PRODUCCION_TIPOS[tipo]){
     var hayP=Object.values(regProduccion||{}).some(function(r){return r.tipo===tipo&&r.fecha===fecha;});
     return {cumplido:hayP,detalle:hayP?'Registrado':'Sin registro'};
@@ -17430,6 +17600,13 @@ function verificarCumplimiento(tipo,fecha){
     var fuente=tipo==='botiquin_pab'?regBotiquin:tipo==='bolso_azul'?regBolso:regControlBio;
     var hayW=Object.values(fuente||{}).some(function(r){return r.fecha>=rg.ini&&r.fecha<=rg.fin;});
     return {cumplido:hayW,detalle:hayW?'Registrado esta semana':'Pendiente'};
+  }
+  if(rolesTecnicos&&rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='ronda'){
+    // La ronda se cumple si la unidad asignada la registró DENTRO de la ventana del día. Sin unidad: cualquier ronda hecha por la persona ese día.
+    var rd=(rondasApertura||{})[fecha]||{},ub=tarea?rondaUnidadDeSector(tarea.sector):'';
+    var rg=ub?rd[ub]:Object.values(rd).filter(function(r){return r&&tarea&&r.quien===tarea.nombre;})[0];
+    if(!rg)return {cumplido:false,detalle:'Sin ronda de apertura'};
+    return {cumplido:!!rg.aTiempo,detalle:rg.aTiempo?'Ronda a tiempo ('+rg.hora+')':'Ronda registrada tarde ('+rg.hora+')'};
   }
   if(rolesTecnicos&&rolesTecnicos[tipo]){
     var hay6;
@@ -17812,7 +17989,7 @@ function calcCumplimientoMesPersona(nombre,mes){
       if(!TIPOS_MEDIBLES[t.tipo])return;
       if(TIPOS_SEMANALES[t.tipo])return;
       asig++;
-      if(verificarCumplimiento(t.tipo,fechaD).cumplido)cumpl++;
+      if(verificarCumplimiento(t.tipo,fechaD,t).cumplido)cumpl++;
     });
   }
   return asig?Math.round(cumpl/asig*100):0;
@@ -18183,7 +18360,7 @@ function renderControlCumplimiento(){
   });
   var pendientes=[],cumplidos=[];
   asignadosHoy.forEach(function(t){
-    var v=verificarCumplimiento(t.tipo,hoy);
+    var v=verificarCumplimiento(t.tipo,hoy,t);
     var fila={nombre:t.nombre,tipo:t.tipo,rol:nombreRol(t.tipo),jornada:t.jornada,detalle:v.detalle};
     if(v.cumplido)cumplidos.push(fila);else pendientes.push(fila);
   });
@@ -18199,7 +18376,7 @@ function renderControlCumplimiento(){
     var cur=new Date(lunesSem);
     while(cur<=hoyD2){
       var fStr=cur.getFullYear()+'-'+('0'+(cur.getMonth()+1)).slice(-2)+'-'+('0'+cur.getDate()).slice(-2);
-      if(verificarCumplimiento(t.tipo,fStr).cumplido){cumplida=true;break;}
+      if(verificarCumplimiento(t.tipo,fStr,t).cumplido){cumplida=true;break;}
       cur.setDate(cur.getDate()+1);
     }
     var fila={nombre:t.nombre,rol:nombreRol(t.tipo),dia:t.dia};
@@ -18282,7 +18459,7 @@ function renderControlCumplimiento(){
       if(TIPOS_SIN_MEDICION[t.tipo])return; // solo asignación de puesto, no se mide cantidad
       if(!TIPOS_MEDIBLES[t.tipo]&&!(rolesTecnicos&&rolesTecnicos[t.tipo]))return;
       var s=num(t.nombre);s.diaAsig++;
-      if(verificarCumplimiento(t.tipo,fechaD).cumplido)s.diaCumpl++;
+      if(verificarCumplimiento(t.tipo,fechaD,t).cumplido)s.diaCumpl++;
     });
   }
   // --- Tareas SEMANALES: contar por semana transcurrida del mes ---
@@ -18311,7 +18488,7 @@ function renderControlCumplimiento(){
       s.semAsig++;
       var fStr=fechaTarea.getFullYear()+'-'+('0'+(fechaTarea.getMonth()+1)).slice(-2)+'-'+('0'+fechaTarea.getDate()).slice(-2);
       // cumplido si hay registro de aseo esa semana
-      if(verificarCumplimiento(t.tipo,fStr).cumplido)s.semCumpl++;
+      if(verificarCumplimiento(t.tipo,fStr,t).cumplido)s.semCumpl++;
     });
   });
   var personas=Object.keys(statPersona).sort(function(a,b){
