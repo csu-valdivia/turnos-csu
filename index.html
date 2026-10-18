@@ -5714,7 +5714,7 @@ function renderEditorTurnoSemana(nombre){
       '<select id="etNuevaTareaJornada" style="width:auto;font-size:12px;padding:6px"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>'+
     '</div>'+
     '<select id="etNuevaTareaTipo" onchange="var sb=document.getElementById(\'etNuevaTareaSector\');if(sb)var rr=rolesTecnicos[this.value],esR=rr&&rr.tipoRegistro===\'ronda\';sb.setAttribute(\'list\',esR?\'dlUnidadesRonda\':\'dlServicios\');sb.placeholder=esR?\'Unidad de la ronda (elige de la lista)\':\'Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)\';sb.style.display=(TIPOS_COMPARTIDOS_JORNADA[this.value]||esR)?\'block\':\'none\';" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
-    '<datalist id="dlUnidadesRonda">'+rondaUnidades().map(function(b){return '<option value="'+BODEGAS[b].nombre.replace(/^\S+\s/,'')+'">';}).join('')+'</datalist><input type="text" id="etNuevaTareaSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
+    '<datalist id="dlUnidadesRonda">'+rondaUnidades().map(function(b){return '<option value="'+rondaCorto(b)+'">';}).join('')+'</datalist><input type="text" id="etNuevaTareaSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
     '<button onclick="agregarTareaEnEditor(\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="width:100%;margin-top:6px;background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">+ Agregar tarea/rol</button>';
   var selSty='width:100%;font-size:12px;padding:6px;margin-bottom:6px';
   var nuevoTurnoForm='<div style="background:rgba(37,99,235,.08);border:1px dashed rgba(96,165,250,.4);border-radius:10px;padding:10px;margin:4px 0 12px">'+
@@ -5747,7 +5747,7 @@ window.agregarTareaEnEditor=function(nombre){
   var sector=(document.getElementById('etNuevaTareaSector').value||'').trim();
   if(!tipo){alert('Elige qué tarea o rol quieres asignar.');return;}
   if(tipo==='pedido'&&!sector){alert('Indica para qué servicio es el pedido semanal (campo Servicio / sector).');return;}
-  if(rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='ronda'&&!rondaUnidadDeSector(sector)){alert('Indica la unidad de la ronda: '+rondaUnidades().map(function(b){return BODEGAS[b].nombre.replace(/^\S+\s/,'');}).join(', ')+'.');return;}
+  if(rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='ronda'&&!rondaUnidadDeSector(sector)){alert('Indica la unidad de la ronda: '+rondaUnidades().map(function(b){return rondaCorto(b);}).join(', ')+'.');return;}
   if(TIPOS_MEDIBLES[tipo]){
     var conflicto=tareaYaAsignada(tipo,dia,jornada,nombre);
     if(conflicto){alert('⛔ "'+cfgTipo(tipo).l+'" ya está asignada ese día/jornada a '+conflicto.nombre+'. Elige otro día, jornada o quítasela primero a esa persona.');return;}
@@ -15097,20 +15097,30 @@ function rondaVentana(fecha){
 }
 function rondaVentanaTxt(fecha){var v=rondaVentana(fecha);return v?(v.ini+' a '+v.fin):'sin ronda (domingo)';}
 var RONDA_NUCLEO=['Puesto de trabajo ordenado','Puesto de trabajo limpio','Insumos abiertos rotulados (fecha y hora de apertura)','Sin restos de insumos abiertos sin eliminar (ej. sueros, soluciones)'];
+var RONDA_ORDEN=['sub_dispensario1','sub_dispensario2','est_t1','est_t2','est_autoclave','est_entrega','sub_pabellon','sub_clinica','sub_rayos'];
+var RONDA_NOM={sub_dispensario1:'📦 Dispensario 1',sub_dispensario2:'📦 Dispensario 2',est_t1:'♻️ Esterilización T1 (lavado)',est_t2:'♻️ Esterilización T2 (empaque y sellado)',est_autoclave:'♻️ Esterilización Autoclave',est_entrega:'♻️ Esterilización Entrega de material',sub_pabellon:'🦷 Pabellón',sub_clinica:'🏥 Clínica Privada',sub_rayos:'📸 Rayos'};
+var RONDA_BODEGA={est_t1:'sub_esterilizacion',est_t2:'sub_esterilizacion',est_autoclave:'sub_esterilizacion',est_entrega:'sub_esterilizacion'};
 var RONDA_EXTRA={
   sub_dispensario1:['PC encendido y sistema abierto','Insumos listos para entregar a los estudiantes'],
   sub_dispensario2:['PC encendido y sistema abierto','Insumos listos para entregar a los estudiantes'],
-  sub_esterilizacion:['Autoclave y equipos críticos operativos','Registros del día anterior completos'],
-  sub_pabellon:['Equipos del pabellón operativos','Registros del día anterior completos'],
-  sub_clinica:['Equipos principales funcionando','Registro del día anterior completo'],
-  sub_rayos:['Equipo operativo','Registro del día anterior completo']
+  est_t1:['PC con el sistema funcionando','Insumos disponibles para lavado y secado (paños de secado, detergente, elementos para lavar)'],
+  est_t2:['Selladoras operativas','Insumos suficientes para desarrollar la tarea (empaque y sellado)'],
+  est_autoclave:['Autoclave 1 con agua para trabajar','Autoclave 2 con agua para trabajar','Autoclave 1 operativa','Autoclave 2 operativa','Sistema de extracción de vapor operativo'],
+  est_entrega:['PC operativo para la entrega','Sistema operativo para la entrega'],
+  sub_pabellon:['Equipos del pabellón operativos','Insumos suficientes para iniciar la jornada'],
+  sub_clinica:['Equipos principales funcionando','Insumos suficientes para iniciar la jornada'],
+  sub_rayos:['PC y sistema operativos','Equipos de sala 1 operativos','Equipos de sala 2 operativos','Insumos suficientes para iniciar la jornada']
 };
+var RONDA_NUMS={est_t1:['Cajas pendientes de ingreso a proceso de lavado','Cajas sin lavar de la jornada anterior']};
+function rondaNombre(k){return RONDA_NOM[k]||(BODEGAS[k]&&BODEGAS[k].nombre)||k;}
+function rondaCorto(k){return rondaNombre(k).replace(/^\S+\s/,'');}
+function rondaBodega(k){return RONDA_BODEGA[k]||k;}
 function rondaNorm(t){return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
 function rondaUnidadDeSector(sec){
   var n=rondaNorm(sec);if(!n)return '';
-  var us=rondaUnidades(),ex=us.filter(function(b){return rondaNorm(BODEGAS[b].nombre)===n;});
+  var us=rondaUnidades(),ex=us.filter(function(b){return rondaNorm(rondaNombre(b))===n;});
   if(ex.length)return ex[0];
-  var par=us.filter(function(b){var bn=rondaNorm(BODEGAS[b].nombre);return bn.indexOf(n)>-1||n.indexOf(bn)>-1;});
+  var par=us.filter(function(b){var bn=rondaNorm(rondaNombre(b));return bn.indexOf(n)>-1||n.indexOf(bn)>-1;});
   return par.length===1?par[0]:'';
 }
 window.rondaElegirUnidad=function(){
@@ -15118,14 +15128,14 @@ window.rondaElegirUnidad=function(){
   ov=document.createElement('div');ov.id='rondaUniOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.94);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:400px;width:100%;margin-top:40px"><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:10px">🌅 ¿De qué unidad es la ronda?</div>'+
-    rondaUnidades().map(function(b){return '<button onclick="document.getElementById(\'rondaUniOv\').remove();abrirRonda(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.07);border:none;border-radius:8px;padding:11px 12px;margin-bottom:6px;color:#fff;font-family:inherit;font-size:14px;cursor:pointer">'+esc(BODEGAS[b].nombre)+'</button>';}).join('')+
+    rondaUnidades().map(function(b){return '<button onclick="document.getElementById(\'rondaUniOv\').remove();abrirRonda(\''+b+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.07);border:none;border-radius:8px;padding:11px 12px;margin-bottom:6px;color:#fff;font-family:inherit;font-size:14px;cursor:pointer">'+esc(rondaNombre(b))+'</button>';}).join('')+
     '<button onclick="document.getElementById(\'rondaUniOv\').remove()" style="width:100%;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button></div>';
   document.body.appendChild(ov);
 };
-function rondaUnidades(){return Object.keys(BODEGAS).filter(function(k){return BODEGAS[k].tipo==='sub';});}
+function rondaUnidades(){return RONDA_ORDEN.slice();}
 function rondaPuntos(b){return RONDA_NUCLEO.concat(RONDA_EXTRA[b]||[]);}
 window.abrirRonda=function(bodega){
-  if(!BODEGAS[bodega])return;
+  if(RONDA_ORDEN.indexOf(bodega)<0)return;
   sedeRef('rondasApertura/'+hoyStr()+'/'+bodega).once('value').then(function(sn){
     var ex=sn.val();
     if(ex&&!confirm('Esta unidad ya registró su ronda hoy a las '+ex.hora+'. ¿Quieres actualizarla? (se conserva la hora original)'))return;
@@ -15147,9 +15157,11 @@ function pintarRonda(bodega){
       (i>=2?'<button type="button" onclick="setCustomChk(this,2)" style="'+bs+'background:rgba(148,163,184,.15);border:1px solid rgba(148,163,184,.35);color:#cbd5e1;'+(v===2?'outline:2px solid #fff;':'')+'">N/A</button>':'')+'</div></div>';
   }).join('');
   var inp='width:100%;font-size:13px;padding:8px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;font-family:inherit;box-sizing:border-box;margin-bottom:8px';
+  var nms=(RONDA_NUMS[bodega]||[]).map(function(p,i){var pv=ex&&(ex.nums||[]).filter(function(c){return c.p===p;})[0];
+    return '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:13px;color:#fff;flex:1">'+esc(p)+'</span><input type="number" min="0" inputmode="numeric" class="rdNum" data-p="'+esc(p)+'" value="'+(pv?pv.v:'')+'" placeholder="N°" style="width:70px;font-size:14px;padding:6px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;text-align:center;font-family:inherit"></div>';}).join('');
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff">🌅 Ronda de apertura</div>'+
-    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">'+esc(BODEGAS[bodega].nombre)+' · '+hoyStr()+' · ventana '+rondaVentanaTxt()+'</div>'+pts+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">'+esc(rondaNombre(bodega))+' · '+hoyStr()+' · ventana '+rondaVentanaTxt()+'</div>'+nms+pts+
     '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin:10px 0 4px">Insumos pendientes</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px">Elige los que faltan o están por acabarse. Si no falta ninguno, déjalo vacío.</div>'+
     '<div id="rdInsSel" style="margin-bottom:6px"></div>'+
@@ -15167,7 +15179,7 @@ window.rondaPintarIns=function(bodega){
   document.getElementById('rdInsSel').innerHTML=chips||'<span style="font-size:11px;color:rgba(255,255,255,.35)">Ningún insumo pendiente</span>';
   var t=(document.getElementById('rdBuscar').value||'').toLowerCase().trim(),cods;
   if(t)cods=Object.keys(cat).filter(function(c){return (String(cat[c].desc||'')+' '+c).toLowerCase().indexOf(t)>-1;});
-  else cods=Object.keys((invLotes||{})[bodega]||{}).filter(function(c){return cat[c];});
+  else cods=Object.keys((invLotes||{})[rondaBodega(bodega)]||{}).filter(function(c){return cat[c];});
   cods=cods.filter(function(c){return !sel[c];}).sort(function(a,b){return String(cat[a].desc||'').localeCompare(String(cat[b].desc||''));});
   var tot=cods.length;cods=cods.slice(0,40);
   var h=cods.map(function(c){return '<div onclick="rondaAgregarIns(\''+c+'\',\''+bodega+'\')" style="padding:7px 9px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:3px;font-size:12px;color:#fff;cursor:pointer">+ '+esc(cat[c].desc||c)+' <span style="color:rgba(255,255,255,.35)">· '+esc(c)+'</span></div>';}).join('');
@@ -15183,8 +15195,11 @@ window.guardarRonda=function(bodega){
     if(c.dataset.val===undefined)falta=true;else checks.push({p:c.dataset.punto,ok:Number(c.dataset.val)});
   });
   if(falta){alert('Marca todos los puntos con ✓, ✗ o N/A (no aplica).');return;}
+  var nums=[],sinNum=false;
+  document.querySelectorAll('#rondaOv .rdNum').forEach(function(c){var v=c.value.trim();if(v===''||isNaN(Number(v))||Number(v)<0)sinNum=true;else nums.push({p:c.dataset.p,v:Math.round(Number(v))});});
+  if(sinNum){alert('Anota las cantidades pedidas (si no hay, pon 0).');return;}
   var ex=window._rondaEx,ah=new Date(),hora=pad(ah.getHours())+':'+pad(ah.getMinutes());
-  var reg={bodega:bodega,fecha:hoyStr(),checks:checks,falla:checks.some(function(c){return c.ok===0;}),obs:(document.getElementById('rdObs').value||'').trim(),
+  var reg={bodega:bodega,fecha:hoyStr(),checks:checks,nums:nums.length?nums:null,falla:checks.some(function(c){return c.ok===0;}),obs:(document.getElementById('rdObs').value||'').trim(),
     quien:curNombre||'Jefatura',ts:Date.now()};
   var ins=window._rondaIns||{};if(Object.keys(ins).length)reg.insumos=ins;
   if(ex){reg.hora=ex.hora;reg.aTiempo=ex.aTiempo;reg.editado=true;}
@@ -15213,8 +15228,9 @@ window.abrirPanelRonda=function(fechaSel){
       if(!r)est='<span style="color:#fca5a5">✗ Sin registro</span>';
       else{okN++;est=(r.aTiempo?'<span style="color:#6ee7b7">✓ A tiempo</span>':'<span style="color:#fcd34d">⏰ Tarde</span>')+' · '+esc(r.hora)+' · '+esc(r.quien||'')+(r.editado?' · editado':'');}
       var fallas=r?(r.checks||[]).filter(function(c){return c.ok===0;}).map(function(c){return c.p;}):[];
-      h+='<div style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:13px;color:#fff">'+esc(BODEGAS[b].nombre)+'</b><span style="font-size:12px">'+est+'</span></div>'+
+      h+='<div style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:13px;color:#fff">'+esc(rondaNombre(b))+'</b><span style="font-size:12px">'+est+'</span></div>'+
         (fallas.length?'<div style="font-size:11px;color:#fca5a5;margin-top:4px">⚠ '+fallas.map(esc).join(' · ')+'</div>':'')+
+        (r&&r.nums&&r.nums.length?'<div style="font-size:11px;color:#93c5fd;margin-top:4px">🔢 '+r.nums.map(function(n){return esc(n.p)+': <b>'+n.v+'</b>';}).join(' · ')+'</div>':'')+
         (r&&r.insumos?'<div style="font-size:11px;color:#fcd34d;margin-top:4px">📦 Pendientes: '+Object.values(r.insumos).map(esc).join(', ')+'</div>':'')+
         (r&&r.obs?'<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:3px">“'+esc(r.obs)+'”</div>':'')+
         (fecha===hoyStr()?'<button onclick="abrirRonda(\''+b+'\')" style="margin-top:6px;background:rgba(251,191,36,.15);color:#fcd34d;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer">'+(r?'✏️ Actualizar':'➕ Registrar')+'</button>':'')+'</div>';
@@ -15225,9 +15241,9 @@ window.abrirPanelRonda=function(fechaSel){
     h+='<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:6px">Últimos 14 días (lunes a sábado: '+dias.length+' días)</div>';
     var cnt={};
     unids.forEach(function(b){
-      var reg=0,tmp=0;dias.forEach(function(f){var r=(all[f]||{})[b];if(r){reg++;if(r.aTiempo)tmp++;if(r.insumos)Object.keys(r.insumos).forEach(function(c){(cnt[c]=cnt[c]||{d:r.insumos[c],n:0,u:{}}).n++;cnt[c].u[BODEGAS[b].nombre]=1;});}});
+      var reg=0,tmp=0;dias.forEach(function(f){var r=(all[f]||{})[b];if(r){reg++;if(r.aTiempo)tmp++;if(r.insumos)Object.keys(r.insumos).forEach(function(c){(cnt[c]=cnt[c]||{d:r.insumos[c],n:0,u:{}}).n++;cnt[c].u[rondaNombre(b)]=1;});}});
       var p1=dias.length?Math.round(reg/dias.length*100):0,p2=dias.length?Math.round(tmp/dias.length*100):0;
-      h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:4px;color:#fff"><span>'+esc(BODEGAS[b].nombre)+'</span><span>Registró <b>'+p1+'%</b> · A tiempo <b>'+p2+'%</b></span></div>';
+      h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:4px;color:#fff"><span>'+esc(rondaNombre(b))+'</span><span>Registró <b>'+p1+'%</b> · A tiempo <b>'+p2+'%</b></span></div>';
     });
     var top=Object.keys(cnt).sort(function(a,b){return cnt[b].n-cnt[a].n;}).slice(0,10);
     h+='<div style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 6px">Insumos que más se reportan pendientes</div>'+
