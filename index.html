@@ -1377,11 +1377,11 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </div>
             <div class="frow" style="margin-bottom:4px">
               <select id="rolAddTipo" style="flex:1"><option value="valor">📊 Registro de valor + observación</option><option value="checklist">☑️ Checklist de puntos</option></select>
-              <select id="rolAddFrec" style="flex:1"><option value="diaria">📅 Diario</option><option value="semanal">🗓️ Semanal (1 vez por semana)</option></select>
+              <select id="rolAddFrec" style="flex:1"><option value="diaria">📅 Diario</option><option value="semanal">🗓️ Semanal (1 vez por semana)</option><option value="mensual">📆 Mensual (1 vez al mes)</option></select>
             </div>
             <input type="text" id="rolAddDetalle" placeholder="Si es valor: unidad (ej: °C, %). Si es checklist: puntos separados por coma" style="width:100%;margin-bottom:4px">
             <button class="btn-add" id="rolAddBtn">+ Crear rol</button>
-            <button class="btn-add" id="rolDeaBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🫀 Cargar plantilla: Inspección semanal del DEA</button>
+            <button class="btn-add" id="rolDeaBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🫀 Cargar plantilla: DEA mensual (piso 1 y 2) + tras uso</button>
             <button class="btn-add" onclick="abrirConfigBolso()" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa);margin-top:6px">🔑 Bolso clave azul: insumos, stock mínimo y equipos</button>
             <button class="btn-add" onclick="abrirConfigBotiquin()" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">💊 Botiquín de pabellón: medicamentos y stock mín/óptimo</button>
             <button class="btn-add" onclick="abrirFaltantesBotiquin()" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">🛒 Botiquín: faltantes por comprar</button>
@@ -5698,7 +5698,7 @@ function renderEditorTurnoSemana(nombre){
   }).join('');
   var opcDiasTarea=DIAS.map(function(d){return '<option value="'+d+'">'+d+'</option>';}).join('');
   var opcTiposTarea=Object.keys(TIPOS).map(function(k){return '<option value="'+k+'">'+TIPOS[k].e+' '+TIPOS[k].l+(TIPOS_SIN_MEDICION[k]?' (solo asignación)':'')+'</option>';}).join('');
-  Object.keys(rolesTecnicos||{}).filter(function(k){return rolesTecnicos[k]&&rolesTecnicos[k].nombre;}).forEach(function(k){var r=rolesTecnicos[k];opcTiposTarea+='<option value="'+k+'">'+esc(r.emoji||'🔧')+' '+esc(r.nombre)+(r.frecuencia==='semanal'?' (semanal)':'')+'</option>';});
+  Object.keys(rolesTecnicos||{}).filter(function(k){return rolesTecnicos[k]&&rolesTecnicos[k].nombre;}).forEach(function(k){var r=rolesTecnicos[k];opcTiposTarea+='<option value="'+k+'">'+esc(r.emoji||'🔧')+' '+esc(r.nombre)+(r.frecuencia==='semanal'?' (semanal)':r.frecuencia==='mensual'?' (mensual)':'')+'</option>';});
   var tareasSection='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">🔧 Tareas / dónde debe trabajar</p>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Esto asigna el PUESTO donde trabaja ese día. Las que dicen "solo asignación" no piden cantidad — el desempeño se mide con métricas aparte, independientes de la actividad.</div>'+
     (filasTareas||'<div style="font-size:12px;color:rgba(255,255,255,.4);padding:6px 0 8px">Sin tareas asignadas esta semana.</div>')+
@@ -5941,7 +5941,7 @@ function renderMisTurnos(nombre){
     // Semanales (botiquín, control biológico, bolso azul y roles semanales propios): aparecen TODA la semana, con su día asignado
     // en la etiqueta, para que se puedan registrar cuando corresponda y no se pierdan.
     var ordD=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-    if({botiquin_pab:1,control_bio:1,bolso_azul:1}[t.tipo]||(rolesTecnicos[t.tipo]&&rolesTecnicos[t.tipo].frecuencia==='semanal'))return true;
+    if({botiquin_pab:1,control_bio:1,bolso_azul:1}[t.tipo]||(rolesTecnicos[t.tipo]&&(rolesTecnicos[t.tipo].frecuencia==='semanal'||rolesTecnicos[t.tipo].frecuencia==='mensual')))return true;
     if(ROLES_SEMANALES[t.tipo])return t.dia===diaHoyRol;
     return true;
   });
@@ -6431,9 +6431,10 @@ window.formAusencia=function(){
 // ¿Quién ganó la última semana cerrada, y ya se puede solicitar el día libre (desde el sábado)?
 // Devuelve la semana SIGUIENTE a la ganada (donde se aplicaría el día libre), o null si no corresponde aún.
 function ultimoGanadorInfo(){
-  var entradas=Object.entries(historialGanadores||{});
+  var entradas=Object.entries(historialGanadores||{}).filter(function(e){return e[1]&&e[1].semFin&&e[1].semFin<hoyStr();});
   if(!entradas.length)return null;
-  entradas.sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);});
+  // La más reciente es la de la SEMANA más nueva, no la última que alguien abrió (cargar semanas antiguas no debe cambiarla)
+  entradas.sort(function(a,b){return (b[1].semFin||'')<(a[1].semFin||'')?-1:1;});
   var ult=entradas[0][1];
   if(!ult||!ult.semFin||!ult.nombre)return null;
   var finD=new Date(ult.semFin+'T12:00:00');
@@ -6506,6 +6507,10 @@ function bannerPremiosPersona(nombre){
 }
 window._premioGan=null;
 // Semana ganada = la semana (lunes a sábado) inmediatamente anterior a la semana de la fecha del premio
+function ganadorDeSemana(ini){
+  var r=Object.values(historialGanadores||{}).filter(function(x){return x&&x.semIni===ini&&x.nombre;});
+  return r.length?r[0]:null;
+}
 function semanaGanadaDesde(fecha){
   var d=new Date(fecha+'T12:00:00');
   while(d.getDay()!==1)d.setDate(d.getDate()-1);
@@ -6518,7 +6523,7 @@ function semanaGanadaDesde(fecha){
 function ddmm(f){return f.slice(8,10)+'-'+f.slice(5,7);}
 window.abrirPremioGanador=function(){
   var ov=document.getElementById('premioOv');if(ov)ov.remove();
-  var ult=Object.entries(historialGanadores||{}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);})[0];
+  var ult=Object.entries(historialGanadores||{}).filter(function(e){return e[1]&&e[1].semFin&&e[1].semFin<hoyStr();}).sort(function(a,b){return (b[1].semFin||'')<(a[1].semFin||'')?-1:1;})[0];
   var g=ult?ult[1]:null;
   var desdeIso=(function(){var d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());})();
   window._premioGan={ganador:g,semanaId:ult?ult[0]:''};
@@ -6539,6 +6544,7 @@ window.abrirPremioGanador=function(){
     '<input type="date" id="prFecha" min="'+hoyStr()+'" value="'+desdeIso+'" onchange="premioTipoCambio()" style="'+inp+'">'+
     '<label style="font-size:12px;color:#fcd34d;display:block;margin:-2px 0 8px;cursor:pointer"><input type="checkbox" id="prSinFecha" onchange="premioTipoCambio()" style="vertical-align:middle"> Sin fecha: que la persona la solicite desde su app</label>'+
     '<div id="prSemTxt" style="font-size:11px;color:#fcd34d;margin:-4px 0 8px"></div>'+
+    '<div id="prRefGan" style="font-size:12px;margin:-2px 0 8px"></div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">Qué se concede</label>'+
     '<select id="prTipo" onchange="premioTipoCambio()" style="'+inp+'"><option value="dia">Día completo libre</option><option value="am">Jornada AM libre</option><option value="pm">Jornada PM libre</option><option value="horas">Franja de horas libre</option></select>'+
     '<div id="prHorasBox" style="display:none"><div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.5)">Desde</label><select id="prIni" onchange="premioTipoCambio()" style="'+inp+'">'+inicios.map(function(h){return '<option value="'+h+'">'+h+'</option>';}).join('')+'</select></div>'+
@@ -6557,7 +6563,12 @@ window.abrirPremioGanador=function(){
 window.premioTipoCambio=function(){
   var sf=document.getElementById('prSinFecha');document.getElementById('prFecha').disabled=!!(sf&&sf.checked);
   var ff=(sf&&sf.checked)?hoyStr():document.getElementById('prFecha').value;
-  if(ff){var sg=semanaGanadaDesde(ff);document.getElementById('prSemTxt').textContent='Semana ganada: del '+ddmm(sg.ini)+' al '+ddmm(sg.fin)+' (la semana anterior a la fecha del premio)';}
+  if(ff){var sg=semanaGanadaDesde(ff);document.getElementById('prSemTxt').textContent='Semana ganada: del '+ddmm(sg.ini)+' al '+ddmm(sg.fin)+' (la semana anterior a la fecha del premio)';
+    var gs=ganadorDeSemana(sg.ini),rf=document.getElementById('prRefGan'),sel=document.getElementById('prNombre');
+    if(rf)rf.innerHTML=gs?'<span style="color:#6ee7b7">🏆 Ganó esa semana según el ranking: <b>'+esc(gs.nombre)+'</b></span>':'<span style="color:#fca5a5">⚠️ No hay ganador registrado para esa semana. Abre el cierre de esa semana o verifica en el ranking antes de elegir.</span>';
+    if(gs&&sel&&!sel.dataset.manual&&Array.prototype.some.call(sel.options,function(o){return o.value===gs.nombre;}))sel.value=gs.nombre;
+    if(sel&&!sel.dataset.bind){sel.dataset.bind=1;sel.addEventListener('change',function(){sel.dataset.manual=1;});}
+    if(sel)premioCargarContacto();}
   var t=document.getElementById('prTipo').value;
   document.getElementById('prHorasBox').style.display=t==='horas'?'block':'none';
   if(t==='horas'){
@@ -6588,6 +6599,8 @@ window.guardarPremioGanador=function(){
   var fecha=document.getElementById('prFecha').value;
   var tipo=document.getElementById('prTipo').value;
   if(!nombre){alert('Elige a la persona.');return;}
+  (function(){var f0=(document.getElementById('prSinFecha')&&document.getElementById('prSinFecha').checked)?hoyStr():fecha;var gs=ganadorDeSemana(semanaGanadaDesde(f0||hoyStr()).ini);window._premioAdv=(gs&&gs.nombre!==nombre)?gs.nombre:'';})();
+  if(window._premioAdv&&!confirm('Según el ranking, la semana la ganó '+window._premioAdv+', no '+nombre+'. ¿Registrar el premio igual para '+nombre+'?'))return;
   var sinF=!!(document.getElementById('prSinFecha')&&document.getElementById('prSinFecha').checked);
   if(sinF)fecha='';
   if(!fecha&&!sinF){alert('Elige la fecha del premio o marca "Sin fecha".');return;}
@@ -10480,7 +10493,7 @@ function initConfigRoles(){
   if(bd)bd.onclick=function(){
     var existente=Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&/\bDEA\b/i.test(r.nombre);})[0];
     var id=existente||('rol_dea_'+Date.now());
-    if(existente&&!confirm('Ya existe el rol "'+rolesTecnicos[existente].nombre+'". ¿Actualizarlo con el checklist semanal del DEA? Los registros anteriores se conservan.'))return;
+    if(existente&&!confirm('Ya existe el rol "'+rolesTecnicos[existente].nombre+'". ¿Actualizarlo a revisión mensual con 2 DEA (piso 1 y piso 2) y registro tras uso? Los registros anteriores se conservan.'))return;
     sedeRef('rolesTecnicos/'+id).set(PLANTILLA_DEA).then(function(){showSaved('rolSaved');});
   };
   var ab=document.getElementById('rolAddBtn');
@@ -10503,7 +10516,7 @@ function initConfigRoles(){
   };
 }
 // Checklist semanal de inspección del DEA (puntos cortos = clave del registro; detalles = qué revisar)
-var PLANTILLA_DEA={emoji:'🫀',nombre:'Inspección semanal del DEA',tipoRegistro:'checklist',frecuencia:'semanal',
+var PLANTILLA_DEA={emoji:'🫀',nombre:'Inspección del DEA (mensual y tras uso)',tipoRegistro:'checklist',frecuencia:'mensual',unidades:['DEA piso 1','DEA piso 2'],trasUso:true,
   puntos:['Indicador de estado','Gabinete y alarma','Integridad física','Kit de rescate','Fechas críticas'],
   detalles:['Comprobar que la luz verde parpadee (o aparezca el símbolo "OK" / "Listo"). Si está en rojo, emite un pitido o tiene una "X", reportarlo de inmediato.',
     'Verificar que la vitrina o caja protectora abra correctamente y que la alarma sonora (si tiene) funcione al abrirla.',
@@ -10849,7 +10862,7 @@ function sembrarRolDEA(){
 }
 function sincronizarRolesSemanales(){
   Object.keys(TIPOS_SEMANALES).forEach(function(k){if(TIPOS_SEMANALES[k]==='custom')delete TIPOS_SEMANALES[k];});
-  Object.keys(rolesTecnicos||{}).forEach(function(k){var r=rolesTecnicos[k];if(r&&r.frecuencia==='semanal')TIPOS_SEMANALES[k]='custom';});
+  Object.keys(rolesTecnicos||{}).forEach(function(k){var r=rolesTecnicos[k];if(r&&(r.frecuencia==='semanal'||r.frecuencia==='mensual'))TIPOS_SEMANALES[k]='custom';});
 }
 function renderRolLista(){
   var cont=document.getElementById('rolLista');
@@ -14974,6 +14987,8 @@ window.abrirRegCustom=function(rolId){
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:440px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+esc(rol.emoji)+' '+esc(rol.nombre)+'</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">'+hoyStr()+'</div>'+
+    (rol.unidades&&rol.unidades.length?'<label style="font-size:12px;color:rgba(255,255,255,.7);display:block">¿Cuál equipo?</label><select id="customUnidad" style="width:100%;font-size:14px;padding:8px;margin-bottom:10px"><option value="">— Elegir —</option>'+rol.unidades.map(function(u){return '<option value="'+esc(u)+'">'+esc(u)+'</option>';}).join('')+'</select>':'')+
+    (rol.trasUso?'<label style="font-size:12px;color:rgba(255,255,255,.7);display:block">Motivo de la revisión</label><select id="customMotivo" style="width:100%;font-size:14px;padding:8px;margin-bottom:10px"><option value="mensual">📆 Revisión mensual</option><option value="uso">⚡ Después de ser usado</option></select>':'')+
     cuerpo+
     '<label style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;display:block">Observación (opcional)</label>'+
     '<textarea id="customObs" rows="2" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
@@ -14996,6 +15011,12 @@ window.guardarRegCustom=function(rolId){
   var reg={rolId:rolId,rolNombre:rol.nombre,tipoRegistro:rol.tipoRegistro,
     obs:document.getElementById('customObs').value.trim(),
     quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:Date.now()};
+  if(rol.unidades&&rol.unidades.length){
+    var un=(document.getElementById('customUnidad')||{}).value;
+    if(!un){alert('Elige cuál equipo estás revisando.');return;}
+    reg.unidad=un;
+  }
+  if(rol.trasUso){reg.motivo=(document.getElementById('customMotivo')||{}).value||'mensual';}
   if(rol.tipoRegistro==='valor'){
     var v=document.getElementById('customValor').value;
     if(v===''){alert('Ingresa el valor.');return;}
@@ -17401,6 +17422,14 @@ function verificarCumplimiento(tipo,fecha){
   }
   if(rolesTecnicos&&rolesTecnicos[tipo]){
     var hay6;
+    if(rolesTecnicos[tipo].frecuencia==='mensual'){
+      // 1 revisión mensual por cada equipo (ej. DEA piso 1 y piso 2). Las revisiones "tras uso" son extra y no reemplazan la mensual.
+      var mes=String(fecha).slice(0,7),rr=rolesTecnicos[tipo],unids=(rr.unidades&&rr.unidades.length)?rr.unidades:[''];
+      var regsM=Object.values(regCustom||{}).filter(function(r){return r.rolId===tipo&&String(r.fecha).slice(0,7)===mes&&(r.motivo||'mensual')!=='uso';});
+      var estado=unids.map(function(u){return {u:u,ok:regsM.some(function(r){return (r.unidad||'')===u;})};});
+      var todo=estado.every(function(x){return x.ok;});
+      return {cumplido:todo,detalle:unids.length>1?estado.map(function(x){return x.u+(x.ok?' ✓':' pendiente');}).join(' · '):(todo?'Registrado este mes':'Pendiente este mes')};
+    }
     if(rolesTecnicos[tipo].frecuencia==='semanal'){
       var fd=new Date(fecha+'T12:00:00');var lun=new Date(fd);while(lun.getDay()!==1)lun.setDate(lun.getDate()-1);
       var dom=new Date(lun);dom.setDate(dom.getDate()+6);
