@@ -1387,8 +1387,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             </div>
             <input type="text" id="rolAddDetalle" placeholder="Si es valor: unidad (ej: °C, %). Si es checklist: puntos separados por coma" style="width:100%;margin-bottom:4px">
             <button class="btn-add" id="rolAddBtn">+ Crear rol</button>
- <button class="btn-add" id="rolRondaBtn" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">🌅 Cargar rol: Ronda de apertura de unidad</button>
-            <button class="btn-add" id="rolDeaBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🫀 Cargar plantilla: DEA mensual (piso 1 y 2) + tras uso</button>
+<button class="btn-add" id="rolDeaBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🫀 Cargar plantilla: DEA mensual (piso 1 y 2) + tras uso</button>
             <button class="btn-add" onclick="abrirConfigBolso()" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa);margin-top:6px">🔑 Bolso clave azul: insumos, stock mínimo y equipos</button>
             <button class="btn-add" onclick="abrirConfigBotiquin()" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">💊 Botiquín de pabellón: medicamentos y stock mín/óptimo</button>
             <button class="btn-add" onclick="abrirFaltantesBotiquin()" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">🛒 Botiquín: faltantes por comprar</button>
@@ -4737,7 +4736,7 @@ window.setSede=function(sede){
   sedeRef('solicitudesMediaJornada').on('value',function(s){solicitudesMediaJ=s.val()||{};if(typeof actualizarBadgePremios==='function')actualizarBadgePremios();});
   sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
   sedeRef('refrigeradores').on('value',function(s){refrigeradores=s.val()||{};if(document.getElementById('refriLista'))renderRefriLista();});
-  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();sembrarRolDEA();limpiarRolBolsoViejo();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
+  sedeRef('rolesTecnicos').on('value',function(s){rolesTecnicos=s.val()||{};sincronizarRolesSemanales();sembrarRolDEA();sembrarRolRonda();migrarDEAMensual();limpiarRolBolsoViejo();if(document.getElementById('rolLista'))renderRolLista();if(document.getElementById('tTip'))actualizarTiposTarea();});
   sedeRef('regCustom').on('value',function(s){regCustom=s.val()||{};});
   sedeRef('anunciosCapacitacion').on('value',function(s){
     anunciosCapacitacion=s.val()||{};
@@ -10516,12 +10515,6 @@ function initConfigRoles(){
     if(existente&&!confirm('Ya existe el rol "'+rolesTecnicos[existente].nombre+'". ¿Actualizarlo a revisión mensual con 2 DEA (piso 1 y piso 2) y registro tras uso? Los registros anteriores se conservan.'))return;
     sedeRef('rolesTecnicos/'+id).set(PLANTILLA_DEA).then(function(){showSaved('rolSaved');});
   };
-  var br=document.getElementById('rolRondaBtn');
-  if(br)br.onclick=function(){
-    var ex=Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.tipoRegistro==='ronda';})[0];
-    if(ex){alert('El rol "Ronda de apertura" ya existe. Ya lo puedes asignar desde el editor de turnos.');return;}
-    sedeRef('rolesTecnicos/rol_ronda_apertura').set(PLANTILLA_RONDA).then(function(){showSaved('rolSaved');});
-  };
   var ab=document.getElementById('rolAddBtn');
   if(ab)ab.onclick=function(){
     var emoji=document.getElementById('rolAddEmoji').value.trim()||'🔧';
@@ -10877,6 +10870,30 @@ function limpiarRolBolsoViejo(){
 }
 // Deja el rol "Inspección semanal del DEA" disponible para asignar sin pasos previos (una sola vez por sede)
 var _deaSembrando=false;
+// La Ronda de apertura aparece sola en "Elegir tarea/rol" al asignar tareas (una sola vez por sede).
+var _rondaSembrando=false;
+function sembrarRolRonda(){
+  if(_rondaSembrando)return;
+  var yaHay=Object.keys(rolesTecnicos||{}).some(function(k){var r=rolesTecnicos[k];return r&&r.tipoRegistro==='ronda';});
+  if(yaHay)return;
+  _rondaSembrando=true;
+  sedeRef('rondaPlantillaSembrada').once('value').then(function(sn){
+    if(sn.val()===true)return;
+    return sedeRef('rolesTecnicos/rol_ronda_apertura').transaction(function(cur){return cur||PLANTILLA_RONDA;}).then(function(){return sedeRef('rondaPlantillaSembrada').set(true);});
+  }).catch(function(){}).then(function(){_rondaSembrando=false;});
+}
+// El DEA semanal que ya existía pasa a revisión mensual con 2 equipos (piso 1 y 2) y registro tras uso. Una sola vez; los registros previos se conservan.
+var _deaMigrando=false;
+function migrarDEAMensual(){
+  if(_deaMigrando)return;
+  var k=Object.keys(rolesTecnicos||{}).filter(function(x){var r=rolesTecnicos[x];return r&&r.nombre&&/\bDEA\b/i.test(r.nombre)&&r.frecuencia==='semanal'&&!(r.unidades&&r.unidades.length);})[0];
+  if(!k)return;
+  _deaMigrando=true;
+  sedeRef('deaMensualMigrado').once('value').then(function(sn){
+    if(sn.val()===true)return;
+    return sedeRef('rolesTecnicos/'+k).update({nombre:PLANTILLA_DEA.nombre,frecuencia:'mensual',unidades:PLANTILLA_DEA.unidades,trasUso:true}).then(function(){return sedeRef('deaMensualMigrado').set(true);});
+  }).catch(function(){}).then(function(){_deaMigrando=false;});
+}
 function sembrarRolDEA(){
   if(_deaSembrando)return;
   var yaHay=Object.keys(rolesTecnicos||{}).some(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&/\bDEA\b/i.test(r.nombre);});
