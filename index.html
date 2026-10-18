@@ -5713,8 +5713,8 @@ function renderEditorTurnoSemana(nombre){
       '<select id="etNuevaTareaDia" style="flex:1;font-size:12px;padding:6px">'+opcDiasTarea+'</select>'+
       '<select id="etNuevaTareaJornada" style="width:auto;font-size:12px;padding:6px"><option value="dia">☀️ Todo el día</option><option value="am">🌅 AM</option><option value="pm">🌇 PM</option></select>'+
     '</div>'+
-    '<select id="etNuevaTareaTipo" onchange="var sb=document.getElementById(\'etNuevaTareaSector\');if(sb)var rr=rolesTecnicos[this.value],esR=rr&&rr.tipoRegistro===\'ronda\';sb.setAttribute(\'list\',esR?\'dlUnidadesRonda\':\'dlServicios\');sb.placeholder=esR?\'Unidad de la ronda (elige de la lista)\':\'Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)\';sb.style.display=(TIPOS_COMPARTIDOS_JORNADA[this.value]||esR)?\'block\':\'none\';" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
-    '<datalist id="dlUnidadesRonda"><option value="Esterilización">'+rondaUnidades().filter(function(b){return b.indexOf('est_')!==0;}).map(function(b){return '<option value="'+rondaCorto(b)+'">';}).join('')+'</datalist><input type="text" id="etNuevaTareaSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
+    '<select id="etNuevaTareaTipo" onchange="var sb=document.getElementById(\'etNuevaTareaSector\');if(sb)var rr=rolesTecnicos[this.value],esR=rr&&rr.tipoRegistro===\'ronda\';sb.setAttribute(\'list\',esR?\'dlUnidadesRonda\':\'dlServicios\');sb.placeholder=esR?\'Unidad o puesto de la ronda (elige de la lista)\':\'Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)\';sb.style.display=(TIPOS_COMPARTIDOS_JORNADA[this.value]||esR)?\'block\':\'none\';" style="width:100%;font-size:12px;padding:6px;margin-top:6px"><option value="">— Elegir tarea/rol —</option>'+opcTiposTarea+'</select>'+
+    '<datalist id="dlUnidadesRonda">'+rondaUnidades().map(function(b){return '<option value="'+rondaCorto(b)+'">';}).join('')+'</datalist><input type="text" id="etNuevaTareaSector" list="dlServicios" placeholder="Servicio / sector (obligatorio en Pedido semanal: elige de la lista o escribe otro)" style="display:none;width:100%;font-size:12px;padding:6px;margin-top:6px;box-sizing:border-box">'+
     '<button onclick="agregarTareaEnEditor(\''+esc(nombre).replace(/'/g,"\\'")+'\')" style="width:100%;margin-top:6px;background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);border-radius:8px;padding:8px;font-family:inherit;cursor:pointer;font-weight:600">+ Agregar tarea/rol</button>';
   var selSty='width:100%;font-size:12px;padding:6px;margin-bottom:6px';
   var nuevoTurnoForm='<div style="background:rgba(37,99,235,.08);border:1px dashed rgba(96,165,250,.4);border-radius:10px;padding:10px;margin:4px 0 12px">'+
@@ -5747,7 +5747,7 @@ window.agregarTareaEnEditor=function(nombre){
   var sector=(document.getElementById('etNuevaTareaSector').value||'').trim();
   if(!tipo){alert('Elige qué tarea o rol quieres asignar.');return;}
   if(tipo==='pedido'&&!sector){alert('Indica para qué servicio es el pedido semanal (campo Servicio / sector).');return;}
-  if(rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='ronda'&&!rondaUnidadDeSector(sector)){alert('Indica la unidad de la ronda: '+['Esterilización (según su turno)'].concat(rondaUnidades().filter(function(b){return b.indexOf('est_')!==0;}).map(rondaCorto)).join(', ')+'.');return;}
+  if(rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='ronda'&&!rondaUnidadDeSector(sector)){alert('Indica la unidad de la ronda: '+rondaUnidades().map(rondaCorto).join(' · ')+'. En Esterilización elige el puesto exacto (T1 o T2).');return;}
   if(TIPOS_MEDIBLES[tipo]){
     var conflicto=tareaYaAsignada(tipo,dia,jornada,nombre);
     if(conflicto){alert('⛔ "'+cfgTipo(tipo).l+'" ya está asignada ese día/jornada a '+conflicto.nombre+'. Elige otro día, jornada o quítasela primero a esa persona.');return;}
@@ -15010,8 +15010,7 @@ document.getElementById('bodegaBtn').addEventListener('click',function(){abrirBo
 window.abrirRegCustom=function(rolId,sector){
   var rol=rolesTecnicos[rolId];
   if(!rol)return;
-  if(rol.tipoRegistro==='ronda'){var ub=rondaUnidadDeSector(sector);if(ub==='est_turno'){var pe=rondaPuestosDe(curNombre,diaDeFecha(hoyStr()));if(pe.length===1)abrirRonda(pe[0]);else rondaElegirUnidad(pe.length?pe:RONDA_ORDEN.filter(function(k){return k.indexOf('est_')===0;}));return;}
-    if(ub)abrirRonda(ub);else rondaElegirUnidad();return;}
+  if(rol.tipoRegistro==='ronda'){var ub=rondaUnidadDeSector(sector);if(ub)abrirRonda(ub);else if(adminUnlocked)rondaElegirUnidad();else alert('A esta ronda no se le asignó un puesto o unidad. Avísale a la jefatura para que se lo asigne.');return;}
   var ov=document.getElementById('regCustomOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regCustomOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
@@ -15113,19 +15112,12 @@ var RONDA_EXTRA={
   sub_rayos:['PC y sistema operativos','Equipos de sala 1 operativos','Equipos de sala 2 operativos','Insumos suficientes para iniciar la jornada']
 };
 var RONDA_NUMS={est_lavado:['Cajas pendientes de ingreso a proceso de lavado','Cajas sin lavar de la jornada anterior']};
-var RONDA_TIPO_PUESTO={inst_recibido:'est_lavado',inst_lavado:'est_lavado',inst_secado:'est_lavado',inst_empaque:'est_empaque',autoclave:'est_autoclave',entrega_esteril:'est_entrega'};
-// Puestos de Esterilización que la persona tiene asignados ese día (según sus tareas), en orden fijo
-function rondaPuestosDe(nombre,dia){
-  var ps={};Object.values(tareas||{}).forEach(function(t){if(t&&t.nombre===nombre&&t.dia===dia&&RONDA_TIPO_PUESTO[t.tipo])ps[RONDA_TIPO_PUESTO[t.tipo]]=1;});
-  return RONDA_ORDEN.filter(function(k){return ps[k];});
-}
 function rondaNombre(k){return RONDA_NOM[k]||(BODEGAS[k]&&BODEGAS[k].nombre)||k;}
 function rondaCorto(k){return rondaNombre(k).replace(/^\S+\s/,'');}
 function rondaBodega(k){return RONDA_BODEGA[k]||k;}
 function rondaNorm(t){return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
 function rondaUnidadDeSector(sec){
   var n=rondaNorm(sec);if(!n)return '';
-  if(n==='esterilizacion')return 'est_turno';
   var us=rondaUnidades(),ex=us.filter(function(b){return rondaNorm(rondaNombre(b))===n;});
   if(ex.length)return ex[0];
   var par=us.filter(function(b){var bn=rondaNorm(rondaNombre(b));return bn.indexOf(n)>-1||n.indexOf(bn)>-1;});
@@ -17646,16 +17638,6 @@ function verificarCumplimiento(tipo,fecha,tarea){
   if(rolesTecnicos&&rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='ronda'){
     // La ronda se cumple si la unidad asignada la registró DENTRO de la ventana del día. Sin unidad: cualquier ronda hecha por la persona ese día.
     var rd=(rondasApertura||{})[fecha]||{},ub=tarea?rondaUnidadDeSector(tarea.sector):'';
-    if(ub==='est_turno'){
-      // Esterilización: cada puesto que tenga asignado ese día debe tener su ronda a tiempo
-      var pe=tarea?rondaPuestosDe(tarea.nombre,tarea.dia):[];
-      if(!pe.length)pe=RONDA_ORDEN.filter(function(k){return k.indexOf('est_')===0&&rd[k]&&tarea&&rd[k].quien===tarea.nombre;});
-      if(!pe.length)return {cumplido:false,detalle:'Sin ronda de apertura'};
-      var faltan=pe.filter(function(k){return !rd[k];}),tardes=pe.filter(function(k){return rd[k]&&!rd[k].aTiempo;});
-      if(faltan.length)return {cumplido:false,detalle:'Falta ronda: '+faltan.map(rondaCorto).join(', ')};
-      if(tardes.length)return {cumplido:false,detalle:'Ronda tarde: '+tardes.map(rondaCorto).join(', ')};
-      return {cumplido:true,detalle:'Ronda a tiempo ('+pe.length+' puesto'+(pe.length>1?'s':'')+')'};
-    }
     var rg=ub?rd[ub]:Object.values(rd).filter(function(r){return r&&tarea&&r.quien===tarea.nombre;})[0];
     if(!rg)return {cumplido:false,detalle:'Sin ronda de apertura'};
     return {cumplido:!!rg.aTiempo,detalle:rg.aTiempo?'Ronda a tiempo ('+rg.hora+')':'Ronda registrada tarde ('+rg.hora+')'};
