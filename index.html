@@ -630,6 +630,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="tab" onclick="goTab('biblioteca')" style="flex:1">📚 Biblioteca de conocimiento</button>
           </div>
           <div style="margin-top:4px">
+            <button onclick="abrirSugerencia()" style="width:100%;padding:12px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:12px;font-family:inherit;cursor:pointer;letter-spacing:.3px;margin-bottom:4px">💡 Sugerir una mejora de la app</button>
+          </div>
+          <div style="margin-top:4px">
             <button id="planPabBtn" onclick="abrirPlanPabellon()" style="width:100%;padding:12px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-family:inherit;cursor:pointer;letter-spacing:.3px">🏥 Ver Plan de Pabellón</button>
           </div>
         </div>
@@ -750,6 +753,11 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <button class="btn-add" id="saveAvisoBtn">Publicar</button>
             <button class="btn-dng" id="clearAvisoBtn" style="margin-top:4px">Eliminar aviso</button>
             <div class="saved" id="avisoSaved">✓ Publicado</div>
+          </div>
+
+          <div class="asec">
+            <p class="asec-title">💡 Sugerencias del equipo</p>
+            <button class="btn-add" id="sugAdminBtn" onclick="abrirSugerenciasAdmin()" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">Ver sugerencias</button>
           </div>
 
           <div class="asec" style="border-color:rgba(251,191,36,.3)">
@@ -2008,6 +2016,7 @@ var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan p
 var supervisores={},pinSupervisor='',conductividad={};
 var supervisorActivo='',supervisorAreas=[];
 var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={},regPedido={},regPabellonAsig={},regLecturaTareas={},historialGanadores={},premiosGanadores={},telefonosEquipo={};
+var sugerencias={};
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={},rondasApertura={};
 // Custodia diaria de subbodegas: quién queda a cargo de cada una hoy, por jornada AM/PM.
 // custodiaSubbodega[fecha][bodegaId][jornada] = {nombre,activo,abierta,aperturaTs,cierreTs,resumen}
@@ -3162,7 +3171,7 @@ window.renderMisTurnosAdmin=function(cont){
   var v=secretarias[key];var funcion=(typeof v==='object'&&v.funcion)||'';
   var hoyD=diaDeDate(hoyStr());
   var M=metricasActivas();
-  var h='<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:2px">🗓️ Mis turnos — semana</div>'+(funcion?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">🧭 '+esc(funcion)+'</div>':'<div style="margin-bottom:8px"></div>');
+  var h=bannerPremiosPersona(nombre)+'<div style="background:#16233d;border-radius:12px;padding:16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:2px">🗓️ Mis turnos — semana</div>'+(funcion?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">🧭 '+esc(funcion)+'</div>':'<div style="margin-bottom:8px"></div>');
   var hayTurno=false;
   DIAS_ROTATIVA_ADMIN.forEach(function(d){
     var t=turnoDelDia(key,d);if(t)hayTurno=true;
@@ -3261,23 +3270,12 @@ function pintarMediaJornadaAdmin(key){
   var c=document.getElementById('mjCard');if(!c)return;
   var render=function(){
     var mias=Object.entries(solicitudesMediaJ||{}).filter(function(e){return e[1]&&e[1].key===key;}).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);}).slice(0,6);
-    var lunAct=rangoSemanaDe(hoyStr()).ini,lunAnt=_sumaDias(lunAct,-7);
-    var cA=cumplSemanaAdminPersona(key,lunAnt),cB=cumplSemanaAdminPersona(key,lunAct);
-    var inp='width:100%;'+_dsCss+'margin-bottom:6px;';
-    var h='<div style="background:#16233d;border-radius:12px;padding:14px;margin-top:12px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:2px">🎯 Media jornada libre por cumplimiento de metas</div>'+
-      '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Si cumpliste tus metas de la semana, puedes solicitar media jornada libre. La responde la Jefa de Operaciones.</div>';
+    var h='<div style="background:#16233d;border-radius:12px;padding:14px;margin-top:12px"><div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:2px">🎁 Jornada libre de premio</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:6px">La jornada libre es un premio solo para quien gana la semana. Si ganas, el botón para solicitarla aparece arriba, en esta misma pestaña.</div>';
+    if(mias.length)h+='<div style="font-size:10px;color:rgba(255,255,255,.35);margin:4px 0">Solicitudes anteriores (sistema anterior)</div>';
     if(mias.length)h+=mias.map(function(e){var x=e[1];return '<div style="padding:7px 9px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:5px;font-size:12px;color:#fff">Semana '+esc(fmtF(x.semIni))+' al '+esc(fmtF(x.semFin))+(x.cumplPct!=null?' · '+x.cumplPct+'%':'')+' · '+esc(textoJornadaMJ(x.jornada))+'<div style="font-size:11px;margin-top:2px">'+estadoMJHtml(x)+'</div></div>';}).join('');
-    h+='<div style="margin-top:8px"><label style="font-size:11px;color:rgba(255,255,255,.55)">Semana por la que solicitas</label>'+
-      '<select id="mjSem" onchange="mjAjustarFecha()" style="'+inp+'"><option value="'+lunAnt+'">Semana pasada ('+esc(fmtF(lunAnt))+' al '+esc(fmtF(_sumaDias(lunAnt,5)))+') · cumplimiento '+(cA.pct!=null?cA.pct+'%':'sin datos')+'</option>'+
-      '<option value="'+lunAct+'">Esta semana ('+esc(fmtF(lunAct))+' al '+esc(fmtF(_sumaDias(lunAct,5)))+') · va en '+(cB.pct!=null?cB.pct+'%':'sin datos')+'</option></select>'+
-      '<label style="font-size:11px;color:rgba(255,255,255,.55)">Media jornada</label>'+
-      '<select id="mjJor" style="'+inp+'"><option value="am">🌅 Mañana (AM)</option><option value="pm">🌆 Tarde (PM)</option></select>'+
-      '<label style="font-size:11px;color:rgba(255,255,255,.55)">Fecha que prefieres <span id="mjRango" style="color:#fcd34d"></span></label>'+
-      '<input type="date" id="mjFecha" style="'+inp+'">'+
-      '<textarea id="mjNota" rows="2" placeholder="Comentario (opcional)" style="'+inp+'"></textarea>'+
-      '<button class="btn-add" onclick="solicitarMediaJornada(\''+key+'\')" style="background:linear-gradient(135deg,#d97706,#fbbf24)">📩 Solicitar media jornada</button></div></div>';
+    h+='</div>';
     c.innerHTML=h;
-    mjAjustarFecha();
   };
   sedeRef('solicitudesMediaJornada').once('value').then(function(sn){solicitudesMediaJ=sn.val()||{};render();}).catch(render);
 }
@@ -4727,6 +4725,7 @@ window.setSede=function(sede){
   sedeRef('regAseo').on('value',function(s){regAseo=s.val()||{};});
   sedeRef('regPedido').on('value',function(s){regPedido=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('botiquinPabellon').on('value',function(s){botiquinPab=s.val()||{};});
+  sedeRef('sugerencias').on('value',function(s){sugerencias=s.val()||{};var n=Object.keys(sugerencias).filter(function(k){return sugerencias[k]&&sugerencias[k].estado!=='vista';}).length,b=document.getElementById('sugAdminBtn');if(b)b.textContent=n?'Ver sugerencias ('+n+' nueva'+(n>1?'s':'')+')':'Ver sugerencias';});
   sedeRef('regBotiquin').on('value',function(s){regBotiquin=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
   sedeRef('bolsoAzulCfg').on('value',function(s){bolsoCfg=s.val()||{};});
   sedeRef('regBolso').on('value',function(s){regBolso=s.val()||{};if(curNombre)renderMisTurnos(curNombre);});
@@ -5545,6 +5544,7 @@ window.borrarAnuncio=function(id){
 };
 
 function renderAviso(txt){
+  window._avisoTxt=(typeof txt==='string')?txt:'';
   var d=document.getElementById('avisoBanner');
   if(!txt||typeof txt!=='string'){d.innerHTML='';return;}
   var esCap=txt.startsWith('📣 CAPACITACIÓN AL EQUIPO');
@@ -5557,8 +5557,20 @@ function renderAviso(txt){
     d.innerHTML=html;
   } else if(txt.indexOf('\n')>-1){
     // Aviso con formato: 1ª línea = título · "- " = punto con ícono · "👉" = llamado a la acción · otras = texto
-    var hh=avisoHash(txt),visto='';try{visto=localStorage.getItem('avisoVisto')||'';}catch(e){}
-    d.innerHTML=(visto===hh)?'':avisoRicoHtml(txt,hh,true);
+    // Una vez por día: la 1ª vez del día sale completo; en las demás entradas del mismo día queda una franja chica (se abre al tocarla).
+    var hh=avisoHash(txt),visto='',hoyA=hoyStr(),reg='';
+    try{visto=localStorage.getItem('avisoVisto')||'';reg=localStorage.getItem('avisoDia')||'';}catch(e){}
+    if(visto===hh){d.innerHTML='';}
+    else{
+      var clave=hh+'|'+hoyA;
+      if(window._avisoAbierto===clave||reg!==clave){
+        window._avisoAbierto=clave;try{localStorage.setItem('avisoDia',clave);}catch(e){}
+        d.innerHTML=avisoRicoHtml(txt,hh,true);
+      }else{
+        var tit=(txt.split('\n')[0]||'Novedades').trim();
+        d.innerHTML='<div onclick="avisoAbrir()" style="cursor:pointer;display:flex;align-items:center;gap:8px;background:rgba(37,99,235,.15);border:1px solid rgba(147,197,253,.3);border-radius:10px;padding:8px 12px;margin-bottom:.8rem;font-size:12px;color:#cbd5e1"><span style="flex:1;font-weight:700;color:#fff">'+esc(tit)+'</span><span style="color:#93c5fd;font-weight:700">Ver ›</span></div>';
+      }
+    }
   } else {
     d.innerHTML='<div class="aviso"><div><div class="aviso-tit">Aviso de la semana</div><p>'+txt+'</p></div></div>';
   }
@@ -5584,10 +5596,55 @@ function avisoRicoHtml(txt,hh,conBoton){
     '<div style="font-size:16px;font-weight:800;color:#fff;line-height:1.3">'+esc(tit)+'</div>'+resto+items+cta+
     (conBoton?'<button onclick="avisoCerrar(\''+hh+'\')" style="margin-top:10px;width:100%;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:9px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">✓ Entendido, ya lo revisé</button>':'')+'</div>';
 }
+// ── Sugerencias de mejora del equipo ──
+window.abrirSugerencia=function(){
+  var ov=document.getElementById('sugOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='sugOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.94);z-index:9300;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var inp='width:100%;font-size:14px;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:10px;font-family:inherit;box-sizing:border-box;margin-bottom:10px';
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:440px;width:100%;margin-top:30px">'+
+    '<div style="font-size:16px;font-weight:800;color:#fff">💡 Sugerir una mejora</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin:4px 0 12px">Cuéntanos qué cambiarías, qué te costó entender o qué falta en la app. Lo lee la jefatura.</div>'+
+    '<select id="sugCat" style="'+inp+'"><option value="idea">💡 Idea o mejora</option><option value="error">🐞 Algo no funciona</option><option value="confuso">❓ Algo me confunde</option></select>'+
+    '<textarea id="sugTxt" rows="5" maxlength="800" placeholder="Escribe tu sugerencia..." style="'+inp+'"></textarea>'+
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:12px;cursor:pointer"><input type="checkbox" id="sugAnon"> Enviar sin mi nombre</label>'+
+    '<button class="btn-add" onclick="enviarSugerencia()" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">Enviar sugerencia</button>'+
+    '<button onclick="document.getElementById(\'sugOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:9px;font-family:inherit;cursor:pointer">Cerrar</button></div>';
+  document.body.appendChild(ov);
+};
+window.enviarSugerencia=function(){
+  var t=(document.getElementById('sugTxt').value||'').trim();
+  if(t.length<5){alert('Escribe tu sugerencia (mínimo unas palabras).');return;}
+  var anon=document.getElementById('sugAnon').checked,ah=new Date();
+  var reg={texto:t.slice(0,800),cat:document.getElementById('sugCat').value,nombre:anon?null:(curNombre||null),fecha:hoyStr(),hora:pad(ah.getHours())+':'+pad(ah.getMinutes()),ts:Date.now(),estado:'nueva'};
+  sedeRef('sugerencias').push(reg).then(function(){
+    var o=document.getElementById('sugOv');if(o)o.remove();
+    alert('✓ ¡Gracias! Tu sugerencia fue enviada.');
+  }).catch(function(){alert('No se pudo enviar. Revisa tu conexión e intenta de nuevo.');});
+};
+window.abrirSugerenciasAdmin=function(){
+  var ov=document.getElementById('sugAdminOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='sugAdminOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  var ks=Object.keys(sugerencias||{}).filter(function(k){return sugerencias[k]&&sugerencias[k].texto;}).sort(function(a,b){return (sugerencias[b].ts||0)-(sugerencias[a].ts||0);});
+  var ic={idea:'💡 Idea',error:'🐞 No funciona',confuso:'❓ Confuso'};
+  var h='<div style="max-width:720px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:17px;font-weight:800;color:#c4b5fd">💡 Sugerencias del equipo</span><button onclick="document.getElementById(\'sugAdminOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div>';
+  if(!ks.length)h+='<div style="font-size:13px;color:rgba(255,255,255,.5);padding:20px;text-align:center">Aún no hay sugerencias.</div>';
+  ks.forEach(function(k){var r=sugerencias[k],vista=r.estado==='vista';
+    h+='<div style="background:#16233d;border-radius:10px;padding:10px 12px;margin-bottom:8px;'+(vista?'opacity:.6':'border-left:3px solid #a78bfa')+'">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:rgba(255,255,255,.5)"><span>'+esc(ic[r.cat]||'💡')+' · <b style="color:#fff">'+esc(r.nombre||'Anónimo')+'</b></span><span>'+esc(r.fecha||'')+' '+esc(r.hora||'')+'</span></div>'+
+      '<div style="font-size:13px;color:#e2e8f0;line-height:1.5;margin:6px 0;white-space:pre-wrap">'+esc(r.texto)+'</div>'+
+      '<div style="display:flex;gap:6px">'+(vista?'':'<button onclick="sugMarcar(\''+k+'\')" style="font-size:11px;background:rgba(16,185,129,.15);color:#6ee7b7;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;cursor:pointer">✓ Marcar vista</button>')+
+      '<button onclick="sugBorrar(\''+k+'\')" style="font-size:11px;background:rgba(239,68,68,.15);color:#fca5a5;border:none;border-radius:6px;padding:5px 10px;font-family:inherit;cursor:pointer">Eliminar</button></div></div>';});
+  ov.innerHTML=h+'</div>';document.body.appendChild(ov);
+};
+window.sugMarcar=function(k){sedeRef('sugerencias/'+k+'/estado').set('vista').then(function(){if(sugerencias[k])sugerencias[k].estado='vista';abrirSugerenciasAdmin();});};
+window.sugBorrar=function(k){if(!confirm('¿Eliminar esta sugerencia?'))return;sedeRef('sugerencias/'+k).remove().then(function(){delete sugerencias[k];abrirSugerenciasAdmin();});};
+window.avisoAbrir=function(){var t=window._avisoTxt;if(t){window._avisoAbierto=avisoHash(t)+'|'+hoyStr();renderAviso(t);}};
 window.avisoCerrar=function(hh){try{localStorage.setItem('avisoVisto',hh);}catch(e){}var d=document.getElementById('avisoBanner');if(d)d.innerHTML='';};
 window.avisoPlantilla=function(){
   var t=document.getElementById('avisoTxt');
-  t.value='🆕 Novedades en GESTHOR\nRevisa estas actualizaciones antes de comenzar tu jornada:\n- 🌅 Ronda de apertura: cada unidad hace un chequeo rápido de 15 minutos al iniciar. Tiene horario propio y se cierra al terminar.\n- 🏆 Premio: si ganaste, ahora solicitas tu jornada de premio desde tu app.\n- 🫀 DEA: revisión una vez al mes en los dos pisos y después de cada uso.\n- 📞 Contacto: confirma tu correo y teléfono (opcional) en el directorio.\n👉 Entra a «Mis turnos» y revisa las tareas que tienes hoy.';
+  t.value='🆕 Novedades en GESTHOR\nRevisa estas actualizaciones antes de comenzar tu jornada:\n- 🌅 Ronda de apertura: cada unidad hace un chequeo rápido de 15 minutos al iniciar. Tiene horario propio y se cierra al terminar.\n- 🏆 Premio: si ganaste, ahora solicitas tu jornada de premio desde tu app.\n- 🫀 DEA: revisión una vez al mes en los dos pisos y después de cada uso.\n- 📞 Contacto: confirma tu correo y teléfono (opcional) en el directorio.\n- 💡 Sugerencias: ahora puedes proponer mejoras de la app con el botón «Sugerir una mejora» (puedes enviarla sin tu nombre).\n👉 Entra a «Mis turnos» y revisa las tareas que tienes hoy.';
   avisoPrevia();
 };
 window.avisoPrevia=function(){var t=document.getElementById('avisoTxt').value.trim(),p=document.getElementById('avisoPrevia');if(!p)return;p.innerHTML=(t&&t.indexOf('\n')>-1)?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin:8px 0 4px">Así lo verá el equipo:</div>'+avisoRicoHtml(t,'',false):'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:6px">Para el formato destacado escribe varias líneas (título en la primera; "- " para puntos; "👉" para el llamado final). Una sola línea se muestra como aviso simple.</div>';};
