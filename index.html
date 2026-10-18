@@ -6478,8 +6478,10 @@ function renderAusencias(){
 function _hm(min){return pad(Math.floor(min/60))+':'+pad(min%60);}
 function _hmMin(t){var m=/^(\d{1,2}):(\d{2})$/.exec(t||'');return m?Number(m[1])*60+Number(m[2]):null;}
 function inicioFranjasPremio(){var a=['07:45'];for(var h=8;h<=19;h++)a.push(pad(h)+':00');return a;}
+function jornadaTxt(o){return o&&o.jornada==='am'?' · mañana (AM)':o&&o.jornada==='pm'?' · tarde (PM)':'';}
 function textoPremio(p){
-  if(p.tipo==='dia')return 'día completo libre';
+  if(p.tipo==='dia')return 'jornada completa libre';
+  if(p.tipo==='media')return p.jornada==='am'?'media jornada libre: mañana (AM)':p.jornada==='pm'?'media jornada libre: tarde (PM)':'media jornada libre (AM o PM, a tu elección)';
   if(p.tipo==='am')return 'jornada de la mañana (AM) libre';
   if(p.tipo==='pm')return 'jornada de la tarde (PM) libre';
   return 'libre de '+p.ini+' a '+p.fin+' hrs';
@@ -6493,9 +6495,9 @@ function bannerPremiosPersona(nombre){
   return '<div style="background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(217,119,6,.08));border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
     '<p style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:6px">🏆 ¡Tu premio por ganar la semana!</p>'+
     mios.map(function(e){var id=e[0],p=e[1],sol=p.solicitud||{};var st=sol.estado;
-      var l='<p style="font-size:12px;color:rgba(255,255,255,.85);margin-bottom:3px">🎁 '+(p.fecha?esc(fechaBonita(p.fecha))+' · ':'')+'<b>'+esc(textoPremio(p))+'</b>'+(p.fecha?'':' · <i>fecha por definir</i>')+'</p>';
+      var l='<p style="font-size:12px;color:rgba(255,255,255,.85);margin-bottom:3px">🎁 '+(p.fecha?esc(fechaBonita(p.fecha))+' · <b>'+esc(textoPremio(p))+'</b>':'<b>Solicita tu jornada de premio</b>')+'</p>';
       if(st==='pendiente'){
-        l+='<p style="font-size:12px;color:#fcd34d">⏳ Pediste '+esc(fechaBonita(sol.fecha))+'. Esperando respuesta de '+esc(esAdminPremio(p.nombre)?'la Jefa de Operaciones':'la jefatura clínica')+'.</p>';
+        l+='<p style="font-size:12px;color:#fcd34d">⏳ Pediste '+esc(fechaBonita(sol.fecha))+jornadaTxt(sol)+'. Esperando respuesta de '+esc(esAdminPremio(p.nombre)?'la Jefa de Operaciones':'la jefatura clínica')+'.</p>';
       }else if(st==='propuesta'){
         l+='<p style="font-size:12px;color:#93c5fd">📅 '+esc(esAdminPremio(p.nombre)?'La Jefa de Operaciones':'La jefatura')+' te propone el <b>'+esc(fechaBonita(sol.fechaPropuesta))+'</b>'+(sol.notaJefatura?' ("'+esc(sol.notaJefatura)+'")':'')+'.</p>'+
           '<button onclick="premioAceptarPropuesta(\''+id+'\')" style="'+bt+'background:#10b981;color:#06281d">✓ Aceptar esa fecha</button>'+
@@ -6546,7 +6548,7 @@ window.abrirPremioGanador=function(){
     '<div id="prSemTxt" style="font-size:11px;color:#fcd34d;margin:-4px 0 8px"></div>'+
     '<div id="prRefGan" style="font-size:12px;margin:-2px 0 8px"></div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">Qué se concede</label>'+
-    '<select id="prTipo" onchange="premioTipoCambio()" style="'+inp+'"><option value="dia">Día completo libre</option><option value="am">Jornada AM libre</option><option value="pm">Jornada PM libre</option><option value="horas">Franja de horas libre</option></select>'+
+    '<select id="prTipo" onchange="premioTipoCambio()" style="'+inp+'"><option value="dia">Jornada completa libre</option><option value="media">Media jornada libre (la persona elige AM o PM)</option><option value="horas">Fracción de horas libre</option></select>'+
     '<div id="prHorasBox" style="display:none"><div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.5)">Desde</label><select id="prIni" onchange="premioTipoCambio()" style="'+inp+'">'+inicios.map(function(h){return '<option value="'+h+'">'+h+'</option>';}).join('')+'</select></div>'+
     '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.5)">Duración</label><select id="prDur" onchange="premioTipoCambio()" style="'+inp+'">'+[1,2,3,4,5,6,8,10,12].map(function(h){return '<option value="'+h+'">'+h+' hora'+(h>1?'s':'')+'</option>';}).join('')+'</select></div></div>'+
     '<div id="prHorasTxt" style="font-size:12px;color:#7ec8f7;margin-bottom:8px"></div></div>'+
@@ -6561,7 +6563,10 @@ window.abrirPremioGanador=function(){
   premioTipoCambio();premioCargarContacto();pintarPremiosLista();
 };
 window.premioTipoCambio=function(){
-  var sf=document.getElementById('prSinFecha');document.getElementById('prFecha').disabled=!!(sf&&sf.checked);
+  var sf=document.getElementById('prSinFecha');
+  var esMedia=document.getElementById('prTipo').value==='media';
+  if(sf){if(esMedia)sf.checked=true;sf.disabled=esMedia;}
+  document.getElementById('prFecha').disabled=!!(sf&&sf.checked);
   var ff=(sf&&sf.checked)?hoyStr():document.getElementById('prFecha').value;
   if(ff){var sg=semanaGanadaDesde(ff);document.getElementById('prSemTxt').textContent='Semana ganada: del '+ddmm(sg.ini)+' al '+ddmm(sg.fin)+' (la semana anterior a la fecha del premio)';
     var gs=ganadorDeSemana(sg.ini),rf=document.getElementById('prRefGan'),sel=document.getElementById('prNombre');
@@ -6651,7 +6656,7 @@ function pintarPremiosLista(){
 
 // ── Solicitud de la jornada de premio (trabajador) y respuesta de la jefatura (aceptar / proponer otra fecha) ──
 function fechaManana(){var d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
-window.pedirFechaPremio=function(titulo,detalle,conNota,cb){
+window.pedirFechaPremio=function(titulo,detalle,conNota,cb,conJornada){
   var ov=document.getElementById('fechaPremioOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='fechaPremioOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.94);z-index:9700;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
@@ -6660,6 +6665,7 @@ window.pedirFechaPremio=function(titulo,detalle,conNota,cb){
     '<div style="font-size:15px;font-weight:700;color:#fcd34d;margin-bottom:4px">'+esc(titulo)+'</div>'+
     '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">'+esc(detalle)+'</div>'+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">Fecha</label><input type="date" id="fpFecha" min="'+fechaManana()+'" style="'+inp+'">'+
+    (conJornada?'<label style="font-size:11px;color:rgba(255,255,255,.5)">¿Qué media jornada quieres libre?</label><select id="fpJornada" style="'+inp+'"><option value="">— Elegir —</option><option value="am">Mañana (AM)</option><option value="pm">Tarde (PM)</option></select>':'')+
     '<label style="font-size:11px;color:rgba(255,255,255,.5)">'+(conNota?'Comentario (opcional)':'')+'</label>'+
     (conNota?'<textarea id="fpNota" rows="2" placeholder="Ej: prefiero ese día por un trámite" style="'+inp+'"></textarea>':'<textarea id="fpNota" rows="2" placeholder="Comentario (opcional)" style="'+inp+'"></textarea>')+
     '<button id="fpOk" class="btn-add" style="background:linear-gradient(135deg,#d97706,#fbbf24)">Enviar</button>'+
@@ -6670,14 +6676,17 @@ window.pedirFechaPremio=function(titulo,detalle,conNota,cb){
     if(!f){alert('Elige una fecha.');return;}
     if(diaDeDate(f)==='Domingo'){alert('Elige un día de lunes a sábado.');return;}
     var nota=(document.getElementById('fpNota').value||'').trim();
-    ov.remove();cb(f,nota);
+    var jor=conJornada?(document.getElementById('fpJornada').value||''):'';
+    if(conJornada&&!jor){alert('Elige si quieres la mañana (AM) o la tarde (PM).');return;}
+    ov.remove();cb(f,nota,jor);
   };
 };
 window.premioSolicitar=function(id){
   var p=(premiosGanadores||{})[id];if(!p)return;
-  pedirFechaPremio('📅 Solicitar mi jornada de premio','Premio: '+textoPremio(p)+'. Elige la fecha que prefieres; la jefatura la acepta o te propone otra.',true,function(f,nota){
-    sedeRef('premiosGanadores/'+id+'/solicitud').set({fecha:f,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){alert('✓ Solicitud enviada. La responde '+aprobadorPremio(p.nombre)+'. Avísale también por WhatsApp si es urgente.');});
-  });
+  pedirFechaPremio('📅 Solicitar mi jornada de premio','Elige la fecha que prefieres; la jefatura la acepta o te propone otra.',true,function(f,nota,jor){
+    var sol={fecha:f,nota:nota,estado:'pendiente',ts:Date.now()};if(jor)sol.jornada=jor;
+    sedeRef('premiosGanadores/'+id+'/solicitud').set(sol).then(function(){alert('✓ Solicitud enviada. La responde '+aprobadorPremio(p.nombre)+'. Avísale también por WhatsApp si es urgente.');});
+  },p.tipo==='media'&&!p.jornada);
 };
 window.premioAceptarPropuesta=function(id){
   var p=(premiosGanadores||{})[id];if(!p||!p.solicitud||!p.solicitud.fechaPropuesta)return;
@@ -6685,7 +6694,9 @@ window.premioAceptarPropuesta=function(id){
 };
 function aplicarFechaPremio(id,fecha){
   var sg=semanaGanadaDesde(fecha);
-  return sedeRef('premiosGanadores/'+id).update({fecha:fecha,dia:diaDeDate(fecha),semIni:sg.ini,semFin:sg.fin,porSolicitar:false,'solicitud/estado':'aceptada','solicitud/respondido':Date.now()});
+  var pp=(premiosGanadores||{})[id]||{},up={fecha:fecha,dia:diaDeDate(fecha),semIni:sg.ini,semFin:sg.fin,porSolicitar:false,'solicitud/estado':'aceptada','solicitud/respondido':Date.now()};
+  if(pp.tipo==='media'&&pp.solicitud&&pp.solicitud.jornada){up.jornada=pp.solicitud.jornada;up.texto=textoPremio(Object.assign({},pp,{jornada:pp.solicitud.jornada}));}
+  return sedeRef('premiosGanadores/'+id).update(up);
 }
 function esAdminPremio(nombre){
   return Object.keys(secretarias||{}).some(function(k){var v=secretarias[k];return v&&(typeof v==='object'?v.nombre:v)===nombre;});
@@ -6695,10 +6706,10 @@ function solicitudPremioAdminHtml(id,p){
   var sol=p.solicitud;if(!sol||p.anulado)return '';
   var mio=(esAdminPremio(p.nombre)?'jefaOperaciones':'')===(modoRol==='jefaOperaciones'?'jefaOperaciones':'');
   if(!mio){
-    return sol.estado==='pendiente'?'<div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.5)">📩 Pide el '+esc(fechaBonita(sol.fecha))+' · lo responde la '+esc(aprobadorPremio(p.nombre))+'</div>':'';
+    return sol.estado==='pendiente'?'<div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.5)">📩 Pide el '+esc(fechaBonita(sol.fecha))+jornadaTxt(sol)+' · lo responde la '+esc(aprobadorPremio(p.nombre))+'</div>':'';
   }
   var bt='border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;margin:5px 5px 0 0;';
-  if(sol.estado==='pendiente')return '<div style="margin-top:6px;background:rgba(251,191,36,.1);border-radius:6px;padding:7px 9px;font-size:11px;color:#fcd34d">📩 Pide el <b>'+esc(fechaBonita(sol.fecha))+'</b>'+(sol.nota?' · "'+esc(sol.nota)+'"':'')+
+  if(sol.estado==='pendiente')return '<div style="margin-top:6px;background:rgba(251,191,36,.1);border-radius:6px;padding:7px 9px;font-size:11px;color:#fcd34d">📩 Pide el <b>'+esc(fechaBonita(sol.fecha))+'</b>'+esc(jornadaTxt(sol))+(sol.nota?' · "'+esc(sol.nota)+'"':'')+
     '<div><button onclick="premioAceptarSolicitud(\''+id+'\')" style="'+bt+'background:#10b981;color:#06281d">✓ Aceptar</button><button onclick="premioProponer(\''+id+'\')" style="'+bt+'background:#60a5fa;color:#0b1220">📅 Proponer otra fecha</button></div></div>';
   if(sol.estado==='propuesta')return '<div style="margin-top:6px;font-size:11px;color:#93c5fd">📅 Propusiste el '+esc(fechaBonita(sol.fechaPropuesta))+' · esperando respuesta de la persona</div>';
   if(sol.estado==='aceptada')return '<div style="margin-top:6px;font-size:11px;color:#6ee7b7">✓ Fecha acordada</div>';
@@ -6708,8 +6719,8 @@ window.premioAceptarSolicitud=function(id){
   var p=(premiosGanadores||{})[id];if(!p||!p.solicitud)return;
   var f=p.solicitud.fecha;
   aplicarFechaPremio(id,f).then(function(){
-    var q=Object.assign({},p,{fecha:f,dia:diaDeDate(f),semIni:semanaGanadaDesde(f).ini,semFin:semanaGanadaDesde(f).fin});
-    avisarPremioPersona(id,q,'GESTHOR — Tu premio quedó confirmado','Hola '+p.nombre.split(' ')[0]+', aceptamos la fecha que pediste.\n\nTu premio será efectivo el '+fechaBonita(f)+': '+textoPremio(p)+'.\n\nPatricio Baeza Aguilar · CSU Valdivia');
+    var q=Object.assign({},p,{fecha:f,dia:diaDeDate(f),semIni:semanaGanadaDesde(f).ini,semFin:semanaGanadaDesde(f).fin,jornada:(p.tipo==='media'&&p.solicitud&&p.solicitud.jornada)||p.jornada});
+    avisarPremioPersona(id,q,'GESTHOR — Tu premio quedó confirmado','Hola '+p.nombre.split(' ')[0]+', aceptamos la fecha que pediste.\n\nTu premio será efectivo el '+fechaBonita(f)+': '+textoPremio(q)+'.\n\nPatricio Baeza Aguilar · CSU Valdivia');
   });
 };
 window.premioProponer=function(id){
