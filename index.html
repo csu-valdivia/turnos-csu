@@ -15088,8 +15088,27 @@ window.guardarRegCustom=function(rolId){
 // Antes de comenzar, cada unidad (las subbodegas) confirma que todo está listo: núcleo común + puntos propios + insumos pendientes
 // elegidos del catálogo de bodega. Se guarda en sedes/S/rondasApertura/{fecha}/{bodega}. Corte de puntualidad: RONDA_CORTE.
 // Ventana de la ronda según el día: lun–jue 07:45–08:00 · vie 08:00–08:15 · sáb 09:00–09:15 (domingo no aplica). Cumple si se registra hasta el fin de la ventana.
-function rondaVentana(fecha,unidad){
+// Rayos T2 (tarde): la ventana son los 15 min desde que la persona asume Rayos según su turno asignado (el último bloque de Rayos del día)
+function rondaInicioRayos(persona,dia){
+  var ini=[];
+  Object.values(bloques||{}).forEach(function(b){if(b&&b.nombre===persona&&b.dia===dia&&b.area==='Rayos'&&b.horario)ini.push(t2m(b.horario.split('–')[0].trim()));});
+  Object.values(coberturas||{}).forEach(function(c){if(c&&c.persona===persona&&c.dia===dia&&c.destino==='Rayos'&&c.horario)ini.push(t2m(c.horario.split('–')[0].trim()));});
+  ini=ini.filter(function(x){return x!=null&&!isNaN(x);});
+  return ini.length?Math.max.apply(null,ini):null;
+}
+function rondaVentanaRayosT2(fecha,persona){
+  var dia=diaDeFecha(fecha||hoyStr());
+  var cand=[persona];
+  Object.values(tareas||{}).forEach(function(t){if(t&&t.dia===dia&&rolesTecnicos[t.tipo]&&rolesTecnicos[t.tipo].tipoRegistro==='ronda'&&rondaUnidadDeSector(t.sector)==='rayos_t2')cand.push(t.nombre);});
+  for(var i=0;i<cand.length;i++){
+    if(!cand[i])continue;var m=rondaInicioRayos(cand[i],dia);
+    if(m!=null){var h=function(x){return pad(Math.floor(x/60))+':'+pad(x%60);};return {ini:h(m),fin:h(m+15)};}
+  }
+  return null;
+}
+function rondaVentana(fecha,unidad,persona){
   var g=new Date((fecha||hoyStr())+'T12:00:00').getDay();
+  if(unidad==='rayos_t2')return rondaVentanaRayosT2(fecha,persona);
   // T2 (recepción, lavado y secado) tiene horario propio: lun–mar 10:00–10:15 · mié–vie 11:00–11:15 (sáb y dom sin ronda)
   if(unidad==='est_lavado'){
     if(g===1||g===2)return {ini:'10:00',fin:'10:15'};
@@ -15109,12 +15128,12 @@ function rondaVentana(fecha,unidad){
   if(g===6)return {ini:'09:00',fin:'09:15'};
   return null;
 }
-function rondaVentanaPropia(b){return b==='est_lavado'||b==='disp1_t2'||b==='disp2_t2';}
-function rondaVentanaTxt(fecha,unidad){var v=rondaVentana(fecha,unidad);return v?(v.ini+' a '+v.fin):(unidad==='est_lavado'?'sin ronda (sáb y dom)':'sin ronda (domingo)');}
+function rondaVentanaPropia(b){return b==='est_lavado'||b==='disp1_t2'||b==='disp2_t2'||b==='rayos_t2';}
+function rondaVentanaTxt(fecha,unidad,persona){var v=rondaVentana(fecha,unidad,persona);return v?(v.ini+' a '+v.fin+(unidad==='rayos_t2'?' (desde que asume Rayos)':'')):(unidad==='est_lavado'?'sin ronda (sáb y dom)':unidad==='rayos_t2'?'se define al asumir Rayos según su turno (sin turno asignado ese día)':'sin ronda (domingo)');}
 var RONDA_NUCLEO=['Puesto de trabajo ordenado','Puesto de trabajo limpio','Insumos abiertos rotulados (fecha y hora de apertura)','Sin restos de insumos abiertos sin eliminar (ej. sueros, soluciones)'];
-var RONDA_ORDEN=['sub_dispensario1','disp1_t2','sub_dispensario2','disp2_t2','est_lavado','est_empaque','est_autoclave','est_entrega','sub_pabellon','sub_clinica','sub_rayos'];
-var RONDA_NOM={sub_dispensario1:'📦 Dispensario 1 T1 (mañana)',disp1_t2:'📦 Dispensario 1 T2 (tarde)',sub_dispensario2:'📦 Dispensario 2 T1 (mañana)',disp2_t2:'📦 Dispensario 2 T2 (tarde)',est_lavado:'♻️ Esterilización T2 · Recepción, lavado y secado',est_empaque:'♻️ Esterilización T1 · Empaque y sellado',est_autoclave:'♻️ Esterilización T1 · Autoclave',est_entrega:'♻️ Esterilización T1 · Entrega de material',sub_pabellon:'🦷 Pabellón',sub_clinica:'🏥 Clínica Privada',sub_rayos:'📸 Rayos'};
-var RONDA_BODEGA={disp1_t2:'sub_dispensario1',disp2_t2:'sub_dispensario2',est_lavado:'sub_esterilizacion',est_empaque:'sub_esterilizacion',est_autoclave:'sub_esterilizacion',est_entrega:'sub_esterilizacion'};
+var RONDA_ORDEN=['sub_dispensario1','disp1_t2','sub_dispensario2','disp2_t2','est_lavado','est_empaque','est_autoclave','est_entrega','sub_pabellon','sub_clinica','sub_rayos','rayos_t2'];
+var RONDA_NOM={sub_dispensario1:'📦 Dispensario 1 T1 (mañana)',disp1_t2:'📦 Dispensario 1 T2 (tarde)',sub_dispensario2:'📦 Dispensario 2 T1 (mañana)',disp2_t2:'📦 Dispensario 2 T2 (tarde)',est_lavado:'♻️ Esterilización T2 · Recepción, lavado y secado',est_empaque:'♻️ Esterilización T1 · Empaque y sellado',est_autoclave:'♻️ Esterilización T1 · Autoclave',est_entrega:'♻️ Esterilización T1 · Entrega de material',sub_pabellon:'🦷 Pabellón',sub_clinica:'🏥 Clínica Privada',sub_rayos:'📸 Rayos T1 (mañana)',rayos_t2:'📸 Rayos T2 (tarde)'};
+var RONDA_BODEGA={rayos_t2:'sub_rayos',disp1_t2:'sub_dispensario1',disp2_t2:'sub_dispensario2',est_lavado:'sub_esterilizacion',est_empaque:'sub_esterilizacion',est_autoclave:'sub_esterilizacion',est_entrega:'sub_esterilizacion'};
 var RONDA_EXTRA={
   sub_dispensario1:['PC encendido y sistema abierto','Insumos listos para entregar a los estudiantes'],
   sub_dispensario2:['PC encendido y sistema abierto','Insumos listos para entregar a los estudiantes'],
@@ -15126,7 +15145,8 @@ var RONDA_EXTRA={
   est_entrega:['PC operativo para la entrega','Sistema operativo para la entrega'],
   sub_pabellon:['Equipos del pabellón operativos','Insumos suficientes para iniciar la jornada'],
   sub_clinica:['Equipos principales funcionando','Insumos suficientes para iniciar la jornada'],
-  sub_rayos:['PC y sistema operativos','Equipos de sala 1 operativos','Equipos de sala 2 operativos','Insumos suficientes para iniciar la jornada']
+  sub_rayos:['PC y sistema operativos','Equipos de sala 1 operativos','Equipos de sala 2 operativos','Insumos suficientes para iniciar la jornada'],
+  rayos_t2:['PC y sistema operativos','Equipos de sala 1 operativos','Equipos de sala 2 operativos','Insumos suficientes para iniciar la jornada']
 };
 var RONDA_NUMS={est_lavado:['Cajas pendientes de ingreso a proceso de lavado','Cajas sin lavar de la jornada anterior']};
 function rondaNombre(k){return RONDA_NOM[k]||(BODEGAS[k]&&BODEGAS[k].nombre)||k;}
@@ -15139,6 +15159,7 @@ function rondaUnidadDeSector(sec){
   if(ex.length)return ex[0];
   if(n==='dispensario 1')return 'sub_dispensario1';
   if(n==='dispensario 2')return 'sub_dispensario2';
+  if(n==='rayos')return 'sub_rayos';
   var par=us.filter(function(b){var bn=rondaNorm(rondaNombre(b));return bn.indexOf(n)>-1||n.indexOf(bn)>-1;});
   return par.length===1?par[0]:'';
 }
@@ -15158,6 +15179,12 @@ window.abrirRonda=function(bodega){
   if(RONDA_ORDEN.indexOf(bodega)<0)return;
   sedeRef('rondasApertura/'+hoyStr()+'/'+bodega).once('value').then(function(sn){
     var ex=sn.val();
+    // Pasada la ventana, el trabajador ya no puede abrir la ronda (queda no cumplida). La jefatura sí puede registrarla (queda "tarde").
+    var vv0=rondaVentana(null,bodega,curNombre);
+    if(!ex&&!adminUnlocked&&vv0&&minAhora()>hhmmAMin(vv0.fin)){
+      alert('La ventana de esta ronda ('+vv0.ini+' a '+vv0.fin+') ya cerró, así que quedó como NO cumplida. Si encontraste algo que reportar, avísale a la jefatura.');
+      return;
+    }
     if(ex&&!confirm('Esta unidad ya registró su ronda hoy a las '+ex.hora+'. ¿Quieres actualizarla? (se conserva la hora original)'))return;
     window._rondaEx=ex||null;window._rondaIns=Object.assign({},(ex&&ex.insumos)||{});
     pintarRonda(bodega);
@@ -15181,7 +15208,7 @@ function pintarRonda(bodega){
     return '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:13px;color:#fff;flex:1">'+esc(p)+'</span><input type="number" min="0" inputmode="numeric" class="rdNum" data-p="'+esc(p)+'" value="'+(pv?pv.v:'')+'" placeholder="N°" style="width:70px;font-size:14px;padding:6px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;text-align:center;font-family:inherit"></div>';}).join('');
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff">🌅 Ronda de apertura</div>'+
-    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">'+esc(rondaNombre(bodega))+' · '+hoyStr()+' · ventana '+rondaVentanaTxt(null,bodega)+'</div>'+nms+pts+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">'+esc(rondaNombre(bodega))+' · '+hoyStr()+' · ventana '+rondaVentanaTxt(null,bodega,curNombre)+'</div>'+nms+pts+
     '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin:10px 0 4px">Insumos pendientes</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px">Elige los que faltan o están por acabarse. Si no falta ninguno, déjalo vacío.</div>'+
     '<div id="rdInsSel" style="margin-bottom:6px"></div>'+
@@ -15223,7 +15250,7 @@ window.guardarRonda=function(bodega){
     quien:curNombre||'Jefatura',ts:Date.now()};
   var ins=window._rondaIns||{};if(Object.keys(ins).length)reg.insumos=ins;
   if(ex){reg.hora=ex.hora;reg.aTiempo=ex.aTiempo;reg.editado=true;}
-  else{reg.hora=hora;var vv=rondaVentana(null,bodega);reg.aTiempo=vv?(minAhora()<=hhmmAMin(vv.fin)):true;}
+  else{reg.hora=hora;var vv=rondaVentana(null,bodega,curNombre);reg.aTiempo=vv?(minAhora()<=hhmmAMin(vv.fin)):true;}
   sedeRef('rondasApertura/'+reg.fecha+'/'+bodega).set(reg).then(function(){
     var o=document.getElementById('rondaOv');if(o)o.remove();
     alert(reg.falla?'✓ Ronda guardada. Marcaste un punto con problema: avísalo a la jefatura.':'✓ Ronda guardada.');
@@ -15286,7 +15313,7 @@ window.abrirPanelRonda=function(fechaSel){
     var top=Object.keys(cnt).sort(function(a,b){return cnt[b].n-cnt[a].n;}).slice(0,10);
     h+='<div style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 6px">Insumos que más se reportan pendientes</div>'+
       (top.length?top.map(function(c){return '<div style="font-size:12px;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:4px;color:#fff">'+esc(cnt[c].d)+' <span style="color:#fcd34d">· '+cnt[c].n+' vez'+(cnt[c].n>1?'es':'')+'</span> <span style="color:rgba(255,255,255,.4)">('+Object.keys(cnt[c].u).map(esc).join(', ')+')</span></div>';}).join(''):'<div style="font-size:12px;color:rgba(255,255,255,.4)">Aún no hay insumos reportados.</div>')+
-      '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:12px">El porcentaje cuenta cada unidad contra todos los días hábiles del período, incluidos los días en que no se haya abierto. A tiempo = registrada hasta el fin de la ventana (lun–jue 08:00 · vie 08:15 · sáb 09:15; Esterilización T2: lun–mar 10:15 · mié–vie 11:15; Dispensarios T2: lun–mar 17:15 · mié–jue 16:15 · vie 14:15 · sáb 09:15).</div></div>';
+      '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:12px">El porcentaje cuenta cada unidad contra todos los días hábiles del período, incluidos los días en que no se haya abierto. A tiempo = registrada hasta el fin de la ventana (lun–jue 08:00 · vie 08:15 · sáb 09:15; Esterilización T2: lun–mar 10:15 · mié–vie 11:15; Dispensarios T2: lun–mar 17:15 · mié–jue 16:15 · vie 14:15 · sáb 09:15; Rayos T2: 15 min desde que asume según su turno).</div></div>';
     ov.innerHTML=h;
   });
 };
