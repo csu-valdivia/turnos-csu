@@ -744,7 +744,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 
           <div class="asec">
             <p class="asec-title">📢 Aviso general</p>
-            <textarea class="atxt" id="avisoTxt" placeholder="Aviso para todo el equipo..."></textarea>
+            <textarea class="atxt" id="avisoTxt" placeholder="Aviso para todo el equipo..." oninput="avisoPrevia()"></textarea>
+            <button class="btn-add" onclick="avisoPlantilla()" style="background:linear-gradient(135deg,#7c3aed,#2563eb);margin-bottom:6px">🆕 Usar plantilla de novedades</button>
+            <div id="avisoPrevia"></div>
             <button class="btn-add" id="saveAvisoBtn">Publicar</button>
             <button class="btn-dng" id="clearAvisoBtn" style="margin-top:4px">Eliminar aviso</button>
             <div class="saved" id="avisoSaved">✓ Publicado</div>
@@ -5017,7 +5019,7 @@ function chequearVentanaHoraria(){
   // Tareas medibles de esta persona para hoy en la jornada de la ventana activa (o todo el día)
   var misTareas=Object.values(tareas||{}).filter(function(t){
     if(t.nombre!==curNombre||t.dia!==diaHoy)return false;
-    if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return false;
+    if(!medibleTarea(t.tipo,true)||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return false;
     var jt=t.jornada||'dia';
     // La tarea aplica si su jornada coincide con la ventana activa, o si es 'dia'
     return jt===va.jornada||jt==='dia'||va.jornada==='dia';
@@ -5149,7 +5151,7 @@ function chequearPendientesMediodia(){
   var hoy=hoyStr();
   var diaHoy=diaDeFecha(hoy);
   var misTareas=Object.values(tareas||{}).filter(function(t){
-    return t.nombre===curNombre&&t.dia===diaHoy&&TIPOS_MEDIBLES[t.tipo]&&!TIPOS_SEMANALES[t.tipo]&&!TIPOS_SIN_MEDICION[t.tipo];
+    return t.nombre===curNombre&&t.dia===diaHoy&&medibleTarea(t.tipo,true)&&!TIPOS_SEMANALES[t.tipo]&&!TIPOS_SIN_MEDICION[t.tipo];
   });
   if(!misTareas.length)return; // sin tareas medibles hoy → nada
   var pendientes=misTareas.filter(function(t){return !verificarCumplimiento(t.tipo,hoy,t).cumplido;});
@@ -5553,10 +5555,42 @@ function renderAviso(txt){
     lineas.slice(1).forEach(function(l){if(l)html+='<p style="font-size:13px;line-height:1.6">'+l+'</p>';});
     html+='</div></div>';
     d.innerHTML=html;
+  } else if(txt.indexOf('\n')>-1){
+    // Aviso con formato: 1ª línea = título · "- " = punto con ícono · "👉" = llamado a la acción · otras = texto
+    var hh=avisoHash(txt),visto='';try{visto=localStorage.getItem('avisoVisto')||'';}catch(e){}
+    d.innerHTML=(visto===hh)?'':avisoRicoHtml(txt,hh,true);
   } else {
     d.innerHTML='<div class="aviso"><div><div class="aviso-tit">Aviso de la semana</div><p>'+txt+'</p></div></div>';
   }
 }
+function avisoHash(t){var h=0;for(var i=0;i<t.length;i++){h=((h<<5)-h+t.charCodeAt(i))|0;}return 'h'+h;}
+function avisoRicoHtml(txt,hh,conBoton){
+  var ls=txt.split('\n').map(function(l){return l.trim();}).filter(function(l){return l;});
+  var tit=ls.shift()||'',items='',resto='',cta='';
+  ls.forEach(function(l){
+    if(/^[-•]\s+/.test(l)){
+      var t=l.replace(/^[-•]\s+/,''),ic='•',m=t.match(/^(\p{Extended_Pictographic}\uFE0F?)\s*(.*)$/u);
+      if(m){ic=m[1];t=m[2];}
+      var k=t.indexOf(':'),cuerpo=(k>0&&k<45)?'<b style="color:#fff">'+esc(t.slice(0,k))+'</b>'+esc(t.slice(k)):esc(t);
+      items+='<div style="display:flex;gap:10px;align-items:flex-start;background:rgba(255,255,255,.05);border-radius:10px;padding:8px 10px;margin-top:6px"><span style="font-size:18px;line-height:1.2;flex:none">'+esc(ic)+'</span><span style="font-size:13px;line-height:1.45;color:#cbd5e1">'+cuerpo+'</span></div>';
+    }else if(l.indexOf('👉')===0){
+      cta+='<div style="margin-top:10px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);border-radius:10px;padding:9px 11px;font-size:13px;font-weight:700;color:#fcd34d">'+esc(l)+'</div>';
+    }else{
+      resto+='<p style="font-size:13px;line-height:1.5;color:#cbd5e1;margin-top:6px">'+esc(l)+'</p>';
+    }
+  });
+  return '<div style="background:linear-gradient(135deg,rgba(37,99,235,.2),rgba(124,58,237,.16));border:1px solid rgba(147,197,253,.35);border-radius:14px;padding:14px;margin-bottom:1rem">'+
+    '<div style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:.6px;color:#93c5fd;background:rgba(147,197,253,.15);border-radius:20px;padding:2px 9px;margin-bottom:6px">NOVEDAD</div>'+
+    '<div style="font-size:16px;font-weight:800;color:#fff;line-height:1.3">'+esc(tit)+'</div>'+resto+items+cta+
+    (conBoton?'<button onclick="avisoCerrar(\''+hh+'\')" style="margin-top:10px;width:100%;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:9px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">✓ Entendido, ya lo revisé</button>':'')+'</div>';
+}
+window.avisoCerrar=function(hh){try{localStorage.setItem('avisoVisto',hh);}catch(e){}var d=document.getElementById('avisoBanner');if(d)d.innerHTML='';};
+window.avisoPlantilla=function(){
+  var t=document.getElementById('avisoTxt');
+  t.value='🆕 Novedades en GESTHOR\nRevisa estas actualizaciones antes de comenzar tu jornada:\n- 🌅 Ronda de apertura: cada unidad hace un chequeo rápido de 15 minutos al iniciar. Tiene horario propio y se cierra al terminar.\n- 🏆 Premio: si ganaste, ahora solicitas tu jornada de premio desde tu app.\n- 🫀 DEA: revisión una vez al mes en los dos pisos y después de cada uso.\n- 📞 Contacto: confirma tu correo y teléfono (opcional) en el directorio.\n👉 Entra a «Mis turnos» y revisa las tareas que tienes hoy.';
+  avisoPrevia();
+};
+window.avisoPrevia=function(){var t=document.getElementById('avisoTxt').value.trim(),p=document.getElementById('avisoPrevia');if(!p)return;p.innerHTML=(t&&t.indexOf('\n')>-1)?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin:8px 0 4px">Así lo verá el equipo:</div>'+avisoRicoHtml(t,'',false):'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:6px">Para el formato destacado escribe varias líneas (título en la primera; "- " para puntos; "👉" para el llamado final). Una sola línea se muestra como aviso simple.</div>';};
 
 // ── NOMBRES ──
 function renderNombresList(){var d=document.getElementById('nombresList');if(!d)return;if(!nombres.length){d.innerHTML='<p class="empty">Sin personal.</p>';return;}d.innerHTML=nombres.map(function(n,i){return '<div class="iitem"><div class="iitem-info">'+n+'</div><button class="del-btn" onclick="delNombre('+i+')">🗑</button></div>';}).join('');}
@@ -8594,7 +8628,7 @@ function calcCumplimientoSemanaPersona(nombre){
     if(esFeriado(diaSem))continue;
     Object.values(tareas||{}).forEach(function(t){
       if(t.nombre!==nombre||t.dia!==diaSem)return;
-      if(!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
+      if(!medibleTarea(t.tipo)||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
       asig++;
       if(verificarCumplimiento(t.tipo,fechaD,t).cumplido)cumpl++;
     });
@@ -14431,7 +14465,7 @@ function calcCumplimientoEquipoMes(mes){
     var fechaD=mes+'-'+('0'+d).slice(-2);
     var diaSem=diaDeFecha(fechaD);
     Object.values(tareas||{}).forEach(function(t){
-      if(t.dia!==diaSem||!TIPOS_MEDIBLES[t.tipo]||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
+      if(t.dia!==diaSem||!medibleTarea(t.tipo)||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
       asig++;
       if(verificarCumplimiento(t.tipo,fechaD,t).cumplido)cumpl++;
     });
@@ -17728,6 +17762,14 @@ function verificarCumplimiento(tipo,fecha,tarea){
   return {cumplido:false,detalle:'—'};
 }
 
+// ¿La tarea cuenta para el cumplimiento? Tipos base medibles + roles personalizados (ronda, etc.). sinRonda=true la excluye de los recordatorios (la ronda se cierra sola al terminar su ventana).
+function medibleTarea(tipo,sinRonda){
+  if(TIPOS_MEDIBLES[tipo])return true;
+  var r=rolesTecnicos&&rolesTecnicos[tipo];
+  if(!r||!r.nombre)return false;
+  if(sinRonda&&r.tipoRegistro==='ronda')return false;
+  return true;
+}
 function nombreRol(tipo){
   if(ROLES_TECNICOS_BASE[tipo])return ROLES_TECNICOS_BASE[tipo].emoji+' '+ROLES_TECNICOS_BASE[tipo].label;
   if(rolesTecnicos&&rolesTecnicos[tipo])return rolesTecnicos[tipo].emoji+' '+rolesTecnicos[tipo].nombre;
@@ -18084,7 +18126,7 @@ function calcCumplimientoMesPersona(nombre,mes){
     var diaSem=diaDeFecha(fechaD);
     Object.values(tareas||{}).forEach(function(t){
       if(t.nombre!==nombre||t.dia!==diaSem)return;
-      if(!TIPOS_MEDIBLES[t.tipo])return;
+      if(!medibleTarea(t.tipo))return;
       if(TIPOS_SEMANALES[t.tipo])return;
       asig++;
       if(verificarCumplimiento(t.tipo,fechaD,t).cumplido)cumpl++;
