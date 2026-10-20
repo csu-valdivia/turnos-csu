@@ -5319,6 +5319,8 @@ function verificarProximoCumpleanos(personaActual){
   sedeRef('cumpleanos').once('value',function(s){
     var todos=s.val()||{};
     var hoy=new Date(hoyStr()+'T12:00:00');
+    var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    var DIA=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
     var candidatos=[];
     Object.entries(todos).forEach(function(e){
       var nombre=e[0].replace(/_/g,' ');
@@ -5331,31 +5333,25 @@ function verificarProximoCumpleanos(personaActual){
       if(prox<hoy)prox=new Date(hoy.getFullYear()+1,mm-1,dd,12,0,0);
       var dias=Math.round((prox-hoy)/(1000*60*60*24));
       var genero=(typeof val==='object'&&val.genero)?val.genero:'F';
-      if(dias===7||dias===3||dias===2)candidatos.push({nombre:nombre,dias:dias,genero:genero});
+      // Aviso todos los días de la semana previa (1 a 7 días antes); una vez al día por persona
+      if(dias>=1&&dias<=7)candidatos.push({nombre:nombre,dias:dias,genero:genero,fechaTxt:DIA[prox.getDay()]+' '+dd+' de '+MES[mm-1]});
     });
-    if(!candidatos.length)return;
-    candidatos.forEach(function(c){
-      var lsKey='tcsu_proxCump_'+S+'_'+hoyStr()+'_'+c.nombre.replace(/\s/g,'_')+'_'+c.dias;
-      if(sessionStorage.getItem(lsKey))return;
-      sessionStorage.setItem(lsKey,'1');
-      mostrarAvisoProximoCumple(c.nombre,c.dias,c.genero);
+    candidatos.sort(function(a,b){return a.dias-b.dias;});
+    var cola=candidatos.filter(function(c){
+      var lsKey='proxCump_'+S+'_'+hoyStr()+'_'+c.nombre.replace(/\s/g,'_');
+      try{if(localStorage.getItem(lsKey))return false;localStorage.setItem(lsKey,'1');}catch(e){if(sessionStorage.getItem(lsKey))return false;sessionStorage.setItem(lsKey,'1');}
+      return true;
     });
+    if(!cola.length)return;
+    function sig(){
+      var c=cola.shift();if(!c)return;
+      if(document.getElementById('cumpleanosOverlay')){cola.unshift(c);setTimeout(sig,2500);return;} // no pisar el saludo del día
+      _cumpleCallback=cola.length?function(){setTimeout(sig,300);}:null;
+      mostrarCumpleanos([{nombre:c.nombre,genero:c.genero}],c.dias,c.fechaTxt);
+    }
+    sig();
   });
 }
-function mostrarAvisoProximoCumple(nombre,dias,genero){
-  var m=document.createElement('div');
-  m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.9);z-index:9650;display:flex;align-items:center;justify-content:center;padding:20px';
-  var texto=dias===7?'¡En una semana!':(dias+' días');
-  m.innerHTML='<div style="background:linear-gradient(135deg,#831843,#be185d);border-radius:20px;padding:24px 24px 20px;max-width:360px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(190,24,93,.4)">'+
-    '<div style="width:130px;height:130px;margin:0 auto 8px">'+svgAvatarBienvenida(genero||'F')+'</div>'+
-    '<div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:6px">'+texto+' es el cumpleaños de</div>'+
-    '<div style="font-size:20px;font-weight:900;color:#fbcfe8;margin-bottom:14px">'+esc(nombre)+' 🎂</div>'+
-    '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:18px">¡No lo olvides! Prepárale un lindo saludo cuando llegue el día 🎉</div>'+
-    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:12px;padding:10px 28px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">¡Anotado!</button>'+
-  '</div>';
-  document.body.appendChild(m);
-}
-
 function verificarCumpleanos(){
   var hoy=hoyStr().substring(5); // MM-DD
   sedeRef('cumpleanos').once('value',function(s){
@@ -7633,12 +7629,42 @@ document.getElementById('addBibBtn').addEventListener('click',function(){
 
 // ── FICHAS OBLIGATORIAS ──
 // ¿Puede el equipo clínico responder preguntas ahora? Según SU turno real asignado hoy (bloques), L-V únicamente.
+// Apertura de la evaluación (en minutos) para quien tiene ronda de apertura hoy: se abre 30 min después de iniciada su ronda para no interferir.
+// T2 de Esterilización/Rayos: lun–mar 10:30 · mié–vie 11:30. T1 (resto de unidades con ronda): vie 08:30 · sáb 09:30. Sin ronda → null (regla normal).
+function evalAperturaRonda(nombre,fecha){
+  if(!nombre)return null;
+  var f=fecha||hoyStr(),dia=diaDeDate(f),g=new Date(f+'T12:00:00').getDay(),res=[];
+  Object.values(tareas||{}).forEach(function(t){
+    if(!t||t.nombre!==nombre||t.dia!==dia)return;
+    var r=rolesTecnicos&&rolesTecnicos[t.tipo];if(!r||r.tipoRegistro!=='ronda')return;
+    var u=rondaUnidadDeSector(t.sector);if(!u)return;
+    if(u==='est_lavado'||u==='rayos_t2'){if(g===1||g===2)res.push(630);else if(g>=3&&g<=5)res.push(690);}
+    else if(u==='disp1_t2'||u==='disp2_t2'){/* dispensario T2: sin cambio */}
+    else{if(g===5)res.push(510);else if(g===6)res.push(570);}
+  });
+  return res.length?Math.min.apply(null,res):null;
+}
+// Con la app abierta: al llegar la hora de apertura de la evaluación (30 min tras su ronda) se lanza sola, una vez al día.
+setInterval(function(){
+  try{
+    if(!curNombre||!W)return;
+    var av=document.getElementById('appView');if(!av||av.style.display==='none')return;
+    var ap=evalAperturaRonda(curNombre);if(ap==null)return;
+    var d=new Date(),m=d.getHours()*60+d.getMinutes();
+    if(m<ap||m>ap+2)return;
+    var k='evalApertura_'+hoyStr()+'_'+curNombre;
+    if(window[k])return;window[k]=1;
+    verificarFichasPendientes();
+  }catch(e){}
+},30000);
 function ventanaPreguntasClinico(nombre){
   var dow=new Date().getDay();
-  if(dow===0||dow===6)return false; // sin preguntas fin de semana, para no generar diferencias
+  var ap=evalAperturaRonda(nombre);
+  if(dow===0)return false;
+  if(dow===6&&ap==null)return false; // sin preguntas fin de semana, salvo quien tiene ronda de apertura el sábado
   var diaHoy=diaDeDate(hoyStr());
   var misBloques=Object.values(bloques||{}).filter(function(b){return b.nombre===nombre&&b.dia===diaHoy&&!b.libre&&b.horario;});
-  if(!misBloques.length)return true; // sin turno asignado hoy: no se restringe (evita bloquear roles sin bloque horario)
+  if(!misBloques.length)return ap==null||(new Date().getHours()*60+new Date().getMinutes())>=ap; // sin turno asignado hoy: no se restringe (evita bloquear roles sin bloque horario)
   var inicios=[],fines=[];
   misBloques.forEach(function(b){
     var p=b.horario.split('–');
@@ -7647,6 +7673,7 @@ function ventanaPreguntasClinico(nombre){
   });
   if(!inicios.length||!fines.length)return true;
   var minIni=Math.min.apply(null,inicios),maxFin=Math.max.apply(null,fines);
+  if(ap!=null)minIni=Math.max(minIni,ap);
   var ahora=new Date();var m=ahora.getHours()*60+ahora.getMinutes();
   return m>=minIni&&m<=maxFin;
 }
@@ -7695,7 +7722,7 @@ function fichasObligatoriasPendientes(nombre){
   });
 }
 
-function dentroHorarioEvaluacion(){
+function dentroHorarioEvaluacion(nombre){
   // Solo disponible Lun-Vie de 08:00 a 20:00
   // Además: no antes del 2026-07-06 08:00 (apertura nueva semana con nuevo protocolo)
   var ahora=new Date();
@@ -7703,8 +7730,8 @@ function dentroHorarioEvaluacion(){
   if(ahora<APERTURA)return false;
   var diaSemana=ahora.getDay(); // 0=Dom,1=Lun,2=Mar,3=Mié,4=Jue,5=Vie,6=Sáb
   var hora=ahora.getHours()*60+ahora.getMinutes();
-  var diasValidos=[1,2,3,4,5]; // Lun,Mar,Mié,Jue,Vie
-  if(diasValidos.indexOf(diaSemana)===-1)return false;
+  var diasValidos=[1,2,3,4,5]; // Lun,Mar,Mié,Jue,Vie (sábado solo para quien tiene ronda de apertura ese día)
+  if(diasValidos.indexOf(diaSemana)===-1&&!(diaSemana===6&&nombre&&evalAperturaRonda(nombre)!=null))return false;
   if(hora<480)return false;  // antes de 08:00
   if(hora>=1200)return false; // desde 20:00
   return true;
@@ -7758,7 +7785,7 @@ function supervisionActivaParaPersona(nombre){
 function verificarFichasPendientes(){
   if(!curNombre)return false;
   if(curNombre.trim().toLowerCase()==='patricio baeza')return false;
-  if(!dentroHorarioEvaluacion())return false;
+  if(!dentroHorarioEvaluacion(curNombre))return false;
   // Si está en inducción, verificar la bienvenida y no evaluar
   if(estaEnInduccion(curNombre)){
     verificarBienvenidaInduccion();
@@ -8417,7 +8444,19 @@ function svgCaricatura(genero){
   }
 }
 
-function mostrarCumpleanos(nombres){
+// Letras grandes tipo cartoon. Nathaly: «VERY GOOD!!!!» · resto: «FELIZ CUMPLE!» el día, «¡CASI CUMPLE!» en los días previos.
+function cumpleLetrasHtml(nombre,antes){
+  var cols=['#f97316','#facc15','#22c55e','#38bdf8','#a78bfa','#f472b6'];
+  function pal(t,sz,i0){return t.split('').map(function(ch,i){
+    var c=cols[(i+i0)%cols.length],rot=((i*7+i0*3)%9)-4;
+    return '<span style="display:inline-block;font-size:'+sz+'px;font-weight:900;font-family:\'Arial Rounded MT Bold\',\'Chalkboard SE\',\'Comic Sans MS\',Impact,sans-serif;color:'+c+';-webkit-text-stroke:'+Math.round(sz/9)+'px #1e1b4b;paint-order:stroke fill;text-shadow:0 '+Math.round(sz/10)+'px 0 #1e1b4b,0 '+Math.round(sz/6)+'px 10px rgba(0,0,0,.45);transform:rotate('+rot+'deg);line-height:1">'+ch+'</span>';}).join('');}
+  var l1,l2,sz=50;
+  if(/^nathaly/i.test(nombre)){l1='VERY';l2='GOOD!!!!';sz=52;}
+  else if(antes){l1='¡CASI';l2='CUMPLE!';}
+  else{l1='FELIZ';l2='CUMPLE!';}
+  return '<div style="margin:6px 0 2px">'+pal(l1,sz,0)+'</div><div style="margin:0 0 6px">'+pal(l2,sz,3)+'</div>';
+}
+function mostrarCumpleanos(nombres,diasAntes,fechaTxt){
   var existing=document.getElementById('cumpleanosOverlay');
   if(existing)existing.remove();
 
@@ -8436,10 +8475,24 @@ function mostrarCumpleanos(nombres){
   var nombre1=Array.isArray(nombres)?nombres[0].nombre||nombres[0]:nombres;
   var genero1=Array.isArray(nombres)&&nombres[0].genero?nombres[0].genero:'F';
   var nombresStr=Array.isArray(nombres)?nombres.map(function(n){return n.nombre||n;}).join(' y '):nombres;
+  var unico=!Array.isArray(nombres)||nombres.length===1;
+  var antes=(diasAntes||0)>0;
+  var cuerpo;
+  if(unico){
+    cuerpo=(antes?'<div style="font-size:15px;font-weight:800;color:#fde68a;margin-bottom:2px">🎂 Esta semana está de cumpleaños</div>':'')+
+      cumpleLetrasHtml(nombre1,antes)+
+      '<div style="font-size:21px;font-weight:900;color:#fff;margin-top:4px;line-height:1.25">'+(antes?'':'¡Feliz cumpleaños!<br>')+esc(String(nombre1))+(/^constanza/i.test(nombre1)?' 🩺':' 🎉')+(antes&&fechaTxt?'<br><span style="font-size:15px;font-weight:700">'+fechaTxt+'</span>':'')+'</div>';
+  }else{
+    cuerpo='<div style="font-size:22px;font-weight:900;color:#fff;line-height:1.2">¡Feliz cumpleaños<br>'+nombresStr+'! 🎉</div>';
+  }
   msg.innerHTML=svgCaricatura(genero1)+
-    '<p style="font-size:22px;font-weight:900;color:#fff;margin:10px 0 6px;line-height:1.2">¡Feliz cumpleaños<br>'+nombresStr+'! 🎉</p>'+
-    '<p style="font-size:14px;color:rgba(255,255,255,.7);margin-bottom:20px;line-height:1.5">Tu equipo CSU Valdivia<br>te desea un día increíble 💙</p>'+
-    '<button onclick="cerrarCumpleanos()" style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;padding:12px 32px;border-radius:50px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">¡Muchas gracias! 🎊</button>';
+    '<p style="margin:10px 0 6px">'+cuerpo+'</p>'+
+    '<p style="font-size:14px;color:rgba(255,255,255,.7);margin-bottom:20px;line-height:1.5">'+(antes?(diasAntes===1?'¡Es mañana!':'Faltan '+diasAntes+' días')+' · prepárale un lindo saludo 💙':'Tu equipo CSU Valdivia<br>te desea un día increíble 💙')+'</p>'+
+    '<button onclick="cerrarCumpleanos()" style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;padding:12px 32px;border-radius:50px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">'+(antes?'¡Entendido! 🎈':'¡Muchas gracias! 🎊')+'</button>';
+  if(unico&&/^constanza/i.test(nombre1)){
+    var sv=msg.querySelector('svg');
+    if(sv)sv.insertAdjacentHTML('beforeend','<g transform="translate(52,-6)"><path d="M6 30 Q4 6 28 4 Q52 6 50 30 Z" fill="#fff" stroke="#cbd5e1" stroke-width="1.5"/><rect x="22" y="9" width="12" height="4" fill="#ef4444"/><rect x="26" y="5" width="4" height="12" fill="#ef4444"/></g>');
+  }
   overlay.appendChild(msg);
   document.body.appendChild(overlay);
 
