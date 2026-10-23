@@ -798,6 +798,12 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="ilist" id="semanasAdminList"></div>
           </div>
 
+          <div class="asec" style="border-color:rgba(37,99,235,.35)">
+            <p class="asec-title" style="color:#93c5fd">📊 Tablero de cumplimiento</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Quién se conectó, respondió y cumplió sus tareas esta semana, más la tendencia. Para mostrar al equipo.</p>
+            <button class="btn-add" onclick="abrirTableroCumpl(false)" style="background:linear-gradient(135deg,#2563eb,#7c3aed)">📊 Abrir tablero</button>
+          </div>
+
           <div class="asec" style="border-color:rgba(16,185,129,.2)">
             <p class="asec-title" style="color:#6ee7b7">📲 Registro de accesos</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Quién abrió la app y a qué hora.</p>
@@ -4986,6 +4992,7 @@ window.forzarActualizar=function(){
 function showApp(){
   document.getElementById('emailView').style.display='none';
   pedirWhatsAppSiFalta(curNombre);
+  if(curNombre&&curNombre.trim().toLowerCase()!=='patricio baeza')registrarAccesoArea(curNombre,'clinico'); // conexión del equipo clínico (1 vez por sesión)
   renderAnuncios(); // curNombre ya está definido: filtra descartados por persona
   // NOTA: registro de marcaje de horario DESACTIVADO por requerimiento legal (control de jornada
   // no puede llevarse en esta app). No se registra hora de entrada ni se guarda en 'asistencia'.
@@ -11780,6 +11787,144 @@ function diasIngresoEnRango(accesos,nombre,area,fechas){
   });
   return {diasDistintos:Object.keys(dias).length,totalAperturas:total};
 }
+// ══════════ TABLERO DE CUMPLIMIENTO DEL EQUIPO (conexión · respuesta · tareas) ══════════
+// Semana activa: por persona, días conectado, días que respondió la evaluación y % de tareas medibles. Estado según días respondidos
+// sobre los días con turno ya transcurridos: ≥80% «Al día» (4–5 de 5) · 40–79% «Irregular» (2–3 de 5) · <40% «Sin actividad» (0–1 de 5).
+// Abajo, tendencia de las últimas semanas (respuestas del equipo actual sobre días hábiles).
+var TCUMPL_COL={ok:'#22c55e',mid:'#f59e0b',bad:'#ef4444',na:'#64748b'};
+function tcFechasSemana(sem){
+  var out=[];if(!sem||!sem.ini||!sem.fin)return out;
+  var d0=new Date(sem.ini+'T12:00:00'),d1=new Date(sem.fin+'T12:00:00');
+  for(var d=new Date(d0);d<=d1;d.setDate(d.getDate()+1))out.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));
+  return out;
+}
+function tcRespuestasPorPersona(){
+  var m={};
+  Object.values(ranking||{}).forEach(function(ent){
+    if(!ent||typeof ent!=='object')return;
+    Object.values(ent).forEach(function(e){
+      if(!e||!e.nombre)return;
+      var f=e.fechaStr||'';
+      if(!f&&e.fecha){var d=new Date(e.fecha);f=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+      if(!f)return;
+      var k=e.nombre.trim().toLowerCase();
+      (m[k]=m[k]||{})[f]=true;
+    });
+  });
+  return m;
+}
+function tcTareasSemana(nombre,fechas,hoy){
+  var asig=0,cumpl=0;
+  fechas.forEach(function(f){
+    if(f>hoy)return;
+    var dia=diaDeDate(f);if(esFeriado(dia))return;
+    Object.values(tareas||{}).forEach(function(t){
+      if(!t||t.nombre!==nombre||t.dia!==dia)return;
+      if(!medibleTarea(t.tipo)||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;
+      asig++;if(verificarCumplimiento(t.tipo,f,t).cumplido)cumpl++;
+    });
+  });
+  return {asig:asig,cumpl:cumpl};
+}
+function tcCalcular(soloInternos,accesos){
+  var sem=semanas[W]||{},fechas=tcFechasSemana(sem),hoy=hoyStr();
+  var resp=tcRespuestasPorPersona();
+  var primerReg=primerAccesoArea(accesos,'clinico');
+  var conex={};
+  Object.values(accesos||{}).forEach(function(a){if(a&&a.area==='clinico'&&a.nombre&&a.fecha)(conex[a.nombre.trim().toLowerCase()]=conex[a.nombre.trim().toLowerCase()]||{})[a.fecha]=true;});
+  var filas=nombresConTurnoSemanaFiltrado(!!soloInternos).map(function(n){
+    var k=n.trim().toLowerCase(),rs=resp[k]||{},cx=conex[k]||{};
+    var diasTurno={};
+    Object.values(bloques||{}).forEach(function(b){if(b&&b.nombre===n&&!b.libre)diasTurno[b.dia]=true;});
+    // Días esperados: L–V con turno, no feriados, ya transcurridos (hoy solo cuenta si ya respondió)
+    var esp=[];
+    fechas.forEach(function(f){
+      var g=new Date(f+'T12:00:00').getDay();if(g===0||g===6)return;
+      var dia=diaDeDate(f);if(!diasTurno[dia]||esFeriado(dia))return;
+      if(f<hoy||(f===hoy&&rs[f]))esp.push(f);
+    });
+    var nResp=esp.filter(function(f){return rs[f];}).length;
+    var espCx=esp.filter(function(f){return primerReg&&f>=primerReg;});
+    var nCx=espCx.filter(function(f){return cx[f];}).length;
+    var ta=tcTareasSemana(n,fechas,hoy);
+    var ratio=esp.length?nResp/esp.length:null;
+    var estado=ratio==null?'na':(ratio>=0.8?'ok':(ratio>=0.4?'mid':'bad'));
+    return {nombre:n,esp:esp.length,resp:nResp,cx:nCx,espCx:espCx.length,asig:ta.asig,cumpl:ta.cumpl,ratio:ratio,estado:estado};
+  });
+  filas.sort(function(a,b){return (b.ratio==null?-1:b.ratio)-(a.ratio==null?-1:a.ratio)||a.nombre.localeCompare(b.nombre);});
+  // Tendencia: últimas 6 semanas con el equipo actual (aprox.: L–V transcurridos, sin descontar feriados de semanas pasadas)
+  var miembros=nombresConTurnoSemanaFiltrado(!!soloInternos).map(function(n){return n.trim().toLowerCase();});
+  var lista=Object.keys(semanas||{}).map(function(id){return semanas[id];}).filter(function(s){return s&&s.ini&&s.ini<=hoy;}).sort(function(a,b){return a.ini<b.ini?-1:1;}).slice(-6);
+  var tend=lista.map(function(s){
+    var fs=tcFechasSemana(s).filter(function(f){var g=new Date(f+'T12:00:00').getDay();return g>=1&&g<=5&&f<hoy;});
+    var tot=fs.length*miembros.length,ok=0;
+    miembros.forEach(function(k){fs.forEach(function(f){if(resp[k]&&resp[k][f])ok++;});});
+    return {nombre:(s.nombre||s.ini).replace(/^Semana\s*/i,''),pct:tot?Math.round(ok/tot*100):null};
+  }).filter(function(t){return t.pct!=null;});
+  var tot=filas.reduce(function(a,f){a.esp+=f.esp;a.resp+=f.resp;a.asig+=f.asig;a.cumpl+=f.cumpl;if(f.espCx>0&&f.cx===0)a.sinCx++;if(f.estado==='ok')a.ok++;return a;},{esp:0,resp:0,asig:0,cumpl:0,sinCx:0,ok:0});
+  return {sem:sem,filas:filas,tend:tend,tot:tot,primerReg:primerReg,hoy:hoy};
+}
+window.abrirTableroCumpl=function(soloInternos){
+  var ov=document.getElementById('tcOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='tcOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1426;z-index:9400;overflow-y:auto;padding:14px';
+  ov.innerHTML='<div style="max-width:720px;margin:0 auto;color:#fff;font-size:13px">Cargando…</div>';
+  document.body.appendChild(ov);
+  sedeRef('accesos').once('value').then(function(s){
+    var D=tcCalcular(soloInternos,s.val()||{});window._tcData=D;window._tcInt=!!soloInternos;
+    var pct=function(a,b){return b?Math.round(a/b*100):null;};
+    var pEq=pct(D.tot.resp,D.tot.esp),pTa=pct(D.tot.cumpl,D.tot.asig);
+    var kp=function(v,l,c){return '<div style="flex:1;min-width:130px;background:rgba(255,255,255,.06);border-radius:12px;padding:10px 12px"><div style="font-size:24px;font-weight:900;color:'+c+'">'+v+'</div><div style="font-size:11px;color:rgba(255,255,255,.55)">'+l+'</div></div>';};
+    var pt=function(f){return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+TCUMPL_COL[f.estado]+';margin-right:6px"></span>';};
+    var lbl={ok:'Al día',mid:'Irregular',bad:'Sin actividad',na:'Sin turnos aún'};
+    var filas=D.filas.map(function(f){
+      var cx=f.espCx?(f.cx+'/'+f.espCx):'—';
+      var ta=f.asig?(Math.round(f.cumpl/f.asig*100)+'%'):'—';
+      return '<tr style="border-top:1px solid rgba(255,255,255,.07)"><td style="padding:8px 4px;font-weight:700">'+esc(f.nombre)+'</td><td style="text-align:center">'+cx+'</td><td style="text-align:center">'+(f.esp?f.resp+'/'+f.esp:'—')+'</td><td style="text-align:center">'+ta+'</td><td style="padding-left:6px;white-space:nowrap">'+pt(f)+lbl[f.estado]+'</td></tr>';
+    }).join('');
+    var tend=D.tend.length?D.tend.map(function(t){
+      var c=t.pct>=80?TCUMPL_COL.ok:(t.pct>=40?TCUMPL_COL.mid:TCUMPL_COL.bad);
+      return '<div style="flex:1;text-align:center"><div style="height:90px;display:flex;align-items:flex-end;justify-content:center"><div style="width:70%;height:'+Math.max(4,t.pct*0.9)+'px;background:'+c+';border-radius:6px 6px 0 0"></div></div><div style="font-weight:800;margin-top:3px">'+t.pct+'%</div><div style="font-size:9px;color:rgba(255,255,255,.45)">'+esc(t.nombre)+'</div></div>';
+    }).join(''):'<p style="font-size:11px;color:rgba(255,255,255,.4)">Aún no hay semanas anteriores con datos.</p>';
+    var nota=D.primerReg?'El registro de conexiones del equipo clínico parte el '+D.primerReg+'; antes de esa fecha aparece «—».':'Las conexiones del equipo clínico recién empiezan a registrarse con esta versión; por ahora aparecerán «—».';
+    ov.firstChild.innerHTML=
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><div style="font-size:18px;font-weight:900">📊 Cumplimiento del equipo'+(soloInternos?' · Internos':'')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5)">'+esc((D.sem.nombre||((D.sem.ini||'')+' al '+(D.sem.fin||''))))+' · al '+D.hoy+'</div></div><button onclick="document.getElementById(\'tcOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+kp(D.tot.ok+' de '+D.filas.length,'están al día',TCUMPL_COL.ok)+kp(pEq==null?'—':pEq+'%','respuestas sobre días con turno',pEq==null?'#fff':(pEq>=80?TCUMPL_COL.ok:pEq>=40?TCUMPL_COL.mid:TCUMPL_COL.bad))+kp(D.tot.sinCx,'sin ninguna conexión',D.tot.sinCx?TCUMPL_COL.bad:TCUMPL_COL.ok)+kp(D.tot.asig?(D.tot.asig-D.tot.cumpl):'—','tareas sin cumplir'+(pTa==null?'':' ('+pTa+'% cumplido)'),'#fff')+'</div>'+
+      '<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:10px 12px;margin-bottom:12px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr style="color:rgba(255,255,255,.45);font-size:10px;text-transform:uppercase"><th style="text-align:left;padding:4px">Persona</th><th>Se conectó</th><th>Respondió</th><th>Tareas</th><th style="text-align:left;padding-left:6px">Estado</th></tr>'+(filas||'<tr><td colspan="5" style="padding:10px;color:rgba(255,255,255,.4)">Sin personas con turno esta semana.</td></tr>')+'</table></div>'+
+      '<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:10px 12px;margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);margin-bottom:6px;text-transform:uppercase">Tendencia · respuestas del equipo por semana</div><div style="display:flex;gap:4px">'+tend+'</div></div>'+
+      '<p style="font-size:10px;color:rgba(255,255,255,.4);line-height:1.5;margin-bottom:12px">Estado: Al día = respondió ≥80% de sus días con turno (4–5 de 5) · Irregular 40–79% (2–3 de 5) · Sin actividad &lt;40% (0–1 de 5). «Respondió» cuenta la evaluación diaria; «Tareas» solo las medibles. '+nota+' La tendencia usa el equipo actual y días hábiles (no descuenta feriados de semanas pasadas).</p>'+
+      '<div style="display:flex;gap:8px"><button onclick="descargarTableroCumpl()" style="flex:1;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:12px;padding:12px;font-family:inherit;font-weight:700;cursor:pointer">🖼️ Descargar imagen</button><button onclick="abrirTableroCumpl('+(soloInternos?'false':'true')+')" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:12px;padding:12px 14px;font-family:inherit;cursor:pointer">'+(soloInternos?'Ver equipo':'Ver internos')+'</button></div>';
+  });
+};
+window.descargarTableroCumpl=function(){
+  var D=window._tcData;if(!D)return;
+  var W0=1080,rowH=54,top=250,n=Math.max(1,D.filas.length),H=top+60+n*rowH+380;
+  var c=document.createElement('canvas');c.width=W0;c.height=H;var x=c.getContext('2d');
+  x.fillStyle='#0b1426';x.fillRect(0,0,W0,H);x.fillStyle='#fff';x.font='bold 44px Arial';
+  x.fillText('Cumplimiento del equipo'+(window._tcInt?' · Internos':''),40,70);
+  x.font='24px Arial';x.fillStyle='rgba(255,255,255,.6)';x.fillText((D.sem.nombre||((D.sem.ini||'')+' al '+(D.sem.fin||'')))+'  ·  al '+D.hoy,40,108);
+  var pEq=D.tot.esp?Math.round(D.tot.resp/D.tot.esp*100):null;
+  var k=[[D.tot.ok+' de '+D.filas.length,'están al día',TCUMPL_COL.ok],[pEq==null?'—':pEq+'%','respuestas s/ días con turno',pEq==null?'#fff':(pEq>=80?TCUMPL_COL.ok:pEq>=40?TCUMPL_COL.mid:TCUMPL_COL.bad)],[''+D.tot.sinCx,'sin ninguna conexión',D.tot.sinCx?TCUMPL_COL.bad:TCUMPL_COL.ok],[D.tot.asig?''+(D.tot.asig-D.tot.cumpl):'—','tareas sin cumplir','#fff']];
+  k.forEach(function(e,i){var bx=40+i*255;x.fillStyle='rgba(255,255,255,.07)';x.fillRect(bx,135,240,95);x.fillStyle=e[2];x.font='bold 42px Arial';x.fillText(e[0],bx+14,188);x.fillStyle='rgba(255,255,255,.6)';x.font='17px Arial';x.fillText(e[1],bx+14,216);});
+  var y=top+10;x.fillStyle='rgba(255,255,255,.45)';x.font='bold 18px Arial';
+  x.fillText('PERSONA',60,y+22);x.fillText('CONECTÓ',470,y+22);x.fillText('RESPONDIÓ',600,y+22);x.fillText('TAREAS',760,y+22);x.fillText('ESTADO',880,y+22);
+  var lbl={ok:'Al día',mid:'Irregular',bad:'Sin actividad',na:'Sin turnos'};
+  D.filas.forEach(function(f,i){
+    var ry=y+40+i*rowH;x.fillStyle=i%2?'rgba(255,255,255,.03)':'rgba(255,255,255,.06)';x.fillRect(40,ry,W0-80,rowH-4);
+    x.fillStyle='#fff';x.font='bold 24px Arial';x.fillText(f.nombre,60,ry+33);
+    x.font='24px Arial';x.fillText(f.espCx?f.cx+'/'+f.espCx:'—',490,ry+33);x.fillText(f.esp?f.resp+'/'+f.esp:'—',630,ry+33);x.fillText(f.asig?Math.round(f.cumpl/f.asig*100)+'%':'—',775,ry+33);
+    x.fillStyle=TCUMPL_COL[f.estado];x.beginPath();x.arc(890,ry+24,9,0,7);x.fill();x.fillStyle='#fff';x.font='22px Arial';x.fillText(lbl[f.estado],910,ry+32);
+  });
+  var ty=y+40+n*rowH+40;x.fillStyle='rgba(255,255,255,.55)';x.font='bold 18px Arial';x.fillText('TENDENCIA · RESPUESTAS DEL EQUIPO POR SEMANA',60,ty);
+  var bw=W0-120,cw=D.tend.length?bw/D.tend.length:bw;
+  D.tend.forEach(function(t,i){var h=Math.max(4,t.pct*2.2),bx=60+i*cw+cw*.2,by=ty+30+220-h;x.fillStyle=t.pct>=80?TCUMPL_COL.ok:(t.pct>=40?TCUMPL_COL.mid:TCUMPL_COL.bad);x.fillRect(bx,by,cw*.6,h);x.fillStyle='#fff';x.font='bold 24px Arial';x.textAlign='center';x.fillText(t.pct+'%',bx+cw*.3,by-8);x.fillStyle='rgba(255,255,255,.55)';x.font='16px Arial';x.fillText(t.nombre.slice(0,14),bx+cw*.3,ty+270);x.textAlign='left';});
+  x.fillStyle='rgba(255,255,255,.35)';x.font='15px Arial';x.fillText('GESTHOR · CSU Valdivia',40,H-20);
+  c.toBlob(function(b){
+    var file=null;try{file=new File([b],'cumplimiento-equipo-'+D.hoy+'.png',{type:'image/png'});}catch(e){}
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Cumplimiento del equipo'}).catch(function(){});return;}
+    var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cumplimiento-equipo-'+D.hoy+'.png';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},500);
+  });
+};
 function primerAccesoArea(accesos,area){
   var min=null;
   Object.values(accesos||{}).forEach(function(a){if(a&&a.area===area&&a.fecha&&(!min||a.fecha<min))min=a.fecha;});
