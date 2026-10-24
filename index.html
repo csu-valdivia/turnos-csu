@@ -11648,7 +11648,7 @@ function lidRender(ov){
   ov.innerHTML=h;
 }
 function lidDiagHtml(){
-  var h=lidCard('<div style="font-weight:800;font-size:15px;color:#fff">Antes de empezar: evaluación diagnóstica</div><div style="font-size:12.5px;color:rgba(255,255,255,.7);margin-top:6px;line-height:1.5">Son 12 situaciones del trabajo diario y una autoevaluación breve (unos 20 minutos). No hay respuestas «de nota»: elige lo que de verdad harías. Con tus resultados se arma tu plan de 8 semanas. No es una evaluación de desempeño.</div>');
+  var h=lidCard('<div style="font-weight:800;font-size:15px;color:#fff">Antes de empezar: evaluación diagnóstica</div><div style="font-size:12.5px;color:rgba(255,255,255,.7);margin-top:6px;line-height:1.5">Son 12 situaciones del trabajo diario y una autoevaluación breve (unos 20 minutos). Elige lo que de verdad harías, no lo que crees que corresponde. Con tus resultados se arma tu plan de 8 semanas. No es una evaluación de desempeño.</div>');
   LID_ESC.forEach(function(it,ix){
     var perm=lidPermutar(ix);
     h+=lidCard('<div style="font-size:11px;color:#93c5fd;font-weight:700">Situación '+(ix+1)+' de 12</div><div style="font-size:13.5px;color:#fff;margin:4px 0 8px;line-height:1.45">'+esc(it.q)+'</div>'+
