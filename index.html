@@ -767,6 +767,12 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
             <div class="saved" id="avisoSaved">✓ Publicado</div>
           </div>
 
+          <div class="asec" style="border-color:rgba(34,197,94,.35)">
+            <p class="asec-title" style="color:#86efac">⚡ Programa de liderazgo (enfermeros)</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px">Estado: <b id="lidAdStatus">INACTIVO</b>. Interruptor, modo prueba y seguimiento.</p>
+            <button class="btn-add" onclick="abrirLiderazgoAdmin()" style="background:linear-gradient(135deg,#16a34a,#22c55e)">Abrir programa</button>
+          </div>
+
           <div class="asec">
             <p class="asec-title">💡 Sugerencias del equipo</p>
             <button class="btn-add" id="sugAdminBtn" onclick="abrirSugerenciasAdmin()" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">Ver sugerencias</button>
@@ -2028,7 +2034,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // Antes estaba fuera de esta lista, así que una vacación pedida hoy para noviembre quedaba guardada
 // dentro de la semana activa de HOY (la única que existía en ese momento) y por eso aparecía como si
 // fuera de la semana actual — y lo mismo le pasaría a cualquier permiso pedido para semanas futuras.
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin','solicitudesMediaJornada'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','liderazgo','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin','solicitudesMediaJornada'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -2153,6 +2159,7 @@ function attach(){
   on('ponderaActiva',function(v){ponderaActiva=(v===true);var ind=document.getElementById('ponderaIndicador');if(ind)renderPonderaIndicador();renderRanking();});
   on('borradores',function(v){borradoresData=v||{};});
   on('rolPersona',function(v){rolPersona=v||{};if(document.getElementById('clasifPersonalList'))renderClasifPersonal();});
+  on('liderazgo',function(v){liderazgo=v||{};lidActualizarBtn();if(curNombre)renderMisTurnos(curNombre);lidRefrescar();});
   on('planEstudio',function(v){planEstudio=v||{};if(document.getElementById('planEstudioList'))renderPlanEstudio();});
   on('rankPesos',function(v){if(v&&typeof v==='object'&&typeof v.conocimiento==='number'){RANK_PESOS={cumplimiento:(v.cumplimiento||0),conocimiento:(v.conocimiento||0),supervision:(v.supervision||0)};renderRanking();}});
   on('factorIndirecto',function(v){if(typeof v==='number'&&v>=0&&v<=2)factorIndirecto=v;if(document.getElementById('rendimientoContenido')&&Object.keys(dotacionData).length)renderRendimiento();});
@@ -6028,6 +6035,7 @@ function renderMisTurnos(nombre){
     return;
   }
   html+=bannerPremiosPersona(nombre);
+  html+=lidTarjetaMisTurnos(nombre);
   // Botón de gestión de subbodega — SOLO si la jefatura activó hoy a esta persona en Custodia diaria
   // (no es un encargado fijo; se prende y apaga cada día, por jornada AM/PM).
   var misCustodias=misCustodiasHoy(nombre);
@@ -11432,6 +11440,327 @@ window.exportarDashboardImagen=function(){
     }catch(err){aviso.textContent='Error: '+err.message;setTimeout(function(){aviso.remove();},3000);}
   }).catch(function(err){aviso.textContent='Error al capturar';setTimeout(function(){aviso.remove();},3000);});
 };
+
+// ══════════════ PROGRAMA DE LIDERAZGO (solo enfermeros) ══════════════
+// Datos (sede): liderazgo={activo:bool, enfermeros:{k:true}, check:{i:true}, personas:{k:{diag:{resp,auto,fecha,ts}, sem:{n:{fecha,a,b,c,lect}}, auto4, auto8, metas:{id:true}, coment:{push:{ts,txt}}}}}
+// Interruptor general: solo se cambia desde Admin. Inactivo = el enfermero no ve nada.
+var liderazgo={};var _lidSim=null,_lidCtx=null,_lidSel='';
+var LID_COMP=[
+  {id:'cla',n:'Claridad',d:'Delegar con claridad',meta:'Delegar una tarea con plazo, resultado esperado y verificación al cierre.'},
+  {id:'fra',n:'Franqueza',d:'Corregir con respeto y precisión',meta:'Hacer una corrección real, en privado, con el modelo SBI.'},
+  {id:'esc',n:'Escucha',d:'Escuchar al equipo',meta:'Pedir opinión a dos TENS sobre cómo delegas y no responder en el momento.'},
+  {id:'coo',n:'Coordinación',d:'Coordinar el turno y las entregas',meta:'Hacer una entrega de turno con pendientes explícitos y confirmar que fue entendida.'},
+  {id:'eje',n:'Ejemplo',d:'Ser coherente con lo que exiges',meta:'Cumplir a la vista del equipo un compromiso propio y reconocer uno que falles.'},
+  {id:'aut',n:'Autoconciencia',d:'Distinguir intención de impacto',meta:'Pedir una observación sincera a un TENS de confianza y agradecerla.'}
+];
+// Semanas 1-6: una competencia por semana. Semanas 7-8: refuerzo de las dos competencias más bajas del diagnóstico.
+var LID_APR={
+  cla:{t:'Delegar bien',x:'Delegar no es repartir tareas: es dejar claro qué, para cuándo, qué significa «terminado» y cómo se verifica. Si falta alguno de los cuatro, el resultado queda a la suerte.',p:'Delega una tarea a un TENS con los cuatro elementos (qué, cuándo, cómo se ve terminada, cómo se verifica) y revísala al cierre del turno.'},
+  fra:{t:'Corregir con el modelo SBI',x:'SBI (Center for Creative Leadership): describe la Situación, la Conducta observable (no la intención) y el Impacto que tuvo. Después pregunta cómo lo ve la otra persona.',p:'Haz una corrección real, en privado y con SBI, y pregunta cómo lo ve la otra persona.'},
+  esc:{t:'Seguridad psicológica',x:'Amy Edmondson: un equipo habla cuando siente que no será castigado ni humillado por opinar. Quien lidera la construye con preguntas abiertas y reaccionando bien a lo incómodo.',p:'Haz una pregunta abierta al equipo («¿qué te ha costado?»), escucha sin responder y pide a dos TENS su opinión sobre cómo delegas.'},
+  coo:{t:'Entregas de turno claras',x:'SBAR (Institute for Healthcare Improvement): Situación, Antecedentes, Evaluación y Recomendación. Una entrega clara deja los pendientes con nombre, plazo y confirmación de que se entendió.',p:'Haz una entrega de turno con pendientes explícitos (quién, qué, para cuándo) y pide a quien recibe que los repita.'},
+  eje:{t:'Coherencia',x:'El equipo imita lo que haces, no lo que dices. Un enfermero que exige lo que él mismo no cumple pierde autoridad más rápido que por cualquier error clínico.',p:'Elige un compromiso tuyo (registro, hora, ficha), cúmplelo a la vista del equipo y, si fallas en otro, dilo en voz alta.'},
+  aut:{t:'Intención e impacto',x:'Lo que quisiste decir y lo que el otro escuchó pueden ser distintos. Liderar incluye hacerse cargo del efecto que tienes, no solo de tu intención.',p:'Pide a un TENS de confianza una observación sincera sobre algo que haces y le complica el trabajo; agradécela sin justificarte.'}
+};
+// Escenarios: op[0] es la mejor (3 pts) … op[3] la peor (0 pts). El orden se mezcla al mostrar.
+var LID_ESC=[
+ {id:'e1',comp:'cla',q:'Debes pedir a un TENS que reponga los insumos de la sala de procedimientos antes del cierre. ¿Qué haces?',op:[
+  'Le digo qué reponer, hasta qué hora, y le pido que me avise al terminar para revisarlo juntos.',
+  'Le explico bien qué reponer y que debe quedar listo antes de que cierre la sala de procedimientos.',
+  'Le pido que «vea los insumos» y confío en que sabrá lo que falta para dejarlo todo en orden.',
+  'Lo repongo yo para evitar errores, aunque me retrase en mis propias tareas del turno de hoy.']},
+ {id:'e2',comp:'cla',q:'Delegaste el registro de temperaturas a una TENS nueva. Al día siguiente está incompleto.',op:[
+  'Reviso con ella qué entendió, aclaro lo que faltó y acordamos cuándo lo vuelvo a revisar.',
+  'Le recuerdo que debe completarlo bien y lo dejo anotado para que no se repita la próxima vez.',
+  'Lo completo yo sin decirle nada para no incomodarla y espero que aprenda viendo cómo se hace.',
+  'Comento al resto del equipo que ella no sabe hacer bien su tarea para que la apoyen entre todos.']},
+ {id:'e3',comp:'fra',q:'Un TENS con más años que tú omite el lavado de manos entre pacientes. Nadie más lo notó.',op:[
+  'Lo converso aparte: describo lo que vi, el riesgo que implica y le pregunto cómo lo ve él.',
+  'Hago un comentario general al grupo sobre la importancia del lavado de manos, sin nombrar a nadie.',
+  'No digo nada porque tiene más experiencia que yo y probablemente sabe lo que hace en su práctica.',
+  'Se lo corrijo en voz alta frente al paciente para que quede claro que no se puede repetir.']},
+ {id:'e4',comp:'fra',q:'Una TENS llega atrasada por tercera vez en la semana y tu jefatura aún no lo sabe.',op:[
+  'Hablo con ella en privado, con las fechas a la vista, y acordamos qué cambia antes de escalarlo.',
+  'Le pregunto si le ocurre algo y le pido que procure llegar a la hora, dejando el tema ahí por ahora.',
+  'Espero a ver si se arregla sola la situación para no generar un conflicto dentro del equipo.',
+  'Aviso directamente a la jefatura sin hablar antes con ella, para dejar constancia de lo ocurrido.']},
+ {id:'e5',comp:'esc',q:'Una TENS te dice que las instrucciones cambian según quién esté de turno. Sientes que es injusto.',op:[
+  'Le pido ejemplos concretos, resumo lo que entendí y le pregunto qué le ayudaría a trabajar mejor.',
+  'La escucho y le explico por qué en el trabajo clínico las instrucciones a veces tienen que cambiar.',
+  'Le digo que lo tendré en cuenta, pero sigo trabajando igual porque hay pacientes esperando atención.',
+  'Le respondo que yo doy siempre las mismas instrucciones y que el problema es de interpretación suya.']},
+ {id:'e6',comp:'esc',q:'En la reunión de turno nadie opina cuando preguntas si hay dudas.',op:[
+  'Cambio la pregunta por una abierta («¿qué te ha costado hoy?») y espero en silencio unos segundos.',
+  'Pregunto a cada persona, una por una, si tiene dudas, partiendo por quien suele hablar más.',
+  'Interpreto el silencio como acuerdo y sigo con la reunión para aprovechar el tiempo que tenemos.',
+  'Les digo que, si nadie tiene dudas ahora, después no se aceptarán reclamos sobre cómo hacer la tarea.']},
+ {id:'e7',comp:'coo',q:'Hay dos pacientes esperando procedimiento y un solo TENS libre. Tú estás ocupado con otro paciente.',op:[
+  'Defino el orden según urgencia, se lo comunico al TENS y aviso a ambos pacientes cuánto demorará.',
+  'Dejo que el TENS decida a quién atiende primero y le digo que me llame si surge algún problema.',
+  'Termino lo mío y después veo cómo resolverlo con calma, ya que el TENS sabe lo que tiene que hacer.',
+  'Le pido al TENS que atienda a ambos al mismo tiempo para que ninguno espere más de lo necesario.']},
+ {id:'e8',comp:'coo',q:'Vas a entregar el turno y recuerdas un pendiente que no dejaste anotado.',op:[
+  'Se lo digo a quien recibe antes de irme, lo dejo anotado en el registro y le dejo mi contacto.',
+  'Le escribo un mensaje más tarde, al llegar a mi casa, para avisarle del pendiente que quedó.',
+  'Espero que quien recibe el turno lo note por sí mismo al revisar la sala y los registros del día.',
+  'No lo menciono; si de verdad fuera importante, alguien ya lo habría dicho antes del cambio de turno.']},
+ {id:'e9',comp:'eje',q:'Estás atrasado en tu propio registro de ronda y el equipo te ve conversando en el pasillo.',op:[
+  'Hago el registro ahora y, si el atraso afectó al equipo, lo reconozco sin justificarme.',
+  'Hago el registro y dejo que el equipo saque sus propias conclusiones sobre lo que ocurrió.',
+  'Le pido a un TENS que lo complete, porque yo tengo responsabilidades más importantes que atender ahora.',
+  'Lo dejo para después; como soy enfermero, nadie va a pedirme cuentas por ese registro en particular.']},
+ {id:'e10',comp:'eje',q:'Pides a los TENS completar las fichas del día, pero tú todavía no respondes las tuyas.',op:[
+  'Respondo primero las mías y luego recuerdo a los demás el plazo, que es el mismo que tengo yo.',
+  'Recuerdo el plazo a todos y respondo la mía apenas termine la atención que tengo en este momento.',
+  'Pido que las completen y me excuso diciendo que mi carga de trabajo es mayor que la de ellos.',
+  'No reviso mis fichas porque nadie las controla en mi caso, solo se controlan las de los TENS.']},
+ {id:'e11',comp:'aut',q:'Un TENS te dice que tu corrección sonó brusca. Tú crees que solo fuiste directo.',op:[
+  'Le pido que me cuente qué escuchó, reconozco el efecto que tuvo y ajusto el tono con que corrijo.',
+  'Le explico cuál era mi intención y le digo que intentaré cuidar más el tono la próxima vez.',
+  'Le respondo que a veces hay que ser firme y que el equipo debería acostumbrarse a mi forma de hablar.',
+  'Me molesto y dejo de darle correcciones directas a esa persona para evitar un conflicto con ella.']},
+ {id:'e12',comp:'aut',q:'Cometes un error en una dosis indicada y un TENS lo detecta antes de administrarla.',op:[
+  'Le agradezco, corrijo, informo el error según el protocolo y lo converso con el equipo para aprender.',
+  'Le agradezco y corrijo la indicación; no creo necesario informar porque el error no llegó al paciente.',
+  'Corrijo en silencio y le pido discreción para no perder autoridad delante del resto del equipo.',
+  'Le digo que no se meta en indicaciones que no son de su competencia como técnico en enfermería.']}
+];
+function lidActualizarBtn(){var b=document.getElementById('lidAdStatus');if(b)b.textContent=lidActivo()?'ACTIVO':'INACTIVO';}
+function lidKey(n){return String(n||'').replace(/\s/g,'_');}
+function lidActivo(){return !!(liderazgo&&liderazgo.activo===true);}
+// Lista efectiva: marcados por la jefatura Y vigentes en la dotación clínica (si alguien sale del equipo, deja de contar solo)
+function lidEnfermeros(){
+  var sel=(liderazgo&&liderazgo.enfermeros)||{};
+  return personalDotacion().filter(function(n){return sel[lidKey(n)];});
+}
+function lidVisiblePara(nombre){return lidActivo()&&!!nombre&&lidEnfermeros().indexOf(nombre)>=0;}
+function lidP(nombre){
+  if(_lidCtx&&_lidCtx.sim)return _lidSim;
+  return ((liderazgo&&liderazgo.personas)||{})[lidKey(nombre)]||{};
+}
+function lidSet(nombre,path,val){
+  if(_lidCtx&&_lidCtx.sim){
+    var p=path.split('/'),o=_lidSim;
+    for(var i=0;i<p.length-1;i++){if(!o[p[i]]||typeof o[p[i]]!=='object')o[p[i]]={};o=o[p[i]];}
+    o[p[p.length-1]]=val;lidRefrescar();return Promise.resolve();
+  }
+  return sedeRef('liderazgo/personas/'+lidKey(nombre)+'/'+path).set(val);
+}
+function lidPuntajes(d){
+  var o={};LID_COMP.forEach(function(c){o[c.id]=0;});
+  LID_ESC.forEach(function(it){var r=d&&d.resp?d.resp[it.id]:null;if(r!=null&&r>=0)o[it.comp]+=3-r;});
+  return o;
+}
+function lidNivel(p){return p>=6?'Sólido':p>=4?'Competente':p>=2?'En desarrollo':'Inicial';}
+function lidFoco(d){
+  var pu=lidPuntajes(d),au=(d&&d.auto)||{};
+  return LID_COMP.map(function(c,i){return {id:c.id,i:i,p:pu[c.id],g:(au[c.id]||0)-pu[c.id]/6*5};})
+    .sort(function(a,b){return a.p-b.p||b.g-a.g||a.i-b.i;}).slice(0,2).map(function(x){return x.id;});
+}
+function lidCompDeSemana(P,n){
+  if(n<=6)return LID_COMP[n-1].id;
+  var f=lidFoco(P.diag);return f[n-7]||LID_COMP[n-7].id;
+}
+function lidHechas(P){var s=(P&&P.sem)||{},n=0;for(var i=1;i<=8;i++){if(s[i]&&s[i].a)n=i;else break;}return n;}
+function lidDeTurnoHoy(nombre){
+  if(_lidCtx&&_lidCtx.sim)return _lidSim._turno!==false;
+  var dia=diaDeDate(hoyStr());
+  return Object.values(bloques||{}).some(function(b){return b&&b.nombre===nombre&&b.dia===dia&&!b.libre&&!b.sinAtencion;});
+}
+function lidUltimaFecha(P){var s=(P&&P.sem)||{},f='';for(var i=1;i<=8;i++){if(s[i]&&s[i].fecha&&s[i].fecha>f)f=s[i].fecha;}return f;}
+function lidSemanaLibre(P){var f=lidUltimaFecha(P);return !f||lunesDeSemana(f)<lunesDeSemana(hoyStr());}
+function lidPermutar(i){var o=[[1,2,3],[2,3,1],[3,1,2]][Math.floor(i/4)%3].slice();o.splice(i%4,0,0);return o;}
+
+// ── Pantalla del enfermero ──
+window.abrirLiderazgo=function(sim){
+  var nombre=curNombre;
+  if(sim){_lidSim={_turno:true};_lidCtx={nombre:'Prueba',sim:true};}
+  else{if(!lidVisiblePara(nombre)){alert('Este módulo no está disponible por ahora.');return;}_lidCtx={nombre:nombre,sim:false};}
+  var ov=document.getElementById('lidOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='lidOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  document.body.appendChild(ov);lidRefrescar();
+};
+window.cerrarLiderazgo=function(){var o=document.getElementById('lidOv');if(o)o.remove();_lidCtx=null;};
+function lidRefrescar(){
+  var ov=document.getElementById('lidOv');if(ov&&_lidCtx)lidRender(ov);
+  var ad=document.getElementById('lidAdOv');if(ad)lidAdRender();
+}
+function lidCard(inner,extra){return '<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:14px;margin-bottom:10px;'+(extra||'')+'">'+inner+'</div>';}
+function lidBtn(txt,fn,color){return '<button onclick="'+fn+'" style="background:'+(color||'#2563eb')+';color:#fff;border:none;border-radius:9px;padding:9px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">'+txt+'</button>';}
+function lidRender(ov){
+  var nombre=_lidCtx.nombre,P=lidP(nombre),sim=_lidCtx.sim;
+  var h='<div style="max-width:560px;margin:0 auto">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:17px;font-weight:800;color:#86efac">🌱 Mi plan de liderazgo</span><button onclick="cerrarLiderazgo()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div>';
+  if(sim){
+    h+='<div style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.5);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#fcd34d"><b>🧪 MODO PRUEBA</b> · lo que hagas aquí no se guarda ni lo ve nadie. Sirve para practicar el recorrido completo.'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+
+    '<button onclick="lidSimReiniciar()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer">↺ Reiniciar</button>'+
+    '<button onclick="lidSimSemana()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer">⏭ Pasar a la semana siguiente</button>'+
+    '<button onclick="lidSimTurno()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer">Hoy estoy de turno: '+(P._turno!==false?'Sí':'No')+'</button>'+
+    '<button onclick="lidSimDiag()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer">⚡ Diagnóstico al azar</button></div></div>';
+  }
+  if(!P.diag){ov.innerHTML=h+lidDiagHtml()+'</div>';return;}
+  var hechas=lidHechas(P),foco=lidFoco(P.diag),pu=lidPuntajes(P.diag);
+  var n=Math.min(hechas+1,8),fin=hechas>=8;
+  // Línea de semanas
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff">'+(fin?'🎉 Programa completado':'Semana '+n+' de 8')+'</div>'+
+    '<div style="height:8px;background:rgba(255,255,255,.12);border-radius:6px;overflow:hidden;margin:8px 0"><div style="height:100%;width:'+Math.round(hechas/8*100)+'%;background:linear-gradient(90deg,#22c55e,#16a34a)"></div></div>'+
+    '<div style="display:flex;gap:5px">'+[1,2,3,4,5,6,7,8].map(function(i){var ok=i<=hechas,hoy=i===n&&!fin;return '<div style="flex:1;text-align:center;border-radius:9px;padding:7px 0;font-size:11px;background:'+(ok?'#16a34a':'rgba(255,255,255,.08)')+';'+(hoy?'outline:2px solid #f59e0b;':'')+'">'+(ok?i+' ✓':i)+'</div>';}).join('')+'</div>');
+  // Comentario del DT
+  var cm=P.coment?Object.keys(P.coment).map(function(k){return P.coment[k];}).sort(function(a,b){return (b.ts||0)-(a.ts||0);})[0]:null;
+  if(cm&&cm.txt)h+=lidCard('<b style="font-size:12px;color:#c4b5fd">Comentario del Director Técnico</b><div style="font-size:13px;color:#fff;margin-top:4px;white-space:pre-wrap">'+esc(cm.txt)+'</div>','background:rgba(124,58,237,.18);');
+  if(!fin){
+    var cid=lidCompDeSemana(P,n),comp=LID_COMP.filter(function(c){return c.id===cid;})[0],ap=LID_APR[cid];
+    var s=(P.sem&&P.sem[n])||{};
+    h+=lidCard('<div style="font-size:11px;color:#fcd34d;font-weight:700;margin-bottom:2px">'+(n>6?'REFUERZO · ':'')+comp.n.toUpperCase()+'</div><div style="font-weight:800;font-size:14px;color:#fff">1 · Aprende (10 min): '+esc(ap.t)+'</div><div style="font-size:13px;color:rgba(255,255,255,.75);margin:6px 0;line-height:1.5">'+esc(ap.x)+'</div>'+
+      '<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:#fff;cursor:pointer"><input type="checkbox" '+(s.lect?'checked':'')+' onchange="lidMarcarLectura(this.checked,'+n+')"> 📖 Ya leí esto <span style="color:rgba(255,255,255,.45)">· lecturas con enlace, próximamente</span></label>','border-left:4px solid #f59e0b;');
+    var turno=lidDeTurnoHoy(nombre),libre=lidSemanaLibre(P);
+    var estado='';
+    if(!libre)estado='<div style="background:rgba(34,197,94,.12);border-radius:9px;padding:8px 10px;font-size:12px;color:#86efac">✓ Ya registraste un ejercicio esta semana. El siguiente se habilita el lunes.</div>';
+    else if(!turno)estado='<div style="background:rgba(148,163,184,.12);border-radius:9px;padding:8px 10px;font-size:12px;color:#cbd5e1">Hoy no estás de turno. El ejercicio se registra un día que tengas turno.</div>';
+    var form='';
+    if(libre&&turno){
+      form='<div style="font-size:12px;color:rgba(255,255,255,.6);margin:6px 0 4px">Cuando lo hagas hoy, cuéntalo en tres líneas:</div>'+
+      ['¿Qué hiciste?','¿Qué pasó?','¿Qué cambiarías la próxima vez?'].map(function(t,i){return '<div style="font-size:11px;color:#93c5fd;margin-top:6px">'+(i+1)+'. '+t+'</div><textarea id="lidR'+i+'" rows="2" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;padding:8px;font-family:inherit;font-size:13px"></textarea>';}).join('')+'<div style="margin-top:8px">'+lidBtn('Guardar registro','lidGuardarReg('+n+')')+'</div>';
+    }
+    h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff">2 · Practica (una vez esta semana, en un turno tuyo)</div><div style="font-size:13px;color:rgba(255,255,255,.8);margin:6px 0;line-height:1.5">'+esc(ap.p)+'</div>'+estado+form,'border-left:4px solid #f59e0b;');
+  }
+  // Mi avance
+  var au0=P.diag.auto||{},au4=P.auto4||null,au8=P.auto8||null,ult=au8||au4||au0;
+  var filas=LID_COMP.map(function(c){
+    var a=au0[c.id]||0,b=ult[c.id]||0,esF=foco.indexOf(c.id)>=0;
+    return '<div style="display:flex;align-items:center;gap:8px;margin:7px 0;font-size:12px"><span style="width:96px;color:#fff">'+c.n+(esF?' <span title="Foco personal" style="color:#fcd34d">★</span>':'')+'</span><div style="flex:1;height:8px;background:rgba(255,255,255,.12);border-radius:6px;position:relative"><div style="position:absolute;height:8px;border-radius:6px;background:rgba(148,163,184,.8);width:'+a*20+'%"></div>'+(ult!==au0?'<div style="position:absolute;height:8px;border-radius:6px;background:#22c55e;opacity:.8;width:'+b*20+'%"></div>':'')+'</div><span style="width:34px;text-align:right;color:rgba(255,255,255,.6)">'+(ult!==au0?a+'→'+b:a)+'</span></div>';
+  }).join('');
+  var pend=(hechas>=4&&!au4)?'4':(hechas>=8&&!au8)?'8':'';
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff">Mi autoevaluación (1 a 5)</div><div style="font-size:11px;color:rgba(255,255,255,.5)">Gris: al inicio'+(ult!==au0?' · Verde: ahora':'')+' · ★ foco personal</div>'+filas+
+    (pend?'<div style="margin-top:6px">'+lidBtn('Actualizar mi autoevaluación (semana '+pend+')','lidAbrirAuto(\''+pend+'\')','#7c3aed')+'</div>':'')+
+    '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:8px">Esto es una guía para tu desarrollo, no una nota de desempeño.</div>');
+  // Diagnóstico
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff">Mi diagnóstico</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">Resultado de las situaciones (0 a 6 por competencia)</div>'+
+    LID_COMP.map(function(c){var p=pu[c.id];return '<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-top:1px solid rgba(255,255,255,.06);color:#fff"><span>'+c.n+(foco.indexOf(c.id)>=0?' <span style="color:#fcd34d">★</span>':'')+'</span><span style="color:rgba(255,255,255,.65)">'+p+'/6 · '+lidNivel(p)+'</span></div>';}).join('')+
+    (function(){var br=LID_COMP.filter(function(c){return (P.diag.auto[c.id]||0)>=4&&pu[c.id]<=3;}).map(function(c){return c.n;});return br.length?'<div style="font-size:11.5px;color:#fcd34d;margin-top:8px">Ojo: en '+br.join(', ')+' te evaluaste alto, pero las situaciones mostraron espacio para crecer. Es un buen tema para conversar.</div>':'';})());
+  // Metas
+  var metas=P.metas||{};
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff;margin-bottom:6px">Mis metas</div>'+foco.map(function(id){var c=LID_COMP.filter(function(x){return x.id===id;})[0];return '<label style="display:flex;gap:8px;font-size:12.5px;color:#fff;margin:6px 0;cursor:pointer"><input type="checkbox" '+(metas[id]?'checked':'')+' onchange="lidMeta(\''+id+'\',this.checked)"><span><b>'+c.n+':</b> '+esc(c.meta)+'</span></label>';}).join('')+
+    '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:6px">Revisión con el Director Técnico en las semanas 4 y 8.</div>');
+  h+='<div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin:10px 0 24px">Lo que registras lo ven solo tú y el Director Técnico.</div></div>';
+  ov.innerHTML=h;
+}
+function lidDiagHtml(){
+  var h=lidCard('<div style="font-weight:800;font-size:15px;color:#fff">Antes de empezar: evaluación diagnóstica</div><div style="font-size:12.5px;color:rgba(255,255,255,.7);margin-top:6px;line-height:1.5">Son 12 situaciones del trabajo diario y una autoevaluación breve (unos 20 minutos). No hay respuestas «de nota»: elige lo que de verdad harías. Con tus resultados se arma tu plan de 8 semanas. No es una evaluación de desempeño.</div>');
+  LID_ESC.forEach(function(it,ix){
+    var perm=lidPermutar(ix);
+    h+=lidCard('<div style="font-size:11px;color:#93c5fd;font-weight:700">Situación '+(ix+1)+' de 12</div><div style="font-size:13.5px;color:#fff;margin:4px 0 8px;line-height:1.45">'+esc(it.q)+'</div>'+
+      perm.map(function(oi,pos){return '<label style="display:flex;gap:8px;align-items:flex-start;background:rgba(255,255,255,.05);border-radius:9px;padding:9px 10px;margin-bottom:6px;font-size:13px;color:#fff;cursor:pointer"><input type="radio" name="ld_'+it.id+'" value="'+oi+'" style="margin-top:2px"><span>'+esc(it.op[oi])+'</span></label>';}).join(''));
+  });
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff;margin-bottom:6px">Mi autoevaluación</div><div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-bottom:6px">1 = me cuesta mucho · 5 = lo hago con soltura</div>'+lidAutoHtml());
+  h+='<div style="margin-bottom:30px">'+lidBtn('Enviar evaluación','lidEnviarDiag()','#16a34a')+'</div>';
+  return h;
+}
+function lidAutoHtml(){
+  return LID_COMP.map(function(c){return '<div style="margin:8px 0"><div style="font-size:12.5px;color:#fff;margin-bottom:4px"><b>'+c.n+':</b> '+c.d+'</div><div style="display:flex;gap:6px">'+[1,2,3,4,5].map(function(v){return '<label style="flex:1;text-align:center;background:rgba(255,255,255,.07);border-radius:8px;padding:7px 0;font-size:13px;color:#fff;cursor:pointer"><input type="radio" name="la_'+c.id+'" value="'+v+'" style="display:block;margin:0 auto 2px">'+v+'</label>';}).join('')+'</div></div>';}).join('');
+}
+function lidLeerAuto(){
+  var o={},ok=true;
+  LID_COMP.forEach(function(c){var r=document.querySelector('input[name="la_'+c.id+'"]:checked');if(r)o[c.id]=+r.value;else ok=false;});
+  return ok?o:null;
+}
+window.lidEnviarDiag=function(){
+  var resp={},ok=true;
+  LID_ESC.forEach(function(it){var r=document.querySelector('input[name="ld_'+it.id+'"]:checked');if(r)resp[it.id]=+r.value;else ok=false;});
+  var au=lidLeerAuto();
+  if(!ok||!au){alert('Faltan respuestas. Responde las 12 situaciones y las 6 competencias de la autoevaluación.');return;}
+  lidSet(_lidCtx.nombre,'diag',{resp:resp,auto:au,fecha:hoyStr(),ts:Date.now()}).then(function(){var o=document.getElementById('lidOv');if(o)o.scrollTop=0;});
+};
+window.lidAbrirAuto=function(w){
+  var ov=document.getElementById('lidOv');if(!ov)return;
+  ov.innerHTML='<div style="max-width:560px;margin:0 auto">'+lidCard('<div style="font-weight:800;font-size:15px;color:#fff">Autoevaluación · semana '+w+'</div><div style="font-size:12px;color:rgba(255,255,255,.6);margin:4px 0 6px">Respóndela pensando en cómo estás hoy.</div>'+lidAutoHtml())+
+  '<div style="display:flex;gap:8px;margin-bottom:30px">'+lidBtn('Guardar','lidGuardarAuto(\''+w+'\')','#16a34a')+lidBtn('Cancelar','lidRefrescar()','#475569')+'</div></div>';
+  ov.scrollTop=0;
+};
+window.lidGuardarAuto=function(w){var au=lidLeerAuto();if(!au){alert('Responde las 6 competencias.');return;}lidSet(_lidCtx.nombre,'auto'+w,au);};
+window.lidMarcarLectura=function(v,n){lidSet(_lidCtx.nombre,'sem/'+n+'/lect',!!v);};
+window.lidMeta=function(id,v){lidSet(_lidCtx.nombre,'metas/'+id,!!v);};
+window.lidGuardarReg=function(n){
+  var t=[0,1,2].map(function(i){return (document.getElementById('lidR'+i).value||'').trim();});
+  if(t.some(function(x){return x.length<5;})){alert('Completa las tres líneas (una frase corta en cada una).');return;}
+  var P=lidP(_lidCtx.nombre),s=(P.sem&&P.sem[n])||{};
+  lidSet(_lidCtx.nombre,'sem/'+n,{fecha:hoyStr(),a:t[0],b:t[1],c:t[2],lect:!!s.lect,ts:Date.now()});
+};
+window.lidSimReiniciar=function(){_lidSim={_turno:true};lidRefrescar();};
+window.lidSimTurno=function(){_lidSim._turno=(_lidSim._turno===false);lidRefrescar();};
+window.lidSimSemana=function(){var f=lidUltimaFecha(_lidSim);if(!f)return;var s=_lidSim.sem;Object.keys(s).forEach(function(k){if(s[k]&&s[k].fecha)s[k].fecha=sumarDias(s[k].fecha,-7);});lidRefrescar();};
+window.lidSimDiag=function(){var r={};LID_ESC.forEach(function(it,i){r[it.id]=(i*5+1)%4;});var a={};LID_COMP.forEach(function(c,i){a[c.id]=[4,3,4,2,5,3][i];});_lidSim.diag={resp:r,auto:a,fecha:hoyStr(),ts:Date.now()};lidRefrescar();};
+
+// ── Admin ──
+var LID_CHECK=['Rol de supervisión explicado al equipo','Gerencia informada','Escenarios de la evaluación probados','Enlaces de lectura cargados','Canal de retroalimentación de los TENS definido'];
+window.abrirLiderazgoAdmin=function(){
+  var ov=document.getElementById('lidAdOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='lidAdOv';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px';
+  document.body.appendChild(ov);lidAdRender();
+};
+function lidAdRender(){
+  var ov=document.getElementById('lidAdOv');if(!ov)return;
+  var act=lidActivo(),sel=(liderazgo&&liderazgo.enfermeros)||{},chk=(liderazgo&&liderazgo.check)||{};
+  var cl=personalDotacion().filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';});
+  var h='<div style="max-width:640px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:17px;font-weight:800;color:#86efac">⚡ Programa de liderazgo</span><button onclick="document.getElementById(\'lidAdOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div>';
+  h+=lidCard('<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div style="font-weight:800;font-size:14px;color:#fff">Interruptor general</div><div style="font-size:11.5px;color:rgba(255,255,255,.55)">Solo tú lo cambias. Estado actual: <b style="color:'+(act?'#86efac':'#cbd5e1')+'">'+(act?'ACTIVO':'INACTIVO')+'</b></div></div>'+
+    '<div style="display:inline-flex;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.2);font-size:12px;font-weight:700"><span onclick="lidToggle(false)" style="padding:8px 14px;cursor:pointer;background:'+(!act?'#475569':'transparent')+';color:'+(!act?'#fff':'rgba(255,255,255,.5)')+'">Inactivo</span><span onclick="lidToggle(true)" style="padding:8px 14px;cursor:pointer;background:'+(act?'#16a34a':'transparent')+';color:'+(act?'#fff':'rgba(255,255,255,.5)')+'">Activo</span></div></div>'+
+    '<div style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:8px;font-size:11.5px;color:#fcd34d;margin-top:10px">Mientras esté <b>inactivo</b>, los enfermeros no ven nada del módulo. Al activarlo, cada enfermero marcado verá primero la evaluación diagnóstica.</div>');
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff;margin-bottom:2px">Enfermeros del programa</div><div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-bottom:6px">Marca solo a los enfermeros. Si llega uno nuevo, márcalo; si alguien sale del equipo, deja de contar solo. Los TENS no deben marcarse.</div>'+
+    (cl.length?cl.map(function(n,i){return '<label style="display:flex;gap:8px;align-items:center;font-size:13px;color:#fff;padding:6px 0;border-top:1px solid rgba(255,255,255,.06);cursor:pointer"><input type="checkbox" '+(sel[lidKey(n)]?'checked':'')+' onchange="lidMarcarEnf('+i+',this.checked)"> '+esc(n)+'</label>';}).join(''):'<div style="font-size:12px;color:rgba(255,255,255,.5)">Sin personal clínico cargado.</div>'));
+  window._lidCl=cl;
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff;margin-bottom:4px">Antes de activar</div>'+LID_CHECK.map(function(t,i){return '<label style="display:flex;gap:8px;font-size:12.5px;color:#fff;padding:4px 0;cursor:pointer"><input type="checkbox" '+(chk[i]?'checked':'')+' onchange="lidCheck('+i+',this.checked)"> '+t+'</label>';}).join(''));
+  h+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+lidBtn('🧪 Modo prueba (practicar como enfermero)','document.getElementById(\'lidAdOv\').remove();abrirLiderazgo(true)','#b45309')+'</div>';
+  // Seguimiento
+  var en=lidEnfermeros();
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff;margin-bottom:6px">📈 Seguimiento</div>'+(en.length?'<table style="width:100%;border-collapse:collapse;font-size:12px;color:#fff"><tr style="color:rgba(255,255,255,.45);font-size:10px;text-transform:uppercase"><th style="text-align:left;padding:4px 0">Enfermero</th><th>Diagnóstico</th><th>Semanas</th><th>Esta semana</th><th></th></tr>'+
+    en.map(function(n,i){var P=((liderazgo.personas||{})[lidKey(n)])||{};var hh=lidHechas(P);var sem=[1,2,3,4,5,6,7,8].map(function(k){return k<=hh?'✓':(k===hh+1?'·':'–');}).join(' ');
+      var est=!P.diag?'Sin diagnóstico':hh>=8?'Completo':lidSemanaLibre(P)?'Pendiente':'Registrado';
+      return '<tr style="border-top:1px solid rgba(255,255,255,.07);text-align:center"><td style="text-align:left;padding:7px 0;font-weight:700">'+esc(n)+'</td><td>'+(P.diag?'✓':'—')+'</td><td style="letter-spacing:1px">'+sem+'</td><td>'+est+'</td><td><button onclick="lidAdVer('+i+')" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:5px 9px;cursor:pointer;font-family:inherit">Ver</button></td></tr>';}).join('')+'</table><div style="font-size:10.5px;color:rgba(255,255,255,.4);margin-top:6px">✓ registró · · semana en curso · – aún no corresponde</div>':'<div style="font-size:12px;color:rgba(255,255,255,.5)">Marca enfermeros arriba para ver su avance.</div>'));
+  window._lidEn=en;
+  if(_lidSel){var P2=((liderazgo.personas||{})[lidKey(_lidSel)])||{};
+    if(en.indexOf(_lidSel)>=0)h+=lidAdDetalle(_lidSel,P2);}
+  h+='<div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin:10px 0 24px">Lo ven solo tú y cada enfermero. Sin correos automáticos. Las puntuaciones no son nota de desempeño.</div></div>';
+  var sc=ov.scrollTop;ov.innerHTML=h;ov.scrollTop=sc;
+}
+function lidAdDetalle(n,P){
+  var pu=P.diag?lidPuntajes(P.diag):null,foco=P.diag?lidFoco(P.diag):[];
+  var h='<div style="font-weight:800;font-size:14px;color:#fff">'+esc(n)+'</div>';
+  if(pu)h+='<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin:2px 0 6px">Foco personal: '+foco.map(function(id){return LID_COMP.filter(function(c){return c.id===id;})[0].n;}).join(' y ')+'</div>'+
+    LID_COMP.map(function(c){var au=P.diag.auto[c.id]||0;return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-top:1px solid rgba(255,255,255,.06);color:#fff"><span>'+c.n+'</span><span style="color:rgba(255,255,255,.65)">situaciones '+pu[c.id]+'/6 ('+lidNivel(pu[c.id])+') · autoeval. '+au+'/5</span></div>';}).join('');
+  else h+='<div style="font-size:12px;color:rgba(255,255,255,.5)">Aún no responde el diagnóstico.</div>';
+  var s=P.sem||{};
+  for(var i=1;i<=8;i++){
+    if(s[i]&&s[i].a)h+='<div style="background:rgba(255,255,255,.05);border-radius:9px;padding:8px;margin-top:6px;font-size:12px;color:#fff"><b>Sem '+i+'</b> · '+esc(s[i].fecha||'')+(s[i].lect?' · leyó ✓':'')+'<br>1. '+esc(s[i].a)+'<br>2. '+esc(s[i].b)+'<br>3. '+esc(s[i].c)+'</div>';
+  }
+  var cm=P.coment?Object.keys(P.coment).map(function(k){return P.coment[k];}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}):[];
+  h+='<div style="font-size:12px;color:rgba(255,255,255,.6);margin:10px 0 4px">Dejar comentario (lo ve el enfermero)</div><textarea id="lidCom" rows="3" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;padding:8px;font-family:inherit;font-size:13px"></textarea><div style="margin-top:6px">'+lidBtn('Enviar comentario','lidEnviarCom()')+'</div>';
+  if(cm.length)h+='<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:8px">Último: '+esc(cm[0].txt||'')+'</div>';
+  return lidCard(h);
+}
+window.lidAdVer=function(i){_lidSel=window._lidEn[i];lidAdRender();};
+window.lidEnviarCom=function(){var t=(document.getElementById('lidCom').value||'').trim();if(!t||!_lidSel)return;sedeRef('liderazgo/personas/'+lidKey(_lidSel)+'/coment').push({ts:Date.now(),txt:t}).then(function(){var x=document.getElementById('lidCom');if(x)x.value='';});};
+window.lidToggle=function(v){
+  if(v===lidActivo())return;
+  if(v){
+    var chk=(liderazgo&&liderazgo.check)||{},f=LID_CHECK.filter(function(t,i){return !chk[i];});
+    var n=lidEnfermeros().length;
+    if(!n){alert('Marca primero al menos un enfermero del programa.');return;}
+    if(!confirm('¿Activar el programa para '+n+' enfermero(s)?'+(f.length?'\n\nTe falta marcar en la lista:\n- '+f.join('\n- '):'')+'\n\nDesde ahora verán la evaluación diagnóstica al entrar a «Mis turnos».'))return;
+  }else if(!confirm('¿Desactivar el programa? Los enfermeros dejarán de ver el módulo (su avance se conserva).'))return;
+  sedeRef('liderazgo/activo').set(v);
+};
+window.lidMarcarEnf=function(i,v){var n=window._lidCl[i];if(!n)return;(v?sedeRef('liderazgo/enfermeros/'+lidKey(n)).set(true):sedeRef('liderazgo/enfermeros/'+lidKey(n)).remove());};
+window.lidCheck=function(i,v){(v?sedeRef('liderazgo/check/'+i).set(true):sedeRef('liderazgo/check/'+i).remove());};
+function lidTarjetaMisTurnos(nombre){
+  if(!lidVisiblePara(nombre))return '';
+  var P=((liderazgo.personas||{})[lidKey(nombre)])||{};
+  var t=!P.diag?'Responde tu evaluación diagnóstica para comenzar':lidHechas(P)>=8?'Programa completado':'Semana '+Math.min(lidHechas(P)+1,8)+' de 8';
+  return '<button onclick="abrirLiderazgo()" style="display:block;width:100%;text-align:left;background:linear-gradient(135deg,rgba(22,163,74,.2),rgba(34,197,94,.07));border:1px solid rgba(34,197,94,.4);border-radius:12px;padding:12px 14px;margin-bottom:10px;font-family:inherit;cursor:pointer"><div style="font-size:14px;font-weight:800;color:#86efac">🌱 Mi plan de liderazgo</div><div style="font-size:12px;color:rgba(255,255,255,.65);margin-top:2px">'+t+'</div></button>';
+}
 
 // ══════════════ CLASIFICACIÓN DE PERSONAL ══════════════
 // rolPersona[nombre] = 'clinico' | 'interna' | 'direccion'. Por defecto: clinico.
