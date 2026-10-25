@@ -6609,11 +6609,11 @@ function renderMisTurnos(nombre){
     var ordD=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
     if({botiquin_pab:1,control_bio:1,bolso_azul:1}[t.tipo]||(rolesTecnicos[t.tipo]&&(rolesTecnicos[t.tipo].frecuencia==='semanal'||rolesTecnicos[t.tipo].frecuencia==='mensual')))return true;
     if(ROLES_SEMANALES[t.tipo])return t.dia===diaHoyRol;
-    return true;
+    return !t.dia||t.dia===diaHoyRol; // rol diario/ronda: solo el día que le tocó
   });
   // Quitar duplicados por tipo
   var rolesVistos={};
-  misRoles=misRoles.filter(function(t){if(rolesVistos[t.tipo])return false;rolesVistos[t.tipo]=1;return true;});
+  misRoles=misRoles.filter(function(t){var k=t.tipo+'|'+(t.sector||'')+'|'+(t.jornada||'dia');if(rolesVistos[k])return false;rolesVistos[k]=1;return true;});
   if(misRoles.length){
     // Confirmación diaria de lectura de tareas (adopción de la app) — 1 tap, cuenta para el puntaje del día
     var hoyLT=hoyStr();
@@ -6633,7 +6633,7 @@ function renderMisTurnos(nombre){
           return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+dEt+'</span>'+estBadge+'</button>';
         } else {
           var rc=rolesTecnicos[t.tipo];
-          return '<button onclick="abrirRegCustom(\''+t.tipo+'\',\''+esc(t.sector||'').replace(/'/g,'')+'\')" style="'+rowStyle+'"><span style="flex:1">'+esc(rc.emoji)+' '+esc(rc.nombre)+' '+jornadaLabel(t.jornada)+((t.dia&&t.dia!==diaHoyRol&&rc.frecuencia==='semanal')?' <span style="font-size:10px;color:#94a3b8">· asignado '+t.dia+'</span>':'')+'</span>'+estBadge+'</button>';
+          return '<button onclick="abrirRegCustom(\''+t.tipo+'\',\''+esc(t.sector||'').replace(/'/g,'')+'\')" style="'+rowStyle+'"><span style="flex:1">'+esc(rc.emoji)+' '+esc(rc.nombre)+(t.sector?' · '+esc(String(t.sector).replace(/^\S+\s/,'')):'')+' '+jornadaLabel(t.jornada)+((t.dia&&t.dia!==diaHoyRol&&rc.frecuencia==='semanal')?' <span style="font-size:10px;color:#94a3b8">· asignado '+t.dia+'</span>':'')+'</span>'+estBadge+'</button>';
         }
       }).join('')+
       '<button onclick="verTodasMisGraficas()" style="display:block;width:100%;text-align:center;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:9px 12px;margin-top:4px;color:#93c5fd;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600">📊 Ver todas mis gráficas de resultados</button>'+
@@ -12904,6 +12904,14 @@ function navInit(){
 window.abrirAdminDesdeMas=function(){var b=document.getElementById('adminBtn');if(b)b.click();};
 // ── Tarjeta «Mi día» (arriba de Mis turnos) ──
 function miDiaFechaTxt(){var d=new Date();return ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][d.getDay()]+' '+d.getDate()+' de '+['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][d.getMonth()];}
+function miDiaAbrirJs(t){
+  try{
+    if(!t||!t.tipo)return '';
+    if(ROLES_TECNICOS_BASE[t.tipo])return ROLES_TECNICOS_BASE[t.tipo].fn+"('"+t.tipo+"')";
+    if(rolesTecnicos[t.tipo])return "abrirRegCustom('"+t.tipo+"','"+String(t.sector||'').replace(/['"\\<>]/g,'')+"')";
+  }catch(e){}
+  return '';
+}
 function miDiaHtml(nombre){
   try{
     var hoy=hoyStr(),dia=diaDeDate(hoy);
@@ -12926,7 +12934,7 @@ function miDiaHtml(nombre){
         var med=false,cum=false;
         try{med=medibleTarea(t.tipo)&&!TIPOS_SEMANALES[t.tipo]&&!TIPOS_SIN_MEDICION[t.tipo];if(med)cum=verificarCumplimiento(t.tipo,hoy,t).cumplido;}catch(e){}
         if(med){tot++;if(cum)ok++;}
-        return '<div style="display:flex;gap:9px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12.5px;color:#fff"><span style="width:16px;height:16px;border-radius:5px;flex:none;'+(med?(cum?'background:#22c55e;border:2px solid #22c55e':'border:2px solid #64748b'):'border:2px dashed rgba(255,255,255,.25)')+'"></span><span style="'+(cum?'color:#86efac':'')+'">'+esc(String(t.texto).slice(0,70))+'</span></div>';
+        var _op=miDiaAbrirJs(t);return '<div '+(_op?'onclick="'+_op+'" ':'')+'style="'+(_op?'cursor:pointer;':'')+'display:flex;gap:9px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12.5px;color:#fff"><span style="width:16px;height:16px;border-radius:5px;flex:none;'+(med?(cum?'background:#22c55e;border:2px solid #22c55e':'border:2px solid #64748b'):'border:2px dashed rgba(255,255,255,.25)')+'"></span><span style="'+(cum?'color:#86efac':'')+'">'+esc(String(t.texto).replace(/ \(asignación automática\)$/,'').slice(0,70))+'</span>'+(_op?'<span style="margin-left:auto;font-size:11px;color:#93c5fd;white-space:nowrap">'+(cum?'✏️ Ver':'Registrar ›')+'</span>':'')+'</div>';
       }).join('');
       var ring=tot?'<div style="width:50px;height:50px;border-radius:50%;background:conic-gradient(#22c55e 0 '+Math.round(ok/tot*100)+'%,rgba(255,255,255,.12) '+Math.round(ok/tot*100)+'%);display:flex;align-items:center;justify-content:center;flex:none"><div style="width:38px;height:38px;border-radius:50%;background:#0b1220;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">'+ok+'/'+tot+'</div></div>':'';
       h+='<div style="display:flex;align-items:center;gap:12px;margin-top:10px">'+ring+'<div><div style="font-size:13.5px;font-weight:800;color:#fff">Mis tareas de hoy</div><div style="font-size:11px;color:rgba(255,255,255,.5)">'+(tot?(tot-ok?'Te faltan '+(tot-ok):'¡Todo al día!'):'Sin tareas con registro')+'</div></div></div>'+filas;
