@@ -836,6 +836,7 @@ body[data-gxcm="tarjetas"] #gxCmLeg,body[data-gxcm="grilla"] #gxCmLeg,body[data-
 .rd-tag{background:var(--gx-teal);color:#fff;border-radius:99px;padding:1px 8px;font-size:10.5px;font-weight:700;margin-left:6px}
 .rd-r{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-top:4px}.rd-r small{color:var(--gx-slate);white-space:nowrap}.rd-r.on span{font-weight:700;color:#0F766E}.rd-r.gap span{color:#B45309;font-weight:600}
 
+.gxp-add{border:1.5px dashed var(--gx-line);background:transparent;color:#9fb3c4;border-radius:7px;padding:3px 0;font:700 14px Inter,system-ui,sans-serif;cursor:pointer;line-height:1}.gxp-add:hover{border-color:var(--gx-teal);color:var(--gx-teal)}
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
 </style>
 </head>
@@ -9630,45 +9631,107 @@ function renderPropuestaTareas(){
     gxpTareas(hist);
   });
 }
+// Área donde normalmente se hace cada tarea (para ajustarla al turno de la persona)
+var GXP_AREA={autoclave:'Esterilización',temp_ester:'Esterilización',conductividad:'Esterilización',almacen_ester:'Esterilización',inst_recibido:'Esterilización',inst_lavado:'Esterilización',inst_empaque:'Esterilización',inst_secado:'Esterilización',entrega_esteril:'Esterilización',temp_pabellon:'Pabellón',pabellon:'Pabellón',pabellon_asig:'Pabellón',radiografias:'Rayos',dispensario_2:'Dispensario 2'};
+// Cada ronda de apertura pertenece a un área (y a un turno T1/T2 en Esterilización)
+var GXP_RONDA_AREA={sub_dispensario1:['Dispensario 1'],disp1_t2:['Dispensario 1'],sub_dispensario2:['Dispensario 2'],disp2_t2:['Dispensario 2'],est_lavado:['Esterilización','T2'],est_empaque:['Esterilización','T1'],est_autoclave:['Esterilización','T1'],est_entrega:['Esterilización','T1'],sub_pabellon:['Pabellón'],sub_clinica:['Clínica Privada'],sub_rayos:['Rayos'],rayos_t2:['Rayos']};
+function gxpBloquesArea(p,dia,area){return rdBloquesDe(p,dia).filter(function(b){return !area||b.area===area;});}
+function gxpCobertura(p,dia,area){
+  var r={am:false,pm:false};
+  gxpBloquesArea(p,dia,area).forEach(function(b){var x=rdPartes(b.horario);if(x[0]<840&&x[1]>465)r.am=true;if(x[1]>840&&x[0]<1200)r.pm=true;});
+  return r;
+}
+function gxpRondaTipo(){return Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&r.tipoRegistro==='ronda';})[0]||'';}
 function gxpTareas(hist){
-  var cont=document.getElementById('propuestaContenido');
   var sem=semanas[W]||{};
   var equipo=(nombres||[]).map(function(n){return n.nombre||n;}).filter(function(n){return rolDe(n)!=='direccion';});
   var tipos=Object.keys(TIPOS_MEDIBLES).filter(function(t){return !TIPOS_SEMANALES[t];});
+  // roles personalizados diarios (no ronda): también se reparten
+  Object.keys(rolesTecnicos||{}).forEach(function(k){var r=rolesTecnicos[k];if(r&&r.nombre&&r.tipoRegistro!=='ronda'&&(r.frecuencia||'diaria')==='diaria'&&tipos.indexOf(k)<0)tipos.push(k);});
   var DIAS_H=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  if(Object.values(bloques||{}).some(function(b){return b&&b.dia==='Sábado';}))DIAS_H.push('Sábado');
   var perf=gxpPerfilTareas(hist);
   var habs=equipo.map(function(p){return perf.hab[p];}).filter(function(x){return x>0;});
   var habMedia=habs.length?habs.reduce(function(a,b){return a+b;},0)/habs.length:6;
   function hab(p){return perf.hab[p]>0?perf.hab[p]:habMedia;}
   function aff(p,t){return (perf.freq[p]&&perf.freq[p][t])||0;}
-  // jornada habitual por tipo (historial + semana actual)
   var jc={};
   hist.concat([tareas||{}]).forEach(function(tw){Object.values(tw||{}).forEach(function(t){if(!t||!t.tipo)return;if(!jc[t.tipo])jc[t.tipo]={am:0,pm:0,dia:0};jc[t.tipo][t.jornada||'dia']++;});});
   function jornTipo(t){var c=jc[t]||{am:0,pm:0,dia:0};if(c.am>c.dia&&c.am>=c.pm)return 'am';if(c.pm>c.dia)return 'pm';return 'dia';}
   var fechaDe={};DIAS_H.forEach(function(d){fechaDe[d]=sem.ini?fechaDeDiaEnSemana(d,sem):'';});
   var carga={},porDia={};equipo.forEach(function(p){carga[p]=Object.values(tareas||{}).filter(function(t){return t.nombre===p;}).length;porDia[p]={};});
   var propuesta=[];
-  tipos.forEach(function(tipo){
-    var j0=jornTipo(tipo);
+  function agregar(o,p,dia){carga[p]++;porDia[p][dia]=(porDia[p][dia]||0)+1;propuesta.push(o);}
+
+  // 1) RONDAS DE APERTURA (tareas con cumplimiento): las hace quien abre la unidad en la hora de la ventana
+  var rtipo=gxpRondaTipo();
+  if(rtipo){
+    var histRonda={};hist.forEach(function(tw){Object.values(tw||{}).forEach(function(t){if(t&&t.tipo===rtipo&&t.sector){var u=rondaUnidadDeSector(t.sector);if(u){(histRonda[u]=histRonda[u]||{})[t.nombre]=(histRonda[u][t.nombre]||0)+1;}}});});
     DIAS_H.forEach(function(dia){
-      if(tareaYaAsignada(tipo,dia,j0,null))return;
+      var f=fechaDe[dia];if(!f)return;
+      rondaUnidades().forEach(function(u){
+        var cfg=GXP_RONDA_AREA[u];if(!cfg)return;
+        var sector=rondaNombre(u);
+        if(Object.values(tareas||{}).some(function(t){return t&&t.tipo===rtipo&&t.dia===dia&&rondaUnidadDeSector(t.sector)===u;}))return;
+        var area=cfg[0],turno=cfg[1]||'';
+        var L=Object.values(bloques||{}).filter(function(b){return b&&b.dia===dia&&b.area===area&&b.nombre&&b.nombre!=='__sa__'&&!b.sinAtencion&&!b.libre&&b.horario;});
+        if(turno){var Lt=L.filter(function(b){return b.turno===turno;});if(Lt.length||L.some(function(b){return b.turno;}))L=Lt;}
+        if(!L.length)return;
+        var ini;
+        if(u==='rayos_t2'){ // asume Rayos más tarde: el último bloque de Rayos del día
+          L=L.slice().sort(function(a,b){return rdPartes(b.horario)[0]-rdPartes(a.horario)[0];});
+          if(rdPartes(L[0].horario)[0]<660)return;
+          ini=rdPartes(L[0].horario)[0];L=[L[0]];
+        } else {
+          var v=rondaVentana(f,u,null);if(!v)return;ini=t2m(v.ini);
+          if(u==='disp1_t2'||u==='disp2_t2'||u==='est_lavado'){ // tarde / ventana propia: quien está presente a esa hora
+            L=L.filter(function(b){var x=rdPartes(b.horario);return x[0]<=ini&&x[1]>ini;});
+          } else { // apertura de la mañana: quien abre la unidad (empieza más temprano)
+            var ab0=L.filter(function(b){var x=rdPartes(b.horario);return x[0]<=ini&&x[1]>ini;});
+            if(!ab0.length){var mn=Math.min.apply(null,L.map(function(b){return rdPartes(b.horario)[0];}));if(mn>=840)return;ab0=L.filter(function(b){return rdPartes(b.horario)[0]===mn;});}
+            L=ab0;
+          }
+        }
+        var cand=L.map(function(b){return b.nombre;}).filter(function(n,i,a){return a.indexOf(n)===i&&!ausCubre(n,f,ini,ini+15);});
+        if(!cand.length)return;
+        cand.sort(function(a,b){var sa=((histRonda[u]||{})[a]||0)*1.5-carga[a],sb=((histRonda[u]||{})[b]||0)*1.5-carga[b];return sb-sa;});
+        var e=cand[0];
+        agregar({tipo:rtipo,dia:dia,nombre:e,jornada:ini<840?'am':'pm',sector:sector,etq:'Ronda · '+rondaCorto(u),costumbre:!!((histRonda[u]||{})[e])},e,dia);
+      });
+    });
+  }
+
+  // 2) TAREAS DIARIAS: se ajustan al turno (jornada y área) de cada persona
+  tipos.forEach(function(tipo){
+    var j0=jornTipo(tipo),areaMap=GXP_AREA[tipo]||'';
+    DIAS_H.forEach(function(dia){
+      if(dia==='Sábado')return;
       var f=fechaDe[dia];
-      var cand=equipo.map(function(p){
-        if(!gxpTurnoDia(p,dia))return null;
-        var ab=f?ausJorn(p,f):{am:false,pm:false};
-        var j=j0;
-        if(j==='dia'){if(ab.am&&ab.pm)return null;if(ab.am)j='pm';else if(ab.pm)j='am';}
-        else if((j==='am'&&ab.am)||(j==='pm'&&ab.pm))return null;
-        var tope=Math.max(2,Math.round(hab(p)/5)+1);
-        if((porDia[p][dia]||0)>=tope)return null;
-        var score=aff(p,tipo)*1.5+(hab(p)-carga[p]);
-        return {p:p,j:j,score:score};
-      }).filter(Boolean);
-      if(!cand.length)return;
-      cand.sort(function(a,b){return b.score-a.score;});
-      var e=cand[0];
-      carga[e.p]++;porDia[e.p][dia]=(porDia[e.p][dia]||0)+1;
-      propuesta.push({tipo:tipo,dia:dia,nombre:e.p,jornada:e.j,costumbre:aff(e.p,tipo)>0});
+      var hayEnArea=areaMap?equipo.some(function(p){return gxpBloquesArea(p,dia,areaMap).length>0;}):false;
+      var area=hayEnArea?areaMap:'';
+      function cands(req){
+        return equipo.map(function(p){
+          var cov=gxpCobertura(p,dia,area);if(!cov.am&&!cov.pm)return null;
+          var ab=f?ausJorn(p,f):{am:false,pm:false};
+          var amOK=cov.am&&!ab.am,pmOK=cov.pm&&!ab.pm,j;
+          if(req==='am'){if(!amOK)return null;j='am';}
+          else if(req==='pm'){if(!pmOK)return null;j='pm';}
+          else {if(!(amOK&&pmOK))return null;j='dia';}
+          var tope=Math.max(2,Math.round(hab(p)/5)+1);
+          if((porDia[p][dia]||0)>=tope)return null;
+          if(tareaYaAsignada(tipo,dia,j,null))return null;
+          if(!TIPOS_COMPARTIDOS_JORNADA[tipo]&&propuesta.some(function(x){return x.tipo===tipo&&x.dia===dia&&(x.jornada===j||x.jornada==='dia'||j==='dia');}))return null;
+          return {p:p,j:j,score:aff(p,tipo)*1.5+(hab(p)-carga[p])+(area?2:0)};
+        }).filter(Boolean).sort(function(a,b){return b.score-a.score;});
+      }
+      function poner(e){agregar({tipo:tipo,dia:dia,nombre:e.p,jornada:e.j,costumbre:aff(e.p,tipo)>0},e.p,dia);}
+      if(j0==='dia'){
+        var c=cands('dia');
+        if(c.length){poner(c[0]);return;}
+        var ca=cands('am'),cp=cands('pm');
+        if(ca.length)poner(ca[0]);
+        cp=cands('pm');if(cp.length)poner(cp[0]);
+      } else {var c2=cands(j0);if(c2.length)poner(c2[0]);}
     });
   });
   window._propuestaActual=propuesta;window._gxpCtx={equipo:equipo,perf:perf,hab:hab,fechaDe:fechaDe,DIAS_H:DIAS_H};
@@ -9696,7 +9759,7 @@ function gxpPintar(){
       if(ab.am&&ab.pm){h+='<td><div class="gxp-c aus">🌴 Ausente<br>sin tareas</div></td>';return;}
       if(!gxpTurnoDia(p,d)&&!items.length){h+='<td><div class="gxp-c off">Sin turno</div></td>';return;}
       if(ab.am||ab.pm){cls+=' aus half';pie='<span class="gxp-ap">½ día '+(ab.am?'AM':'PM')+' · ausente</span>';}
-      h+='<td><div class="'+cls+'">'+items.map(function(o){return '<button class="gxp-t1'+(o.x.costumbre?' k':'')+(o.x.jornada!=='dia'?' e':'')+'" onclick="gxpEditar('+o.i+')">'+esc(cfgTipo(o.x.tipo).l)+(o.x.jornada!=='dia'?' <i>'+o.x.jornada.toUpperCase()+'</i>':o.x.costumbre?' <i>★</i>':'')+'</button>';}).join('')+pie+'</div></td>';
+      h+='<td><div class="'+cls+'">'+items.map(function(o){return '<button class="gxp-t1'+(o.x.costumbre?' k':'')+(o.x.jornada!=='dia'?' e':'')+'" onclick="gxpEditar('+o.i+')">'+esc(o.x.etq||cfgTipo(o.x.tipo).l)+(o.x.jornada!=='dia'?' <i>'+o.x.jornada.toUpperCase()+'</i>':o.x.costumbre?' <i>★</i>':'')+'</button>';}).join('')+'<button class="gxp-add" title="Agregar tarea" onclick="gxpAgregar(\''+esc(p).replace(/'/g,'')+'\',\''+d+'\')">+</button>'+pie+'</div></td>';
     });
     h+='</tr>';
   });
@@ -9704,11 +9767,47 @@ function gxpPintar(){
   h+='<div class="gxp-btns"><button class="gxp-b2" onclick="renderPropuestaTareas()">↻ Regenerar</button><button class="gxp-b1" onclick="aplicarPropuesta()">✓ Aplicar propuesta ('+propuesta.length+' tareas)</button></div>';
   cont.innerHTML=h;
 }
+window.gxpAgregar=function(p,dia){
+  var c=window._gxpCtx||{};var f=c.fechaDe&&c.fechaDe[dia];
+  var cov=gxpCobertura(p,dia,'');var ab=f?ausJorn(p,f):{am:false,pm:false};
+  var am=cov.am&&!ab.am,pm=cov.pm&&!ab.pm;
+  var jdef=am&&pm?'dia':am?'am':pm?'pm':'dia';
+  var rt=gxpRondaTipo();
+  var tiposL=Object.keys(TIPOS_MEDIBLES).concat(Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&r.tipoRegistro!=='ronda'&&!TIPOS_MEDIBLES[k];}));
+  var opt=tiposL.filter(function(t,i,a){return a.indexOf(t)===i;}).map(function(t){return '<option value="'+esc(t)+'">'+esc(nombreRol(t))+'</option>';}).join('');
+  if(rt)opt='<option value="__ronda">🌅 Ronda de apertura de unidad</option>'+opt;
+  var unidades=rondaUnidades().map(function(u){return '<option value="'+u+'">'+esc(rondaCorto(u))+'</option>';}).join('');
+  var m=mkOverlay();m.style.zIndex=9100;var box=document.createElement('div');box.className='obox';
+  box.innerHTML='<h3>Agregar tarea · '+esc(p)+' · '+esc(dia)+'</h3>'
+    +'<label class="gxp-l">Tarea</label><select id="gxaT" class="gxp-s"><option value="">Elige…</option>'+opt+'</select>'
+    +'<div id="gxaU" style="display:none"><label class="gxp-l">Unidad de la ronda</label><select id="gxaUS" class="gxp-s">'+unidades+'</select></div>'
+    +'<div id="gxaS" style="display:none"><label class="gxp-l">Servicio (pedido semanal)</label><input id="gxaSI" class="gxp-s" type="text" maxlength="60"></div>'
+    +'<label class="gxp-l">Jornada (según su turno)</label><select id="gxaJ" class="gxp-s"><option value="dia">Todo el día</option><option value="am">AM</option><option value="pm">PM</option></select>';
+  var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
+  row.appendChild(oBtn('Cancelar',function(){m.remove();}));
+  row.appendChild(pBtn('Agregar',function(){
+    var t=document.getElementById('gxaT').value;if(!t){alert('Elige la tarea.');return;}
+    var j=document.getElementById('gxaJ').value,o={nombre:p,dia:dia,jornada:j,costumbre:false,manual:true};
+    if(t==='__ronda'){var u=document.getElementById('gxaUS').value;o.tipo=rt;o.sector=rondaNombre(u);o.etq='Ronda · '+rondaCorto(u);}
+    else{o.tipo=t;if(t==='pedido'){var sv=(document.getElementById('gxaSI').value||'').trim();if(!sv){alert('Indica el servicio del pedido.');return;}o.sector=sv;}}
+    if(TIPOS_MEDIBLES[o.tipo]&&!TIPOS_COMPARTIDOS_JORNADA[o.tipo]){
+      var cf=tareaYaAsignada(o.tipo,dia,j,null)||(window._propuestaActual||[]).filter(function(x){return x.tipo===o.tipo&&x.dia===dia&&(x.jornada===j||x.jornada==='dia'||j==='dia');})[0];
+      if(cf){alert('⛔ "'+cfgTipo(o.tipo).l+'" ya está asignada ese día/jornada a '+cf.nombre+'. Cámbiala o quítala primero.');return;}
+    }
+    var f2=c.fechaDe&&c.fechaDe[dia];
+    if(f2&&tareaExcluidaPorAusencia(o,p,f2)&&!confirm(p+' está ausente en esa jornada. ¿Agregarla igual?'))return;
+    window._propuestaActual.push(o);m.remove();gxpPintar();
+  }));
+  box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
+  document.getElementById('gxaJ').value=jdef;
+  document.getElementById('gxaT').onchange=function(){var v=this.value;document.getElementById('gxaU').style.display=v==='__ronda'?'block':'none';document.getElementById('gxaS').style.display=v==='pedido'?'block':'none';};
+};
+
 window.gxpEditar=function(i){
   var p=(window._propuestaActual||[])[i];if(!p)return;
   var c=window._gxpCtx||{};
   var m=mkOverlay();m.style.zIndex=9100;var box=document.createElement('div');box.className='obox';
-  box.innerHTML='<h3>'+esc(cfgTipo(p.tipo).l)+' · '+esc(p.dia)+'</h3>'
+  box.innerHTML='<h3>'+esc(p.etq||cfgTipo(p.tipo).l)+' · '+esc(p.dia)+'</h3>'
     +'<label class="gxp-l">Persona</label><select id="gxpP" class="gxp-s">'+c.equipo.map(function(n){return '<option value="'+esc(n)+'"'+(n===p.nombre?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select>'
     +'<label class="gxp-l">Jornada</label><select id="gxpJ" class="gxp-s"><option value="dia"'+(p.jornada==='dia'?' selected':'')+'>Todo el día</option><option value="am"'+(p.jornada==='am'?' selected':'')+'>AM</option><option value="pm"'+(p.jornada==='pm'?' selected':'')+'>PM</option></select>';
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;margin-top:12px';
@@ -22654,8 +22753,10 @@ window.aplicarPropuesta=function(){
   if(!prop.length)return;
   if(!confirm('¿Aplicar '+prop.length+' tareas? Podrás editarlas después.'))return;
   Promise.all(prop.map(function(p){
-    var cfg=TIPOS[p.tipo]||{l:p.tipo};
-    return sRef('tareas').push({dia:p.dia,nombre:p.nombre,tipo:p.tipo,texto:cfg.l+' (asignación automática)',jornada:p.jornada||'dia'});
+    var cfg=cfgTipo(p.tipo)||{l:p.tipo};
+    var o={dia:p.dia,nombre:p.nombre,tipo:p.tipo,texto:(p.etq||cfg.l)+' (asignación automática)',jornada:p.jornada||'dia'};
+    if(p.sector)o.sector=p.sector;
+    return sRef('tareas').push(o);
   })).then(function(){document.getElementById('propuestaOv').remove();alert('✓ '+prop.length+' tareas asignadas.');});
 };
 window.aplicarPropuestaTurnos=function(){
