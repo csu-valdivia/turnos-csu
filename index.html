@@ -836,6 +836,7 @@ body[data-gxcm="tarjetas"] #gxCmLeg,body[data-gxcm="grilla"] #gxCmLeg,body[data-
 .rd-tag{background:var(--gx-teal);color:#fff;border-radius:99px;padding:1px 8px;font-size:10.5px;font-weight:700;margin-left:6px}
 .rd-r{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-top:4px}.rd-r small{color:var(--gx-slate);white-space:nowrap}.rd-r.on span{font-weight:700;color:#0F766E}.rd-r.gap span{color:#B45309;font-weight:600}
 
+body.gx-light button.tcb,body.gx-light button.tcb *{color:#fff!important}
 .gxp-add{border:1.5px dashed var(--gx-line);background:transparent;color:#9fb3c4;border-radius:7px;padding:3px 0;font:700 14px Inter,system-ui,sans-serif;cursor:pointer;line-height:1}.gxp-add:hover{border-color:var(--gx-teal);color:var(--gx-teal)}
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
 </style>
@@ -13834,8 +13835,8 @@ function tcTareasSemana(nombre,fechas,hoy){
   });
   return {asig:asig,cumpl:cumpl};
 }
-function tcCalcular(soloInternos,accesos){
-  var sem=semanas[W]||{},fechas=tcFechasSemana(sem),hoy=hoyStr();
+function tcCalcular(soloInternos,accesos,semO){
+  var sem=semO||semanas[W]||{},fechas=tcFechasSemana(sem),hoy=hoyStr();
   var resp=tcRespuestasPorPersona();
   var primerReg=primerAccesoArea(accesos,'clinico');
   var conex={};
@@ -13857,7 +13858,7 @@ function tcCalcular(soloInternos,accesos){
     var ta=tcTareasSemana(n,fechas,hoy);
     var ratio=esp.length?nResp/esp.length:null;
     var estado=ratio==null?'na':(ratio>=0.8?'ok':(ratio>=0.4?'mid':'bad'));
-    return {nombre:n,esp:esp.length,resp:nResp,cx:nCx,espCx:espCx.length,asig:ta.asig,cumpl:ta.cumpl,ratio:ratio,estado:estado,det:(estado==='mid'||estado==='bad')?tcDetalle(n,fechas,hoy,rs,esp):null};
+    return {nombre:n,esp:esp.length,resp:nResp,cx:nCx,espCx:espCx.length,asig:ta.asig,cumpl:ta.cumpl,ratio:ratio,estado:estado,det:(estado==='mid'||estado==='bad'||ta.cumpl<ta.asig||nResp<esp.length)?tcDetalle(n,fechas,hoy,rs,esp):null};
   });
   filas.sort(function(a,b){return (b.ratio==null?-1:b.ratio)-(a.ratio==null?-1:a.ratio)||a.nombre.localeCompare(b.nombre);});
   // Tendencia: últimas 6 semanas con el equipo actual (aprox.: L–V transcurridos, sin descontar feriados de semanas pasadas)
@@ -13920,6 +13921,61 @@ function tcDetalle(n,fechas,hoy,rs,esp){
   });
   return {faltan:faltan,tareasF:tareasF,rondasF:rondasF,protos:tcProtocolosNunca(n)};
 }
+// ── Felicitaciones a quienes cumplen (mismo criterio del premio: mín. % y mín. tareas, o 100% de lo asignado) + evaluación diaria completa ──
+function tcCumplio(f){
+  if(!f||!f.esp||f.resp<f.esp)return false;
+  if(!f.asig)return false;
+  var pct=Math.round(f.cumpl/f.asig*100);
+  var cfg=premioConfig||{minPct:90,minTareas:5};
+  return (pct>=cfg.minPct&&f.asig>=cfg.minTareas)||f.cumpl===f.asig;
+}
+function tcTextoFelicitacion(p,sem){
+  var nom=p.nombre.split(' ')[0],pct=p.asig?Math.round(p.cumpl/p.asig*100):null;
+  var L=[];
+  L.push('• Tareas asignadas: '+p.cumpl+' de '+p.asig+(pct!=null?' ('+pct+'%)':''));
+  L.push('• Evaluación diaria: '+p.resp+' de '+p.esp+' días con turno');
+  return 'Hola '+nom+':\n\nTe escribo para felicitarte. Según el registro de GESTHOR de la semana del '+tcFmtRango(sem.ini,sem.fin)+', cumpliste con lo que te correspondía:\n\n'+L.join('\n')+'\n\nEse cumplimiento sostiene al equipo: cuando tú cumples, nadie más tiene que cubrir lo tuyo y el servicio funciona de forma coordinada y segura. ¡Muchas gracias por tu compromiso!\n\nPatricio Baeza Aguilar\nDirector Técnico · CSU Valdivia';
+}
+window.tcAbrirFelicitacion=function(i,volverLote){
+  var D=window._tcData;if(!D||!D.filas[i])return;
+  var p=D.filas[i],k=p.nombre.replace(/\s/g,'_');
+  var correo=(correos||{})[k]||'',fono=(telefonosEquipo||{})[k]||'';
+  var ov=document.getElementById('tcMail');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='tcMail';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1426;z-index:9500;overflow-y:auto;padding:14px;color:#fff;font-size:13px';
+  var box=document.createElement('div');box.style.cssText='max-width:560px;margin:0 auto';ov.appendChild(box);document.body.appendChild(ov);
+  var inp='width:100%;box-sizing:border-box;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:7px 9px;font-family:inherit;font-size:13px';
+  var asu='Gracias por tu cumplimiento · semana '+tcFmtRango(D.sem.ini,D.sem.fin);
+  box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:17px;font-weight:900">🎉 Felicitación para '+esc(p.nombre)+'</div><button id="tcf_x" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;padding:7px 12px;font-family:inherit;cursor:pointer">✕</button></div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:3px">Para</div><input id="tcf_para" value="'+esc(correo)+'" placeholder="Sin correo cargado: complétalo en el Directorio" style="'+inp+';margin-bottom:6px">'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:3px">Asunto</div><input id="tcf_asu" value="'+esc(asu)+'" style="'+inp+';margin-bottom:10px">'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:3px">Texto (editable)</div><textarea id="tcf_txt" rows="13" style="'+inp+';line-height:1.45;margin-bottom:10px">'+esc(tcTextoFelicitacion(p,D.sem))+'</textarea>'+
+    '<div style="display:flex;gap:8px"><button id="tcf_mail" class="tcb" style="flex:1;background:linear-gradient(135deg,#0d9488,#2563eb);color:#fff;border:none;border-radius:12px;padding:12px;font-family:inherit;font-weight:700;cursor:pointer">✉️ Abrir en mi correo</button><button id="tcf_wsp" class="tcb" style="background:#16a34a;color:#fff;border:none;border-radius:12px;padding:12px 14px;font-family:inherit;font-weight:700;cursor:pointer">WhatsApp</button></div>'+
+    '<p style="font-size:10px;color:rgba(255,255,255,.4);margin-top:8px;line-height:1.5">Se abre tu programa de correo y sale desde tu cuenta cuando tú lo envías; GESTHOR no envía nada solo. Queda anotada la fecha de la felicitación.</p>';
+  function reg(c){sedeRef('felicitacionesCumpl/'+k).push({ts:Date.now(),fecha:hoyStr(),semana:D.semId||W,canal:c});(D.felic[k]=D.felic[k]||{})['n'+Date.now()]=1;}
+  document.getElementById('tcf_x').onclick=function(){ov.remove();if(volverLote)tcFelicitacionesLote();};
+  document.getElementById('tcf_mail').onclick=function(){
+    var para=document.getElementById('tcf_para').value.trim();
+    if(!para){alert('Esta persona no tiene correo cargado. Complétalo en el Directorio o escríbelo aquí.');return;}
+    reg('correo');location.href='mailto:'+para+'?subject='+encodeURIComponent(document.getElementById('tcf_asu').value)+'&body='+encodeURIComponent(document.getElementById('tcf_txt').value);
+  };
+  document.getElementById('tcf_wsp').onclick=function(){
+    if(!fono||!fonoValido(fono)){alert('Esta persona no tiene WhatsApp cargado. Complétalo en el Directorio.');return;}
+    reg('whatsapp');window.open('https://wa.me/'+fono+'?text='+encodeURIComponent(document.getElementById('tcf_txt').value),'_blank','noopener');
+  };
+};
+window.tcFelicitacionesLote=function(){
+  var D=window._tcData;if(!D)return;
+  var ov=document.getElementById('tcLote');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='tcLote';
+  ov.style.cssText='position:fixed;inset:0;background:#0b1426;z-index:9450;overflow-y:auto;padding:14px;color:#fff;font-size:13px';
+  var it=[];D.filas.forEach(function(f,i){if(tcCumplio(f))it.push(i);});
+  ov.innerHTML='<div style="max-width:560px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:17px;font-weight:900">🎉 Felicitaciones · semana '+esc(tcFmtRango(D.sem.ini,D.sem.fin))+'</div><button onclick="document.getElementById(\'tcLote\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;padding:7px 12px;font-family:inherit;cursor:pointer">✕</button></div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px">Un correo por persona, con sus cifras. Cumplen: evaluación diaria completa y tareas según el criterio del premio ('+premioConfig.minPct+'% con mín. '+premioConfig.minTareas+' tareas) o 100% de lo asignado.</div>'+
+    (it.length?it.map(function(i){var f=D.filas[i],k=f.nombre.replace(/\s/g,'_'),n=Object.keys((D.felic||{})[k]||{}).length;
+      return '<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:10px;padding:9px 12px;margin-bottom:6px"><div style="flex:1"><b>'+esc(f.nombre)+'</b><div style="font-size:11px;color:rgba(255,255,255,.5)">'+f.cumpl+'/'+f.asig+' tareas · '+f.resp+'/'+f.esp+' evaluaciones'+(n?' · ya felicitado/a '+n+' vez':'')+'</div></div><button class="tcb" onclick="tcAbrirFelicitacion('+i+',true)" style="background:#0d9488;color:#fff;border:none;border-radius:9px;padding:8px 12px;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer">🎉 Redactar</button></div>';}).join(''):'<p style="color:rgba(255,255,255,.5)">Nadie cumple todavía los criterios en esta semana.</p>')+'</div>';
+  document.body.appendChild(ov);
+};
 function tcTextoCorreo(p,nivel,sel,limite,ultAviso){
   var D=window._tcData,s=D.sem,nom=p.nombre.split(' ')[0],L=[];
   if(sel.eval&&p.det.faltan.length)L.push('• Evaluación diaria: sin responder '+(p.det.faltan.length>1?'los días ':'el día ')+tcLista(p.det.faltan.map(tcFmtDia))+' ('+(nivel==='reit'?'respondiste ':'respondiste ')+p.resp+' de '+p.esp+' días con turno).');
@@ -13970,7 +14026,7 @@ window.tcAbrirCorreo=function(i){
     document.getElementById('tcm_x').onclick=function(){ov.remove();};
     document.getElementById('tcm_n1').onclick=function(){rehacer();st.nivel='prim';pintar();};
     document.getElementById('tcm_n2').onclick=function(){rehacer();st.nivel='reit';pintar();};
-    function reg(canal){sedeRef('avisosCumpl/'+k).push({ts:Date.now(),fecha:hoyStr(),semana:W,nivel:st.nivel,canal:canal,items:Object.keys(st.sel).filter(function(x){return st.sel[x];})});(D.avisos[k]=D.avisos[k]||{})['n'+Date.now()]={ts:Date.now(),fecha:hoyStr()};}
+    function reg(canal){sedeRef('avisosCumpl/'+k).push({ts:Date.now(),fecha:hoyStr(),semana:D.semId||W,nivel:st.nivel,canal:canal,items:Object.keys(st.sel).filter(function(x){return st.sel[x];})});(D.avisos[k]=D.avisos[k]||{})['n'+Date.now()]={ts:Date.now(),fecha:hoyStr()};}
     document.getElementById('tcm_mail').onclick=function(){
       var para=document.getElementById('tcm_para').value.trim(),ccv=document.getElementById('tcm_cc').value.trim();
       if(!para){alert('Esta persona no tiene correo cargado. Complétalo en el Directorio o escríbelo aquí.');return;}
@@ -13986,15 +14042,25 @@ window.tcAbrirCorreo=function(i){
   }
   pintar();
 };
-window.abrirTableroCumpl=function(soloInternos){
+window.abrirTableroCumpl=function(soloInternos,semSel){
+  semSel=semSel==='prev'?'prev':'cur';
   var ov=document.getElementById('tcOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='tcOv';
   ov.style.cssText='position:fixed;inset:0;background:#0b1426;z-index:9400;overflow-y:auto;padding:14px';
   ov.innerHTML='<div style="max-width:720px;margin:0 auto;color:#fff;font-size:13px">Cargando…</div>';
   document.body.appendChild(ov);
-  Promise.all([sedeRef('accesos').once('value'),sedeRef('avisosCumpl').once('value'),sedeRef('configCorreo').once('value')]).then(function(rr){
-    var s=rr[0];
-    var D=tcCalcular(soloInternos,s.val()||{});D.avisos=rr[1].val()||{};D.cfgCorreo=rr[2].val()||{};window._tcData=D;window._tcInt=!!soloInternos;
+  var act=semanas[W]||{};
+  var prevId=Object.keys(semanas||{}).filter(function(id){var x=semanas[id];return id!==W&&x&&x.ini&&(!act.ini||x.ini<act.ini);}).sort(function(a,b){return semanas[b].ini<semanas[a].ini?-1:1;})[0]||'';
+  if(semSel==='prev'&&!prevId){alert('No hay una semana anterior cargada.');semSel='cur';}
+  var cargaPrev=semSel==='prev'?Promise.all([db.ref('sedes/'+S+'/semanas/'+prevId+'/tareas').once('value'),db.ref('sedes/'+S+'/semanas/'+prevId+'/bloques').once('value')]):Promise.resolve(null);
+  Promise.all([sedeRef('accesos').once('value'),sedeRef('avisosCumpl').once('value'),sedeRef('configCorreo').once('value'),sedeRef('felicitacionesCumpl').once('value'),cargaPrev]).then(function(rr){
+    var s=rr[0],D;
+    if(semSel==='prev'&&rr[4]){
+      var t0=tareas,b0=bloques;tareas=rr[4][0].val()||{};bloques=rr[4][1].val()||{};
+      try{D=tcCalcular(soloInternos,s.val()||{},semanas[prevId]);}finally{tareas=t0;bloques=b0;}
+      D.semId=prevId;
+    }else{D=tcCalcular(soloInternos,s.val()||{});D.semId=W;}
+    D.sel=semSel;D.avisos=rr[1].val()||{};D.cfgCorreo=rr[2].val()||{};D.felic=rr[3].val()||{};window._tcData=D;window._tcInt=!!soloInternos;
     var pct=function(a,b){return b?Math.round(a/b*100):null;};
     var pEq=pct(D.tot.resp,D.tot.esp),pTa=pct(D.tot.cumpl,D.tot.asig);
     var kp=function(v,l,c){return '<div style="flex:1;min-width:130px;background:rgba(255,255,255,.06);border-radius:12px;padding:10px 12px"><div style="font-size:24px;font-weight:900;color:'+c+'">'+v+'</div><div style="font-size:11px;color:rgba(255,255,255,.55)">'+l+'</div></div>';};
@@ -14003,7 +14069,8 @@ window.abrirTableroCumpl=function(soloInternos){
     var filas=D.filas.map(function(f,i){
       var cx=f.espCx?(f.cx+'/'+f.espCx):'—';
       var nav=Object.keys(D.avisos[f.nombre.replace(/\s/g,'_')]||{}).length;
-      var btn=f.det?'<td style="padding-left:6px"><button onclick="tcAbrirCorreo('+i+')" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">✉️ Correo'+(nav?' ('+nav+')':'')+'</button></td>':'<td></td>';
+      var btnF=tcCumplio(f)?'<button onclick="tcAbrirFelicitacion('+i+')" style="background:#0d9488;color:#fff;border:none;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">🎉 Felicitar</button>':'';
+      var btn=f.det?'<td style="padding-left:6px"><button onclick="tcAbrirCorreo('+i+')" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">✉️ Correo'+(nav?' ('+nav+')':'')+'</button></td>':'<td style="padding-left:6px">'+btnF+'</td>';
       var ta=f.asig?(Math.round(f.cumpl/f.asig*100)+'%'):'—';
       return '<tr style="border-top:1px solid rgba(255,255,255,.07)"><td style="padding:8px 4px;font-weight:700">'+esc(f.nombre)+'</td><td style="text-align:center">'+cx+'</td><td style="text-align:center">'+(f.esp?f.resp+'/'+f.esp:'—')+'</td><td style="text-align:center">'+ta+'</td><td style="padding-left:6px;white-space:nowrap">'+pt(f)+lbl[f.estado]+'</td>'+btn+'</tr>';
     }).join('');
@@ -14014,11 +14081,13 @@ window.abrirTableroCumpl=function(soloInternos){
     var nota=D.primerReg?'El registro de conexiones del equipo clínico parte el '+D.primerReg+'; antes de esa fecha aparece «—».':'Las conexiones del equipo clínico recién empiezan a registrarse con esta versión; por ahora aparecerán «—».';
     ov.firstChild.innerHTML=
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><div style="font-size:18px;font-weight:900">📊 Cumplimiento del equipo'+(soloInternos?' · Internos':'')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5)">'+esc((D.sem.nombre||((D.sem.ini||'')+' al '+(D.sem.fin||''))))+' · al '+D.hoy+'</div></div><button onclick="document.getElementById(\'tcOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div>'+
+      '<div style="display:flex;gap:6px;margin-bottom:10px"><button onclick="abrirTableroCumpl('+(soloInternos?'true':'false')+',\'cur\')" style="flex:1;border:none;border-radius:10px;padding:8px;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;color:'+(D.sel==='cur'?'#fff':'#475569')+';background:'+(D.sel==='cur'?'#0d9488':'#e6eef5')+'">Esta semana</button><button onclick="abrirTableroCumpl('+(soloInternos?'true':'false')+',\'prev\')" style="flex:1;border:none;border-radius:10px;padding:8px;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;color:'+(D.sel==='prev'?'#fff':'#475569')+';background:'+(D.sel==='prev'?'#0d9488':'#e6eef5')+'">Semana anterior'+(prevId?' ('+esc(tcFmtRango(semanas[prevId].ini,semanas[prevId].fin))+')':'')+'</button></div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+kp(D.tot.ok+' de '+D.filas.length,'están al día',TCUMPL_COL.ok)+kp(pEq==null?'—':pEq+'%','respuestas sobre días con turno',pEq==null?'#fff':(pEq>=80?TCUMPL_COL.ok:pEq>=40?TCUMPL_COL.mid:TCUMPL_COL.bad))+kp(D.tot.sinCx,'sin ninguna conexión',D.tot.sinCx?TCUMPL_COL.bad:TCUMPL_COL.ok)+kp(D.tot.asig?(D.tot.asig-D.tot.cumpl):'—','tareas sin cumplir'+(pTa==null?'':' ('+pTa+'% cumplido)'),'#fff')+'</div>'+
       '<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:10px 12px;margin-bottom:12px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr style="color:rgba(255,255,255,.45);font-size:10px;text-transform:uppercase"><th style="text-align:left;padding:4px">Persona</th><th>Se conectó</th><th>Respondió</th><th>Tareas</th><th style="text-align:left;padding-left:6px">Estado</th><th></th></tr>'+(filas||'<tr><td colspan="6" style="padding:10px;color:rgba(255,255,255,.4)">Sin personas con turno esta semana.</td></tr>')+'</table></div>'+
       '<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:10px 12px;margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);margin-bottom:6px;text-transform:uppercase">Tendencia · respuestas del equipo por semana</div><div style="display:flex;gap:4px">'+tend+'</div></div>'+
       '<p style="font-size:10px;color:rgba(255,255,255,.4);line-height:1.5;margin-bottom:12px">Estado: Al día = respondió ≥80% de sus días con turno (4–5 de 5) · Irregular 40–79% (2–3 de 5) · Sin actividad &lt;40% (0–1 de 5). «Respondió» cuenta la evaluación diaria; «Tareas» solo las medibles. '+nota+' La tendencia usa el equipo actual y días hábiles (no descuenta feriados de semanas pasadas).</p>'+
-      '<div style="display:flex;gap:8px"><button onclick="descargarTableroCumpl()" style="flex:1;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:12px;padding:12px;font-family:inherit;font-weight:700;cursor:pointer">🖼️ Descargar imagen</button><button onclick="abrirTableroCumpl('+(soloInternos?'false':'true')+')" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:12px;padding:12px 14px;font-family:inherit;cursor:pointer">'+(soloInternos?'Ver equipo':'Ver internos')+'</button></div>';
+      '<button onclick="tcFelicitacionesLote()" style="width:100%;background:rgba(13,148,136,.14);color:#0f766e;border:1px solid rgba(13,148,136,.45);border-radius:12px;padding:11px;font-family:inherit;font-weight:700;cursor:pointer;margin-bottom:8px">🎉 Felicitaciones ('+D.filas.filter(tcCumplio).length+' cumplieron)</button>'+
+      '<div style="display:flex;gap:8px"><button onclick="descargarTableroCumpl()" style="flex:1;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:12px;padding:12px;font-family:inherit;font-weight:700;cursor:pointer">🖼️ Descargar imagen</button><button onclick="abrirTableroCumpl('+(soloInternos?'false':'true')+',\''+semSel+'\')" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:12px;padding:12px 14px;font-family:inherit;cursor:pointer">'+(soloInternos?'Ver equipo':'Ver internos')+'</button></div>';
   });
 };
 window.descargarTableroCumpl=function(){
