@@ -12940,6 +12940,26 @@ function miDiaHtml(nombre){
       var ring=tot?'<div style="width:50px;height:50px;border-radius:50%;background:conic-gradient(#22c55e 0 '+Math.round(ok/tot*100)+'%,rgba(255,255,255,.12) '+Math.round(ok/tot*100)+'%);display:flex;align-items:center;justify-content:center;flex:none"><div style="width:38px;height:38px;border-radius:50%;background:#0b1220;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">'+ok+'/'+tot+'</div></div>':'';
       h+='<div style="display:flex;align-items:center;gap:12px;margin-top:10px">'+ring+'<div><div style="font-size:13.5px;font-weight:800;color:#fff">Mis tareas de hoy</div><div style="font-size:11px;color:rgba(255,255,255,.5)">'+(tot?(tot-ok?'Te faltan '+(tot-ok):'¡Todo al día!'):'Sin tareas con registro')+'</div></div></div>'+filas;
     }
+    // Tareas del resto de la semana (para que vea qué le toca, aunque hoy no tenga turno)
+    try{
+      var sem0=semanas[W]||{},DD=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+      var otras=Object.values(tareas||{}).filter(function(t){return t&&t.nombre===nombre&&t.dia!==dia&&t.texto&&DD.indexOf(t.dia)>=0;});
+      if(otras.length){
+        var porDia={};otras.forEach(function(t){(porDia[t.dia]=porDia[t.dia]||[]).push(t);});
+        h+='<div style="margin-top:12px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px"><div style="font-size:13.5px;font-weight:800;color:#fff;margin-bottom:2px">📅 Mis tareas de la semana</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:4px">Se registran el mismo día en que te corresponden.</div>';
+        DD.filter(function(d){return porDia[d];}).forEach(function(d){
+          var f=sem0.ini?fechaDeDiaEnSemana(d,sem0):'';var pasado=f&&f<hoy;
+          h+='<div style="font-size:11px;font-weight:800;color:#93c5fd;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 2px">'+d+(f?' '+f.slice(8):'')+(f&&f===sumarDias(hoy,1)?' · mañana':'')+'</div>';
+          porDia[d].forEach(function(t){
+            var med=false,cum=false;
+            try{med=medibleTarea(t.tipo)&&!TIPOS_SEMANALES[t.tipo]&&!TIPOS_SIN_MEDICION[t.tipo];if(med&&pasado)cum=verificarCumplimiento(t.tipo,f,t).cumplido;}catch(e){}
+            var ic=pasado&&med?(cum?'✅':'⚠️'):'🔹';
+            h+='<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:12.5px;color:#fff"><span>'+ic+'</span><span>'+esc(String(t.texto).replace(/ \(asignación automática\)$/,'').slice(0,70))+(t.jornada&&t.jornada!=='dia'?' <small style="color:#94a3b8">· '+t.jornada.toUpperCase()+'</small>':'')+'</span></div>';
+          });
+        });
+        h+='</div>';
+      }
+    }catch(e){}
     return h+'</div>';
   }catch(e){return '';}
 }
