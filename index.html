@@ -12213,7 +12213,8 @@ window._gxPost='';
 function gxVisible(id){var e=document.getElementById(id);return !!e&&e.style.display!=='none'&&e.style.display!=='';}
 function gxSync(){
   var app=document.getElementById('appView');
-  var enApp=!!app&&app.style.display==='block';
+  var mv=document.getElementById('mainView');
+  var enApp=!!app&&app.style.display==='block'&&!!mv&&getComputedStyle(mv).display!=='none';
   var adm=document.getElementById('adminPanel');var admAbierto=!!adm&&adm.classList.contains('open');
   document.body.classList.toggle('gx-ing',!enApp);
   document.body.classList.toggle('gx-app',enApp&&!admAbierto);
@@ -12222,6 +12223,7 @@ function gxSync(){
   if(gxVisible('mainView'))on='turnos';
   ['gxBar','gxRail'].forEach(function(id){var n=document.getElementById(id);if(!n)return;Array.prototype.forEach.call(n.querySelectorAll('.gxit'),function(b){b.classList.toggle('on',b.dataset.k===on);});});
   var lb=document.getElementById('semanaLabel'),pl=document.getElementById('gxPill');
+  if(lb&&enApp&&!W&&/^(Buscando|Cargando)/.test((lb.textContent||'').trim()))lb.textContent='Sin semana seleccionada';
   if(pl&&lb){var t=(lb.textContent||'').trim();var ok=t&&/\d/.test(t);pl.classList.toggle('v',ok);pl.textContent=ok?(/^Semana/i.test(t)?t:'Semana: '+t)+' ›':'';}
   gxReloj();
 }
