@@ -339,6 +339,35 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
 .anun-fade{animation:anfade .45s ease}
 @keyframes anfade{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.hbob,.hw1,.hw2,.hw3,.anun-fade{animation:none}}
+#navBottom{position:fixed;left:0;right:0;bottom:0;z-index:800;display:none;justify-content:space-around;background:rgba(11,18,32,.96);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.12);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+#appView[style*="block"] #navBottom{display:flex}
+#navBottom .nb{flex:1;background:none;border:none;color:rgba(255,255,255,.5);font-family:inherit;font-size:10px;font-weight:700;padding:4px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px}
+#navBottom .nb .ni{font-size:20px;line-height:1}
+#navBottom .nb.on{color:#60a5fa}
+#navBottom .nb{position:relative}.ndot{position:absolute;top:2px;right:28%;width:9px;height:9px;border-radius:50%;background:#ef4444}
+#navChips{display:none;gap:6px;margin:0 0 10px;overflow-x:auto}
+.nchip{flex:none;padding:8px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.nchip.on{background:#2563eb;border-color:#2563eb;color:#fff}
+#appView{padding-bottom:84px}
+.admSrch{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:4px 12px;margin-bottom:10px;position:sticky;top:0;z-index:5;backdrop-filter:blur(6px)}
+.admSrch input{flex:1;background:transparent;border:none;outline:none;color:#fff;font-family:inherit;font-size:14px;padding:9px 0}
+.admLbl{font-size:11px;color:#93c5fd;text-transform:uppercase;letter-spacing:.6px;margin:12px 0 6px;font-weight:700}
+.admAten{background:rgba(245,158,11,.13);border:1px solid rgba(245,158,11,.45);border-radius:14px;padding:10px 12px;margin-bottom:6px}
+.admAten h4{margin:0 0 4px;color:#fcd34d;font-size:14px}
+.admAten .ar{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:13px;border-top:1px solid rgba(255,255,255,.08);cursor:pointer;color:#fff}.admAten .ar:first-of-type{border-top:none}
+.admAten .n{background:#f59e0b;color:#000;border-radius:20px;padding:1px 9px;font-weight:800;font-size:12px}
+.admQuick{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.admQuick button{background:rgba(255,255,255,.07);border:none;border-radius:12px;padding:12px 4px;color:#fff;font-family:inherit;font-size:11.5px;cursor:pointer}.admQuick button b{display:block;font-size:22px;margin-bottom:3px;font-weight:400}
+.admFavs{display:flex;flex-wrap:wrap;gap:6px}.admFavs button{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);color:#fcd34d;border-radius:20px;padding:6px 12px;font-family:inherit;font-size:11.5px;cursor:pointer}
+.admG{background:rgba(255,255,255,.05);border-radius:13px;margin-bottom:7px;overflow:hidden}
+.admMant{opacity:.75}
+.admGh{display:flex;align-items:center;gap:11px;padding:12px;cursor:pointer}
+.admGi{font-size:22px;width:34px;text-align:center}.admGt{flex:1}.admGt .n{font-size:14px;font-weight:700;color:#fff}.admGt .d{font-size:10.5px;color:rgba(255,255,255,.5)}
+.admGc{color:rgba(255,255,255,.45);font-size:12px}.admGa{color:rgba(255,255,255,.4);font-size:16px;transition:transform .2s}
+.admG.open .admGa{transform:rotate(90deg)}
+.admGb{display:none;padding:0 8px 8px}.admG.open .admGb{display:block}
+.admStar{float:right;cursor:pointer;font-size:16px;opacity:.7;padding:0 4px}
+.admFlash{outline:2px solid #fbbf24;transition:outline .3s}
 </style>
 </head>
 <body>
@@ -623,8 +652,9 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
         <div id="anunciosBanner"></div>
         <div id="avisoBanner"></div>
         <div id="rankingMiniCard"></div>
+        <div id="navChips"></div>
 
-        <div style="margin-bottom:4px">
+        <div id="oldTabs" style="margin-bottom:4px;display:none">
           <div class="tabs">
             <button class="tab active" onclick="goTab('panorama')">Panorama</button>
             <button class="tab" onclick="goTab('mis-turnos')">Mis turnos</button>
@@ -715,7 +745,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           <div id="novedadesView"></div>
         </div>
 
-        <div class="tc" id="tc-biblioteca">
+        <div class="tc" id="tc-biblioteca"><div id="aprenderExtra"></div>
           <div class="sel-wrap">
             <select id="bibFiltro" style="background:rgba(255,255,255,.08);color:#fff">
               <option value="">Todas las categorías</option>
@@ -729,8 +759,12 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           <div id="bibliotecaView"></div>
         </div>
 
+        <div class="tc" id="tc-mas"><div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:6px">☰ Más</div><div id="masBody"></div>
+          <div style="margin-top:8px"><button onclick="abrirAdminDesdeMas()" style="width:100%;padding:12px;font-size:13px;font-weight:700;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:12px;font-family:inherit;cursor:pointer">⚙ Administración (con PIN)</button></div></div>
+
         <div id="pendientesSection"></div>
 
+        <nav id="navBottom"></nav>
         <div class="atoggle"><button id="adminBtn" style="position:relative">⚙ Admin<span id="adminNuevoBadge" style="display:none;position:absolute;top:-10px;right:-6px;gap:2px;box-shadow:0 0 0 2px #0b1220;border-radius:10px;overflow:hidden"><span id="adminBadgePreg" title="Pendientes: activar preguntas" style="display:none;background:#2563eb;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span><span id="adminBadgeAmbos" title="Pendientes: ambos (esperando 7 días)" style="display:none;background:#b45309;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span><span id="adminBadgeProt" title="Pendientes: falta protocolo" style="display:none;background:#dc2626;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span></span></button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button> <button id="conductBtn" style="background:rgba(37,99,235,.15);border:1px solid rgba(96,165,250,.35);color:#93c5fd">💧 Conductividad</button></div>
         <div class="apanel" id="adminPanel">
 
@@ -2145,6 +2179,7 @@ function attach(){
       tabBtn.innerHTML=pendParaMi>0?'Cambios <span style="background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-left:3px">'+pendParaMi+'</span>':'Cambios';
     }
     if(pendParaMi>0)reproducirAlerta();
+    _navCamb=pendParaMi;if(typeof navActualizar==='function')navActualizar(_navTabActual);
   });
   on('ausencias',function(v){ausencias=v;renderAusencias();renderAusenciasAdmin();if(curNombre)renderMisTurnos(curNombre);});
   on('llamados',function(v){llamados=v;renderLlList();renderPanorama();renderHeatMap();renderEstado();});
@@ -6035,6 +6070,7 @@ function renderMisTurnos(nombre){
     return;
   }
   html+=bannerPremiosPersona(nombre);
+  html+=miDiaHtml(nombre);
   html+=lidTarjetaMisTurnos(nombre);
   // Botón de gestión de subbodega — SOLO si la jefatura activó hoy a esta persona en Custodia diaria
   // (no es un encargado fijo; se prende y apaga cada día, por jornada AM/PM).
@@ -11614,7 +11650,7 @@ function lidRender(ov){
     var cid=lidCompDeSemana(P,n),comp=LID_COMP.filter(function(c){return c.id===cid;})[0],ap=LID_APR[cid];
     var s=(P.sem&&P.sem[n])||{};
     h+=lidCard('<div style="font-size:11px;color:#fcd34d;font-weight:700;margin-bottom:2px">'+(n>6?'REFUERZO · ':'')+comp.n.toUpperCase()+'</div><div style="font-weight:800;font-size:14px;color:#fff">1 · Aprende (10 min): '+esc(ap.t)+'</div><div style="font-size:13px;color:rgba(255,255,255,.75);margin:6px 0;line-height:1.5">'+esc(ap.x)+'</div>'+
-      '<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:#fff;cursor:pointer"><input type="checkbox" '+(s.lect?'checked':'')+' onchange="lidMarcarLectura(this.checked,'+n+')"> 📖 Ya leí esto <span style="color:rgba(255,255,255,.45)">· lecturas con enlace, próximamente</span></label>','border-left:4px solid #f59e0b;');
+      lidLecturaHtml(cid)+'<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:#fff;cursor:pointer"><input type="checkbox" '+(s.lect?'checked':'')+' onchange="lidMarcarLectura(this.checked,'+n+')"> Ya leí esto</label>','border-left:4px solid #f59e0b;');
     var turno=lidDeTurnoHoy(nombre),libre=lidSemanaLibre(P);
     var estado='';
     if(!libre)estado='<div style="background:rgba(34,197,94,.12);border-radius:9px;padding:8px 10px;font-size:12px;color:#86efac">✓ Ya registraste un ejercicio esta semana. El siguiente se habilita el lunes.</div>';
@@ -11695,6 +11731,19 @@ window.lidSimDiag=function(){var r={};LID_ESC.forEach(function(it,i){r[it.id]=(i
 
 // ── Admin ──
 var LID_CHECK=['Rol de supervisión explicado al equipo','Gerencia informada','Escenarios de la evaluación probados','Enlaces de lectura cargados','Canal de retroalimentación de los TENS definido'];
+var LID_LECT_DEF={cla:{t:'Opazo y Oteíza (2023). Guía de desarrollo y mantenimiento del liderazgo en enfermería, U. de Chile',u:'https://revistas.udec.cl/index.php/cienciayenfermeria/article/view/8753'}};
+function lidLect(id){var l=(liderazgo&&liderazgo.lecturas)||{};return l[id]!==undefined?l[id]:(LID_LECT_DEF[id]||{t:'',u:''});}
+function lidUrlOk(u){return /^https?:\/\/[^\s"'<>]+$/i.test(u||'');}
+function lidLecturaHtml(cid){var l=lidLect(cid);if(!l||!l.u||!lidUrlOk(l.u))return '<div style="font-size:11.5px;color:rgba(255,255,255,.45);margin:2px 0 6px">Lectura de esta semana: aún sin enlace.</div>';return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener noreferrer" style="display:block;background:rgba(37,99,235,.2);border:1px solid rgba(96,165,250,.4);border-radius:9px;padding:9px 11px;margin:6px 0 8px;color:#93c5fd;font-size:13px;text-decoration:none">📖 '+esc(l.t||'Lectura de la semana')+' ↗</a>';}
+window.lidGuardarLect=function(){
+  var upd={},bad=[];
+  LID_COMP.forEach(function(c){var t=(document.getElementById('lidLt_'+c.id).value||'').trim(),u=(document.getElementById('lidLu_'+c.id).value||'').trim();
+    if(u&&!lidUrlOk(u)){bad.push(c.n);return;}
+    upd[c.id]={t:t,u:u};});
+  if(bad.length){alert('El enlace debe comenzar con https:// ('+bad.join(', ')+').');return;}
+  Object.keys(upd).forEach(function(k){sedeRef('liderazgo/lecturas/'+k).set(upd[k]);});
+  alert('Lecturas guardadas.');
+};
 window.abrirLiderazgoAdmin=function(){
   var ov=document.getElementById('lidAdOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='lidAdOv';
@@ -11713,6 +11762,9 @@ function lidAdRender(){
     (cl.length?cl.map(function(n,i){return '<label style="display:flex;gap:8px;align-items:center;font-size:13px;color:#fff;padding:6px 0;border-top:1px solid rgba(255,255,255,.06);cursor:pointer"><input type="checkbox" '+(sel[lidKey(n)]?'checked':'')+' onchange="lidMarcarEnf('+i+',this.checked)"> '+esc(n)+'</label>';}).join(''):'<div style="font-size:12px;color:rgba(255,255,255,.5)">Sin personal clínico cargado.</div>'));
   window._lidCl=cl;
   h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff;margin-bottom:4px">Antes de activar</div>'+LID_CHECK.map(function(t,i){return '<label style="display:flex;gap:8px;font-size:12.5px;color:#fff;padding:4px 0;cursor:pointer"><input type="checkbox" '+(chk[i]?'checked':'')+' onchange="lidCheck('+i+',this.checked)"> '+t+'</label>';}).join(''));
+  h+=lidCard('<div style="font-weight:800;font-size:14px;color:#fff">📖 Lecturas por competencia</div><div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-bottom:4px">Una lectura por tema (usa enlaces de acceso libre). Las semanas 7 y 8 usan la lectura de la competencia que le toque a cada enfermero.</div>'+
+    LID_COMP.map(function(c,i){var l=lidLect(c.id);var inp='width:100%;box-sizing:border-box;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;padding:7px;font-family:inherit;font-size:12px;margin-top:4px';return '<div style="border-top:1px solid rgba(255,255,255,.08);padding:8px 0"><b style="font-size:13px;color:#fff">'+c.n+'</b> <span style="font-size:11px;color:rgba(255,255,255,.5)">(sem '+(i+1)+')</span> '+(l.u?'<span style="font-size:11px;color:#86efac">✓ cargada</span>':'<span style="font-size:11px;color:rgba(255,255,255,.45)">· sin cargar</span>')+'<input id="lidLt_'+c.id+'" value="'+esc(l.t||'')+'" placeholder="Título de la lectura" style="'+inp+'"><input id="lidLu_'+c.id+'" value="'+esc(l.u||'')+'" placeholder="Enlace (https://…)" style="'+inp+'"></div>';}).join('')+
+    '<div style="margin-top:8px">'+lidBtn('Guardar lecturas','lidGuardarLect()')+'</div>');
   h+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+lidBtn('🧪 Modo prueba (practicar como enfermero)','document.getElementById(\'lidAdOv\').remove();abrirLiderazgo(true)','#b45309')+'</div>';
   // Seguimiento
   var en=lidEnfermeros();
@@ -11761,6 +11813,185 @@ function lidTarjetaMisTurnos(nombre){
   var t=!P.diag?'Responde tu evaluación diagnóstica para comenzar':lidHechas(P)>=8?'Programa completado':'Semana '+Math.min(lidHechas(P)+1,8)+' de 8';
   return '<button onclick="abrirLiderazgo()" style="display:block;width:100%;text-align:left;background:linear-gradient(135deg,rgba(22,163,74,.2),rgba(34,197,94,.07));border:1px solid rgba(34,197,94,.4);border-radius:12px;padding:12px 14px;margin-bottom:10px;font-family:inherit;cursor:pointer"><div style="font-size:14px;font-weight:800;color:#86efac">🌱 Mi plan de liderazgo</div><div style="font-size:12px;color:rgba(255,255,255,.65);margin-top:2px">'+t+'</div></button>';
 }
+
+// ══════════════ NAVEGACIÓN NUEVA: menú inferior (colaborador) + centro de mando (admin) ══════════════
+// No reemplaza funciones: reordena lo existente. Las pestañas viejas siguen existiendo (ocultas) y goTab() sigue siendo el motor.
+var NAV_GRUPOS=[
+  {id:'hoy',ic:'🏠',n:'Hoy',tabs:[['mis-turnos','Mi día']]},
+  {id:'semana',ic:'📅',n:'Mi semana',tabs:[['panorama','Panorama'],['cambios','Cambios'],['ausencias','Ausencias']]},
+  {id:'equipo',ic:'👥',n:'Equipo',tabs:[['novedades','Novedades'],['resumen','Resumen'],['estado','KPIs']]},
+  {id:'aprender',ic:'📚',n:'Aprender',tabs:[['biblioteca','Biblioteca']]},
+  {id:'mas',ic:'☰',n:'Más',tabs:[['mas','Más']]}
+];
+var _navTabActual='mis-turnos',_navCamb=0;
+function navActualizar(tab){
+  _navTabActual=tab;
+  var g=NAV_GRUPOS.filter(function(x){return x.tabs.some(function(t){return t[0]===tab;});})[0];
+  document.querySelectorAll('#navBottom .nb').forEach(function(b){b.classList.toggle('on',!!g&&b.getAttribute('data-g')===g.id);var dot=b.querySelector('.ndot');if(b.getAttribute('data-g')==='semana'){if(_navCamb>0&&!dot){dot=document.createElement('span');dot.className='ndot';b.appendChild(dot);}else if(_navCamb<=0&&dot)dot.remove();}});
+  var ch=document.getElementById('navChips');if(!ch)return;
+  if(!g||g.tabs.length<2){ch.innerHTML='';ch.style.display='none';return;}
+  ch.style.display='flex';
+  ch.innerHTML=g.tabs.map(function(t){return '<button class="nchip'+(t[0]===tab?' on':'')+'" onclick="goTab(\''+t[0]+'\')">'+t[1]+(t[0]==='cambios'&&_navCamb>0?' <span style="background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px">'+_navCamb+'</span>':'')+'</button>';}).join('');
+}
+window.navIr=function(gid){
+  var g=NAV_GRUPOS.filter(function(x){return x.id===gid;})[0];if(!g)return;
+  goTab(g.tabs[0][0]);window.scrollTo(0,0);
+};
+function aprenderExtra(){
+  var d=document.getElementById('aprenderExtra');if(!d)return;
+  d.innerHTML=(typeof lidTarjetaMisTurnos==='function'&&curNombre)?lidTarjetaMisTurnos(curNombre):'';
+}
+function navInit(){
+  if(document.getElementById('navBottom')&&document.getElementById('navBottom').dataset.ok)return;
+  var nav=document.getElementById('navBottom');if(!nav)return;nav.dataset.ok='1';
+  nav.innerHTML=NAV_GRUPOS.map(function(g){return '<button class="nb" data-g="'+g.id+'" onclick="navIr(\''+g.id+'\')"><span class="ni">'+g.ic+'</span>'+g.n+'</button>';}).join('');
+  // Pestaña «Más»: mueve los botones sueltos que estaban bajo las pestañas viejas
+  var mas=document.getElementById('masBody');
+  if(mas){
+    ['abrirSugerencia()','abrirPlanPabellon()'].forEach(function(k){
+      var b=Array.from(document.querySelectorAll('#oldTabs button')).filter(function(x){return (x.getAttribute('onclick')||'').indexOf(k)>=0;})[0];
+      if(b&&b.parentNode){var w=b.parentNode;w.style.marginTop='8px';mas.appendChild(w);}
+    });
+  }
+  if(TABS.indexOf('mas')<0)TABS.push('mas');
+  var g0=window.goTab;
+  window.goTab=function(t){g0(t);navActualizar(t);if(t==='biblioteca')aprenderExtra();};
+  navActualizar(_navTabActual);
+}
+window.abrirAdminDesdeMas=function(){var b=document.getElementById('adminBtn');if(b)b.click();};
+// ── Tarjeta «Mi día» (arriba de Mis turnos) ──
+function miDiaFechaTxt(){var d=new Date();return ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][d.getDay()]+' '+d.getDate()+' de '+['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][d.getMonth()];}
+function miDiaHtml(nombre){
+  try{
+    var hoy=hoyStr(),dia=diaDeDate(hoy);
+    var ps=Object.values(bloques||{}).filter(function(b){return b&&b.nombre===nombre&&b.dia===dia&&!b.libre&&!b.sinAtencion;}).sort(function(a,b){return (a.horario?t2m(a.horario.split('–')[0].trim()):0)-(b.horario?t2m(b.horario.split('–')[0].trim()):0);});
+    var libre=Object.values(bloques||{}).some(function(b){return b&&b.nombre===nombre&&b.dia===dia&&b.libre;});
+    var h='<div style="background:rgba(255,255,255,.06);border-left:4px solid #2563eb;border-radius:14px;padding:12px 14px;margin-bottom:10px">'+
+      '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.5px;text-transform:uppercase">Hoy · '+miDiaFechaTxt()+'</div>';
+    if(ps.length){
+      var col=null;try{col=dia!=='Sábado'?colacionPorJornada(ps):null;var ck=nombre.replace(/\s/g,'_')+'_'+dia;if(colacionManual&&colacionManual[ck])col=colacionManual[ck];}catch(e){}
+      h+='<div style="font-size:11px;color:#86efac;font-weight:700;margin-top:2px">ESTÁS DE TURNO</div>'+
+        ps.map(function(b){return '<div style="font-size:15px;font-weight:800;color:#fff;margin-top:2px">'+esc(b.area||'')+(b.horario?' · '+esc(b.horario):'')+'</div>';}).join('')+
+        (col?'<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:2px">🍴 Colación '+esc(col)+'</div>':'');
+      var comp=[];ps.forEach(function(b){Object.values(bloques||{}).forEach(function(o){if(o&&o.dia===dia&&o.area===b.area&&o.nombre&&o.nombre!==nombre&&!o.libre&&!o.sinAtencion&&o.nombre!=='__sa__'&&comp.indexOf(o.nombre)<0)comp.push(o.nombre);});});
+      if(comp.length)h+='<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:2px">👥 Contigo: '+comp.slice(0,6).map(esc).join(', ')+'</div>';
+    }else h+='<div style="font-size:15px;font-weight:800;color:#fff;margin-top:4px">'+(libre?'🏖 Hoy es tu día libre':'Hoy no tienes turno asignado')+'</div>';
+    var ts=Object.values(tareas||{}).filter(function(t){return t&&t.nombre===nombre&&t.dia===dia&&t.texto;});
+    if(ts.length){
+      var tot=0,ok=0;
+      var filas=ts.map(function(t){
+        var med=false,cum=false;
+        try{med=medibleTarea(t.tipo)&&!TIPOS_SEMANALES[t.tipo]&&!TIPOS_SIN_MEDICION[t.tipo];if(med)cum=verificarCumplimiento(t.tipo,hoy,t).cumplido;}catch(e){}
+        if(med){tot++;if(cum)ok++;}
+        return '<div style="display:flex;gap:9px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12.5px;color:#fff"><span style="width:16px;height:16px;border-radius:5px;flex:none;'+(med?(cum?'background:#22c55e;border:2px solid #22c55e':'border:2px solid #64748b'):'border:2px dashed rgba(255,255,255,.25)')+'"></span><span style="'+(cum?'color:#86efac':'')+'">'+esc(String(t.texto).slice(0,70))+'</span></div>';
+      }).join('');
+      var ring=tot?'<div style="width:50px;height:50px;border-radius:50%;background:conic-gradient(#22c55e 0 '+Math.round(ok/tot*100)+'%,rgba(255,255,255,.12) '+Math.round(ok/tot*100)+'%);display:flex;align-items:center;justify-content:center;flex:none"><div style="width:38px;height:38px;border-radius:50%;background:#0b1220;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">'+ok+'/'+tot+'</div></div>':'';
+      h+='<div style="display:flex;align-items:center;gap:12px;margin-top:10px">'+ring+'<div><div style="font-size:13.5px;font-weight:800;color:#fff">Mis tareas de hoy</div><div style="font-size:11px;color:rgba(255,255,255,.5)">'+(tot?(tot-ok?'Te faltan '+(tot-ok):'¡Todo al día!'):'Sin tareas con registro')+'</div></div></div>'+filas;
+    }
+    return h+'</div>';
+  }catch(e){return '';}
+}
+// ── Centro de mando del Administrador ──
+var ADM_GRUPOS=[
+ {id:'turnos',ic:'📅',n:'Turnos y semana',d:'Semanas, bloques, cobertura, ausencias, premio, rondas',m:['Gestión de semanas','Carga masiva','Bloques horarios','Bloques cargados','Equipo clave azul','Enfermero/a a cargo','Cobertura cruzada','De llamado','Sin servicio','Turno pendiente manual','Ausencias (licencia','Solicitudes de cambio','Premio de la semana','Ronda de apertura','Ausencias activas','Solicitudes ausencia','Asignar tarea']},
+ {id:'personas',ic:'👥',n:'Personas',d:'Dotación, internos, inducción, directorio',m:['Personal de este establecimiento','Clasificación del personal','Internos de enfermería','Inducción de colaboradores','Supervisores autorizados']},
+ {id:'calidad',ic:'📊',n:'Cumplimiento y calidad',d:'Informes, tablero, accesos, supervisión, indicadores',m:['Informe de gestión','Tablero de cumplimiento','Registro de accesos','Cumplimiento de lectura','Ronda de supervisión','Indicadores operacionales']},
+ {id:'comunica',ic:'📣',n:'Comunicación',d:'Avisos, anuncios, sugerencias, cumpleaños',m:['Aviso general','Anuncio de capacitación','Sugerencias del equipo','Cumpleaños del equipo']},
+ {id:'clinica',ic:'🏥',n:'Operación clínica',d:'Pabellón, roles técnicos, temperaturas',m:['Plan de Pabellón','Roles técnicos','Espacios de temperatura']},
+ {id:'programas',ic:'🌱',n:'Programas',d:'Liderazgo, plan de estudio, biblioteca',m:['Programa de liderazgo','Plan de estudio','Biblioteca de conocimiento']},
+ {id:'mant',ic:'⚙',n:'Mantenimiento',d:'Limpiar y migrar datos (avanzado, con cuidado)',m:['Migrar datos antiguos','Limpiar semanas duplicadas','Limpiar semana']}
+];
+var ADM_KW={'Personal de este establecimiento':'directorio correo telefono fono contacto importar planilla','Cumplimiento de lectura':'ficha preguntas banco evaluacion obligatoria','Tablero de cumplimiento':'correo whatsapp aviso incumplimiento semaforo','Registro de accesos':'conexiones ingresos','Programa de liderazgo':'lecturas modo prueba enfermeros diagnostico','Informe de gestión':'dashboard gerencia pdf','Aviso general':'anuncio comunicado novedades','Gestión de semanas':'crear semana publicar','Ausencias (licencia':'vacaciones permiso licencia','Premio de la semana':'ganador jornada libre'};
+function admNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+function admTitulo(sec){var t=sec.querySelector('.asec-title');return t?t.textContent.replace(/☆|★/g,'').trim():'';}
+function admFavs(){try{return JSON.parse(localStorage.getItem('admFav')||'[]');}catch(e){return [];}}
+function admSetFavs(a){try{localStorage.setItem('admFav',JSON.stringify(a));}catch(e){}}
+function admOrganizar(){
+  var P=document.getElementById('adminPanel');if(!P||P.dataset.org)return;P.dataset.org='1';
+  var secs=Array.from(P.children).filter(function(c){return c.classList&&c.classList.contains('asec');});
+  var hub=document.createElement('div');hub.id='admHub';
+  hub.innerHTML='<div class="admSrch"><span>🔍</span><input id="admQ" type="search" placeholder="Buscar una función… (ej: ausencias, correo, tablero)" oninput="admBuscar(this.value)" autocomplete="off"></div>'+
+    '<div id="admAten"></div><div id="admFavBox"></div>'+
+    '<p class="admLbl">Acciones rápidas</p><div class="admQuick">'+
+    [['📅','Turnos de hoy',"goTab('panorama');window.scrollTo(0,0)"],['📢','Aviso general',"admIr('Aviso general')"],['📊','Cumplimiento',"abrirTableroCumpl(false)"],['🗓','Ausencias',"admIr('Ausencias (licencia')"],['📒','Directorio',"admDirectorio()"],['🌱','Liderazgo',"abrirLiderazgoAdmin()"]].map(function(q){return '<button onclick="'+q[2]+'"><b>'+q[0]+'</b>'+q[1]+'</button>';}).join('')+'</div>'+
+    '<p class="admLbl">Todo, ordenado</p><div id="admGrupos"></div><div id="admVacio" style="display:none;text-align:center;color:rgba(255,255,255,.5);font-size:13px;padding:18px">Sin resultados</div>';
+  P.insertBefore(hub,P.firstChild);
+  var cont=hub.querySelector('#admGrupos');
+  var gEls={};
+  var todos=ADM_GRUPOS.concat([{id:'otros',ic:'🗂',n:'Otros',d:'Sin clasificar',m:[]}]);
+  todos.forEach(function(g){
+    var el=document.createElement('div');el.className='admG'+(g.id==='mant'?' admMant':'');el.setAttribute('data-g',g.id);
+    el.innerHTML='<div class="admGh" onclick="admToggle(this.parentNode)"><span class="admGi">'+g.ic+'</span><div class="admGt"><div class="n">'+g.n+'</div><div class="d">'+g.d+'</div></div><span class="admGc">0</span><span class="admGa">›</span></div><div class="admGb"></div>';
+    cont.appendChild(el);gEls[g.id]=el;
+  });
+  secs.forEach(function(sec){
+    var t=admNorm(admTitulo(sec));var gid='otros';
+    ADM_GRUPOS.forEach(function(g){if(gid==='otros'&&g.m.some(function(k){return t.indexOf(admNorm(k))>=0;}))gid=g.id;});
+    var kw=Object.keys(ADM_KW).filter(function(k){return t.indexOf(admNorm(k))>=0;}).map(function(k){return ADM_KW[k];}).join(' ');
+    sec.setAttribute('data-kw',kw);
+    var tt=sec.querySelector('.asec-title');
+    if(tt){var st=document.createElement('span');st.className='admStar';st.textContent='☆';st.title='Fijar en Inicio';st.onclick=function(ev){ev.stopPropagation();admFavToggle(admTitulo(sec));};tt.appendChild(st);}
+    gEls[gid].querySelector('.admGb').appendChild(sec);
+  });
+  Object.keys(gEls).forEach(function(k){var n=gEls[k].querySelectorAll('.admGb > .asec').length;gEls[k].querySelector('.admGc').textContent=n;if(!n)gEls[k].style.display='none';});
+  admFavRender();
+  new MutationObserver(function(){if(P.classList.contains('open')){admAtencion();setTimeout(function(){try{hub.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}},150);}}).observe(P,{attributes:true,attributeFilter:['class']});
+}
+window.admToggle=function(g){g.classList.toggle('open');};
+function admSecPorTitulo(key){var P=document.getElementById('adminPanel');var k=admNorm(key);return Array.from(P.querySelectorAll('.asec')).filter(function(s){return admNorm(admTitulo(s)).indexOf(k)>=0;})[0];}
+window.admIr=function(key){
+  var s=admSecPorTitulo(key);if(!s)return;
+  var q=document.getElementById('admQ');if(q&&q.value){q.value='';admBuscar('');}
+  var g=s.closest('.admG');if(g)g.classList.add('open');
+  setTimeout(function(){s.scrollIntoView({behavior:'smooth',block:'start'});s.classList.add('admFlash');setTimeout(function(){s.classList.remove('admFlash');},1600);},60);
+};
+window.admDirectorio=function(){var P=document.getElementById('adminPanel');var b=Array.from(P.querySelectorAll('button')).filter(function(x){return /Directorio/i.test(x.textContent);})[0];if(b)b.click();else admIr('Personal de este establecimiento');};
+function admFavToggle(t){var f=admFavs(),i=f.indexOf(t);if(i>=0)f.splice(i,1);else f.push(t);admSetFavs(f);admFavRender();}
+function admFavRender(){
+  var f=admFavs(),box=document.getElementById('admFavBox');if(!box)return;
+  Array.from(document.querySelectorAll('#adminPanel .admStar')).forEach(function(st){var t=admTitulo(st.closest('.asec'));st.textContent=f.indexOf(t)>=0?'★':'☆';st.style.color=f.indexOf(t)>=0?'#fbbf24':'';});
+  box.innerHTML=f.length?'<p class="admLbl">⭐ Fijadas</p><div class="admFavs">'+f.map(function(t,i){return '<button onclick="admIrFav('+i+')">'+esc(t.replace(/^[^\wÁÉÍÓÚáéíóúñÑ(]+/,'').slice(0,34))+'</button>';}).join('')+'</div>':'';
+}
+window.admIrFav=function(i){var t=admFavs()[i];if(t)admIr(t.replace(/^[^\wÁÉÍÓÚáéíóúñÑ(]+/,'').trim());};
+function admAtencion(){
+  var d=document.getElementById('admAten');if(!d)return;
+  var cam=Object.values(cambios||{}).filter(function(c){return c&&c.estado==='aceptado';}).length;
+  var aus=Object.values(ausencias||{}).filter(function(a){return a&&a.estado==='pendiente';}).length;
+  function pinta(sug){
+    var rows=[];
+    if(cam)rows.push(['🔁','Cambios de turno por aprobar',cam,"admIr('Solicitudes de cambio')"]);
+    if(aus)rows.push(['🗓','Ausencias por aprobar',aus,"admIr('Solicitudes ausencia')"]);
+    if(sug)rows.push(['💡','Sugerencias del equipo',sug,"admIr('Sugerencias del equipo')"]);
+    rows.push(['📝','Quién no ha respondido hoy','',"var b=document.getElementById('abrirPendientesHoyBtn');if(b)b.click()"]);
+    d.innerHTML='<div class="admAten"><h4>Requiere tu atención</h4>'+rows.map(function(r){return '<div class="ar" onclick="'+r[3]+'"><span>'+r[0]+' '+r[1]+'</span>'+(r[2]!==''?'<span class="n">'+r[2]+'</span>':'<span style="color:rgba(255,255,255,.4)">›</span>')+'</div>';}).join('')+'</div>';
+  }
+  pinta(0);
+  try{sedeRef('sugerencias').once('value').then(function(s){var v=s.val();var n=v&&typeof v==='object'?Object.keys(v).length:0;if(n)pinta(n);});}catch(e){}
+}
+window.admBuscar=function(q){
+  q=admNorm(q).trim();
+  var P=document.getElementById('adminPanel');
+  var secs=Array.from(P.querySelectorAll('.admGb > .asec'));
+  var visibles=0;
+  secs.forEach(function(s){
+    var btns=Array.from(s.querySelectorAll('button'));
+    if(!q){s.style.display='';btns.forEach(function(b){if(b.dataset.admHid){b.style.display='';delete b.dataset.admHid;}});return;}
+    var tit=admNorm(admTitulo(s))+' '+(s.getAttribute('data-kw')||'');
+    if(tit.indexOf(q)>=0){s.style.display='';visibles++;btns.forEach(function(b){if(b.dataset.admHid){b.style.display='';delete b.dataset.admHid;}});return;}
+    var hit=btns.filter(function(b){return admNorm(b.textContent).indexOf(q)>=0;});
+    if(hit.length){s.style.display='';visibles++;btns.forEach(function(b){if(hit.indexOf(b)<0){if(!b.dataset.admHid){b.dataset.admHid='1';b.style.display='none';}}else if(b.dataset.admHid){b.style.display='';delete b.dataset.admHid;}});}
+    else s.style.display='none';
+  });
+  Array.from(P.querySelectorAll('.admG')).forEach(function(g){
+    var n=Array.from(g.querySelectorAll('.admGb > .asec')).filter(function(s){return s.style.display!=='none';}).length;
+    if(!q){g.style.display=g.querySelectorAll('.admGb > .asec').length?'':'none';g.classList.remove('open');return;}
+    g.style.display=n?'':'none';if(n)g.classList.add('open');
+  });
+  var v=document.getElementById('admVacio');if(v)v.style.display=(q&&!visibles)?'block':'none';
+  var a=document.getElementById('admAten');if(a)a.style.display=q?'none':'';
+};
+function navAdminInit(){try{admOrganizar();}catch(e){console.error(e);}try{navInit();}catch(e){console.error(e);}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',navAdminInit);else navAdminInit();
 
 // ══════════════ CLASIFICACIÓN DE PERSONAL ══════════════
 // rolPersona[nombre] = 'clinico' | 'interna' | 'direccion'. Por defecto: clinico.
