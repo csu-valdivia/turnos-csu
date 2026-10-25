@@ -12628,15 +12628,17 @@ function lidTarjetaMisTurnos(nombre){
 // No reemplaza funciones: reordena lo existente. Las pestañas viejas siguen existiendo (ocultas) y goTab() sigue siendo el motor.
 var NAV_GRUPOS=[
   {id:'hoy',ic:'🏠',n:'Hoy',tabs:[['mis-turnos','Mi día']]},
-  {id:'semana',ic:'📅',n:'Mi semana',tabs:[['panorama','Panorama'],['cambios','Cambios'],['ausencias','Ausencias']]},
+  {id:'semana',ic:'📅',n:'Mi semana',tabs:[['mis-turnos','Mis turnos'],['panorama','Panorama'],['cambios','Cambios'],['ausencias','Ausencias']]},
   {id:'equipo',ic:'👥',n:'Equipo',tabs:[['cumplimiento','Cumplimiento'],['novedades','Novedades'],['resumen','Resumen'],['estado','KPIs']]},
   {id:'aprender',ic:'📚',n:'Aprender',tabs:[['biblioteca','Biblioteca']]},
   {id:'mas',ic:'☰',n:'Más',tabs:[['mas','Más']]}
 ];
-var _navTabActual='mis-turnos',_navCamb=0;
+var _navTabActual='mis-turnos',_navCamb=0,_navGrupo='';
 function navActualizar(tab){
   _navTabActual=tab;
-  var g=NAV_GRUPOS.filter(function(x){return x.tabs.some(function(t){return t[0]===tab;});})[0];
+  // Si la pestaña pertenece al grupo en que ya está la persona (ej. «Mis turnos» dentro de «Mi semana»), se queda en ese grupo
+  var g=NAV_GRUPOS.filter(function(x){return x.id===_navGrupo&&x.tabs.some(function(t){return t[0]===tab;});})[0]||NAV_GRUPOS.filter(function(x){return x.tabs.some(function(t){return t[0]===tab;});})[0];
+  if(g)_navGrupo=g.id;
   document.querySelectorAll('#navBottom .nb').forEach(function(b){b.classList.toggle('on',!!g&&b.getAttribute('data-g')===g.id);var dot=b.querySelector('.ndot');if(b.getAttribute('data-g')==='semana'){if(_navCamb>0&&!dot){dot=document.createElement('span');dot.className='ndot';b.appendChild(dot);}else if(_navCamb<=0&&dot)dot.remove();}});
   var ch=document.getElementById('navChips');if(!ch)return;
   if(!g||g.tabs.length<2){ch.innerHTML='';ch.style.display='none';return;}
@@ -12645,6 +12647,7 @@ function navActualizar(tab){
 }
 window.navIr=function(gid){
   var g=NAV_GRUPOS.filter(function(x){return x.id===gid;})[0];if(!g)return;
+  _navGrupo=gid;
   goTab(g.tabs[0][0]);
 };
 function aprenderExtra(){
