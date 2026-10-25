@@ -820,6 +820,22 @@ body[data-gxcm="tarjetas"] #gxCmLeg,body[data-gxcm="grilla"] #gxCmLeg,body[data-
 .gxcol{display:block;font-size:11px;font-weight:600;color:var(--gx-slate);text-align:center;padding:2px 0}
 .gxcell{height:auto}
 
+.rd-days{display:flex;gap:5px;margin-bottom:12px}.rd-d{flex:1;border:1px solid var(--gx-line);background:#fff;border-radius:10px;padding:8px 0;font:600 12.5px Inter,system-ui,sans-serif;color:var(--gx-slate);cursor:pointer}
+.rd-d.hoy{border-color:var(--gx-teal);color:var(--gx-teal)}.rd-d.on{background:var(--gx-teal);border-color:var(--gx-teal);color:#fff}
+.rd-in{display:flex;gap:8px;margin-bottom:6px}.rd-in input{flex:1;border:1px solid var(--gx-line);border-radius:14px;padding:12px 14px;font:inherit;font-size:15px;background:#fff;color:var(--gx-navy)}
+.rd-yo{border:1px solid var(--gx-teal);background:var(--gx-sel);color:var(--gx-teal);border-radius:14px;padding:0 16px;font:700 14px Inter,system-ui,sans-serif;cursor:pointer}
+.rd-msg{font-size:12px;color:var(--gx-slate);min-height:6px;margin-bottom:6px}
+.rd-res{border:1px solid var(--gx-teal);background:var(--gx-sel);border-radius:16px;padding:14px;margin:6px 0 12px;color:var(--gx-navy)}.rd-res h4{margin:0 0 4px;font-size:17px}
+.rd-now{font-size:13px;font-weight:700;color:#0F766E;margin-bottom:8px}.rd-now.aus{color:#B91C1C}.rd-now.col{color:#B45309}.rd-now.sig{color:#1D4ED8}.rd-now.fin{color:var(--gx-slate)}
+.rd-chip{display:inline-block;background:#fff;border:1px solid #BFE9E7;border-radius:99px;padding:3px 10px;font-size:12px;font-weight:600;margin:0 6px 6px 0}.rd-chip.aus{background:#FEE2E2;border-color:#FCA5A5;color:#B91C1C}
+.rd-bl{background:#fff;border:1px solid #BFE9E7;border-radius:10px;padding:8px 10px;margin-top:6px;display:flex;justify-content:space-between;gap:8px;font-weight:600;font-size:13px}.rd-bl small{color:var(--gx-slate);font-weight:500}
+.rd-ex{margin-top:8px;font-size:12.5px;color:var(--gx-slate);line-height:1.6}.rd-vacio{font-size:13px;color:var(--gx-slate);margin:6px 0}
+.rd-det{margin-top:10px;font-size:13px}.rd-det summary{cursor:pointer;font-weight:700;color:var(--gx-teal)}.rd-wk{padding:6px 0;border-top:1px solid #CFE8E6;margin-top:6px}.rd-wk small{color:var(--gx-slate)}.rd-wkt{font-size:12px;color:var(--gx-slate);margin-top:2px}
+.rd-h{margin:14px 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#5B6B82}
+.rd-ar{border:1px solid var(--gx-line);border-radius:12px;padding:9px 11px;margin-bottom:6px;background:#fff;color:var(--gx-navy)}.rd-ar.now{border-color:var(--gx-teal)}
+.rd-tag{background:var(--gx-teal);color:#fff;border-radius:99px;padding:1px 8px;font-size:10.5px;font-weight:700;margin-left:6px}
+.rd-r{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-top:4px}.rd-r small{color:var(--gx-slate);white-space:nowrap}.rd-r.on span{font-weight:700;color:#0F766E}.rd-r.gap span{color:#B45309;font-weight:600}
+
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
 </style>
 </head>
@@ -1141,6 +1157,8 @@ body[data-gxcm="tarjetas"] #gxCmLeg,body[data-gxcm="grilla"] #gxCmLeg,body[data-
           </div>
           <div class="pan-wrap"><table class="ptbl" id="panTable"></table></div>
         </div>
+
+        <div class="tc" id="tc-rol-diario"><div id="rolDiarioView"></div></div>
 
         <div class="tc" id="tc-mis-turnos">
           <div class="sel-wrap"><select id="nameSelect" style="background:rgba(255,255,255,.08);color:#fff"><option value="">— Selecciona tu nombre —</option></select></div>
@@ -2623,7 +2641,7 @@ function attach(){
   on('aviso',function(v){renderAviso(v);});
   on('anuncios',function(v){anuncios=v||{};anunIdx=0;renderAnuncios();renderAnunciosAdmin();});
   on('bloques',function(v){
-    bloques=v;renderPanorama();renderBloquesList();renderResumen();renderHeatMap();if(curNombre)renderMisTurnos(curNombre);
+    bloques=v;renderPanorama();renderBloquesList();renderResumen();renderHeatMap();if(curNombre)renderMisTurnos(curNombre);try{if(_navTabActual==='rol-diario')renderRolDiario();}catch(e){}
     var totalAhora=Object.keys(bloques).length;
     if(!primerCargaBloques&&totalAhora>ultimosBloquesCount)reproducirAlerta();
     primerCargaBloques=false;
@@ -5948,7 +5966,7 @@ function updateSelects(){
 }
 
 // ── TABS ──
-var TABS=['panorama','mis-turnos','estado','cambios','ausencias','resumen','biblioteca','novedades','cumplimiento'];
+var TABS=['panorama','mis-turnos','estado','cambios','ausencias','resumen','biblioteca','novedades','cumplimiento','rol-diario'];
 window.goTab=function(tab){
   document.querySelectorAll('.tab').forEach(function(t){var m=t.getAttribute('onclick').match(/goTab\('([^']+)'\)/);if(m)t.classList.toggle('active',m[1]===tab);});
   TABS.forEach(function(id){var el=document.getElementById('tc-'+id);if(el)el.classList.toggle('active',id===tab);});
@@ -5965,6 +5983,7 @@ window.goTab=function(tab){
   }
   if(tab==='cambios')renderCambios();
   if(tab==='ausencias')renderAusencias();
+  if(tab==='rol-diario')renderRolDiario(true);
   if(tab==='biblioteca')renderBiblioteca();
   if(tab==='novedades')renderNovedades();
 };
@@ -9348,6 +9367,108 @@ function salBadgesPersona(nombre){
   return h;
 }
 
+// ═══════════ ROL DIARIO: dónde está cada persona, quién está en cada servicio ═══════════
+// Solo lectura, para todo el equipo. Lee bloques, colación, llamados, coberturas, ausencias y salidas.
+var _rdDia='',_rdNombre='';
+function rdNorm(s){return (s||'').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();}
+function rdNombresEquipo(){
+  var l=(nombres||[]).map(function(n){return n&&n.nombre?n.nombre:n;}).filter(Boolean);
+  Object.values(bloques||{}).forEach(function(b){if(b&&b.nombre&&b.nombre!=='__sa__'&&l.indexOf(b.nombre)<0)l.push(b.nombre);});
+  return l.sort(function(a,b){return a.localeCompare(b);});
+}
+function rdPartes(h){var p=(h||'').split('–');return [p[0]?t2m(p[0].trim()):0,p[1]?t2m(p[1].trim()):0];}
+function rdBloquesDe(n,dia){
+  return Object.values(bloques||{}).filter(function(b){return b&&b.nombre===n&&b.dia===dia&&!b.sinAtencion&&!b.libre&&b.horario;})
+    .sort(function(a,b){return rdPartes(a.horario)[0]-rdPartes(b.horario)[0];});
+}
+function rdFechaDia(dia){var sem=semanas&&semanas[W];return(sem&&sem.ini)?fechaDeDiaEnSemana(dia,sem):'';}
+function rdEsHoy(dia){return diaDeDate(hoyStr())===dia&&(function(){var f=rdFechaDia(dia);return !f||f===hoyStr();})();}
+function rdEstadoAhora(n,dia,bl,col){
+  if(!rdEsHoy(dia))return '';
+  var now=minAhora(),f=hoyStr();
+  var ab=ausVentanasMin(n,f).some(function(w){return w[0]<=now&&w[1]>now;});
+  if(ab)return '<div class="rd-now aus">● Ausente ahora</div>';
+  var sa=Object.values(salidas||{}).filter(function(x){return x&&x.nombre===n&&!x.finTs;})[0];
+  if(sa)return '<div class="rd-now aus">🚪 Fuera del turno desde las '+horaLocal(sa.inicioTs)+'</div>';
+  if(!bl.length)return '';
+  if(col){var c=rdPartes(col);if(now>=c[0]&&now<c[1])return '<div class="rd-now col">🍴 En colación hasta las '+_hhmm(c[1])+'</div>';}
+  for(var i=0;i<bl.length;i++){var p=rdPartes(bl[i].horario);if(now>=p[0]&&now<p[1])return '<div class="rd-now">● Ahora en '+esc(bl[i].area||'')+' · hasta las '+_hhmm(p[1])+'</div>';}
+  var prox=bl.filter(function(b){return rdPartes(b.horario)[0]>now;})[0];
+  if(prox)return '<div class="rd-now sig">Próximo: '+esc(prox.area||'')+' a las '+_hhmm(rdPartes(prox.horario)[0])+'</div>';
+  return '<div class="rd-now fin">Ya terminó su jornada de hoy</div>';
+}
+function rdTarjetaPersona(n,dia){
+  var bl=rdBloquesDe(n,dia),fch=rdFechaDia(dia);
+  var libre=Object.values(bloques||{}).some(function(b){return b&&b.nombre===n&&b.dia===dia&&b.libre;});
+  var col=null;try{col=dia!=='Sábado'&&bl.length?colacionPorJornada(bl):null;var ck=n.replace(/\s/g,'_')+'_'+dia;if(colacionManual&&colacionManual[ck])col=colacionManual[ck];}catch(e){}
+  var h='<div class="rd-res"><h4>'+esc(n)+'</h4>'+rdEstadoAhora(n,dia,bl,col);
+  if(fch){ausActivasDe(n,fch).forEach(function(a){h+='<div class="rd-chip aus">'+(a.tipo==='licencia'?'🏥':a.tipo==='vacaciones'?'🌴':a.tipo==='cumpleanos'?'🎂':'📋')+' '+esc(a.tipoLabel||a.tipo)+' · '+esc(ausFechaTxt(a))+'</div>';});}
+  if(libre)h+='<div class="rd-chip">🏖 Día libre</div>';
+  if(!bl.length&&!libre)h+='<p class="rd-vacio">Sin turnos cargados el '+esc(dia)+'.</p>';
+  bl.forEach(function(b){h+='<div class="rd-bl"><span>'+esc(b.area||'')+(b.turno?' '+esc(b.turno):'')+'</span><small>'+esc(b.horario)+'</small></div>';});
+  var ex=[];
+  if(col)ex.push('🍴 Colación '+esc(col));
+  if(Object.values(encargados||{}).some(function(e){return e&&e.nombre===n&&e.dia===dia;}))ex.push('⭐ Enfermero/a a cargo');
+  try{var cl=getClaveParaDia(dia).filter(function(e){return e&&e.n===n;})[0];if(cl)ex.push('🔷 Equipo clave'+(cl.r?' · '+esc(cl.r):''));}catch(e){}
+  Object.values(llamados||{}).filter(function(l){return l&&l.nombre===n&&l.dia===dia;}).forEach(function(l){ex.push('📞 De llamado'+(l.area?' · '+esc(l.area):''));});
+  Object.values(coberturas||{}).filter(function(c){return c&&c.persona===n&&c.dia===dia;}).forEach(function(c){ex.push('↔ Cubre '+esc(c.area||'')+(c.origen?' (deja '+esc(c.origen)+')':'')+(c.horario?' '+esc(c.horario):''));});
+  if(ex.length)h+='<div class="rd-ex">'+ex.join('<br>')+'</div>';
+  var tds=Object.values(tareas||{}).filter(function(t){return t&&t.nombre===n&&t.dia===dia;});
+  if(tds.length)h+='<div class="rd-ex"><b>Designaciones:</b> '+tds.map(function(t){var c=cfgTipo(t.tipo);return esc((c.e||'')+' '+(c.l||t.tipo))+(t.jornada&&t.jornada!=='dia'?' ('+t.jornada.toUpperCase()+')':'');}).join(' · ')+'</div>';
+  // semana completa
+  var sem=DIAS.map(function(d){var b2=rdBloquesDe(n,d);var lb=Object.values(bloques||{}).some(function(b){return b&&b.nombre===n&&b.dia===d&&b.libre;});
+    var td=Object.values(tareas||{}).filter(function(t){return t&&t.nombre===n&&t.dia===d;}).map(function(t){return esc(cfgTipo(t.tipo).l||t.tipo);});
+    if(!b2.length&&!lb&&!td.length)return '';
+    return '<div class="rd-wk"><b>'+d.slice(0,3)+'</b> '+(lb?'🏖 Libre':b2.map(function(b){return esc((b.area||'')+(b.turno?' '+b.turno:''))+' <small>'+esc(b.horario)+'</small>';}).join(' · '))+(td.length?'<div class="rd-wkt">'+td.join(' · ')+'</div>':'')+'</div>';}).join('');
+  if(sem)h+='<details class="rd-det"><summary>Ver su semana completa</summary>'+sem+'</details>';
+  return h+'</div>';
+}
+function rdPanelAreas(dia){
+  var areas=AREAS.slice();Object.values(bloques||{}).forEach(function(b){if(b&&b.area&&b.nombre!=='__sa__'&&areas.indexOf(b.area)<0)areas.push(b.area);});
+  var def=[];try{def=verificar().filter(function(d){return d.dia===dia;});}catch(e){}
+  var hoy=rdEsHoy(dia),now=minAhora(),fch=rdFechaDia(dia),h='',alguno=false;
+  areas.forEach(function(a){
+    var L=Object.values(bloques||{}).filter(function(b){return b&&b.area===a&&b.dia===dia&&b.nombre&&b.nombre!=='__sa__'&&!b.sinAtencion&&!b.libre&&b.horario;});
+    var gaps=def.filter(function(d){return d.area===a;});
+    if(!L.length&&!gaps.length)return;alguno=true;
+    var g={},act={};L.forEach(function(b){var ab=fch&&ausCubre(b.nombre,fch,rdPartes(b.horario)[0],rdPartes(b.horario)[1]);if(!ab)act[b.horario]=true;(g[b.horario]=g[b.horario]||[]).push(esc(b.nombre)+(ab?' <small>(ausente)</small>':''));});
+    var ks=Object.keys(g).sort(function(x,y){return rdPartes(x)[0]-rdPartes(y)[0];});
+    var ahora=hoy&&ks.some(function(k){var p=rdPartes(k);return act[k]&&now>=p[0]&&now<p[1];});
+    h+='<div class="rd-ar'+(ahora?' now':'')+'"><b>'+esc(a)+'</b>'+(ahora?'<span class="rd-tag">AHORA</span>':'');
+    ks.forEach(function(k){var p=rdPartes(k);var on=hoy&&act[k]&&now>=p[0]&&now<p[1];h+='<div class="rd-r'+(on?' on':'')+'"><span>'+g[k].join(' · ')+'</span><small>'+esc(k)+'</small></div>';});
+    gaps.forEach(function(d){h+='<div class="rd-r gap"><span>Sin cobertura</span><small>'+esc(d.horario)+'</small></div>';});
+    h+='</div>';
+  });
+  return alguno?h:'<p class="rd-vacio">No hay turnos cargados el '+esc(dia)+'.</p>';
+}
+window.rdSet=function(k,v){if(k==='dia')_rdDia=v;if(k==='n')_rdNombre=v;renderRolDiario(true);};
+window.rdBuscar=function(txt){
+  var q=rdNorm(txt);if(!q){_rdNombre='';renderRolDiario(true);return;}
+  var todos=rdNombresEquipo();
+  var ex=todos.filter(function(n){return rdNorm(n)===q;})[0];
+  var par=ex?[ex]:todos.filter(function(n){return rdNorm(n).indexOf(q)>=0;});
+  var msg=document.getElementById('rdMsg');
+  if(par.length===1){_rdNombre=par[0];renderRolDiario(true);}
+  else if(msg)msg.textContent=par.length?'Hay varias coincidencias: '+par.slice(0,4).join(', ')+(par.length>4?'…':'')+'. Escribe un poco más.':'No encontré a nadie con ese nombre.';
+};
+function renderRolDiario(keepFocus){
+  var d=document.getElementById('rolDiarioView');if(!d)return;
+  var hoyN=diaDeDate(hoyStr());
+  if(!_rdDia)_rdDia=DIAS.indexOf(hoyN)>=0?hoyN:'Lunes';
+  var dias=DIAS.map(function(x){return '<button class="rd-d'+(x===_rdDia?' on':'')+(x===hoyN?' hoy':'')+'" onclick="rdSet(\'dia\',\''+x+'\')">'+x.slice(0,3)+'</button>';}).join('');
+  var yo=(typeof curNombre==='string'&&curNombre)?curNombre:'';
+  var h='<div class="rd-days">'+dias+'</div>'
+    +'<div class="rd-in"><input id="rdQ" list="rdNombres" type="search" autocomplete="off" placeholder="¿Dónde está…? Escribe un nombre" value="'+esc(_rdNombre)+'" onchange="rdBuscar(this.value)" onkeydown="if(event.key===\'Enter\')rdBuscar(this.value)">'
+    +(yo?'<button class="rd-yo" onclick="rdSet(\'n\',\''+esc(yo).replace(/'/g,'')+'\')">Yo</button>':'')+'</div>'
+    +'<datalist id="rdNombres">'+rdNombresEquipo().map(function(n){return '<option value="'+esc(n)+'">';}).join('')+'</datalist><div id="rdMsg" class="rd-msg"></div>';
+  if(_rdNombre)h+=rdTarjetaPersona(_rdNombre,_rdDia);
+  h+='<h5 class="rd-h">Quién está dónde · '+esc(_rdDia.toLowerCase())+'</h5>'+rdPanelAreas(_rdDia);
+  var act=document.activeElement&&document.activeElement.id==='rdQ'&&!keepFocus;
+  if(act)return; // no pisar lo que se está escribiendo
+  d.innerHTML=h;
+}
+setInterval(function(){try{if(_navTabActual==='rol-diario'&&document.getElementById('appView').style.display!=='none')renderRolDiario();}catch(e){}},60000);
+
 // ═══════════ AUSENCIAS CON JORNADA (día completo / medio día AM / medio día PM) ═══════════
 // Fuente de verdad: 'ausencias' (a nivel sede). Turnos, tareas, cumplimiento y premio la CONSULTAN,
 // así que si una ausencia se aprueba, se rechaza o se borra, todo se recalcula solo.
@@ -12628,7 +12749,7 @@ function lidTarjetaMisTurnos(nombre){
 // No reemplaza funciones: reordena lo existente. Las pestañas viejas siguen existiendo (ocultas) y goTab() sigue siendo el motor.
 var NAV_GRUPOS=[
   {id:'hoy',ic:'🏠',n:'Hoy',tabs:[['mis-turnos','Mi día']]},
-  {id:'semana',ic:'📅',n:'Mi semana',tabs:[['mis-turnos','Mis turnos'],['panorama','Panorama'],['cambios','Cambios'],['ausencias','Ausencias']]},
+  {id:'semana',ic:'📅',n:'Mi semana',tabs:[['mis-turnos','Mis turnos'],['panorama','Panorama'],['cambios','Cambios'],['ausencias','Ausencias'],['rol-diario','Rol diario']]},
   {id:'equipo',ic:'👥',n:'Equipo',tabs:[['cumplimiento','Cumplimiento'],['novedades','Novedades'],['resumen','Resumen'],['estado','KPIs']]},
   {id:'aprender',ic:'📚',n:'Aprender',tabs:[['biblioteca','Biblioteca']]},
   {id:'mas',ic:'☰',n:'Más',tabs:[['mas','Más']]}
