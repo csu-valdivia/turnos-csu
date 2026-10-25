@@ -817,6 +817,9 @@ body[data-gxcm="tarjetas"] #gxCmLeg,body[data-gxcm="grilla"] #gxCmLeg,body[data-
 .gxsal-x{border:none;background:transparent;color:#94A3B8;font-size:16px;line-height:1;cursor:pointer;padding:0 3px}
 .gxsal-as{margin-top:8px;border:1px solid var(--gx-teal);background:var(--gx-sel);color:var(--gx-teal);border-radius:10px;padding:8px 12px;font:700 13px Inter,system-ui,sans-serif;cursor:pointer}
 
+.gxcol{display:block;font-size:11px;font-weight:600;color:var(--gx-slate);text-align:center;padding:2px 0}
+.gxcell{height:auto}
+
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
 </style>
 </head>
@@ -6664,7 +6667,7 @@ function renderMisTurnos(nombre){
     html+='<div class="day-card"><div class="day-hdr"><span style="font-size:16px">📅</span><span class="day-name">'+dia+'</span>'+(cobDia?'<span style="font-size:11px;background:rgba(239,68,68,.1);color:#991b1b;padding:2px 8px;border-radius:4px;margin-left:auto">Cubre '+cobDia.destino+'</span>':'')+'</div>';
     ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?renderSubareaTareas(b.turno,b.nombre,dia):null;var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,b.area,b.horario):null;var editBtn=claveB?'<button onclick="abrirEditarTurnoSemana(\''+nombre.replace(/'/g,"\\'")+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'';html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+editBtn+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
     if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span>'+(adminUnlocked?'<button onclick="editarColacion(\''+colKey+'\',\''+col+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'')+'</div></div>';
-    tds.forEach(function(t){var cfg=cfgTipo(t.tipo);var vk=(nombre+'_'+dia+'_'+t.texto.substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';var sectorT=t.sector?'<span style="font-size:10px;color:#94a3b8;margin-left:5px">📍'+esc(t.sector)+'</span>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+' '+jornadaLabel(t.jornada||'dia')+sectorT+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
+    tds.forEach(function(t){var cfg=cfgTipo(t.tipo);var vk=(nombre+'_'+dia+'_'+(t.texto||'').substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';var sectorT=t.sector?'<span style="font-size:10px;color:#94a3b8;margin-left:5px">📍'+esc(t.sector)+'</span>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+' '+jornadaLabel(t.jornada||'dia')+sectorT+'</div>'+t.texto+pabH+'<br><button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
     notaLista.forEach(function(nt){
       var respuestas=nt.respuestas?Object.values(nt.respuestas).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
       var respHtml=respuestas.map(function(rp){return '<div style="margin-top:6px;padding:6px 10px;background:rgba(96,165,250,.1);border-left:2px solid #60a5fa;border-radius:4px;font-size:12px;color:rgba(255,255,255,.85)"><b style="color:#93c5fd">↳ '+esc(rp.quien||'Jefatura')+':</b> '+esc(rp.texto)+'</div>';}).join('');
@@ -13084,6 +13087,14 @@ function gxGridData(){
   GXG.pend.forEach(function(p,i){((m[p.nombre]=m[p.nombre]||{})[p.dia]=(m[p.nombre][p.dia]||[])).push({i:i,area:p.area,horario:p.horario,turno:p.turno,pend:true});});
   return m;
 }
+function gxColTxt(n,d,L){
+  try{
+    if(d==='Sábado'||!L||!L.length)return '';
+    var col=colacionPorJornada(L.filter(function(x){return x.horario;}));
+    var mk=(n||'').replace(/\s/g,'_')+'_'+d;if(colacionManual&&colacionManual[mk])col=colacionManual[mk];
+    return col?'<span class="gxcol">🍴 '+gxEsc(col)+'</span>':'';
+  }catch(e){return '';}
+}
 function gxGridRender(){
   var host=document.getElementById('gxCmGri');if(!host||host.style.display==='none')return;
   var data=gxGridData();var pers=gxNombresTodos();Object.keys(data).forEach(function(n){if(pers.indexOf(n)<0)pers.push(n);});
@@ -13093,7 +13104,8 @@ function gxGridRender(){
     var tds=GX_DIAS.map(function(d){
       var L=(data[n]&&data[n][d])||[];
       if(!L.length)return '<td><button type="button" class="gxcell vacia" data-g="cel" data-n="'+encodeURIComponent(n)+'" data-d="'+d+'" aria-label="Agregar turno a '+gxEsc(n)+' el '+d+'">'+gxIc('plus',14)+'</button></td>';
-      var inner=L.slice(0,2).map(function(x){var c=gxAreaCol(x.area);return '<span class="gxbl'+(x.pend?' pend':'')+'" style="background:'+c[0]+';color:'+c[1]+'">'+gxEsc(gxAreaShort(x.area))+(x.turno?' '+gxEsc(x.turno):'')+'<small>'+gxEsc(x.horario||'')+'</small></span>';}).join('')+(L.length>2?'<span class="gxmas">+'+(L.length-2)+'</span>':'');
+      L=L.slice().sort(function(a,b){return (a.horario||'')<(b.horario||'')?-1:1;});
+      var inner=L.map(function(x){var c=gxAreaCol(x.area);return '<span class="gxbl'+(x.pend?' pend':'')+'" style="background:'+c[0]+';color:'+c[1]+'">'+gxEsc(gxAreaShort(x.area))+(x.turno?' '+gxEsc(x.turno):'')+'<small>'+gxEsc(x.horario||'')+'</small></span>';}).join('')+gxColTxt(n,d,L);
       return '<td><button type="button" class="gxcell" data-g="cel" data-n="'+encodeURIComponent(n)+'" data-d="'+d+'">'+inner+'</button></td>';
     }).join('');
     return '<tr><th scope="row" class="gxg-n" title="'+gxEsc(n)+'">'+gxEsc(n)+'</th>'+tds+'</tr>';
@@ -13107,14 +13119,20 @@ function gxGridCelda(n,d){
   var w=document.createElement('div');var sh;
   function pintar(){
     data=gxGridData();L=(data[n]&&data[n][d])||[];
-    var ex=L.map(function(x,j){return '<div class="gx-ex"><span class="gxbl'+(x.pend?' pend':'')+'" style="background:'+gxAreaCol(x.area)[0]+';color:'+gxAreaCol(x.area)[1]+'">'+gxEsc(x.area||'')+(x.turno?' '+gxEsc(x.turno):'')+' · '+gxEsc(x.horario||'')+(x.pend?' (por guardar)':'')+'</span><button type="button" class="gxchip" data-x="'+j+'">Quitar</button></div>';}).join('');
+    var ex=L.map(function(x,j){return '<div class="gx-ex"><span class="gxbl'+(x.pend?' pend':'')+'" style="background:'+gxAreaCol(x.area)[0]+';color:'+gxAreaCol(x.area)[1]+'">'+gxEsc(x.area||'')+(x.turno?' '+gxEsc(x.turno):'')+' · '+gxEsc(x.horario||'')+(x.pend?' (por guardar)':'')+'</span>'+(x.pend?'':'<button type="button" class="gxchip" data-e="'+j+'">Editar</button>')+'<button type="button" class="gxchip" data-x="'+j+'">Quitar</button></div>';}).join('');
     var a=GXG.last.area,h=GXG.last.hor;
     w.innerHTML=(ex||'<p class="empty" style="text-align:left">Sin turnos este día.</p>')
      +'<div class="gxlbl">Agregar turno</div><div class="gxcard-g"><label><span>Área</span><select id="gxSA">'+mkOpts(AREAS,'Elige área').replace('<option>'+a+'</option>','<option selected>'+a+'</option>')+'</select></label><label><span>Horario</span><select id="gxSH">'+mkOpts(HORARIOS,'Elige horario').replace('<option>'+h+'</option>','<option selected>'+h+'</option>')+'</select></label></div>'
      +'<div class="gxwrap" id="gxST" style="margin-top:8px;display:'+(a==='Esterilización'?'flex':'none')+'"><button type="button" class="gxchip" data-t="T1">T1</button><button type="button" class="gxchip" data-t="T2">T2</button></div>'
      +'<div class="gxwrap" style="margin-top:12px"><button type="button" class="btn-add" style="width:auto;flex:1;margin:0" data-a="add">Agregar a este día</button><button type="button" class="btn-sec" style="width:auto;flex:1;margin:0" data-a="lv">Copiar a Lun–Vie</button></div>';
+    var tb=w.querySelectorAll('[data-t]');Array.prototype.forEach.call(tb,function(x){x.classList.toggle('on',x.dataset.t===turno);});
+    if(editK){
+      var ab=w.querySelector('[data-a=add]');if(ab){ab.textContent='Guardar cambios';ab.setAttribute('data-a','upd');}
+      var lv=w.querySelector('[data-a=lv]');if(lv){lv.textContent='Cancelar edición';lv.setAttribute('data-a','canc');}
+      var lb=w.querySelector('.gxlbl');if(lb)lb.textContent='Editando turno';
+    }
   }
-  var turno='';
+  var turno='',editK=null;
   w.addEventListener('change',function(e){if(e.target.id==='gxSA'){GXG.last.area=e.target.value;var t=w.querySelector('#gxST');if(t)t.style.display=e.target.value==='Esterilización'?'flex':'none';}if(e.target.id==='gxSH')GXG.last.hor=e.target.value;});
   w.addEventListener('click',function(e){
     var b=e.target.closest('button');if(!b)return;
@@ -13124,11 +13142,18 @@ function gxGridCelda(n,d){
       if(!confirm('¿Quitar este turno ('+d+' · '+x.area+' · '+x.horario+')?'))return;
       sRef('bloques/'+x.k).remove().then(function(){setTimeout(function(){genPendientes(function(){});},400);});
       setTimeout(function(){pintar();gxGridRender();},350);return;}
+    if(b.dataset.e!==undefined){var xe=L[+b.dataset.e];if(!xe||xe.pend)return;editK=xe.k;GXG.last.area=xe.area;GXG.last.hor=xe.horario;turno=xe.turno||'';pintar();return;}
     var a=b.dataset.a;if(!a)return;
+    if(a==='canc'){editK=null;turno='';pintar();return;}
     var area=(w.querySelector('#gxSA')||{}).value,hor=(w.querySelector('#gxSH')||{}).value;
     if(!area||!hor){alert('Elige área y horario.');return;}
     var blk=function(dia){var o={nombre:n,dia:dia,area:area,horario:hor};if(turno&&area==='Esterilización')o.turno=turno;return o;};
     var existe=function(o){return gxGridData()[n]&&(gxGridData()[n][o.dia]||[]).some(function(z){return z.area===o.area&&z.horario===o.horario;});};
+    if(a==='upd'&&editK){
+      var kk=editK;editK=null;
+      sRef('bloques/'+kk).update({area:area,horario:hor,turno:(turno&&area==='Esterilización')?turno:null}).then(function(){turno='';setTimeout(function(){genPendientes(function(){});pintar();gxGridRender();},350);});
+      return;
+    }
     if(a==='add'){var o=blk(d);if(!existe(o))GXG.pend.push(o);}
     if(a==='lv'){GX_DIAS.slice(0,5).forEach(function(dd){var o=blk(dd);if(!existe(o))GXG.pend.push(o);});}
     pintar();gxGridRender();
