@@ -652,6 +652,7 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
         <div id="anunciosBanner"></div>
         <div id="avisoBanner"></div>
         <div id="rankingMiniCard"></div>
+        <div id="navAnchor"></div>
         <div id="navChips"></div>
 
         <div id="oldTabs" style="margin-bottom:4px;display:none">
@@ -758,6 +759,8 @@ button{cursor:pointer;font-family:inherit;transition:all .15s}
           </div>
           <div id="bibliotecaView"></div>
         </div>
+
+        <div class="tc" id="tc-cumplimiento"><div id="cumpEquipo"></div><div id="cumpRanking" style="margin-top:14px"></div></div>
 
         <div class="tc" id="tc-mas"><div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:6px">☰ Más</div><div id="masBody"></div>
           <div style="margin-top:8px"><button onclick="abrirAdminDesdeMas()" style="width:100%;padding:12px;font-size:13px;font-weight:700;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:12px;font-family:inherit;cursor:pointer">⚙ Administración (con PIN)</button></div></div>
@@ -5460,7 +5463,7 @@ function updateSelects(){
 }
 
 // ── TABS ──
-var TABS=['panorama','mis-turnos','estado','cambios','ausencias','resumen','biblioteca','novedades'];
+var TABS=['panorama','mis-turnos','estado','cambios','ausencias','resumen','biblioteca','novedades','cumplimiento'];
 window.goTab=function(tab){
   document.querySelectorAll('.tab').forEach(function(t){var m=t.getAttribute('onclick').match(/goTab\('([^']+)'\)/);if(m)t.classList.toggle('active',m[1]===tab);});
   TABS.forEach(function(id){var el=document.getElementById('tc-'+id);if(el)el.classList.toggle('active',id===tab);});
@@ -11819,7 +11822,7 @@ function lidTarjetaMisTurnos(nombre){
 var NAV_GRUPOS=[
   {id:'hoy',ic:'🏠',n:'Hoy',tabs:[['mis-turnos','Mi día']]},
   {id:'semana',ic:'📅',n:'Mi semana',tabs:[['panorama','Panorama'],['cambios','Cambios'],['ausencias','Ausencias']]},
-  {id:'equipo',ic:'👥',n:'Equipo',tabs:[['novedades','Novedades'],['resumen','Resumen'],['estado','KPIs']]},
+  {id:'equipo',ic:'👥',n:'Equipo',tabs:[['cumplimiento','Cumplimiento'],['novedades','Novedades'],['resumen','Resumen'],['estado','KPIs']]},
   {id:'aprender',ic:'📚',n:'Aprender',tabs:[['biblioteca','Biblioteca']]},
   {id:'mas',ic:'☰',n:'Más',tabs:[['mas','Más']]}
 ];
@@ -11835,7 +11838,7 @@ function navActualizar(tab){
 }
 window.navIr=function(gid){
   var g=NAV_GRUPOS.filter(function(x){return x.id===gid;})[0];if(!g)return;
-  goTab(g.tabs[0][0]);window.scrollTo(0,0);
+  goTab(g.tabs[0][0]);
 };
 function aprenderExtra(){
   var d=document.getElementById('aprenderExtra');if(!d)return;
@@ -11855,7 +11858,17 @@ function navInit(){
   }
   if(TABS.indexOf('mas')<0)TABS.push('mas');
   var g0=window.goTab;
-  window.goTab=function(t){g0(t);navActualizar(t);if(t==='biblioteca')aprenderExtra();};
+  var cr=document.getElementById('cumpRanking'),rm=document.getElementById('rankingMiniCard');
+  if(cr&&rm)cr.appendChild(rm);
+  window.goTab=function(t){
+    g0(t);navActualizar(t);
+    if(t==='biblioteca')aprenderExtra();
+    if(t==='cumplimiento')renderCumpEquipo();
+    ['anunciosBanner','avisoBanner'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display=(t==='mis-turnos')?'':'none';});
+    var an=document.getElementById('navAnchor');
+    if(an){var top=an.getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top-6||document.documentElement.scrollHeight>window.innerHeight*1.2)window.scrollTo(0,Math.max(0,top-6));}
+  };
+  setInterval(function(){if(_navTabActual==='cumplimiento'&&document.getElementById('appView').style.display!=='none')renderCumpEquipo();},20000);
   navActualizar(_navTabActual);
 }
 window.abrirAdminDesdeMas=function(){var b=document.getElementById('adminBtn');if(b)b.click();};
@@ -11890,6 +11903,51 @@ function miDiaHtml(nombre){
     }
     return h+'</div>';
   }catch(e){return '';}
+}
+
+// ── Cumplimiento del equipo (visible para todos): quién respondió todos los días y quién hizo sus tareas ──
+function cumpEquipoDatos(){
+  var dh=diasHabilesSemana();
+  var filas=[];try{filas=ordenarRanking(false);}catch(e){}
+  var mapa={};filas.forEach(function(f){mapa[f.nombre]=f;});
+  var nombresT=[];try{nombresT=nombresConTurnoSemanaFiltrado(false);}catch(e){}
+  var lista=nombresT.slice();filas.forEach(function(f){if(f.nombre&&lista.indexOf(f.nombre)<0)lista.push(f.nombre);});
+  lista=lista.filter(function(n){return n&&n.trim().toLowerCase()!=='patricio baeza';});
+  var sem=semanas[W]||{};var ini=sem.ini||'',fin=sem.fin||'';var hoy=hoyStr();
+  var fechas=[];
+  if(ini&&fin){var d0=new Date(ini+'T12:00:00'),d1=new Date(Math.min(new Date(fin+'T12:00:00').getTime(),new Date(hoy+'T12:00:00').getTime()));for(var d=new Date(d0);d<=d1;d.setDate(d.getDate()+1)){var f=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());if(!esFeriado(diaDeDate(f)))fechas.push(f);}}
+  var out=lista.map(function(n){
+    var veces=mapa[n]?mapa[n].veces:0;var asig=0,cum=0,pend=[];
+    fechas.forEach(function(f){var dia=diaDeDate(f);
+      Object.values(tareas||{}).forEach(function(t){
+        if(!t||t.nombre!==n||t.dia!==dia)return;
+        try{if(!medibleTarea(t.tipo)||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;}catch(e){return;}
+        asig++;var ok=false;try{ok=verificarCumplimiento(t.tipo,f,t).cumplido;}catch(e){}
+        if(ok)cum++;else pend.push(dia.slice(0,3)+': '+String(t.texto||t.tipo).slice(0,38));
+      });});
+    return {nombre:n,veces:veces,asig:asig,cum:cum,pend:pend};
+  });
+  return {dh:dh,personas:out};
+}
+function renderCumpEquipo(){
+  var d=document.getElementById('cumpEquipo');if(!d)return;
+  var D=cumpEquipoDatos(),P=D.personas;
+  var todos=P.filter(function(x){return D.dh>0&&x.veces>=D.dh;}).sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
+  var faltan=P.filter(function(x){return !(D.dh>0&&x.veces>=D.dh);}).sort(function(a,b){return b.veces-a.veces||a.nombre.localeCompare(b.nombre);});
+  var alDia=P.filter(function(x){return x.asig>0&&!x.pend.length;});
+  var conPend=P.filter(function(x){return x.pend.length;}).sort(function(a,b){return b.pend.length-a.pend.length;});
+  var sinT=P.filter(function(x){return !x.asig;});
+  function blk(tit,col,items,vacio){return '<div style="background:rgba(255,255,255,.05);border-left:4px solid '+col+';border-radius:12px;padding:10px 12px;margin-bottom:8px"><div style="font-size:12px;font-weight:800;color:'+col+';margin-bottom:4px">'+tit+' ('+items.length+')</div>'+(items.length?items.join(''):'<div style="font-size:12px;color:rgba(255,255,255,.4)">'+vacio+'</div>')+'</div>';}
+  function fila(n,der,sub){return '<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,.07)"><div style="display:flex;justify-content:space-between;font-size:13px;color:#fff"><span>'+esc(n)+'</span><span style="color:rgba(255,255,255,.55);font-size:12px">'+der+'</span></div>'+(sub?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;line-height:1.4">'+sub+'</div>':'')+'</div>';}
+  var h='<div style="margin-bottom:6px"><div style="font-size:16px;font-weight:800;color:#fff">📊 Cumplimiento del equipo</div><div style="font-size:11.5px;color:rgba(255,255,255,.5)">Esta semana · '+D.dh+' día'+(D.dh===1?'':'s')+' hábil'+(D.dh===1?'':'es')+' transcurrido'+(D.dh===1?'':'s')+'. Lo ve todo el equipo clínico.</div></div>';
+  h+='<div style="font-size:11px;color:#93c5fd;text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin:12px 0 6px">📝 Evaluación diaria</div>';
+  h+=blk('✅ Respondieron todos los días','#22c55e',todos.map(function(x){return fila(x.nombre,x.veces+' de '+D.dh,'');}),'Nadie todavía.');
+  h+=blk('⏳ Con días pendientes','#f59e0b',faltan.map(function(x){return fila(x.nombre,x.veces+' de '+D.dh+' días','');}),'Todos al día.');
+  h+='<div style="font-size:11px;color:#93c5fd;text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin:12px 0 6px">🧰 Tareas asignadas</div>';
+  h+=blk('✅ Tareas al día','#22c55e',alDia.map(function(x){return fila(x.nombre,x.cum+' de '+x.asig,'');}),'Nadie todavía.');
+  h+=blk('⚠ Con tareas pendientes','#ef4444',conPend.map(function(x){return fila(x.nombre,x.cum+' de '+x.asig,x.pend.slice(0,4).map(esc).join(' · ')+(x.pend.length>4?' · +'+(x.pend.length-4)+' más':''));}),'Sin pendientes.');
+  if(sinT.length)h+='<div style="font-size:11px;color:rgba(255,255,255,.4);margin:2px 0 10px">Sin tareas con registro esta semana: '+sinT.map(function(x){return esc(x.nombre);}).join(', ')+'</div>';
+  d.innerHTML=h;
 }
 // ── Centro de mando del Administrador ──
 var ADM_GRUPOS=[
