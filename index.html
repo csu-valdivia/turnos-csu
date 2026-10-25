@@ -837,6 +837,22 @@ body[data-gxcm="tarjetas"] #gxCmLeg,body[data-gxcm="grilla"] #gxCmLeg,body[data-
 .rd-r{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-top:4px}.rd-r small{color:var(--gx-slate);white-space:nowrap}.rd-r.on span{font-weight:700;color:#0F766E}.rd-r.gap span{color:#B45309;font-weight:600}
 
 body.gx-light button.tcb,body.gx-light button.tcb *{color:#fff!important}
+.gxp-nm{cursor:pointer;color:var(--gx-teal)}
+.gxrev{position:fixed;inset:0;z-index:9200;background:rgba(15,37,64,.55);overflow-y:auto;padding:14px}
+.gxrev-box{max-width:620px;margin:0 auto;background:var(--gx-bg,#f4f8fb);border-radius:16px;padding:14px;color:var(--gx-navy,#0f2540);font-size:13px}
+.gxrev-h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.gxrev-h b{font-size:16px;display:block}.gxrev-h small{color:var(--gx-slate,#64748b);font-size:11px}
+.gxrev-x{border:none;background:#e6eef5;color:#475569;border-radius:9px;padding:7px 11px;cursor:pointer;font-family:inherit}
+.gxrev-k{display:flex;gap:6px;margin-bottom:6px}.gxrev-k div{flex:1;background:#fff;border:1px solid var(--gx-line,#dbe5ee);border-radius:10px;padding:7px;text-align:center;font-size:10.5px;color:#64748b}.gxrev-k b{display:block;font-size:18px;color:var(--gx-navy,#0f2540)}
+.gxrev-d{font-size:11px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.3px;margin:12px 0 4px}
+.gxrev-e{font-size:12px;color:#64748b;padding:2px 4px}
+.gxrev-t{background:#fff;border:1px solid var(--gx-line,#dbe5ee);border-radius:10px;padding:8px 10px;margin-bottom:5px}.gxrev-t.n{background:#fff7df;border:1px dashed #f0c36a}
+.gxrev-r{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.gxrev-n{flex:1;font-weight:700;min-width:150px}
+.gxrev-tag{font-style:normal;font-size:10px;font-weight:800;border-radius:10px;padding:2px 7px;background:#d6eaf8;color:#1d5f8f}.gxrev-tag.p{background:#fde7a8;color:#92580a}
+.gxrev-a{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.gxrev-a button,.gxrev-f button{border:none;border-radius:8px;padding:6px 10px;font-family:inherit;font-weight:700;font-size:11.5px;cursor:pointer;background:#e6eef5;color:#334155}.gxrev-a button.q{background:#fee2e2;color:#b91c1c}
+.gxrev-q{display:none;margin-top:6px;background:#f1f6fa;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;color:#334155}
+.gxrev-f{display:flex;gap:8px;margin-top:10px}.gxrev-f button{flex:1;padding:9px}.gxrev-f button.p{background:#0d9488;color:#fff}.gxrev-f select{border:1px solid var(--gx-line,#dbe5ee);border-radius:8px;padding:6px;font-family:inherit}
+.gxrev-ok{width:100%;margin-top:10px;border:none;border-radius:11px;padding:11px;background:#0d9488;color:#fff;font-family:inherit;font-weight:800;cursor:pointer}
+.gxrev-s{font-size:10.5px;color:#64748b;margin:8px 0 0}
 .gxp-add{border:1.5px dashed var(--gx-line);background:transparent;color:#9fb3c4;border-radius:7px;padding:3px 0;font:700 14px Inter,system-ui,sans-serif;cursor:pointer;line-height:1}.gxp-add:hover{border-color:var(--gx-teal);color:var(--gx-teal)}
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
 </style>
@@ -9752,7 +9768,7 @@ function gxpPintar(){
   personas.forEach(function(p){
     var fr=(c.perf.freq[p])||{};var top=Object.keys(fr).sort(function(a,b){return fr[b]-fr[a];}).slice(0,2).map(function(t){return cfgTipo(t).l;});
     var asig=propuesta.filter(function(x){return x.nombre===p;}).length;var hb=c.hab(p);
-    h+='<tr><td class="gxp-p"><b>'+esc(p)+'</b><small>'+(top.length?'Suele: '+esc(top.join(', ')):'Sin historial')+'<br>Habitual: '+(c.perf.hab[p]?Math.round(c.perf.hab[p]):'—')+'/sem · propuesta: '+asig+'</small><div class="gxp-m"><i style="width:'+Math.min(100,Math.round(asig/(hb||1)*100))+'%"></i></div></td>';
+    h+='<tr><td class="gxp-p"><b class="gxp-nm" onclick="gxRevisar(\''+esc(p).replace(/'/g,'')+'\')" title="Revisar sus tareas">'+esc(p)+' 🔍</b><small>'+(top.length?'Suele: '+esc(top.join(', ')):'Sin historial')+'<br>Habitual: '+(c.perf.hab[p]?Math.round(c.perf.hab[p]):'—')+'/sem · propuesta: '+asig+'</small><div class="gxp-m"><i style="width:'+Math.min(100,Math.round(asig/(hb||1)*100))+'%"></i></div></td>';
     dias.forEach(function(d){
       var f=c.fechaDe[d];var ab=f?ausJorn(p,f):{am:false,pm:false};
       var items=propuesta.map(function(x,i){return {x:x,i:i};}).filter(function(o){return o.x.nombre===p&&o.x.dia===d;});
@@ -9778,7 +9794,7 @@ window.gxpAgregar=function(p,dia){
   var opt=tiposL.filter(function(t,i,a){return a.indexOf(t)===i;}).map(function(t){return '<option value="'+esc(t)+'">'+esc(nombreRol(t))+'</option>';}).join('');
   if(rt)opt='<option value="__ronda">🌅 Ronda de apertura de unidad</option>'+opt;
   var unidades=rondaUnidades().map(function(u){return '<option value="'+u+'">'+esc(rondaCorto(u))+'</option>';}).join('');
-  var m=mkOverlay();m.style.zIndex=9100;var box=document.createElement('div');box.className='obox';
+  var m=mkOverlay();m.style.zIndex=9300;var box=document.createElement('div');box.className='obox';
   box.innerHTML='<h3>Agregar tarea · '+esc(p)+' · '+esc(dia)+'</h3>'
     +'<label class="gxp-l">Tarea</label><select id="gxaT" class="gxp-s"><option value="">Elige…</option>'+opt+'</select>'
     +'<div id="gxaU" style="display:none"><label class="gxp-l">Unidad de la ronda</label><select id="gxaUS" class="gxp-s">'+unidades+'</select></div>'
@@ -9804,10 +9820,98 @@ window.gxpAgregar=function(p,dia){
   document.getElementById('gxaT').onchange=function(){var v=this.value;document.getElementById('gxaU').style.display=v==='__ronda'?'block':'none';document.getElementById('gxaS').style.display=v==='pedido'?'block':'none';};
 };
 
+// ═══════════ REVISAR TAREAS POR PERSONA (vista del admin antes de asignar) ═══════════
+function gxqInfo(t,fecha){
+  var h='',L=function(a){return '<ul style="margin:4px 0 0 16px;padding:0">'+a.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';};
+  try{
+    var rc=rolesTecnicos&&rolesTecnicos[t.tipo];
+    if(rc&&rc.tipoRegistro==='ronda'){
+      var u=rondaUnidadDeSector(t.sector);
+      if(!u)return '<b>Ronda sin unidad asignada.</b> Falta indicar el puesto o unidad; sin eso el colaborador no puede registrarla.';
+      var v=rondaVentana(fecha,u,t.nombre);
+      h+='<b>'+esc(rondaNombre(u))+'</b><br>Ventana para registrar: <b>'+(v?v.ini+' a '+v.fin:'se define al asumir el puesto')+'</b>. Cumple si registra dentro de la ventana.';
+      h+='<div style="margin-top:4px">Debe confirmar cada punto:</div>'+L(rondaPuntos(u));
+      if(RONDA_NUMS[u])h+='<div style="margin-top:4px">Y anotar cantidades:</div>'+L(RONDA_NUMS[u]);
+      h+='<div style="margin-top:4px">Además puede elegir insumos pendientes del catálogo de bodega.</div>';
+      return h;
+    }
+    if(ROLES_TECNICOS_BASE[t.tipo]){var r=ROLES_TECNICOS_BASE[t.tipo];return '<b>'+esc(r.label)+'</b><br>'+esc(r.desc);}
+    if(rc){
+      h+='<b>'+esc(rc.nombre)+'</b>'+(rc.frecuencia==='semanal'?' · semanal':rc.frecuencia==='mensual'?' · mensual':' · diario')+'<br>';
+      if(rc.tipoRegistro==='valor')h+='Debe anotar un valor'+(rc.unidad?' en <b>'+esc(rc.unidad)+'</b>':'')+'.';
+      else h+='Debe marcar cada punto:'+L((rc.puntos||[]).map(function(p,i){return p+((rc.detalles&&rc.detalles[i])?' — '+rc.detalles[i]:'');}));
+      if(rc.unidades&&rc.unidades.length)h+='<div>Elige cuál equipo: '+esc(rc.unidades.join(', '))+'.</div>';
+      if(rc.trasUso)h+='<div>Indica el motivo de la revisión.</div>';
+      return h+'<div style="margin-top:3px">Puede dejar una observación.</div>';
+    }
+    if(TIPOS_SIN_MEDICION[t.tipo])return 'Es un puesto de trabajo: <b>solo asignación</b>, no pide registrar nada.';
+    var c=cfgTipo(t.tipo);return esc((c&&c.l)||t.tipo)+': no tiene formulario de registro propio.';
+  }catch(e){return 'Sin detalle disponible.';}
+}
+window.gxRevisar=function(persona){
+  var sem=semanas[W]||{};
+  window._gxRev=persona;
+  var DD=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var equipo=(window._gxpCtx&&window._gxpCtx.equipo)||(nombres||[]).map(function(n){return n.nombre||n;}).filter(function(n){return rolDe(n)!=='direccion';});
+  var i0=equipo.indexOf(persona);
+  window._propuestaActual=window._propuestaActual||[];
+  if(!window._gxpCtx){var fd={};DD.forEach(function(d){fd[d]=sem.ini?fechaDeDiaEnSemana(d,sem):'';});window._gxpCtx={equipo:equipo,perf:{freq:{},hab:{},semanas:0},hab:function(){return 6;},fechaDe:fd,DIAS_H:DD.slice(0,5),_min:true};}
+  var fechaDe=window._gxpCtx.fechaDe||{};
+  var ov=document.getElementById('gxRevOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='gxRevOv';ov.className='gxrev';
+  var items=[];
+  Object.keys(tareas||{}).forEach(function(k){var t=tareas[k];if(t&&t.nombre===persona)items.push({t:t,k:k,prop:false});});
+  window._propuestaActual.forEach(function(t,i){if(t&&t.nombre===persona)items.push({t:t,i:i,prop:true});});
+  var nProp=items.filter(function(x){return x.prop;}).length,nRond=items.filter(function(x){var r=rolesTecnicos&&rolesTecnicos[x.t.tipo];return r&&r.tipoRegistro==='ronda';}).length;
+  var dTurno=DD.filter(function(d){return gxpTurnoDia(persona,d);}).length;
+  var h='<div class="gxrev-box"><div class="gxrev-h"><div><b>👤 Revisar a '+esc(persona)+'</b><small>'+esc(sem.nombre||((sem.ini||'')+' al '+(sem.fin||'')))+' · así verá sus tareas el colaborador. Lo amarillo aún no está aplicado.</small></div><button class="gxrev-x" onclick="gxRevCerrar()">✕</button></div>'
+    +'<div class="gxrev-k"><div><b>'+items.length+'</b>tareas</div><div><b>'+nRond+'</b>rondas</div><div><b>'+dTurno+'</b>días con turno</div><div><b>'+nProp+'</b>por aplicar</div></div>';
+  DD.forEach(function(d){
+    var its=items.filter(function(x){return x.t.dia===d;});
+    var f=fechaDe[d]||'';var ab=f?ausJorn(persona,f):{am:false,pm:false};
+    var bl=gxpBloquesArea(persona,d,'').map(function(b){return (b.area||'')+' '+(b.horario||'');});
+    if(!its.length&&!bl.length&&!(ab.am||ab.pm))return;
+    h+='<div class="gxrev-d">'+d+(f?' '+f.slice(8):'')+(bl.length?' · '+esc(bl.join(' + ')):' · sin turno')+((ab.am&&ab.pm)?' · 🌴 ausente':ab.am?' · 🌴 ausente AM':ab.pm?' · 🌴 ausente PM':'')+'</div>';
+    if(!its.length)h+='<div class="gxrev-e">Sin tareas</div>';
+    its.forEach(function(x,ix){
+      var t=x.t,id='gxq'+d+ix;
+      var nom=t.etq||(t.texto?String(t.texto).replace(/ \(asignación automática\)$/,''):cfgTipo(t.tipo).l);
+      if(!t.etq&&t.sector&&nom.indexOf(t.sector)<0)nom+=' · '+t.sector;
+      h+='<div class="gxrev-t'+(x.prop?' n':'')+'"><div class="gxrev-r"><span class="gxrev-n">'+esc(nom)+'</span>'+(x.prop?'<i class="gxrev-tag p">PROPUESTA</i>':'')+'<i class="gxrev-tag">'+({dia:'TODO EL DÍA',am:'AM',pm:'PM'}[t.jornada||'dia'])+'</i></div>'
+        +'<div class="gxrev-a"><button onclick="var e=document.getElementById(\''+id+'\');e.style.display=e.style.display===\'block\'?\'none\':\'block\'">👁 Qué debe registrar</button>'
+        +(x.prop?'<button onclick="gxpEditar('+x.i+')">Editar</button><button class="q" onclick="window._propuestaActual.splice('+x.i+',1);gxpPintar()">Quitar</button>':'<button class="q" onclick="gxRevQuitar(\''+x.k+'\')">Quitar</button>')+'</div>'
+        +'<div class="gxrev-q" id="'+id+'">'+gxqInfo(t,f)+'</div></div>';
+    });
+  });
+  h+='<div class="gxrev-f"><button class="p" onclick="gxpAgregar(\''+esc(persona).replace(/'/g,"\\'")+'\',gxRevDia())">+ Agregar tarea</button>'
+    +'<select id="gxRevD">'+DD.map(function(d){return '<option>'+d+'</option>';}).join('')+'</select></div>'
+    +'<div class="gxrev-f"><button onclick="gxRevNav(-1)">◀ Anterior</button><button onclick="gxRevNav(1)">Siguiente ▶</button></div>'
+    +(nProp?'<button class="gxrev-ok" onclick="gxRevAplicar()">✓ Aplicar solo las de '+esc(persona.split(' ')[0])+' ('+nProp+')</button>':'')
+    +'<p class="gxrev-s">Es una vista de revisión: no registra datos en nombre del colaborador.</p></div>';
+  ov.innerHTML=h;document.body.appendChild(ov);
+  window._gxRevEq=equipo;
+};
+window.gxRevDia=function(){var e=document.getElementById('gxRevD');return e?e.value:'Lunes';};
+window.gxRevCerrar=function(){window._gxRev=null;var o=document.getElementById('gxRevOv');if(o)o.remove();if(window._gxpCtx&&window._gxpCtx._min)window._gxpCtx=null;if(document.getElementById('propuestaContenido'))gxpPintar();};
+window.gxRevNav=function(d){var eq=window._gxRevEq||[],i=eq.indexOf(window._gxRev);if(i<0)return;gxRevisar(eq[(i+d+eq.length)%eq.length]);};
+window.gxRevQuitar=function(k){if(!confirm('¿Quitar esta tarea ya asignada?'))return;sRef('tareas/'+k).remove().then(function(){delete tareas[k];gxRevisar(window._gxRev);});};
+window.gxRevAplicar=function(){
+  var p=window._gxRev,mine=(window._propuestaActual||[]).filter(function(x){return x&&x.nombre===p;});
+  if(!mine.length)return;
+  if(!confirm('¿Aplicar '+mine.length+' tarea(s) a '+p+'?'))return;
+  Promise.all(mine.map(function(x){
+    var cfg=cfgTipo(x.tipo)||{l:x.tipo};
+    var o={dia:x.dia,nombre:x.nombre,tipo:x.tipo,texto:(x.etq||cfg.l)+(x.manual?'':' (asignación automática)'),jornada:x.jornada||'dia'};
+    if(x.sector)o.sector=x.sector;
+    var r=sRef('tareas').push(o);if(r&&r.key)tareas[r.key]=o;return r;
+  })).then(function(){window._propuestaActual=window._propuestaActual.filter(function(x){return x.nombre!==p;});gxRevisar(p);if(document.getElementById('propuestaContenido'))gxpPintar();});
+};
+(function(){var _p=gxpPintar;gxpPintar=function(){_p();if(window._gxRev&&document.getElementById('gxRevOv'))gxRevisar(window._gxRev);};})();
+
 window.gxpEditar=function(i){
   var p=(window._propuestaActual||[])[i];if(!p)return;
   var c=window._gxpCtx||{};
-  var m=mkOverlay();m.style.zIndex=9100;var box=document.createElement('div');box.className='obox';
+  var m=mkOverlay();m.style.zIndex=9300;var box=document.createElement('div');box.className='obox';
   box.innerHTML='<h3>'+esc(p.etq||cfgTipo(p.tipo).l)+' · '+esc(p.dia)+'</h3>'
     +'<label class="gxp-l">Persona</label><select id="gxpP" class="gxp-s">'+c.equipo.map(function(n){return '<option value="'+esc(n)+'"'+(n===p.nombre?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select>'
     +'<label class="gxp-l">Jornada</label><select id="gxpJ" class="gxp-s"><option value="dia"'+(p.jornada==='dia'?' selected':'')+'>Todo el día</option><option value="am"'+(p.jornada==='am'?' selected':'')+'>AM</option><option value="pm"'+(p.jornada==='pm'?' selected':'')+'>PM</option></select>';
