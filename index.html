@@ -2695,8 +2695,17 @@ function hoyStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1
 
 function detectarSemanaActual(){
   var hoy=hoyStr();
-  var match=Object.entries(semanas).find(function(e){return e[1].ini<=hoy&&e[1].fin>=hoy;});
-  return match?match[0]:null;
+  var match=Object.entries(semanas).find(function(e){return e[1]&&e[1].ini<=hoy&&e[1].fin>=hoy;});
+  if(match)return match[0];
+  // Domingo (o cualquier día entre semanas): no queda el equipo sin ver sus tareas.
+  // 1) si ya está armada la semana que empieza en los próximos 2 días, esa; 2) si no, la que terminó hace poco (hasta 3 días).
+  var d=new Date(hoy+'T12:00:00');
+  function iso(n){var x=new Date(d);x.setDate(x.getDate()+n);return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate());}
+  var lim2=iso(2),lim3=iso(-3);
+  var prox=Object.entries(semanas).filter(function(e){return e[1]&&e[1].ini>hoy&&e[1].ini<=lim2;}).sort(function(a,b){return a[1].ini<b[1].ini?-1:1;})[0];
+  if(prox)return prox[0];
+  var ant=Object.entries(semanas).filter(function(e){return e[1]&&e[1].fin<hoy&&e[1].fin>=lim3;}).sort(function(a,b){return a[1].fin<b[1].fin?1:-1;})[0];
+  return ant?ant[0]:null;
 }
 
 // Ingreso por rol: Colaborador (libre), Enfermero Jefe (PIN admin), Operaciones (PIN bodega → solo Bodega)
