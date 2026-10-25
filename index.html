@@ -449,6 +449,64 @@ body.gx-ing .wrap{padding-bottom:6rem}
  #gxPanel .gx-tag span{color:#5eead4}
  #gxPanel .gx-sub{position:absolute;left:40px;bottom:36px;font-size:14px;color:#9fc0d6}
 }
+/* ══ Pantallas del colaborador en tema claro (capa de traducción; el Admin sigue oscuro) ══ */
+body.gx-app{background:var(--gx-bg);font-family:'InterGX',Inter,-apple-system,BlinkMacSystemFont,sans-serif}
+body.gx-app .wrap{color:var(--gx-navy)}
+body.gx-app .hero{background:transparent;text-align:left;padding:1.25rem 1.25rem .25rem}
+body.gx-app .logo-row{justify-content:flex-start;margin-bottom:4px}
+body.gx-app .gesthor-logo{filter:none}
+body.gx-app .app-name{color:var(--gx-navy);font-size:26px;font-weight:700;letter-spacing:.5px}
+body.gx-app .app-name .gx-hor{color:var(--gx-teal)}
+body.gx-app .app-sub{color:var(--gx-slate);font-size:12px}
+body.gx-app .semana-badge{background:#fff;border:1px solid var(--gx-line);color:var(--gx-navy);font-size:13px;font-weight:500}
+body.gx-app .card,body.gx-app .res-card,body.gx-app .cambio-card{background:#fff;border:1px solid var(--gx-line);box-shadow:0 1px 3px rgba(16,42,67,.08);color:var(--gx-navy)}
+body.gx-app .sede-tag{background:#E3F2FB;color:var(--gx-navy);border-color:var(--gx-line)}
+body.gx-app .sede-change{color:var(--gx-slate);font-size:13px}
+body.gx-app select,body.gx-app input,body.gx-app textarea,body.gx-app .atxt{background:#fff;border:1px solid var(--gx-line);color:var(--gx-navy);font-size:15px;min-height:44px}
+body.gx-app select option{background:#fff;color:var(--gx-navy)}
+body.gx-app input::placeholder,body.gx-app textarea::placeholder,body.gx-app .atxt::placeholder{color:#94A3B8}
+body.gx-app select:focus,body.gx-app input:focus,body.gx-app textarea:focus{border-color:var(--gx-teal)}
+body.gx-app .btn-add,body.gx-app .btn-ll,body.gx-app .btn-ap,body.gx-app .pend-btn-blue{background:var(--gx-teal);border-radius:10px;min-height:44px}
+body.gx-app .btn-sec{background:#fff;color:var(--gx-tealD);border:1.5px solid var(--gx-teal);border-radius:10px;min-height:44px;font-size:14px;font-weight:600}
+body.gx-app .btn-ac{background:var(--gx-ok)}
+body.gx-app .cambio-hdr,body.gx-app .pend-info,body.gx-app .stat-val,body.gx-app .obox h3{color:var(--gx-navy)}
+body.gx-app .cambio-sub,body.gx-app .pend-sub,body.gx-app .iitem-sub,body.gx-app .empty,body.gx-app .no-result,body.gx-app .sub,body.gx-app .res-card h3,body.gx-app .footer p{color:var(--gx-slate)}
+body.gx-app .footer strong{color:var(--gx-navy)}
+body.gx-app .anun-l{color:var(--gx-navy)}body.gx-app .anun-x{color:var(--gx-slate)}
+body.gx-app .stat-row,body.gx-app .iitem{border-color:var(--gx-line)}
+body.gx-app .cob-bar{background:#E3EDF4}
+body.gx-app .ptbl th{background:#E8F1F7;color:var(--gx-navy)}
+body.gx-app .ptbl th.fth{background:#F1F6FA;color:var(--gx-slate)}
+body.gx-app .ptbl td{background:#fff;border:1px solid var(--gx-line);color:var(--gx-navy)}
+body.gx-app .ptbl td.ftd{background:#F1F6FA;color:var(--gx-slate)}
+body.gx-app .asist-row{border-color:var(--gx-line)}
+body.gx-app .nchip{background:#fff;border:1px solid var(--gx-line);color:var(--gx-navy);font-size:13px;min-height:40px}
+body.gx-app .nchip.on{background:var(--gx-teal);border-color:var(--gx-teal);color:#fff}
+/* traducción de colores incrustados en el HTML */
+body.gx-app #appView [style*="color:#fff"],body.gx-app #appView [style*="color:white"],body.gx-app #appView [style*="color:#f1f5f9"],body.gx-app #appView [style*="color:#e2e8f0"]{color:var(--gx-navy)!important}
+body.gx-app #appView [style*="color:rgba(255,255,255"],body.gx-app #appView [style*="color: rgba(255,255,255"]{color:var(--gx-slate)!important}
+body.gx-app #appView [style*="color:rgba(255,255,255,.7"],body.gx-app #appView [style*="color:rgba(255,255,255,.8"],body.gx-app #appView [style*="color:rgba(255,255,255,.9"]{color:#334E68!important}
+body.gx-app #appView [style*="color:#7ec8f7"],body.gx-app #appView [style*="color:#93c5fd"],body.gx-app #appView [style*="color:#60a5fa"],body.gx-app #appView [style*="color:#93d8fc"],body.gx-app #appView [style*="color:#38bdf8"]{color:#1D4ED8!important}
+body.gx-app #appView [style*="color:#6ee7b7"],body.gx-app #appView [style*="color:#86efac"],body.gx-app #appView [style*="color:#4ade80"],body.gx-app #appView [style*="color:#34d399"],body.gx-app #appView [style*="color:#10b981"]{color:var(--gx-ok)!important}
+body.gx-app #appView [style*="color:#fbbf24"],body.gx-app #appView [style*="color:#fcd34d"],body.gx-app #appView [style*="color:#fde68a"],body.gx-app #appView [style*="color:#f59e0b"]{color:#B45309!important}
+body.gx-app #appView [style*="color:#fca5a5"],body.gx-app #appView [style*="color:#f87171"],body.gx-app #appView [style*="color:#ef4444"]{color:#B91C1C!important}
+body.gx-app #appView [style*="color:#c4b5fd"],body.gx-app #appView [style*="color:#a78bfa"],body.gx-app #appView [style*="color:#d8b4fe"]{color:#6D28D9!important}
+body.gx-app #appView [style*="background:rgba(255,255,255"]{background:#fff!important;box-shadow:inset 0 0 0 1px var(--gx-line)}
+body.gx-app #appView [style*="background:#2563eb"],body.gx-app #appView [style*="background:#dc2626"],body.gx-app #appView [style*="background:#059669"],body.gx-app #appView [style*="background:#10b981"],body.gx-app #appView [style*="background:#ef4444"],body.gx-app #appView [style*="background:#7c3aed"],body.gx-app #appView [style*="background:#b45309"],body.gx-app #appView [style*="background:#0f766e"],body.gx-app #appView [style*="background:#16a34a"],body.gx-app #appView [style*="background:#d97706"]{color:#fff!important}
+body.gx-app #appView button[style*="linear-gradient"]{background:var(--gx-teal)!important;color:#fff!important}
+body.gx-app #connIndicator{background:#FEE2E2;border-color:#FCA5A5;color:#B91C1C!important}
+body.gx-app #connIndicator span{color:#B91C1C!important}
+body.gx-app #connIndicator button{background:#fff!important;color:var(--gx-navy)!important;border:1px solid var(--gx-line)!important}
+body.gx-app #appView [style*="border:1px solid rgba(255,255,255"],body.gx-app #appView [style*="border-left:3px solid rgba(255,255,255"],body.gx-app #appView [style*="border-top:1px solid rgba(255,255,255"],body.gx-app #appView [style*="border-bottom:1px solid rgba(255,255,255"]{border-color:var(--gx-line)!important}
+body.gx-app #appView [style*="font-size:10px"],body.gx-app #appView [style*="font-size:9px"],body.gx-app #appView [style*="font-size:11px"]{font-size:12px!important}
+body.gx-app .atoggle button{background:#fff!important;color:var(--gx-slate)!important;border:1px solid var(--gx-line)!important;font-size:13px;min-height:40px}
+body.gx-app .atoggle button[id=bodegaBtn]{color:#B45309!important}body.gx-app .atoggle button[id=reasBtn]{color:var(--gx-ok)!important}body.gx-app .atoggle button[id=superBtn]{color:#6D28D9!important}body.gx-app .atoggle button[id=conductBtn]{color:#1D4ED8!important}
+/* menú inferior con la nueva identidad */
+body.gx-app #navBottom{background:#fff;border-top:1px solid var(--gx-line);backdrop-filter:none;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+body.gx-app #navBottom .nb{color:var(--gx-slate);font-size:12px;font-weight:500}
+body.gx-app #navBottom .nb.on{color:var(--gx-teal)}
+body.gx-app #navBottom .nb .ni{display:grid;place-items:center;height:24px;font-size:0}
+body.gx-app .ndot{background:var(--gx-bad)}
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
 </style>
 </head>
@@ -12156,13 +12214,24 @@ function gxVisible(id){var e=document.getElementById(id);return !!e&&e.style.dis
 function gxSync(){
   var app=document.getElementById('appView');
   var enApp=!!app&&app.style.display==='block';
+  var adm=document.getElementById('adminPanel');var admAbierto=!!adm&&adm.classList.contains('open');
   document.body.classList.toggle('gx-ing',!enApp);
+  document.body.classList.toggle('gx-app',enApp&&!admAbierto);
+  gxNavIconos();
   var on='inicio';
   if(gxVisible('mainView'))on='turnos';
   ['gxBar','gxRail'].forEach(function(id){var n=document.getElementById(id);if(!n)return;Array.prototype.forEach.call(n.querySelectorAll('.gxit'),function(b){b.classList.toggle('on',b.dataset.k===on);});});
   var lb=document.getElementById('semanaLabel'),pl=document.getElementById('gxPill');
   if(pl&&lb){var t=(lb.textContent||'').trim();var ok=t&&/\d/.test(t);pl.classList.toggle('v',ok);pl.textContent=ok?(/^Semana/i.test(t)?t:'Semana: '+t)+' ›':'';}
   gxReloj();
+}
+var GX_NAVIC={hoy:'home',semana:'cal',equipo:'users',aprender:'grad',mas:'more'};
+GX_IC.more='<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>';
+function gxNavIconos(){
+  Array.prototype.forEach.call(document.querySelectorAll('#navBottom .nb'),function(b){
+    if(b.dataset.gxi)return;var k=GX_NAVIC[b.dataset.g];var ni=b.querySelector('.ni');
+    if(k&&ni){ni.innerHTML=gxIc(k,22);b.dataset.gxi='1';}
+  });
 }
 function gxReloj(){
   var t=document.getElementById('gxT'),d=document.getElementById('gxD');if(!t)return;
@@ -12207,10 +12276,18 @@ function gxInit(){
   var obs=new MutationObserver(gxSync);
   ['appView','mainView','sedeView'].forEach(function(id){var e=document.getElementById(id);if(e)obs.observe(e,{attributes:true,attributeFilter:['style']});});
   var lb=document.getElementById('semanaLabel');if(lb)obs.observe(lb,{childList:true,characterData:true,subtree:true});
+  var ap=document.getElementById('adminPanel');if(ap)obs.observe(ap,{attributes:true,attributeFilter:['class']});
+  var nbm=document.getElementById('navBottom');if(nbm)obs.observe(nbm,{childList:true});
   setInterval(gxReloj,20000);
   gxSync();
 }
 (function(){var _sa=showApp;showApp=function(){var r=_sa.apply(this,arguments);if(window._gxPost){var g=window._gxPost;window._gxPost='';setTimeout(function(){try{navIr(g);}catch(e){}},500);}return r;};})();
+try{if(typeof Chart!=='undefined')Chart.register({id:'gxTheme',beforeUpdate:function(c){
+  if(!document.body.classList.contains('gx-app'))return;
+  var sc=(c.options&&c.options.scales)||{};
+  Object.keys(sc).forEach(function(k){var x=sc[k];if(!x)return;if(x.ticks)x.ticks.color='#64748B';if(x.grid)x.grid.color='rgba(16,42,67,.08)';if(x.pointLabels)x.pointLabels.color='#64748B';});
+  var lg=c.options&&c.options.plugins&&c.options.plugins.legend;if(lg&&lg.labels)lg.labels.color='#334E68';
+}});}catch(e){console.error('gxChart',e);}
 try{gxInit();}catch(e){console.error('gxInit',e);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',navAdminInit);else navAdminInit();
 
