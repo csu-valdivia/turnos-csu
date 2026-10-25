@@ -704,6 +704,60 @@ body.gx-light [style*="linear-gradient(135deg,#"] [style*="font-size: 12px"]{col
 
 #relojFlotante svg{filter:drop-shadow(0 4px 12px rgba(16,42,67,.28))!important}
 @media(min-width:1000px){body.gx-ing #relojFlotante{display:none!important}}
+/* ══ Carga de turnos: tarjetas · grilla · tabla ══ */
+#gxCmBar{display:flex;gap:6px;background:#E8F1F7;border:1px solid var(--gx-line);border-radius:12px;padding:4px;margin:6px 0 12px}
+#gxCmBar button{flex:1;min-height:44px;border:0;border-radius:9px;background:transparent;color:var(--gx-slate);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .18s,color .18s}
+#gxCmBar button.on{background:var(--gx-teal);color:#fff}
+#gxCmBar button:focus-visible,.gxchip:focus-visible,.gxic:focus-visible,.gxcell:focus-visible{outline:2px solid var(--gx-teal);outline-offset:2px}
+body[data-gxcm="tarjetas"] .gx-tblwrap:not(.gx-keep),body[data-gxcm="grilla"] .gx-tblwrap:not(.gx-keep){display:none}
+body[data-gxcm="tarjetas"] #gxCmLeg,body[data-gxcm="grilla"] #gxCmLeg,body[data-gxcm="grilla"] #addRowBtn,body[data-gxcm="grilla"] #saveBulkBtn{display:none}
+#gxCmGri .gx-tblwrap{display:block!important}
+.gx-tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.bulk-tbl{font-size:13px}.bulk-tbl td,.bulk-tbl th{padding:6px 5px;vertical-align:middle}
+.bulk-tbl select,.bulk-tbl input[type=date]{font-size:14px;min-height:40px;padding:6px 8px}
+.bulk-tbl input[type=checkbox]{width:22px;height:22px}
+.gxPers{display:flex;flex-wrap:wrap;gap:4px;min-width:170px}
+.gxchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--gx-line);background:#fff;color:var(--gx-navy);border-radius:20px;padding:6px 12px;font-family:inherit;font-size:13px;font-weight:500;min-height:36px;cursor:pointer}
+.gxchip.on{background:var(--gx-sel);border-color:var(--gx-teal);color:var(--gx-tealD);font-weight:600}
+.gxchip.add{color:var(--gx-tealD);border:1px dashed var(--gx-teal)}
+.gxic,.gxdup{background:none;border:0;color:var(--gx-slate);cursor:pointer;min-width:40px;min-height:40px;display:inline-grid;place-items:center;border-radius:8px}
+.gxic:hover,.gxdup:hover{background:#E8F1F7}
+.gxcard{background:#fff;border:1px solid var(--gx-line);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(16,42,67,.08)}
+.gxcard-h{display:flex;justify-content:space-between;align-items:center;font-size:16px;color:var(--gx-navy)}
+.gxcard-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.gxcard-g label span,.gxlbl{display:block;font-size:12px;color:var(--gx-slate);font-weight:600;margin:0 0 4px}
+.gxlbl{margin-top:12px}
+.gxro{min-height:44px;display:flex;align-items:center;padding:0 12px;border-radius:10px;background:#F1F6FA;color:var(--gx-slate);font-size:15px}
+.gxwrap{display:flex;flex-wrap:wrap;gap:6px}
+.gxg-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px}
+.gxg-t{font-size:16px;color:var(--gx-navy)}.gxg-s{font-size:12px;color:var(--gx-slate);margin-top:2px;max-width:420px}
+.gxg{width:100%;border-collapse:separate;border-spacing:4px;min-width:560px}
+.gxg th{font-size:12px;color:var(--gx-slate);font-weight:600;text-align:center;padding:4px}
+.gxg .gxg-n{text-align:left;font-size:14px;color:var(--gx-navy);white-space:nowrap;position:sticky;left:0;background:var(--gx-bg);padding:4px 8px;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.gxcell{width:100%;min-height:46px;border:0;background:transparent;border-radius:8px;display:flex;flex-direction:column;gap:3px;padding:0;cursor:pointer}
+.gxcell.vacia{border:1.5px dashed var(--gx-line);color:#9fb3c4;align-items:center;justify-content:center}
+.gxcell.vacia:hover{border-color:var(--gx-teal);color:var(--gx-teal)}
+.gxbl{display:block;border-radius:8px;padding:5px 4px;font-size:12px;font-weight:600;text-align:center;line-height:1.25}
+.gxbl small{display:block;font-weight:500;font-size:11px}
+.gxbl.pend{outline:2px dashed var(--gx-teal);outline-offset:-2px}
+.gxmas{font-size:12px;color:var(--gx-slate);text-align:center}
+.gxg-bar{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.gxg-pend{font-size:13px;color:var(--gx-slate)}
+.gxg-save{width:auto;margin:0;padding:0 20px;min-height:46px}.gxg-save:disabled{opacity:.45;cursor:not-allowed}
+.gx-ex{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:6px}.gx-ex .gxbl{text-align:left;flex:1;padding:8px 10px;font-size:13px}
+/* hoja (selector de personas / celda) */
+.gx-sheet{position:fixed;inset:0;background:rgba(16,42,67,.45);z-index:9600;display:flex;align-items:flex-end;justify-content:center}
+.gx-sheet-p{background:#fff;color:var(--gx-navy);width:100%;max-width:460px;max-height:86vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -10px 30px rgba(16,42,67,.25)}
+@media(min-width:700px){.gx-sheet{align-items:center}.gx-sheet-p{border-radius:18px}}
+.gx-sheet-h{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--gx-line);font-size:16px}
+.gx-done{background:var(--gx-teal);color:#fff;border:0;border-radius:10px;min-height:44px;padding:0 20px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.gx-sheet-b{padding:14px 16px;overflow:auto}
+.gx-search{width:100%;margin-bottom:8px}
+.gx-plist{display:flex;flex-direction:column}
+.gx-prow{display:flex;align-items:center;gap:12px;min-height:48px;border-bottom:1px solid var(--gx-line);font-size:16px;cursor:pointer}
+.gx-prow input{width:24px;height:24px;min-height:0;accent-color:var(--gx-teal)}
+@media(prefers-reduced-motion:reduce){#gxCmBar button{transition:none}}
+
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
 </style>
 </head>
@@ -1323,6 +1377,9 @@ body.gx-light [style*="linear-gradient(135deg,#"] [style*="font-size: 12px"]{col
             </div>
 
             <p class="asec-title">📋 Carga masiva de turnos</p>
+            <div id="gxCmBar" role="group" aria-label="Forma de cargar turnos"></div>
+            <div id="gxCmTar" style="display:none"></div>
+            <div id="gxCmGri" style="display:none"></div>
 
             <!-- MAPA DE CALOR -->
             <div style="margin-bottom:12px">
@@ -1367,7 +1424,7 @@ body.gx-light [style*="linear-gradient(135deg,#"] [style*="font-size: 12px"]{col
               </div>
             </details>
 
-            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">T=Turno (Esterilización) · 🔑=Equipo clave · S/A=Sin atención · 🏖=Libre</p>
+            <p id="gxCmLeg" style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">T=Turno (Esterilización) · 🔑=Equipo clave · S/A=Sin atención · 🏖=Libre</p>
             <table class="bulk-tbl">
               <thead><tr><th>Fecha</th><th>Día</th><th>Personas</th><th>Área</th><th>Horario</th><th style="color:#a78bfa">T</th><th style="color:#93c5fd">🔑</th><th style="color:#fca5a5">S/A</th><th style="color:#7ec8f7">🏖</th><th></th></tr></thead>
               <tbody id="bulkBody"></tbody>
@@ -12499,6 +12556,226 @@ try{if(typeof Chart!=='undefined')Chart.register({id:'gxTheme',beforeUpdate:func
   var lg=c.options&&c.options.plugins&&c.options.plugins.legend;if(lg&&lg.labels)lg.labels.color='#334E68';
 }});}catch(e){console.error('gxChart',e);}
 try{gxInit();}catch(e){console.error('gxInit',e);}
+// ══════════════ CARGA DE TURNOS · tres formas (Tarjetas · Grilla · Tabla) ══════════════
+var GX_DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+var GXG={pend:[],last:{area:'',hor:''}};
+var GX_AREA_COL=[['#E3F2FB','#1D4ED8'],['#F3E8FF','#6D28D9'],['#E8F8F7','#0B7F7C'],['#FEF3C7','#92400E'],['#FCE7F3','#9D174D']];
+function gxEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function gxNombresTodos(){var t=(nombres||[]).slice();Object.values(internos||{}).forEach(function(i){if(i&&i.nombre&&t.indexOf(i.nombre)===-1)t.push(i.nombre);});return t;}
+function gxRows(){return Array.prototype.slice.call(document.querySelectorAll('#bulkBody tr'));}
+function gxQ(tr,s){return tr.querySelector(s);}
+function gxFire(el){if(el)el.dispatchEvent(new Event('change',{bubbles:true}));}
+function gxSelPers(tr){return Array.prototype.map.call(tr.querySelectorAll('.pCheck:checked'),function(c){return c.value;});}
+function gxSetPers(tr,name,on){Array.prototype.forEach.call(tr.querySelectorAll('.pCheck'),function(c){if(c.value===name){c.checked=on;gxFire(c);}});}
+function gxPri(n){return String(n).split(' ')[0];}
+var GXI={copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',x:'<path d="M6 6l12 12M18 6 6 18"/>',plus:'<path d="M12 5v14M5 12h14"/>'};
+GX_IC.copy=GXI.copy;GX_IC.trash=GXI.trash;GX_IC.x=GXI.x;GX_IC.plus=GXI.plus;
+// ── selector de personas (hoja) ──
+function gxSheet(titulo,cuerpo,onClose){
+  var ov=document.createElement('div');ov.className='gx-sheet';ov.dataset.gxo='1';
+  ov.innerHTML='<div class="gx-sheet-p" role="dialog" aria-label="'+gxEsc(titulo)+'"><div class="gx-sheet-h"><b>'+gxEsc(titulo)+'</b><button type="button" class="gx-done" data-a="ok">Listo</button></div><div class="gx-sheet-b"></div></div>';
+  ov.querySelector('.gx-sheet-b').appendChild(cuerpo);
+  function cerrar(){if(ov.parentNode)ov.parentNode.removeChild(ov);if(onClose)onClose();}
+  ov.addEventListener('click',function(e){if(e.target===ov||(e.target.closest&&e.target.closest('[data-a=ok]')))cerrar();});
+  document.body.appendChild(ov);return {el:ov,cerrar:cerrar};
+}
+function gxPicker(tr){
+  var all=gxNombresTodos();var sel=gxSelPers(tr);
+  var w=document.createElement('div');
+  w.innerHTML='<input type="search" class="gx-search" placeholder="Buscar persona…" aria-label="Buscar persona"><div class="gx-plist"></div>';
+  var lst=w.querySelector('.gx-plist');
+  function pintar(f){
+    f=(f||'').toLowerCase();
+    lst.innerHTML=all.filter(function(n){return !f||n.toLowerCase().indexOf(f)>-1;}).map(function(n){
+      return '<label class="gx-prow"><input type="checkbox" value="'+gxEsc(n)+'"'+(sel.indexOf(n)>-1?' checked':'')+'><span>'+gxEsc(n)+'</span></label>';
+    }).join('')||'<p class="empty">Sin resultados.</p>';
+  }
+  pintar('');
+  w.querySelector('.gx-search').addEventListener('input',function(){pintar(this.value);});
+  lst.addEventListener('change',function(e){var c=e.target;if(!c||c.type!=='checkbox')return;gxSetPers(tr,c.value,c.checked);var i=sel.indexOf(c.value);if(c.checked&&i<0)sel.push(c.value);if(!c.checked&&i>-1)sel.splice(i,1);});
+  gxSheet('Elegir personas',w,function(){gxPersSummary(tr);if(document.body.getAttribute('data-gxcm')==='tarjetas')gxCmRenderCards();});
+}
+function gxPersSummary(tr){
+  var box=tr.querySelector('.gxPers');if(!box)return;
+  box.innerHTML=gxSelPers(tr).map(function(n){return '<button type="button" class="gxchip on" data-act="delp" data-p="'+gxEsc(n)+'" title="Quitar '+gxEsc(n)+'">'+gxEsc(gxPri(n))+' '+gxIc('x',12)+'</button>';}).join('')+'<button type="button" class="gxchip add" data-act="pick">'+gxIc('plus',13)+' Persona</button>';
+}
+function gxDupRow(tr){
+  addBulkRow();var rows=gxRows();var nt=rows[rows.length-1];if(!nt)return;gxEnhanceRow(nt);
+  ['.dFecha','.aSel','.hSel','.tSel'].forEach(function(s){var a=gxQ(tr,s),b=gxQ(nt,s);if(a&&b){b.value=a.value;gxFire(b);}});
+  gxSelPers(tr).forEach(function(n){gxSetPers(nt,n,true);});
+  ['.saCk','.lCk'].forEach(function(s){var a=gxQ(tr,s),b=gxQ(nt,s);if(a&&b&&a.checked){b.checked=true;gxFire(b);}});
+  gxPersSummary(nt);if(document.body.getAttribute('data-gxcm')==='tarjetas')gxCmRenderCards();
+}
+// ── Tabla (la de siempre, ordenada) ──
+function gxEnhanceRow(tr){
+  if(tr.dataset.gx)return;var panel=tr.querySelector('.pCheckPanel');if(!panel)return;tr.dataset.gx='1';
+  panel.style.display='none';
+  var box=document.createElement('div');box.className='gxPers';panel.parentNode.insertBefore(box,panel);gxPersSummary(tr);
+  box.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if(!b)return;
+    if(b.dataset.act==='pick')gxPicker(tr);
+    if(b.dataset.act==='delp'){gxSetPers(tr,b.dataset.p,false);gxPersSummary(tr);}});
+  var last=tr.lastElementChild;
+  var d=document.createElement('button');d.type='button';d.className='gxdup';d.title='Duplicar fila';d.setAttribute('aria-label','Duplicar fila');d.innerHTML=gxIc('copy',16);
+  d.addEventListener('click',function(){gxDupRow(tr);});if(last)last.insertBefore(d,last.firstChild);
+}
+function gxTablaInit(){
+  var tb=document.querySelector('table.bulk-tbl');if(!tb||tb.dataset.gx)return;tb.dataset.gx='1';
+  var w=document.createElement('div');w.className='gx-tblwrap';tb.parentNode.insertBefore(w,tb);w.appendChild(tb);
+  var th=tb.querySelectorAll('thead th');var nm=['Fecha','Día','Personas','Área','Horario','T','Clave','S/A','Libre',''];
+  Array.prototype.forEach.call(th,function(h,i){if(nm[i]!==undefined){h.textContent=nm[i];h.removeAttribute('style');}});
+}
+// ── Tarjetas (vista de las mismas filas) ──
+function gxCardHtml(tr,i){
+  var v=function(s){var e=gxQ(tr,s);return e?e.value:'';};
+  var fecha=v('.dFecha'),dia=(gxQ(tr,'.dLabel')||{}).textContent||'—',area=v('.aSel'),hor=v('.hSel'),turno=v('.tSel'),rol=v('.kSel');
+  var sa=gxQ(tr,'.saCk')&&gxQ(tr,'.saCk').checked,lib=gxQ(tr,'.lCk')&&gxQ(tr,'.lCk').checked;
+  var pers=gxSelPers(tr);
+  var opts=function(arr,sel,ph){return '<option value="">'+ph+'</option>'+arr.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+gxEsc(o)+'</option>';}).join('');};
+  var ch=function(act,val,txt,on){return '<button type="button" class="gxchip'+(on?' on':'')+'" data-act="'+act+'" data-v="'+gxEsc(val)+'" aria-pressed="'+(on?'true':'false')+'">'+txt+'</button>';};
+  var flags='';
+  if(area==='Esterilización')flags+=ch('t','T1','T1',turno==='T1')+ch('t','T2','T2',turno==='T2');
+  flags+=ch('rol','Rol A','Clave A',rol==='Rol A')+ch('rol','Rol B','Clave B',rol==='Rol B')+ch('rol','Rol C','Clave C',rol==='Rol C')+ch('sa','','Sin atención',sa)+ch('lib','','Libre',lib);
+  var pc=pers.map(function(n){return '<button type="button" class="gxchip on" data-act="delp" data-p="'+gxEsc(n)+'" title="Quitar '+gxEsc(n)+'">'+gxEsc(n)+' '+gxIc('x',12)+'</button>';}).join('')+'<button type="button" class="gxchip add" data-act="pick">'+gxIc('plus',14)+' Agregar</button>';
+  return '<div class="gxcard" data-i="'+i+'"><div class="gxcard-h"><b>Turno '+(i+1)+'</b><span><button type="button" class="gxic" data-act="dup" aria-label="Duplicar turno" title="Duplicar">'+gxIc('copy',18)+'</button><button type="button" class="gxic" data-act="del" aria-label="Quitar turno" title="Quitar">'+gxIc('trash',18)+'</button></span></div>'
+   +'<div class="gxcard-g"><label><span>Fecha</span><input type="date" data-f="fecha" value="'+gxEsc(fecha)+'"></label><label><span>Día</span><div class="gxro">'+gxEsc(dia==='—'?'Elige fecha':dia)+'</div></label></div>'
+   +'<div class="gxcard-g"><label><span>Área</span><select data-f="area">'+opts(AREAS,area,'Elige área')+'</select></label><label><span>Horario</span><select data-f="hor">'+opts(HORARIOS,hor,'Elige horario')+'</select></label></div>'
+   +'<div class="gxlbl">Personas ('+pers.length+')</div><div class="gxwrap">'+pc+'</div>'
+   +'<div class="gxlbl">Marcar como</div><div class="gxwrap">'+flags+'</div></div>';
+}
+function gxCmRenderCards(){
+  var host=document.getElementById('gxCmTar');if(!host)return;
+  gxRows().forEach(gxEnhanceRow);
+  var h=gxRows().map(gxCardHtml).join('');
+  host.innerHTML=h||'<p class="empty">Aún no hay turnos. Toca «Agregar turno».</p>';
+}
+function gxCmTarInit(){
+  var host=document.getElementById('gxCmTar');if(!host||host.dataset.ok)return;host.dataset.ok='1';
+  function rowOf(e){var c=e.target.closest('.gxcard');return c?gxRows()[+c.dataset.i]:null;}
+  host.addEventListener('change',function(e){
+    var f=e.target.dataset&&e.target.dataset.f;if(!f)return;var tr=rowOf(e);if(!tr)return;
+    var map={fecha:'.dFecha',area:'.aSel',hor:'.hSel'};var t=gxQ(tr,map[f]);if(!t)return;t.value=e.target.value;gxFire(t);gxCmRenderCards();
+  });
+  host.addEventListener('click',function(e){
+    var b=e.target.closest('[data-act]');if(!b)return;var tr=rowOf(e);if(!tr)return;var a=b.dataset.act;
+    if(a==='pick'){gxPicker(tr);return;}
+    if(a==='delp'){gxSetPers(tr,b.dataset.p,false);}
+    else if(a==='t'){var t=gxQ(tr,'.tSel');if(t){t.value=t.value===b.dataset.v?'':b.dataset.v;}}
+    else if(a==='rol'){var k=gxQ(tr,'.kSel');if(k){k.value=k.value===b.dataset.v?'':b.dataset.v;}}
+    else if(a==='sa'||a==='lib'){var c=gxQ(tr,a==='sa'?'.saCk':'.lCk');if(c){c.checked=!c.checked;gxFire(c);}}
+    else if(a==='dup'){gxDupRow(tr);return;}
+    else if(a==='del'){if(gxSelPers(tr).length&&!confirm('¿Quitar este turno?'))return;tr.remove();return;}
+    gxCmRenderCards();
+  });
+}
+// ── Grilla semanal (persona × día) ──
+function gxAreaShort(a){var m={'Esterilización':'Esteril.','Dispensario 1':'Disp. 1','Dispensario 2':'Disp. 2'};return m[a]||String(a||'').slice(0,9);}
+function gxAreaCol(a){var i=AREAS.indexOf(a);return GX_AREA_COL[(i<0?0:i)%GX_AREA_COL.length];}
+function gxGridData(){
+  var m={};
+  Object.keys(bloques||{}).forEach(function(k){var b=bloques[k];if(!b||b.sinAtencion||b.libre||!b.nombre||b.nombre==='__sa__')return;
+    ((m[b.nombre]=m[b.nombre]||{})[b.dia]=(m[b.nombre][b.dia]||[])).push({k:k,area:b.area,horario:b.horario,turno:b.turno,pend:false});});
+  GXG.pend.forEach(function(p,i){((m[p.nombre]=m[p.nombre]||{})[p.dia]=(m[p.nombre][p.dia]||[])).push({i:i,area:p.area,horario:p.horario,turno:p.turno,pend:true});});
+  return m;
+}
+function gxGridRender(){
+  var host=document.getElementById('gxCmGri');if(!host||host.style.display==='none')return;
+  var data=gxGridData();var pers=gxNombresTodos();Object.keys(data).forEach(function(n){if(pers.indexOf(n)<0)pers.push(n);});
+  var sem=(W&&semanas&&semanas[W])?(semanas[W].nombre||(semanas[W].ini+' al '+semanas[W].fin)):'';
+  var head='<div class="gxg-top"><div><b class="gxg-t">'+(sem?gxEsc(sem):'Sin semana confirmada')+'</b><div class="gxg-s">Toca una celda para poner área y horario. Para sin atención, libre o equipo clave usa Tarjetas o Tabla.</div></div><button type="button" class="gxchip" data-g="copiar">'+gxIc('copy',14)+' Copiar de otra semana</button></div>';
+  var rows=pers.map(function(n){
+    var tds=GX_DIAS.map(function(d){
+      var L=(data[n]&&data[n][d])||[];
+      if(!L.length)return '<td><button type="button" class="gxcell vacia" data-g="cel" data-n="'+encodeURIComponent(n)+'" data-d="'+d+'" aria-label="Agregar turno a '+gxEsc(n)+' el '+d+'">'+gxIc('plus',14)+'</button></td>';
+      var inner=L.slice(0,2).map(function(x){var c=gxAreaCol(x.area);return '<span class="gxbl'+(x.pend?' pend':'')+'" style="background:'+c[0]+';color:'+c[1]+'">'+gxEsc(gxAreaShort(x.area))+(x.turno?' '+gxEsc(x.turno):'')+'<small>'+gxEsc(x.horario||'')+'</small></span>';}).join('')+(L.length>2?'<span class="gxmas">+'+(L.length-2)+'</span>':'');
+      return '<td><button type="button" class="gxcell" data-g="cel" data-n="'+encodeURIComponent(n)+'" data-d="'+d+'">'+inner+'</button></td>';
+    }).join('');
+    return '<tr><th scope="row" class="gxg-n" title="'+gxEsc(n)+'">'+gxEsc(n)+'</th>'+tds+'</tr>';
+  }).join('');
+  var np=GXG.pend.length;
+  host.innerHTML=head+'<div class="gx-tblwrap"><table class="gxg"><thead><tr><th>Persona</th>'+GX_DIAS.map(function(d){return '<th>'+d.slice(0,3)+'</th>';}).join('')+'</tr></thead><tbody>'+rows+'</tbody></table></div>'
+   +'<div class="gxg-bar"><span class="gxg-pend">'+(np?np+' turno'+(np>1?'s':'')+' por guardar':'Sin cambios por guardar')+'</span><span style="flex:1"></span>'+(np?'<button type="button" class="gxchip" data-g="descartar">Descartar</button>':'')+'<button type="button" class="btn-add gxg-save" data-g="guardar"'+(np?'':' disabled')+'>Guardar todo</button></div><div class="saved" id="gxGriSaved">✓ Guardado</div>';
+}
+function gxGridCelda(n,d){
+  var data=gxGridData();var L=(data[n]&&data[n][d])||[];
+  var w=document.createElement('div');var sh;
+  function pintar(){
+    data=gxGridData();L=(data[n]&&data[n][d])||[];
+    var ex=L.map(function(x,j){return '<div class="gx-ex"><span class="gxbl'+(x.pend?' pend':'')+'" style="background:'+gxAreaCol(x.area)[0]+';color:'+gxAreaCol(x.area)[1]+'">'+gxEsc(x.area||'')+(x.turno?' '+gxEsc(x.turno):'')+' · '+gxEsc(x.horario||'')+(x.pend?' (por guardar)':'')+'</span><button type="button" class="gxchip" data-x="'+j+'">Quitar</button></div>';}).join('');
+    var a=GXG.last.area,h=GXG.last.hor;
+    w.innerHTML=(ex||'<p class="empty" style="text-align:left">Sin turnos este día.</p>')
+     +'<div class="gxlbl">Agregar turno</div><div class="gxcard-g"><label><span>Área</span><select id="gxSA">'+mkOpts(AREAS,'Elige área').replace('<option>'+a+'</option>','<option selected>'+a+'</option>')+'</select></label><label><span>Horario</span><select id="gxSH">'+mkOpts(HORARIOS,'Elige horario').replace('<option>'+h+'</option>','<option selected>'+h+'</option>')+'</select></label></div>'
+     +'<div class="gxwrap" id="gxST" style="margin-top:8px;display:'+(a==='Esterilización'?'flex':'none')+'"><button type="button" class="gxchip" data-t="T1">T1</button><button type="button" class="gxchip" data-t="T2">T2</button></div>'
+     +'<div class="gxwrap" style="margin-top:12px"><button type="button" class="btn-add" style="width:auto;flex:1;margin:0" data-a="add">Agregar a este día</button><button type="button" class="btn-sec" style="width:auto;flex:1;margin:0" data-a="lv">Copiar a Lun–Vie</button></div>';
+  }
+  var turno='';
+  w.addEventListener('change',function(e){if(e.target.id==='gxSA'){GXG.last.area=e.target.value;var t=w.querySelector('#gxST');if(t)t.style.display=e.target.value==='Esterilización'?'flex':'none';}if(e.target.id==='gxSH')GXG.last.hor=e.target.value;});
+  w.addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;
+    if(b.dataset.t!==undefined){turno=turno===b.dataset.t?'':b.dataset.t;Array.prototype.forEach.call(w.querySelectorAll('[data-t]'),function(x){x.classList.toggle('on',x.dataset.t===turno);});return;}
+    if(b.dataset.x!==undefined){var x=L[+b.dataset.x];if(!x)return;
+      if(x.pend){GXG.pend.splice(x.i,1);pintar();gxGridRender();return;}
+      if(!confirm('¿Quitar este turno ('+d+' · '+x.area+' · '+x.horario+')?'))return;
+      sRef('bloques/'+x.k).remove().then(function(){setTimeout(function(){genPendientes(function(){});},400);});
+      setTimeout(function(){pintar();gxGridRender();},350);return;}
+    var a=b.dataset.a;if(!a)return;
+    var area=(w.querySelector('#gxSA')||{}).value,hor=(w.querySelector('#gxSH')||{}).value;
+    if(!area||!hor){alert('Elige área y horario.');return;}
+    var blk=function(dia){var o={nombre:n,dia:dia,area:area,horario:hor};if(turno&&area==='Esterilización')o.turno=turno;return o;};
+    var existe=function(o){return gxGridData()[n]&&(gxGridData()[n][o.dia]||[]).some(function(z){return z.area===o.area&&z.horario===o.horario;});};
+    if(a==='add'){var o=blk(d);if(!existe(o))GXG.pend.push(o);}
+    if(a==='lv'){GX_DIAS.slice(0,5).forEach(function(dd){var o=blk(dd);if(!existe(o))GXG.pend.push(o);});}
+    pintar();gxGridRender();
+  });
+  pintar();
+  gxSheet(gxPri(n)+' · '+d,w,function(){gxGridRender();});
+}
+function gxGridInit(){
+  var host=document.getElementById('gxCmGri');if(!host||host.dataset.ok)return;host.dataset.ok='1';
+  host.addEventListener('click',function(e){
+    var b=e.target.closest('[data-g]');if(!b)return;var g=b.dataset.g;
+    if(g==='cel'){gxGridCelda(decodeURIComponent(b.dataset.n),b.dataset.d);return;}
+    if(g==='copiar'){if(typeof abrirCopiarTurnos==='function')abrirCopiarTurnos();return;}
+    if(g==='descartar'){if(confirm('¿Descartar los turnos por guardar?')){GXG.pend=[];gxGridRender();}return;}
+    if(g==='guardar'){
+      if(!W){alert('⚠ Confirma una semana primero antes de cargar turnos.');return;}
+      if(!GXG.pend.length)return;
+      var lista=GXG.pend.slice();
+      Promise.all(lista.map(function(p){var o={dia:p.dia,nombre:p.nombre,area:p.area,horario:p.horario};if(p.turno)o.turno=p.turno;return sRef('bloques').push(o);})).then(function(){
+        GXG.pend=[];gxGridRender();var s=document.getElementById('gxGriSaved');if(s)showSaved('gxGriSaved');
+        setTimeout(function(){var v=document.getElementById('verificarBtn');if(v)v.click();},400);
+      });
+    }
+  });
+}
+// ── selector de modo ──
+function gxCmModo(m){
+  try{localStorage.setItem('gxCmModo',m);}catch(e){}
+  document.body.setAttribute('data-gxcm',m);
+  var T=document.getElementById('gxCmTar'),G=document.getElementById('gxCmGri');
+  if(T)T.style.display=m==='tarjetas'?'block':'none';
+  if(G)G.style.display=m==='grilla'?'block':'none';
+  Array.prototype.forEach.call(document.querySelectorAll('#gxCmBar button'),function(b){var on=b.dataset.m===m;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
+  var ab=document.getElementById('addRowBtn');if(ab)ab.textContent=m==='tarjetas'?'+ Agregar turno':'+ Agregar fila';
+  if(m==='tarjetas')gxCmRenderCards();
+  if(m==='grilla')gxGridRender();
+  if(m==='tabla')gxRows().forEach(gxEnhanceRow);
+}
+function gxCmInit(){
+  var bar=document.getElementById('gxCmBar');if(!bar||bar.dataset.ok)return;bar.dataset.ok='1';
+  bar.innerHTML=[['tarjetas','Tarjetas'],['grilla','Grilla semanal'],['tabla','Tabla']].map(function(x){return '<button type="button" data-m="'+x[0]+'" aria-pressed="false">'+x[1]+'</button>';}).join('');
+  bar.addEventListener('click',function(e){var b=e.target.closest('button');if(b)gxCmModo(b.dataset.m);});
+  gxTablaInit();gxCmTarInit();gxGridInit();
+  var bb=document.getElementById('bulkBody');
+  if(bb)new MutationObserver(function(){gxRows().forEach(gxEnhanceRow);if(document.body.getAttribute('data-gxcm')==='tarjetas')gxCmRenderCards();}).observe(bb,{childList:true});
+  var m='';try{m=localStorage.getItem('gxCmModo')||'';}catch(e){}
+  if(['tarjetas','grilla','tabla'].indexOf(m)<0)m=(window.innerWidth>=900?'grilla':'tarjetas');
+  gxCmModo(m);
+  var ap=document.getElementById('adminPanel');
+  if(ap)new MutationObserver(function(){if(ap.classList.contains('open')){gxRows().forEach(gxEnhanceRow);var mm=document.body.getAttribute('data-gxcm');if(mm==='tarjetas')gxCmRenderCards();if(mm==='grilla')gxGridRender();}}).observe(ap,{attributes:true,attributeFilter:['class']});
+}
+(function(){var _rb=renderBloquesList;renderBloquesList=function(){var r=_rb.apply(this,arguments);try{if(document.body.getAttribute('data-gxcm')==='grilla')gxGridRender();}catch(e){}return r;};})();
+try{gxCmInit();}catch(e){console.error('gxCmInit',e);}
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',navAdminInit);else navAdminInit();
 
 // ══════════════ CLASIFICACIÓN DE PERSONAL ══════════════
