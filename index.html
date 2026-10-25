@@ -394,6 +394,9 @@ body.gx-ing .sede-change{color:var(--gx-slate);font-size:13px}
 body.gx-ing select,body.gx-ing input,body.gx-ing textarea{background:#fff;border:1px solid var(--gx-line);color:var(--gx-navy);font-size:15px;min-height:44px}
 body.gx-ing select option{background:#fff;color:var(--gx-navy)}
 body.gx-ing select:focus,body.gx-ing input:focus{border-color:var(--gx-teal)}
+body.gx-ing .btn-sec{background:#fff;color:var(--gx-tealD);border:1.5px solid var(--gx-teal);border-radius:10px;min-height:46px;font-size:15px;font-weight:600}
+body.gx-ing .btn-dng{border-radius:10px;min-height:46px;font-size:15px;font-weight:600}
+body.gx-ing #semanaConfirmView p[onclick]{color:var(--gx-tealD)!important;text-decoration:underline;font-size:14px!important;min-height:44px;display:flex;align-items:center;justify-content:center;margin-top:4px!important}
 body.gx-ing .btn-add{background:var(--gx-teal);border-radius:10px;min-height:46px;font-size:15px;font-weight:600}
 body.gx-ing #selectorSemanasDiv>.card:first-child{display:none}
 body.gx-ing #connIndicator [style*="color:#fca5a5"],body.gx-ing #connIndicator{color:#B91C1C!important}
@@ -4999,6 +5002,7 @@ function mostrarConfirmacionSemana(){
 function _mostrarConfirmacionSemanaInner(){
   var wId=detectarSemanaActual();
   var v=document.getElementById('semanaConfirmView');
+  var _sl=document.getElementById('semanaLabel');if(_sl)_sl.textContent=wId?'Confirma tu semana':'Sin semana activa hoy';
   if(!wId){
     v.innerHTML='<div class="card" style="text-align:center"><p style="font-size:32px;margin-bottom:10px">📅</p><p style="font-size:15px;font-weight:600;margin-bottom:8px">No hay una semana activa para hoy</p><p style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:16px">El jefe debe crear la semana correspondiente a la fecha de hoy, o migrar datos antiguos, desde el panel admin.</p><button class="btn-sec" onclick="toggleSelectorSemanas()" style="margin-bottom:8px">Ver semanas disponibles</button><button class="btn-add" onclick="entrarAdminSinSemana()">⚙ Entrar a Admin</button></div>';
   } else {
@@ -12157,7 +12161,7 @@ function gxSync(){
   if(gxVisible('mainView'))on='turnos';
   ['gxBar','gxRail'].forEach(function(id){var n=document.getElementById(id);if(!n)return;Array.prototype.forEach.call(n.querySelectorAll('.gxit'),function(b){b.classList.toggle('on',b.dataset.k===on);});});
   var lb=document.getElementById('semanaLabel'),pl=document.getElementById('gxPill');
-  if(pl&&lb){var t=(lb.textContent||'').trim();var ok=t&&!/^(Cargando|Buscando)/.test(t);pl.classList.toggle('v',ok);pl.textContent=ok?(/^Semana/i.test(t)?t:'Semana: '+t)+' ›':'';}
+  if(pl&&lb){var t=(lb.textContent||'').trim();var ok=t&&/\d/.test(t);pl.classList.toggle('v',ok);pl.textContent=ok?(/^Semana/i.test(t)?t:'Semana: '+t)+' ›':'';}
   gxReloj();
 }
 function gxReloj(){
