@@ -162,6 +162,12 @@ async function entTablas(env) { // libro de entregas de documentos (copia de fic
   entOk = true; }
 const TTL_FIRMA = 5 * 60_000;
 /* ---------- garantías clínicas (protocolo de garantías odontológicas): Operaciones → DT → Gerencia ---------- */
+let repoOk = false;   // repositorio de evoluciones del DT: el contenido llega CIFRADO desde el navegador (el servidor no puede leerlo)
+async function repoTablas(env) { if (repoOk) return;
+  await env.DB.batch([
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS repo_items (id TEXT PRIMARY KEY, tipo TEXT NOT NULL, padre TEXT, cab TEXT NOT NULL, cuerpo TEXT, tam INTEGER NOT NULL DEFAULT 0, creado TEXT DEFAULT (datetime('now')), actualizado TEXT DEFAULT (datetime('now')))`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS repo_meta (k TEXT PRIMARY KEY, v TEXT)`)]);
+  repoOk = true; }
 let garOk = false;
 async function garTablas(env) { if (garOk) return;
   try { await env.DB.prepare("ALTER TABLE usuarios ADD COLUMN garantias TEXT").run(); } catch (e) { /* ya existe */ }
@@ -247,7 +253,7 @@ const sinPrecio = (u, row) => { if (row && !u.es_admin) { delete row.arancel; de
 /* varios trabajos en una misma orden: viajan juntos (un QR); cada uno con su tipo, dientes y color */
 const itemsNorm = (body, cfg, lab, req) => {
   if (!Array.isArray(body.items)) return null;
-  const arr = body.items.slice(0, 10).map(x => ({ tipo: txt(x.tipo_trabajo ?? x.tipo, 140), diente: txt(x.diente, 60), color: colorNorm(x.color) || "" })).filter(x => x.tipo || x.diente || x.color);
+  const arr = body.items.slice(0, 10).map(x => ({ tipo: txt(x.tipo_trabajo ?? x.tipo, 1000), diente: txt(x.diente, 60), color: colorNorm(x.color) || "" })).filter(x => x.tipo || x.diente || x.color);
   if (req && (!arr.length || arr.some(x => !x.tipo))) fail(400, "Indica el tipo de cada trabajo de la orden.");
   arr.forEach(x => { const ti = tipoInfo(cfg, x.tipo, lab); x.a = ti?.a ?? null; x.p = ti?.p ?? null; });
   return arr;
@@ -292,7 +298,7 @@ async function vincularAjuste(env, u, nuevoId, padreId, rut, smile, prueba) {
 const ajusteDe = (t, body) => { if (body.ok) return null; const n = itemsDe(t).length; if (n < 2) return null;
   const sel = [...new Set((Array.isArray(body.ajuste_items) ? body.ajuste_items : []).map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < n))].sort((a, b) => a - b);
   if (!sel.length) fail(400, "Marca cuál o cuáles trabajos de la orden requieren ajuste."); return JSON.stringify(sel); };
-const resumenItems = arr => ({ tipo_trabajo: arr.map(x => x.tipo).filter(Boolean).join(" + ").slice(0, 400), diente: [...new Set(arr.map(x => x.diente).filter(Boolean))].join(", ").slice(0, 200),
+const resumenItems = arr => ({ tipo_trabajo: arr.map(x => x.tipo).filter(Boolean).join(" + ").slice(0, 4000), diente: [...new Set(arr.map(x => x.diente).filter(Boolean))].join(", ").slice(0, 200),
   color: (arr.find(x => x.color) || {}).color || "", arancel: arr.some(x => x.a != null) ? arr.reduce((s, x) => s + (x.a || 0), 0) : null,
   plazo_dias: arr.some(x => x.p != null) ? Math.max(...arr.map(x => x.p || 0)) : null });
 const itemsDe = t => { try { const a = JSON.parse(t.items || ""); if (Array.isArray(a) && a.length) return a; } catch { } return [{ tipo: t.tipo_trabajo || "", diente: t.diente || "", color: t.color || "", a: t.arancel ?? null, p: t.plazo_dias ?? null }]; };
@@ -629,6 +635,38 @@ async function rutear(req, env, path) {
     return json((await env.DB.prepare(`SELECT rut,nombre,apellido${esCSU ? ",telefono,correo" : ""} FROM usuarios WHERE rol='docente' AND estado='ACTIVO' ORDER BY apellido,nombre`).all()).results);
   }
 
+  if (seg[0] === "repo") {
+    if (!admin) fail(403, "El repositorio de evoluciones es solo del Director Técnico.");
+    await repoTablas(env);
+    const meta = async () => Object.fromEntries((await env.DB.prepare("SELECT k,v FROM repo_meta").all()).results.map(x => [x.k, x.v]));
+    const b64 = (v, max) => { const x = String(v ?? ""); if (!/^[gp]1:[A-Za-z0-9+/=]+$/.test(x)) fail(400, "Contenido no cifrado o inválido."); if (x.length > max) fail(413, "Demasiado grande: divide las evoluciones en dos pacientes o carpetas."); return x; };
+    if (seg[1] === "meta" && m === "GET") { const M = await meta(); return json({ salt: M.salt || "", verif: M.verif || "", dias: +(M.dias || 90) }); }
+    if (seg[1] === "meta" && m === "POST") { const M = await meta();
+      if (M.salt && body.reset !== true) fail(409, "El repositorio ya tiene clave.");
+      const salt = txt(body.salt, 64), verif = b64(body.verif, 2000); if (!/^[A-Za-z0-9+/=]{16,64}$/.test(salt)) fail(400, "Clave inválida.");
+      await env.DB.batch([...(body.reset === true ? [env.DB.prepare("DELETE FROM repo_items")] : []), env.DB.prepare("INSERT OR REPLACE INTO repo_meta(k,v) VALUES('salt',?)").bind(salt), env.DB.prepare("INSERT OR REPLACE INTO repo_meta(k,v) VALUES('verif',?)").bind(verif)]);
+      return json({ ok: true }); }
+    if (seg[1] === "config" && m === "POST") { const d = Math.round(+body.dias); if (!(d >= 7 && d <= 730)) fail(400, "El plazo debe estar entre 7 y 730 días.");
+      await env.DB.prepare("INSERT OR REPLACE INTO repo_meta(k,v) VALUES('dias',?)").bind(String(d)).run(); return json({ ok: true }); }
+    if (!seg[1] && m === "GET") { const dias = +((await meta()).dias || 90);
+      await env.DB.prepare(`DELETE FROM repo_items WHERE tipo='P' AND actualizado < datetime('now', ?)`).bind(`-${dias} days`).run();   // borrado automático por inactividad
+      return json({ dias, items: (await env.DB.prepare("SELECT id,tipo,padre,cab,tam,actualizado FROM repo_items ORDER BY creado").all()).results }); }
+    const id = txt(seg[1], 40); if (!/^[a-z0-9]{8,40}$/.test(id)) fail(400, "Identificador inválido.");
+    if (m === "GET") { const x = await env.DB.prepare("SELECT cuerpo FROM repo_items WHERE id=?").bind(id).first(); if (!x) fail(404, "No existe (quizás se borró por inactividad)."); return json({ cuerpo: x.cuerpo || "" }); }
+    if (m === "PUT") { const tipo = body.tipo === "C" ? "C" : body.tipo === "P" ? "P" : fail(400, "Tipo inválido.");
+      const padre = body.padre ? txt(body.padre, 40) : null;
+      if (padre) { if (padre === id) fail(400, "Una carpeta no puede contenerse a sí misma."); const pa = await env.DB.prepare("SELECT tipo FROM repo_items WHERE id=?").bind(padre).first(); if (!pa || pa.tipo !== "C") fail(400, "La carpeta de destino no existe.");
+        if (tipo === "C") { let c = padre, g = 0; while (c && g++ < 50) { if (c === id) fail(400, "No puedes mover una carpeta dentro de sí misma."); c = (await env.DB.prepare("SELECT padre FROM repo_items WHERE id=?").bind(c).first())?.padre; } } }
+      const cab = b64(body.cab, 20000), cuerpo = tipo === "P" && body.cuerpo != null ? b64(body.cuerpo, 1900000) : null;
+      const ya = await env.DB.prepare("SELECT tipo FROM repo_items WHERE id=?").bind(id).first(); if (ya && ya.tipo !== tipo) fail(409, "Conflicto de tipo.");
+      if (ya) await env.DB.prepare(`UPDATE repo_items SET padre=?, cab=?${cuerpo != null ? ", cuerpo=?, tam=?" : ""}, actualizado=datetime('now') WHERE id=?`).bind(...[padre, cab, ...(cuerpo != null ? [cuerpo, cuerpo.length] : []), id]).run();
+      else await env.DB.prepare("INSERT INTO repo_items(id,tipo,padre,cab,cuerpo,tam) VALUES(?,?,?,?,?,?)").bind(id, tipo, padre, cab, cuerpo, cuerpo ? cuerpo.length : 0).run();
+      return json({ ok: true }); }
+    if (m === "DELETE") { const todos = (await env.DB.prepare("SELECT id,padre FROM repo_items").all()).results, borrar = new Set([id]); let cambio = true;
+      while (cambio) { cambio = false; for (const x of todos) if (x.padre && borrar.has(x.padre) && !borrar.has(x.id)) { borrar.add(x.id); cambio = true; } }
+      await env.DB.batch([...borrar].map(x => env.DB.prepare("DELETE FROM repo_items WHERE id=?").bind(x))); return json({ ok: true, borrados: borrar.size }); }
+    fail(404, "Ruta no encontrada.");
+  }
   if (seg[0] === "garantias") {
     await garTablas(env);
     const gr = admin ? "DT" : (u.garantias === "OPS" || u.garantias === "GER") && ["administrativo", "clinico", "directivo"].includes(u.rol) ? u.garantias : "";
@@ -930,7 +968,7 @@ async function rutear(req, env, path) {
     if (dp) { body.docente_nombre = `${dp.nombre} ${dp.apellido}`.trim(); body.docente_telefono = dp.telefono || ""; body.docente_correo = dp.correo || ""; }
     const ins = await env.DB.prepare(`INSERT INTO trabajos(presupuesto,num_orden,fecha_recepcion,paciente_nombre,paciente_rut,codigo_smile,estudiante_rut,estudiante_nombre,tipo_trabajo,diente,laboratorio_id,estado,qr_token,creado_por,
       estudiante_telefono,estudiante_correo,docente_rut,docente_nombre,docente_telefono,docente_correo) VALUES(?,?,?,?,?,?,?,?,?,?,?,'SOLICITADA',?,?,?,?,?,?,?,?)`)
-      .bind(pn.pres, pn.num, hoyCL(), txt(body.paciente_nombre, 120), prut, smile, u.rut, nombreDe(u), txt(body.tipo_trabajo, 400), txt(body.diente, 200), lab.id, rnd(), u.rut,
+      .bind(pn.pres, pn.num, hoyCL(), txt(body.paciente_nombre, 120), prut, smile, u.rut, nombreDe(u), txt(body.tipo_trabajo, 4000), txt(body.diente, 200), lab.id, rnd(), u.rut,
         u.telefono || "", u.correo || "", drut, txt(body.docente_nombre, 120), telNorm(body.docente_telefono) || "", txt(body.docente_correo, 120).toLowerCase()).run();
     const id = ins.meta.last_row_id;
     const col = colorNorm(body.color); if (col || itsS) await env.DB.prepare("UPDATE trabajos SET color=?, items=? WHERE id=?").bind(col || null, itsS && itsS.length > 1 ? JSON.stringify(itsS) : null, id).run();
@@ -1123,7 +1161,7 @@ async function rutear(req, env, path) {
       if (drut && !prueba) { const r = rutNorm(drut); if (!r || !r.ok) fail(400, "RUT del docente inválido."); drut = r.rut; }
       const dp = drut ? await env.DB.prepare("SELECT nombre,apellido,telefono,correo FROM usuarios WHERE rut=? AND rol='docente'").bind(drut).first() : null;
       const itsC = itemsNorm(body, await cfgGet(env), lab.id, false), rC = itsC ? resumenItems(itsC) : null;
-      const n = { paciente_rut: prut, codigo_smile: smile, paciente_nombre: txt(body.paciente_nombre, 120), tipo_trabajo: rC ? rC.tipo_trabajo : txt(body.tipo_trabajo, 140), diente: rC ? rC.diente : txt(body.diente, 60),
+      const n = { paciente_rut: prut, codigo_smile: smile, paciente_nombre: txt(body.paciente_nombre, 120), tipo_trabajo: rC ? rC.tipo_trabajo : txt(body.tipo_trabajo, 1000), diente: rC ? rC.diente : txt(body.diente, 60),
         laboratorio_id: lab.id, docente_rut: drut, docente_nombre: dp ? `${dp.nombre} ${dp.apellido}`.trim() : drut ? txt(body.docente_nombre, 120) || t.docente_nombre || "" : "",
         docente_telefono: dp ? dp.telefono || "" : drut === t.docente_rut ? t.docente_telefono || "" : "", docente_correo: dp ? dp.correo || "" : drut === t.docente_rut ? t.docente_correo || "" : "" };
       const col = colorNorm(body.color); if (col !== undefined) n.color = col;

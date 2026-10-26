@@ -86,6 +86,7 @@ tr.st-OKOBS td:first-child{box-shadow:inset 3px 0 var(--ok),inset 6px 0 var(--wa
 .obs.pago li{color:var(--muted);font-style:italic}
 .pill{display:inline-block;border-radius:99px;padding:1px 9px;font-size:.72rem;font-weight:600;letter-spacing:.03em;white-space:nowrap;border:1px solid currentColor}
 .p-ok{color:var(--ok)} .p-warn{color:var(--warn)} .p-bad{color:var(--bad)} .p-mut{color:var(--muted)}
+.obs.info li{color:var(--muted)}
 .obs{font-size:.76rem;color:var(--muted);margin:2px 0 0;padding-left:14px}
 .obs li{margin:0}
 td select,td input{padding:3px 6px;font-size:.8rem}
@@ -149,6 +150,7 @@ body.on-home header.top{display:none}
 .hm svg{width:52px;height:56px;color:var(--logo-a);transition:transform .25s}
 .hm:hover{background:var(--chip);transform:translateY(-2px)} .hm:hover svg{transform:scale(1.08)}
 .hm:focus-visible,.home-cfg:focus-visible{outline:2px solid var(--logo-b);outline-offset:3px}
+.home-links{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}.home-links .home-cfg{margin-top:0}
 .home-cfg{margin-top:18px;background:none;border:1px solid var(--line);color:var(--muted);border-radius:99px;padding:6px 16px;font:inherit;font-size:.85rem;cursor:pointer}
 .home-cfg:hover{color:var(--fg);border-color:var(--logo-b)}
 .brand{cursor:pointer}
@@ -166,7 +168,7 @@ body.on-home header.top{display:none}
 .anim .w{animation:type .3s steps(7,jump-none) calc(2.4s + var(--i)*.2s) both}
 @keyframes type{from{clip-path:inset(0 100% 0 0);opacity:0}1%{opacity:1}to{clip-path:inset(0 0 0 0);opacity:1}}
 .anim .hm{animation:rise .45s ease-out calc(4s + var(--i)*.12s) both}
-.anim .home-cfg{animation:rise .45s ease-out 4.55s both}
+.anim .home-links,.anim .home-cfg{animation:rise .45s ease-out 4.55s both}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){ .gear{animation:none} }
 
@@ -355,6 +357,17 @@ body.on-home header.top{display:none}
 .tl-sello.sm{margin-left:0;font-size:.7rem}
 .tl-regi{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:7px;font-size:.9rem}
 @media(max-width:560px){.tl-regi{grid-template-columns:1fr}}
+.tl-otro{field-sizing:content;min-height:4.6em;max-height:16em;resize:vertical;line-height:1.35;font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;text-transform:none;letter-spacing:normal}
+
+/* repositorio de evoluciones */
+.rp-lock{font-size:.7rem;font-weight:700;background:color-mix(in srgb,var(--ok) 14%,var(--panel));color:var(--ok);border-radius:999px;padding:2px 9px;letter-spacing:0;text-transform:none}
+.rp-lay{display:grid;grid-template-columns:300px 1fr;gap:14px;margin-top:14px}@media(max-width:820px){.rp-lay{grid-template-columns:1fr}}
+.rp-f{padding:7px 9px;border-radius:8px;cursor:pointer;font-size:.92rem}.rp-f:hover{background:var(--chip)}.rp-f.on{background:color-mix(in srgb,var(--accent) 14%,var(--panel));font-weight:700}
+.rp-p{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-top:6px;font-size:.9rem}
+.rp-ed{border:2px solid var(--accent);border-radius:10px;padding:12px;margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.rp-bt{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.rp-dlg{border:1px solid var(--line);border-radius:12px;padding:16px;max-width:640px;width:92vw;background:var(--panel);color:var(--fg)}.rp-dlg::backdrop{background:#0006}
+#repApp .bad,.rp-dlg .bad{color:var(--bad,#c23535)} #repApp .warn{color:var(--warn,#b45309)}
 /* ===== Auditoría de fichas clínicas (REG 1.2) ===== */
 #fcApp{display:block}
 .fc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:14px}
@@ -387,7 +400,7 @@ body.on-home header.top{display:none}
   <div class="brand" id="brandHome" role="button" tabindex="0" title="Volver a la portada">
     <small>CSU USS Valdivia · Clínica privada</small>
     <h1>Auditor <span>CSU</span></h1>
-    <div class="sub mono" style="font-size:.68rem;opacity:.7">versión 2026-10-22a · Gerencia con acceso a trabajos y entregas</div>
+    <div class="sub mono" style="font-size:.68rem;opacity:.7">versión 2026-10-26b · órdenes por ficha y criterios por niveles</div>
   </div>
   <div id="sesBox" aria-live="polite"></div>
   <div class="modbar"><span class="modtitle" id="modTitle"></span><button class="btn" id="btnSalir" title="Volver a la portada">← Salir al inicio</button></div>
@@ -398,6 +411,7 @@ body.on-home header.top{display:none}
     <button role="tab" id="tab-fic" aria-selected="false" data-view="fic">Auditoría de fichas clínicas</button>
     <button role="tab" id="tab-ent" aria-selected="false" data-view="ent">Entrega de documentos</button>
     <button role="tab" id="tab-gar" aria-selected="false" data-view="gar">Garantías clínicas</button>
+    <button role="tab" id="tab-rep" aria-selected="false" data-view="rep">Repositorio</button>
     <button role="tab" id="tab-cfg" aria-selected="false" data-view="cfg">Profesionales y tarifas</button>
   </nav>
 </header>
@@ -442,7 +456,7 @@ body.on-home header.top{display:none}
         <svg viewBox="0 0 52 56" aria-hidden="true"><path d="M26 4l18 7v14c0 13-8 22-18 27C16 47 8 38 8 25V11z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/><path d="M18 28l6 6 11-12" fill="none" stroke="var(--logo-b)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>Garantías <br>clínicas</span></button>
     </div>
-    <button class="home-cfg" data-go="cfg">Profesionales y tarifas</button>
+    <div class="home-links"><button class="home-cfg" data-go="cfg">Profesionales y tarifas</button><button class="home-cfg" data-go="rep">🗂️ Repositorio de evoluciones</button></div>
   </div>
 </section>
 
@@ -541,9 +555,9 @@ body.on-home header.top{display:none}
     <div class="panel">
       <h2><span class="step">5</span>Pagos de los pacientes</h2>
       <p class="small muted" style="margin:0"><b>Consejo:</b> escribe en el Word el código de ficha o el RUT del paciente justo arriba de cada pantallazo; así se asocia sin error.</p>
-      <p class="small muted" style="margin:0">Word (o PDF/imágenes) con los pantallazos de pago. Cada pantallazo se asocia al paciente por RUT, código de ficha o nombre, y se compara lo pagado con lo que cobra el laboratorio.</p>
-      <div class="drop" id="dropPag" tabindex="0" role="button" aria-label="Cargar pagos de pacientes"><strong>Arrastra el Word con los pantallazos</strong> o haz clic<div class="small" id="pagNames">Sin archivos</div></div>
-      <input type="file" id="filePag" accept=".docx,.pdf,image/*" multiple hidden>
+      <p class="small muted" style="margin:0">Excel del <b>estado de cuenta</b> de SMILE (uno o varios por paciente), o Word/PDF/imágenes con pantallazos. Del Excel se toman los cargos de laboratorio (las líneas que empiezan con “LAB”) y sus abonos; cada archivo se asocia al paciente por código de ficha o nombre.</p>
+      <div class="drop" id="dropPag" tabindex="0" role="button" aria-label="Cargar pagos de pacientes"><strong>Arrastra los Excel de estado de cuenta o el Word con pantallazos</strong> o haz clic<div class="small" id="pagNames">Sin archivos</div></div>
+      <input type="file" id="filePag" accept=".xlsx,.xls,.docx,.pdf,image/*" multiple hidden>
       <div class="actions"><button class="btn" id="btnPagos">Leer pagos</button><span class="small muted" id="pagInfo"></span></div>
     </div>
   </div>
@@ -606,6 +620,11 @@ body.on-home header.top{display:none}
 <!-- ===================== GARANTÍAS CLÍNICAS ===================== -->
 <section class="view" id="view-gar" hidden>
   <div id="garApp"></div>
+</section>
+
+<!-- ===================== REPOSITORIO DE EVOLUCIONES (solo DT, cifrado) ===================== -->
+<section class="view" id="view-rep" hidden>
+  <div id="repApp"></div>
 </section>
 
 <!-- ===================== FICHAS CLÍNICAS ===================== -->
@@ -1232,7 +1251,17 @@ function linesFromItems(items){
   rows.sort((a,b)=>b.y-a.y);
   return rows.map(r=>{ r.its.sort((a,b)=>a.x-b.x); let s="",end=null; r.its.forEach(t=>{ if(end!=null) s+=(t.x-end>8?"  ":" "); s+=t.s; end=t.x+t.w; }); return s; }).join("\n");
 }
-async function fileToPages(file,prog){
+/* En las órdenes de SMILE el nombre del paciente va en letra chica y a veces en dos líneas: el OCR de página completa lo pierde.
+   Se vuelve a leer solo ese recuadro, ampliado, para recuperar "código de ficha - NOMBRE". */
+async function ocrPaciente(c,w){ try{
+    const {data}=await w.recognize(c,{},{blocks:true}); const words=[]; (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(x=>words.push(x)))));
+    const k=words.find(x=>/^Paciente:?$/i.test(x.text)); if(!k) return "";
+    const hh=k.bbox.y1-k.bbox.y0, x0=k.bbox.x1+8, y0=Math.max(0,k.bbox.y0-1.8*hh), x1=Math.min(c.width,Math.round(c.width*0.53)), y1=Math.min(c.height,k.bbox.y1+1.8*hh), Z=2.2;
+    const z=document.createElement("canvas"); z.width=Math.round((x1-x0)*Z); z.height=Math.round((y1-y0)*Z); const g=z.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,z.width,z.height); g.imageSmoothingQuality="high";
+    g.drawImage(c,x0,y0,x1-x0,y1-y0,0,0,z.width,z.height);
+    await w.setParameters({tessedit_pageseg_mode:"6"}); const r=await w.recognize(z); await w.setParameters({tessedit_pageseg_mode:"4"}); z.width=z.height=0;
+    return r.data.text.replace(/\s+/g," ").trim(); }catch(e){ try{ await w.setParameters({tessedit_pageseg_mode:"4"}); }catch{} return ""; } }
+async function fileToPages(file,prog,{zoomPac=false}={}){
   const buf=await readBuf(file); const name=file.name;
   if((file.type||"").startsWith("image/")||/\.(png|jpe?g|webp|bmp|tiff?)$/i.test(name)){
     prog(`Leyendo imagen ${name} con OCR…`); const w=await getOcr(); const {data}=await w.recognize(new Blob([buf])); return [{text:data.text,ocr:true,file:name,page:1}];
@@ -1246,7 +1275,9 @@ async function fileToPages(file,prog){
       const vp=pg.getViewport({scale:3.4}); const c=document.createElement("canvas"); c.width=Math.floor(vp.width); c.height=Math.floor(vp.height);
       const ctx=c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height);
       await pg.render({canvasContext:ctx,viewport:vp}).promise;
-      const w=await getOcr(); const {data}=await w.recognize(c); text=data.text; ocr=true; c.width=c.height=0;
+      const w=await getOcr(); const {data}=await w.recognize(c); text=data.text; ocr=true;
+      if(zoomPac&&!/Paciente:?[ \t]*\d{3,6}\s*[-–]\s*[A-ZÁÉÍÓÚÑ]/i.test(text)){ const zp=await ocrPaciente(c,w); const m=zp.match(/(\d{3,6})\s*[-–]\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{4,})/); if(m) text=`Paciente: ${m[1]} - ${m[2].trim()}  Fecha Nac\n`+text; }
+      c.width=c.height=0;
     } else prog(`Leyendo ${name}: página ${i} de ${pdf.numPages}…`);
     out.push({text,ocr,file:name,page:i});
   }
@@ -1267,32 +1298,41 @@ function rutLoose(s){
 /* --- prefactura --- */
 function parsePrefactura(pages){
   const lines=pages.flatMap(p=>p.text.split(/\n/)).map(l=>l.replace(/\s+/g," ").trim()).filter(Boolean);
-  const res={numero:"",fecha:null,totalDoc:null,jobs:[]}; let job=null,lastItem=null;
+  const res={numero:"",fecha:null,totalDoc:null,jobs:[]}; let job=null,lastItem=null,dupl=0;
   for(let i=0;i<lines.length;i++){
     const L=lines[i], N=norm(L);
     if(!job && !res.numero){ const m=L.match(/\b0?(\d{4,6})\s+(\d{2}\/\d{2}\/\d{4})\s*$/); if(m && !/20\d{12}/.test(L)){ res.numero=m[0].trim().split(/\s+/)[0]; res.fecha=parseDate(m[2]); continue; } }
-    const h=L.match(/(20\d{12})\s*[—–-]?\s*(\d{2}\/\d{2}\/\d{4})?\s*(.*)$/);
+    const h=L.match(/(20\d{12})\s*[—–-]?\s*(\d{2}\/\d{2}\/\d{4})?\s*(.*)$/)||L.match(/\b(20\d{10}[\dOoIl|?!S]{2})\s+(\d{2}\/\d{2}\/\d{4})\s*(.*)$/);   // tolera 1-2 dígitos finales mal leídos por OCR
     if(h){
+      if(res.jobs.some(x=>x.codigo===h[1])){ job=null; dupl=(dupl||0)+1; continue; }   // la misma prefactura cargada dos veces
       job={codigo:h[1],ingreso:iso(+h[1].slice(0,4),+h[1].slice(4,6),+h[1].slice(6,8)),fechaEnvio:h[2]?parseDate(h[2]):null,detalle:h[3].replace(/[\/✓|]+\s*$/,"").trim(),rutInfo:null,items:[],totalDoc:null};
       const nx=lines[i+1]||""; job.rutInfo=rutLoose(h[3]) || (/\d{1,2}[.,]\d{3}[.,]\d{3}\s*-\s*$/.test(h[3])? rutLoose(h[3]+nx.match(/([\dkK])\s*[\/✓|xX]*\s*$/)?.[1]) : null);
       res.jobs.push(job); lastItem=null; continue;
     }
     if(!job) continue;
     if(/^(CONCEPTO|CODIGO TRABAJO|PAG\.|METODO|CUENTA|ENVIO)\b/.test(N)) continue;
-    const it=L.match(/^(\d{5})\s*[-–—]\s*(.+?)\s+(\d{1,3})\s+\$\s?(\d[\d.,]*)/);
-    if(it){
+    const it=L.match(/^(\d{5})\s*[-–—]\s*(.+?)\s+(\d{1,3})\s+\$\s?(\d[\d.,]*)/)||L.match(/^([A-Za-z][A-Za-z0-9-]{2,7})\s+[-–—]\s+(.+?)\s+(\d{1,3})\s+\$\s?(\d[\d.,]*)/);   // Cerna: 12345 · Line System: REM048, FIJ099, P-E009
+    if(it){ it[1]=it[1].toUpperCase().replace(/O(?=\d)/g,"0").replace(/(\d)O/g,"$10").replace(/^([A-Z][A-Z-]*?)0*(\d{3})$/,"$1$2");
       const dto=L.match(/\((\d{1,3})\s?%\)/);
       lastItem={codigo:it[1],concepto:it[2].replace(/\s+\$.*$/,"").trim(),unidades:+it[3],precio:Number(it[4].replace(/[.,]/g,"")),importe:lastMoney(L),dto:dto?+dto[1]:0};
       if(lastItem.dto>=100) lastItem.importe=0;
       if(lastItem.importe==null) lastItem.importe=lastItem.precio*lastItem.unidades;
       job.items.push(lastItem); continue;
     }
+    if(/^TOTAL PACIENTE\b/.test(N)){ const r=L.replace(/^total paciente\s*:?\s*/i,"").replace(/\$.*$/,"").trim(), a=r.match(/^(\d{3,6})\s*[-:–.]\s*(.+)$/), b=r.match(/^(.+?)\s*[\/|]\s*(\d{3,6})\s*$/);
+      if(a){ job.ficha=a[1]; job.paciente=a[2].trim(); } else if(b){ job.ficha=b[2]; job.paciente=b[1].trim(); } else if(r) job.paciente=r; lastItem=null; continue; }
     if(/^TOTAL\b/.test(N)){ const v=lastMoney(L) ?? (/\$\s*[oO]/.test(L)?0:null); if(job.totalDoc==null) job.totalDoc=v; else res.totalDoc=v; lastItem=null; continue; }
     if(lastItem && !/\$/.test(L) && L.length<60){ lastItem.concepto+=" "+L; continue; }
     if(!lastItem && !job.items.length && L.length<40){ job.detalle+=" "+L; if(!job.rutInfo) job.rutInfo=rutLoose(L); }
   }
   // el último "Total" de la última página es el total del documento
   if(res.totalDoc==null && res.jobs.length>1){ const lj=res.jobs[res.jobs.length-1]; const sumItems=lj.items.reduce((a,b)=>a+(b.importe||0),0); if(lj.totalDoc!=null && lj.totalDoc!==sumItems){ res.totalDoc=lj.totalDoc; lj.totalDoc=sumItems; } }
+  res.duplicados=dupl;
+  res.jobs.forEach(j=>{ j.detalle=j.detalle.replace(/\s*P[aá]g\.?\s*\d+\s*de\s*\d+.*$/i,"").replace(/\s*\$\s?[\d.,]+\s*$/,"").trim();
+    if(!j.ficha){ const a=j.detalle.match(/\b(\d{3,6})\s*[-:–]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ][^\/]*)$/), b=j.detalle.match(/\/\s*(\d{3,6})\b/); if(a){ j.ficha=a[1]; j.paciente=j.paciente||a[2].trim(); } else if(b) j.ficha=b[1]; }
+    if(j.paciente) j.paciente=j.paciente.replace(/\s+/g," ").trim(); });
+  res.jobs.filter(j=>!j.ficha).forEach(j=>{ const D=" "+norm(j.detalle).replace(/[^A-Z ]/g," ")+" ";   // mismo paciente con dos trabajos: el "Total paciente" aparece una sola vez
+    const o=res.jobs.find(x=>x.ficha&&x.paciente&&norm(x.paciente).split(" ").filter(w=>w.length>2).every(w=>D.includes(" "+w+" "))); if(o){ j.ficha=o.ficha; j.paciente=o.paciente; } });
   res.jobs.forEach((j,ix)=>{ j.n=ix+1; j.suma=j.items.reduce((a,b)=>a+(b.importe||0),0); j.total=j.totalDoc??j.suma; j.rut=j.rutInfo?j.rutInfo.rut:""; j.rutManual=false; });
   return res;
 }
@@ -1305,7 +1345,7 @@ function parseOrden(p){
     fecha:parseDate(g(/Fecha creaci[oó]n:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)),
     autorizo:g(/Autoriz[oó]:?[ \t]*([^\n]+?)(?:\s{2,}|Detalle|$)/im), tratante:g(/Tratante:?[ \t]*([^\n]+?)(?:\s{2,}|RUT|$)/im),
     clinica:g(/Cl[ií]nica:?[ \t]*([^\n]+)/i), rut:"", rutOk:false, trabajo:"", diente:"", etapa:"", obs:""};
-  const cp=o.pacRaw.match(/^(\d{2,7})\s*-\s*/); o.codigoPac=cp?cp[1]:""; o.paciente=o.pacRaw.replace(/^[\d\s-]+/,"");
+  const cp=o.pacRaw.match(/^(\d{2,7})\s*-\s*/); o.codigoPac=cp?cp[1]:""; o.paciente=o.pacRaw.replace(/^[\d\s-]+/,"").replace(/(\s+[A-Z])+$/,"").trim();
   const r=t.match(/RUT\*?\s*:?\s*([\d.]{7,12}\s*-?\s*[\dkK]?)/i); const ri=r?rutLoose(r[1]):null; if(ri){ o.rut=ri.rut; o.rutOk=ri.ok; }
   const i0=L.findIndex(x=>/\bLAB\b/.test(x)); const i1=L.findIndex(x=>/^Observaciones/i.test(x));
   if(i0>=0){
@@ -1317,9 +1357,18 @@ function parseOrden(p){
   if(i1>=0) o.obs=L.slice(i1).join(" ").replace(/^Observaciones:?/i,"").split(/Firma de Profesor|Cirujano|Omar Alejandro|Esp\.? /i)[0].trim().slice(0,300);
   return o;
 }
+function completarOrdenes(L){
+  const por=new Map(); L.forEach(o=>{ const k=o.archivo||""; if(!por.has(k)) por.set(k,[]); por.get(k).push(o); });
+  por.forEach(G=>{ const ruts=[...new Set(G.map(o=>o.rut).filter(Boolean))], cods=[...new Set(G.map(o=>o.codigoPac).filter(Boolean))];
+    if(ruts.length===1&&cods.length<=1) G.forEach(o=>{ if(!o.rut){ o.rut=ruts[0]; o.rutCompletado=true; } if(!o.codigoPac&&cods[0]){ o.codigoPac=cods[0]; o.codCompletado=true; } });
+    else if(cods.length===1&&!ruts.length) G.forEach(o=>{ if(!o.codigoPac){ o.codigoPac=cods[0]; o.codCompletado=true; } });
+    const nom=G.map(o=>o.paciente||"").filter(n=>/^[A-ZÁÉÍÓÚÑ]{3,}( [A-ZÁÉÍÓÚÑ]{2,}){2,}/.test(n)).sort((a,b)=>b.length-a.length)[0]; if(nom) G.forEach(o=>{ if(!/^[A-ZÁÉÍÓÚÑ]{3,}( [A-ZÁÉÍÓÚÑ]{2,}){1,}/.test(o.paciente||"")) o.paciente=nom; }); });
+  const r2c=new Map(), c2r=new Map(); L.forEach(o=>{ if(o.rut&&o.codigoPac){ r2c.set(o.rut,o.codigoPac); c2r.set(String(o.codigoPac),o.rut); } });
+  L.forEach(o=>{ if(o.rut&&!o.codigoPac&&r2c.has(o.rut)){ o.codigoPac=r2c.get(o.rut); o.codCompletado=true; } if(!o.rut&&o.codigoPac&&c2r.has(String(o.codigoPac))){ o.rut=c2r.get(String(o.codigoPac)); o.rutCompletado=true; } });
+  return L; }
 /* --- conceptos --- */
-const FAM={"Implant bridge":["IMPLANT","BRIDGE","HIBRID"],"Provisorio":["PROVISOR","PROVISION","PMMA"],"Corona":["CORONA"],"Pilar / cementación":["PILAR","TIBASE","CEMENTAC"],
-  "Prótesis removible":["REMOVIBLE","PPR"],"Prótesis total":["PROTESIS TOTAL"],"Reparación":["REPARAC","CAMBIO DE COLOR","TRANSFORMAC","MODIFICAC"],"Póntico":["PONTICO","INTERMEDIARIO"],
+const FAM={"Implant bridge":["IMPLANT","BRIDGE","HIBRID"],"Provisorio":["PROVISOR","PROVISION","PMMA"],"Corona":["CORONA","CORONO","MONOLITIC"],"Pilar / cementación":["PILAR","TIBASE","CEMENTAC"],
+  "Prótesis removible":["REMOVIBLE","PPR"],"Prótesis total":["PROTESIS TOTAL","REMOVIBLE TOTAL","JUEGO DE PROTESIS"],"Prótesis parcial":["PARCIAL","PPR"],"Encerado":["ENCERADO"],"Reparación":["REPARAC","CAMBIO DE COLOR","TRANSFORMAC","MODIFICAC"],"Póntico":["PONTICO","INTERMEDIARIO"],
   "Incrustación":["INCRUST","INLAY","ONLAY"],"Carilla":["CARILLA"],"Plano":["PLANO"],"Prótesis inmediata":["INMEDIATA"]};
 const MAT={"zirconio":["ZIRCON","CIRCON","ZR"],"PMMA":["PMMA"],"acrílico":["ACRILIC"],"metal":["METAL"],"disilicato":["DISILIC"]};
 function tags(dict,text){ const T=" "+norm(text).replace(/[^A-Z0-9 ]/g," ").replace(/\s+/g," ")+" "; return Object.keys(dict).filter(k=>dict[k].some(w=>w.length<=3?T.includes(" "+w+" "):T.includes(w.includes(" ")?w:" "+w))); }
@@ -1386,10 +1435,11 @@ async function loadValores(file,prog){
 }
 /* --- pagos de pacientes --- */
 const surnames=n=>{ const t=norm(n).replace(/[^A-Z ]/g," ").split(" ").filter(w=>w.length>=3&&!["DEL","LOS","LAS"].includes(w)); return t; };
+const pidOf=j=>j.rut||(j.ficha?"C:"+j.ficha:"J:"+j.codigo);   // identificador del paciente de un trabajo
 function pacReg(){
   const reg=new Map();
   lab.ordenes.forEach(o=>{ const k=o.rut||(o.codigoPac?"C:"+o.codigoPac:null); if(!k) return; const e=reg.get(k)||{key:k,rut:o.rut,codigo:o.codigoPac,nombre:o.paciente,fuente:"orden"}; if(!e.codigo&&o.codigoPac) e.codigo=o.codigoPac; if((!e.nombre||e.nombre.length<o.paciente.length)&&o.paciente) e.nombre=o.paciente; reg.set(k,e); });
-  (lab.pre?.jobs||[]).forEach(j=>{ const k=j.rut||("J:"+j.codigo); if(!reg.has(k)) reg.set(k,{key:k,rut:j.rut,codigo:"",nombre:j.detalle.replace(/^Dra?\.\s*\S+(\s\S+)?\s*/,""),fuente:"prefactura"}); });
+  (lab.pre?.jobs||[]).forEach(j=>{ const k=pidOf(j); if(!reg.has(k)) reg.set(k,{key:k,rut:j.rut,codigo:j.ficha||"",nombre:j.paciente||j.detalle.replace(/^Dra?\.\s*\S+(\s\S+)?\s*/,""),fuente:"prefactura"}); else { const e=reg.get(k); if(!e.codigo&&j.ficha) e.codigo=j.ficha; } });
   return [...reg.values()];
 }
 const pacLabel=e=>[e.rut,e.codigo?"cód. "+e.codigo:"",e.nombre].filter(Boolean).join(" · ").slice(0,80);
@@ -1426,11 +1476,36 @@ function parsePago(p){
   return {id:p.file+"#"+p.page,archivo:p.file,pagina:p.page,img:p.img||null,imgBlob:p.imgBlob||null,text:p.text,caption:p.caption||"",montos:amts,monto:monto??0,
     forma:fp?fp[1].toUpperCase().replace("É","E"):"",referencia:ref.trim(),pac:mp.key,via:mp.via};
 }
+/* Excel "Estado de cuenta" de SMILE: cada cargo trae debajo sus abonos y una fila de subtotal (cargos · abonos · saldo).
+   Se toman solo los cargos de laboratorio (descripción que empieza con "LAB"); cada abono es un pago con su forma de pago. */
+async function excelPagos(f){
+  const wb=XLSX.read(await readBuf(f),{type:"array"}), ws=wb.Sheets[wb.SheetNames[0]], R=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const num=v=>{ if(v==null||v==="") return null; if(typeof v==="number") return v; const s=String(v).trim().replace(/\$/g,""); if(!/\d/.test(s)) return null; return Number(s.replace(/\./g,"").replace(",","."))||0; };
+  const tit=(R.find(r=>r.some(c=>/estado de cuenta\s*:/i.test(String(c||""))))||[]).find(c=>/estado de cuenta/i.test(String(c||"")))||"";
+  const mt=String(tit).match(/estado de cuenta\s*:\s*(\d+)\s*-\s*(.+)$/i), ficha=mt?mt[1]:"", nombre=mt?mt[2].trim():"";
+  const hi=R.findIndex(r=>r.some(c=>/^descripci/i.test(String(c||"")))&&r.some(c=>/^abonos?$/i.test(String(c||"").trim())));
+  if(hi<0) throw new Error(`${f.name}: no tiene el formato de "Estado de cuenta" de SMILE (no encontré las columnas Descripción y Abonos).`);
+  const H=R[hi].map(c=>String(c||"").trim().toLowerCase()), ix=k=>H.findIndex(c=>c.startsWith(k));
+  const cF=ix("fecha"), cD=ix("descrip"), cP=ix("presup"), cDi=ix("diente"), cC=ix("cargo"), cA=ix("abono"), cS=ix("saldo");
+  const mp=matchPac(`Estado de cuenta: ${ficha} - ${nombre}\n${tit}`,""), off=XLSX.utils.decode_range(ws["!ref"]||"A1").s.r;
+  const formaDe=s=>{ const x=norm(s); return /GRATUIDAD/.test(x)?"GRATUIDAD":/DEBITO/.test(x)?"DEBITO":/CREDITO/.test(x)?"CREDITO":/EFECTIVO/.test(x)?"EFECTIVO":/TRANSFER/.test(x)?"TRANSFERENCIA":/CONVENIO/.test(x)?"CONVENIO":x?"OTRA":""; };
+  const out=[]; let blk=null, otras=0;
+  const cerrar=()=>{ if(!blk) return; if(blk.lab){ const base={archivo:f.name,img:null,imgBlob:null,caption:"",pac:mp.key,via:mp.via?mp.via+" (Excel)":"",excel:true};
+      const ref=`${blk.desc}${blk.pres!=null?` · presupuesto ${blk.pres}`:""}${blk.diente?` · diente ${blk.diente}`:""} · cargo ${clp(blk.cargo)}${blk.saldo>0?` · saldo pendiente ${clp(blk.saldo)}`:""}`;
+      const txt=`Estado de cuenta ${ficha} - ${nombre}\n${blk.fecha||""} ${blk.desc}\nCargo ${clp(blk.cargo)} · Abonos ${clp(blk.abonos.reduce((s,a)=>s+a.monto,0))}${blk.saldo!=null?" · Saldo "+clp(blk.saldo):""}`;
+      if(!blk.abonos.length) out.push({...base,id:f.name+"#"+blk.fila,pagina:"fila "+blk.fila,text:txt,montos:[blk.cargo],monto:0,forma:"",referencia:ref+" · sin abono"});
+      blk.abonos.forEach((a,k)=>out.push({...base,id:f.name+"#"+blk.fila+"."+k,pagina:"fila "+a.fila,text:txt,montos:[blk.cargo,a.monto],monto:a.monto,forma:a.forma,referencia:ref})); } else otras++; blk=null; };
+  for(let i=hi+1;i<R.length;i++){ const r=R[i]||[], d=String(r[cD]??"").trim(), fe=r[cF];
+    if(r.some(c=>/total cargos|^formas de pago/i.test(String(c||"")))){ break; }
+    if(d&&/^ABONO\b/i.test(d)){ if(blk) blk.abonos.push({monto:num(r[cA])||0,forma:formaDe((d.match(/\(([^)]+)\)/)||[])[1]||d),fila:i+1+off}); continue; }
+    if(d&&fe){ cerrar(); blk={desc:d,fecha:String(fe),pres:r[cP],diente:r[cDi]&&+r[cDi]?String(r[cDi]):"",cargo:num(r[cC])||0,abonos:[],saldo:null,fila:i+1+off,lab:/^LAB\b/i.test(d)}; continue; }
+    if(!d&&blk&&num(r[cC])!=null&&num(r[cS])!=null){ blk.saldo=num(r[cS]); cerrar(); } }
+  cerrar(); return {pagos:out,otras}; }
 function renderPagos(){
   $("#pagCount").textContent=lab.pagos.length;
   const reg=pacReg();
   $("#tblPag tbody").innerHTML=lab.pagos.map((g,i)=>`<tr>
-    <td>${g.img?`<img src="${g.img}" alt="Pantallazo ${i+1}" style="max-width:160px;max-height:110px;border:1px solid var(--line);border-radius:4px">`:""}<div class="sub">${esc(g.archivo)} · ${esc(String(g.pagina))}</div></td>
+    <td>${g.img?`<img src="${g.img}" alt="Pantallazo ${i+1}" style="max-width:160px;max-height:110px;border:1px solid var(--line);border-radius:4px">`:g.excel?`<span class="small">📊 Excel estado de cuenta</span>`:""}<div class="sub">${esc(g.archivo)} · ${esc(String(g.pagina))}</div></td>
     <td style="min-width:220px"><select id="pg-p-${i}" data-pi="${i}" data-k="pac" aria-label="Paciente pago ${i+1}"><option value="">— Sin asignar —</option>${reg.map(e=>`<option value="${esc(e.key)}" ${e.key===g.pac?"selected":""}>${esc(pacLabel(e))}</option>`).join("")}${g.pac&&!reg.some(e=>e.key===g.pac)?`<option value="${esc(g.pac)}" selected>${esc(g.pac)} (no está en la prefactura)</option>`:""}</select><div class="sub">${g.via?"Reconocido por "+esc(g.via):"No se reconoció el paciente"}</div></td>
     <td class="num"><input id="pg-m-${i}" data-pi="${i}" data-k="monto" type="number" step="100" style="width:110px" value="${g.monto}" aria-label="Monto pagado ${i+1}"></td>
     <td><select id="pg-f-${i}" data-pi="${i}" data-k="forma" aria-label="Forma de pago ${i+1}">${["","EFECTIVO","TRANSFERENCIA","DEBITO","CREDITO","GRATUIDAD","CONVENIO","OTRA"].map(f=>`<option value="${f}" ${f===g.forma?"selected":""}>${f||"—"}</option>`).join("")}</select>${g.forma==="GRATUIDAD"?'<div class="sub">No es pago del paciente</div>':""}</td>
@@ -1456,10 +1531,10 @@ $("#btnLeer").addEventListener("click",async()=>{
   try{
     let pp=[]; for(const f of lab.filesPre) pp=pp.concat(await fileToPages(f,prog));
     lab.pre=parsePrefactura(pp); lab.pre.ocr=pp.some(p=>p.ocr);
-    let op=[]; for(const f of lab.filesOrd) op=op.concat(await fileToPages(f,prog));
-    lab.ordenes=op.map(parseOrden).filter(o=>o.trabajo||o.rut||o.numero);
+    let op=[]; for(const f of lab.filesOrd) op=op.concat(await fileToPages(f,prog,{zoomPac:true}));
+    lab.ordenes=completarOrdenes(op.map(parseOrden).filter(o=>o.trabajo||o.rut||o.numero));
     const nOcr=pp.concat(op).filter(p=>p.ocr).length;
-    prog(`Leídos ${lab.pre.jobs.length} trabajos y ${lab.ordenes.length} órdenes en ${Math.round((Date.now()-t0)/1000)} s${nOcr?` (${nOcr} páginas con OCR)`:""}. Ahora agrega las evoluciones y presiona Auditar.`);
+    prog(`Leídos ${lab.pre.jobs.length} trabajos y ${lab.ordenes.length} órdenes en ${Math.round((Date.now()-t0)/1000)} s${nOcr?` (${nOcr} páginas con OCR)`:""}.${lab.pre.duplicados?` Atención: la prefactura venía repetida (${lab.pre.duplicados} trabajos duplicados ignorados).`:""}${!lab.ordenes.length?" Atención: no cargaste órdenes; sin ellas ningún trabajo puede verificarse.":""} Ahora agrega las evoluciones y presiona Auditar.`);
     $("#btnAuditLab").disabled=false; auditLab(true); autoBoxes();
     const sinRut=lab.ordenes.filter(o=>!o.rut).length;
     if(sinRut){ $("#ordPanel").open=true; prog($("#leerInfo").textContent+` Atención: ${sinRut} orden(es) sin RUT legible; escríbelo en la tabla "Órdenes leídas" para que se puedan cruzar.`); }
@@ -1472,9 +1547,10 @@ function addBox(){ lab.boxes.push({id:Date.now()+Math.random(),text:"",sel:""});
 function autoBoxes(){
   const prev=new Map(lab.boxes.filter(b=>b.auto).map(b=>[b.key,b.text])); const manual=lab.boxes.filter(b=>!b.auto);
   const seen=new Set(), out=[];
-  (lab.pre?.jobs||[]).forEach(j=>{ const k=j.rut||("J:"+j.codigo); if(seen.has(k)) return; seen.add(k);
-    const o=lab.ordenes.find(o=>o.rut&&o.rut===j.rut&&o.codigoPac);
-    out.push({id:k,auto:true,key:k,label:`${j.rut||"RUT no leído"}${o?" · cód. "+o.codigoPac:""} · ${nombrePacJob(j)}`,text:prev.get(k)||"",sel:""}); });
+  (lab.pre?.jobs||[]).forEach(j=>{ const k=pidOf(j); if(seen.has(k)) return; seen.add(k);
+    const o=lab.ordenes.find(o=>o.codigoPac&&((o.rut&&o.rut===j.rut)||(j.ficha&&String(o.codigoPac)===j.ficha)));
+    const fi=j.ficha||o?.codigoPac;
+    out.push({id:k,auto:true,key:k,label:`${j.rut||(fi?"":"Paciente sin identificar")}${fi?(j.rut?" · ":"")+"cód. "+fi:""} · ${nombrePacJob(j)}`,text:prev.get(k)||prev.get("J:"+j.codigo)||"",sel:""}); });
   lab.boxes=out.concat(manual); renderBoxes();
 }
 function boxRut(b){ if(b.auto) return b.key; const m=b.text.match(RUT_RE); RUT_RE.lastIndex=0; if(m){ const r=rutLoose(m[0]); if(r) return r.rut; } const m2=b.text.match(/RUT\*?\s*:?\s*([\d.]{7,12}\s*-?\s*[\dkK]?)/i); if(m2){ const r=rutLoose(m2[1]); if(r) return r.rut; } return b.sel||""; }
@@ -1491,6 +1567,7 @@ function renderBoxes(){
       </div>
       <textarea id="eb-txt-${i}" data-i="${i}" data-k="text" placeholder="Pega aquí las evoluciones de este paciente" style="min-height:110px">${esc(b.text)}</textarea>
     </div>`; }).join("") || `<p class="small muted">Sin cuadros. Agrega uno por paciente.</p>`;
+  if(window.REPO) lab.boxes.forEach((b,i)=>REPO.botones($("#eb-txt-"+i),()=>{ const r=boxRut(b), c=(b.label||"").match(/cód\.\s*(\d+)/); return {rut:/^\d{7,8}-[\dkK]$/.test(r)?r:"",codigo:c?c[1]:"",nombre:b.auto?(b.label||"").split(" · ").slice(-1)[0]:""}; }));
 }
 let _lbT; $("#evoBoxes").addEventListener("input",e=>{ const i=e.target.dataset.i,k=e.target.dataset.k; if(i==null||!k) return; lab.boxes[i][k]=e.target.value; saveLab();
   if(k==="text"&&lab.boxes[i].auto){ clearTimeout(_lbT); _lbT=setTimeout(()=>{ lab.boxes.forEach((b,x)=>{ const el=$("#lbs-"+x); if(el) el.innerHTML=labBoxSummary(b); }); },300); } });
@@ -1503,12 +1580,12 @@ wireDropMulti($("#dropVal"),$("#fileVal"),async fs=>{ const f=fs[0]; if(!f) retu
   catch(e){ $("#valInfo").textContent=""; toast(e.message||"No se pudo leer la lista de valores"); } });
 wireDropMulti($("#dropPag"),$("#filePag"),fs=>{ lab.filesPag=lab.filesPag.concat(fs); $("#pagNames").textContent=`${lab.filesPag.length} archivo(s): `+lab.filesPag.map(f=>f.name).join(", "); });
 $("#btnPagos").addEventListener("click",async()=>{
-  if(!lab.filesPag.length) return toast("Primero carga el Word con los pantallazos");
+  if(!lab.filesPag.length) return toast("Primero carga los Excel de estado de cuenta o el Word con los pantallazos");
   if(!lab.pre) toast("Consejo: lee primero la prefactura y las órdenes para reconocer a los pacientes");
   const b=$("#btnPagos"); b.disabled=true; const prog=m=>$("#pagInfo").textContent=m;
-  try{ let pp=[]; for(const f of lab.filesPag) pp=pp.concat(await anyToPages(f,prog,{keepImg:true}));
-    lab.pagos=pp.filter(p=>p.img||(p.ocr&&p.text.trim())||/\d{1,3}[.,]\d{3}/.test(p.text)).filter(p=>p.text.trim()).map(parsePago); const ok=lab.pagos.filter(g=>g.pac).length;
-    prog(`${lab.pagos.length} pantallazos leídos · ${ok} asociados a un paciente${lab.pagos.length-ok?` · ${lab.pagos.length-ok} sin asociar (asígnalos en la tabla)`:""}`);
+  try{ let pp=[], xs=[], nX=0, nOtras=0; for(const f of lab.filesPag){ if(/\.xlsx?$/i.test(f.name)){ prog("Leyendo "+f.name+"…"); const r=await excelPagos(f); xs=xs.concat(r.pagos); nOtras+=r.otras; nX++; } else pp=pp.concat(await anyToPages(f,prog,{keepImg:true})); }
+    lab.pagos=xs.concat(pp.filter(p=>p.img||(p.ocr&&p.text.trim())||/\d{1,3}[.,]\d{3}/.test(p.text)).filter(p=>p.text.trim()).map(parsePago)); const ok=lab.pagos.filter(g=>g.pac).length;
+    prog(`${lab.pagos.length} pago(s) leídos${nX?` (${xs.length} de ${nX} Excel: cargos de laboratorio; ${nOtras} prestaciones clínicas no consideradas)`:""} · ${ok} asociados a un paciente${lab.pagos.length-ok?` · ${lab.pagos.length-ok} sin asociar (asígnalos en la tabla)`:""}`);
     $("#pagPanel").open=true; renderPagos(); if(lab.pre) auditLab(true);
   }catch(e){ prog(""); toast(e.message||"No se pudieron leer los pagos"); }
   b.disabled=false; });
@@ -1518,23 +1595,24 @@ $("#tblPag").addEventListener("change",e=>{ const i=e.target.dataset.pi,k=e.targ
 function auditLab(silent){
   if(!lab.pre) return;
   cfg.arancelLab=cfg.arancelLab||{};
-  lab.boxes.forEach(b=>{ if(b.auto&&/^J:/.test(b.key)){ const j=lab.pre.jobs.find(x=>"J:"+x.codigo===b.key); if(j&&j.rut){ b.key=j.rut; b.label=b.label.replace("RUT no leído",j.rut); } } });
+  lab.boxes.forEach(b=>{ if(b.auto&&/^[JC]:/.test(b.key)){ const j=lab.pre.jobs.find(x=>"J:"+x.codigo===b.key||(x.ficha&&"C:"+x.ficha===b.key)); if(j&&pidOf(j)!==b.key){ b.key=pidOf(j); if(j.rut) b.label=b.label.replace(/RUT no leído|Paciente sin identificar/,j.rut); } } });
   const evo=new Map(); lab.boxes.forEach(b=>{ const r=boxRut(b); if(r&&b.text.trim()) evo.set(r,(evo.get(r)||"")+"\n"+b.text); });
   lab.ordenes.forEach(o=>o.usadaPor=[]);
+  lab.pre.jobs.forEach(j=>{ if(j.rut||j.rutManual||!j.ficha) return; const o=lab.ordenes.find(o=>o.rut&&String(o.codigoPac||"")===j.ficha); if(o){ j.rut=o.rut; j.rutDesdeFicha=true; } });   // la prefactura trae ficha: el RUT sale de la orden con ese código
   lab.pre.jobs.forEach(j=>{ if(j.rut||j.rutManual) return; const T=" "+norm(j.detalle).replace(/[^A-Z ]/g," ")+" ";
     const o=lab.ordenes.find(o=>o.rut&&(()=>{ const s=surnames(o.paciente); return s.length>=2 && T.includes(" "+s[0]+" ") && s.slice(1).some(w=>T.includes(" "+w+" ")); })());
     if(o){ j.rut=o.rut; j.rutDesdeOrden=true; } });
-  const keyOf=j=>j.rut||("J:"+j.codigo);
+  const keyOf=pidOf;
   const hayPagos=lab.pagos.length>0; const pagado=new Map(), cobrado=new Map();
   const gratis=new Map();
   lab.pagos.forEach(g=>{ if(!g.pac) return; if(g.forma==="GRATUIDAD") gratis.set(g.pac,(gratis.get(g.pac)||0)+(g.monto||0)); else pagado.set(g.pac,(pagado.get(g.pac)||0)+(g.monto||0)); });
   lab.pre.jobs.forEach(j=>cobrado.set(keyOf(j),(cobrado.get(keyOf(j))||0)+(j.total||0)));
   let nuevos=0;
   lab.jobsRes=lab.pre.jobs.map(j=>{
-    const alerts=[]; const jt=j.items.map(x=>x.concepto).join(" ");
+    const alerts=[], info=[]; const jt=j.items.map(x=>x.concepto).join(" ");
     const fam=tags(FAM,jt), mat=tags(MAT,jt);
-    if(!j.rut) alerts.push("RUT del paciente no leído: escríbelo en la columna Paciente");
-    else if(j.rutDesdeOrden && !j.rutManual) alerts.push("RUT tomado de la orden por coincidencia de nombre: confírmalo");
+    if(!j.rut&&!j.ficha) alerts.push("Paciente sin identificar (ni RUT ni código de ficha): escríbelo en la columna Paciente");
+    else if(j.rutDesdeOrden && !j.rutManual) info.push("RUT tomado de la orden por coincidencia de nombre: confírmalo");
     let pago="—", pagoDet=hayPagos?"":"Sin pantallazos de pago cargados";
     if(hayPagos && j.total>0){ const pg=pagado.get(keyOf(j))||0, cb=cobrado.get(keyOf(j))||0;
       const gr=gratis.get(keyOf(j))||0;
@@ -1542,18 +1620,20 @@ function auditLab(silent){
       else if(!pg){ pago="SIN PAGO"; pagoDet="No hay pantallazo de pago de este paciente"; alerts.push("Sin pago del paciente en los pantallazos"); }
       else if(cb>pg){ pago="NO CUBRE"; pagoDet=`Pagó ${clp(pg)}; el laboratorio cobra ${clp(cb)} por este paciente`; alerts.push(`El laboratorio cobra ${clp(cb)} y el paciente pagó ${clp(pg)}`); }
       else { pago="CUBRE"; pagoDet=`Pagó ${clp(pg)} ≥ cobro del laboratorio ${clp(cb)}`; } }
-    else if(j.rutInfo && !j.rutInfo.ok && !j.rutManual) alerts.push(`Dígito verificador leído "${j.rutInfo.leido}" no corresponde; se usó ${j.rut}`);
-    if(j.totalDoc!=null && j.totalDoc!==j.suma) alerts.push(`Suma de ítems ${clp(j.suma)} ≠ total impreso ${clp(j.totalDoc)} (posible error de lectura)`);
+    else if(j.rutInfo && !j.rutInfo.ok && !j.rutManual) info.push(`Dígito verificador leído "${j.rutInfo.leido}" no corresponde; se usó ${j.rut}`);
+    if(j.totalDoc!=null && j.totalDoc!==j.suma) info.push(`Suma de ítems ${clp(j.suma)} ≠ total impreso ${clp(j.totalDoc)} (posible error de lectura)`);
     // precios
     j.items.forEach(it=>{ const a=cfg.arancelLab[it.codigo];
       if(it.precio>0){ if(!a){ cfg.arancelLab[it.codigo]={concepto:it.concepto,precio:it.precio,origen:`Factura ${lab.pre.numero||"?"} ${fmtD(lab.pre.fecha)}`}; it.nuevo=true; nuevos++; }
-        else if(a.precio!==it.precio){ it.alerta=`precio ${clp(it.precio)} ≠ arancel ${clp(a.precio)}`; alerts.push(`${it.codigo}: ${it.alerta}`); } } });
+        else if(a.precio!==it.precio){ it.alerta=`precio ${clp(it.precio)} ≠ arancel ${clp(a.precio)}`; const dif=Math.abs(it.precio-a.precio);
+          (dif<=Math.max(1000,a.precio*0.02)?info:alerts).push(`${it.codigo}: ${it.alerta}${dif<=Math.max(1000,a.precio*0.02)?" (diferencia menor, no frena el pago)":""}`); } } });
     // órdenes
-    const cand=lab.ordenes.filter(o=>o.rut&&o.rut===j.rut);
+    let cand=lab.ordenes.filter(o=>(o.rut&&o.rut===j.rut)||(j.ficha&&o.codigoPac&&String(o.codigoPac)===j.ficha)), porNombre=false;
+    if(!cand.length&&j.paciente){ const P=" "+norm(j.paciente).replace(/[^A-Z ]/g," ")+" "; const c2=lab.ordenes.filter(o=>{ const s=surnames(o.paciente||""); return s.length>=2&&s.filter(w=>P.includes(" "+w+" ")).length>=2; }); if(c2.length){ cand=c2; porNombre=true; } }
     let best=null,bs=-1;
     cand.forEach(o=>{ const of=tags(FAM,o.trabajo+" "+o.obs); const sc=inter(fam,of).length*1000-Math.min(dayDiff(j.ingreso,o.fecha),999); if(inter(fam,of).length&&sc>bs){bs=sc;best=o;} });
     let ord="SIN ORDEN", ordDet = cand.length? `El paciente tiene ${cand.length} orden(es), pero ninguna con el concepto ${fam.join(", ")||"del trabajo"}` : "No hay orden de este paciente entre las cargadas";
-    if(best){ ord="CON ORDEN"; best.usadaPor.push(j.n); const dd=dayDiff(j.ingreso,best.fecha);
+    if(best){ ord="CON ORDEN"; best.usadaPor.push(j.n); if(porNombre) info.push(`Orden ${best.numero||"s/n"} asociada por los apellidos del paciente (no por RUT ni ficha): confírmala`); const dd=dayDiff(j.ingreso,best.fecha);
       ordDet=`Orden ${best.numero||"s/n"} del ${fmtD(best.fecha)}${best.codigoPac?" · ficha "+best.codigoPac:""}: ${best.trabajo}${best.etapa?" · "+best.etapa:""} — glosa coincide en: ${inter(fam,tags(FAM,best.trabajo+" "+best.obs)).join(", ")}`;
       const plazo=Number(cfg.plazoLab??60); const post=best.fecha&&j.ingreso&&Date.parse(best.fecha)>Date.parse(j.ingreso);
       if(dd<9999){ const txt=post?`orden ${Math.round(dd)} día(s) posterior al ingreso al laboratorio`:`orden ${Math.round(dd)} día(s) antes del ingreso al laboratorio`;
@@ -1564,20 +1644,22 @@ function auditLab(silent){
     } else if(cand.length) ord="ORDEN CON OTRO CONCEPTO";
     // evolución
     let ev="SIN EVOLUCIONES CARGADAS", evDet="Agrega un cuadro con las evoluciones de este paciente";
-    const ek=evo.has(j.rut)?j.rut:("J:"+j.codigo);
-    if(evo.has(ek)&&(j.rut||ek.startsWith("J:"))){
+    const ek=evo.has(pidOf(j))?pidOf(j):("J:"+j.codigo);
+    if(evo.has(ek)){
       const segs=parseFicha(evo.get(ek)); const hits=segs.filter(s=>inter(fam,tags(FAM,s.text)).length);
       const whole=inter(fam,tags(FAM,evo.get(ek))).length;
       if(hits.length){ ev="REGISTRADA"; evDet="Menciona el trabajo el "+[...new Set(hits.map(s=>fmtD(s.date)))].join(", "); }
       else if(whole){ ev="REGISTRADA"; evDet="La ficha menciona el trabajo (sin fecha reconocida)"; }
       else { ev="SIN REGISTRO DEL TRABAJO"; evDet=`Las evoluciones no mencionan: ${fam.join(", ")||"el concepto"}`; }
     }
-    const calc=flex=>{ if(j.total===0) return "SIN COBRO"; if(ord==="SIN ORDEN") return "RECHAZADO";
+    const identif=!!(j.rut||j.ficha);
+    const calc=flex=>{ if(j.total===0) return "SIN COBRO"; if(!identif) return "OBSERVADO";   // sin identificar: se retiene para aclarar, no se rechaza
+      if(ord==="SIN ORDEN"||ord==="ORDEN CON OTRO CONCEPTO") return "RECHAZADO";
       if(ord==="CON ORDEN" && (ev==="REGISTRADA"||flex) && !alerts.length) return "APROBADO"; return "OBSERVADO"; };
     const sugStrict=calc(false), sugFlex=calc(true), flexOn=!!cfg.flexEvo;
     const sug=flexOn?sugFlex:sugStrict; const aprobSinEvo=sug==="APROBADO"&&ev!=="REGISTRADA";
     const reasons=[]; if(j.total>0){
-      if(!j.rut) reasons.push("sinrut");
+      if(!j.rut&&!j.ficha) reasons.push("sinrut");
       if(ord==="SIN ORDEN") reasons.push("sinorden"); else if(ord!=="CON ORDEN") reasons.push("concepto");
       if(ev==="SIN EVOLUCIONES CARGADAS") reasons.push("sinevo"); else if(ev!=="REGISTRADA") reasons.push("evonomenc");
       if(pago==="SIN PAGO") reasons.push("sinpago"); else if(pago==="GRATUIDAD") reasons.push("gratuidad"); else if(pago==="NO CUBRE") reasons.push("nocubre");
@@ -1585,7 +1667,7 @@ function auditLab(silent){
       if(/precio/.test(A)) reasons.push("precio"); if(/Material/.test(A)) reasons.push("material"); if(/Fuera de plazo/.test(A)) reasons.push("plazo");
       if(/RUT tomado/.test(A)) reasons.push("rutnombre"); if(/Dígito verificador/.test(A)) reasons.push("dv"); if(/Suma de ítems/.test(A)) reasons.push("lectura"); }
     const prev=(lab.jobsRes||[]).find(x=>x.codigo===j.codigo);
-    return {...j,fam,mat,ord,ordDet,ev,evDet,alerts,sug,sugStrict,sugFlex,aprobSinEvo,reasons,pago,pagoDet,estado:(prev&&prev.estado!==prev.sug)?prev.estado:sug};
+    return {...j,fam,mat,ord,ordDet,ev,evDet,alerts,info,sug,sugStrict,sugFlex,aprobSinEvo,reasons,pago,pagoDet,estado:(prev&&prev.estado!==prev.sug)?prev.estado:sug};
   });
   if(nuevos){ saveCfg(); renderArancel(); if(!silent) toast(`${nuevos} código(s) nuevos guardados en el arancel de laboratorio`); }
   renderLab();
@@ -1610,7 +1692,7 @@ function renderLab(){
   $("#labFilters").innerHTML=["TODOS","APROBADO","OBSERVADO","RECHAZADO","SIN COBRO"].map(f=>`<button class="chip" aria-pressed="${f===lab.filter}" data-lf="${f}">${f==="TODOS"?"Todos":f[0]+f.slice(1).toLowerCase()}</button>`).join("");
   $("#tblJobs thead").innerHTML=`<tr><th>N°</th><th>Código · ingreso</th><th>Paciente / RUT</th><th>Trabajos facturados</th><th class="num">Total</th><th>Orden / glosa</th><th>Evolución</th><th>Pago paciente</th><th>Estado final</th></tr>`;
   const MOT={sinevo:["Sin evoluciones cargadas","warn"],evonomenc:["Ficha no menciona el trabajo","warn"],sinorden:["Sin orden de laboratorio","bad"],concepto:["Orden con otra glosa","bad"],
-    sinrut:["Sin RUT del paciente","bad"],sinpago:["Sin pago del paciente","warn"],gratuidad:["Pago como gratuidad","warn"],nocubre:["Pago no cubre el cobro","bad"],
+    sinrut:["Paciente sin identificar","bad"],sinpago:["Sin pago del paciente","warn"],gratuidad:["Pago como gratuidad","warn"],nocubre:["Pago no cubre el cobro","bad"],
     precio:["Precio distinto al arancel","warn"],material:["Material distinto a la orden","warn"],plazo:["Fuera de plazo","warn"],rutnombre:["RUT tomado por nombre (confirmar)","warn"],dv:["RUT con DV mal leído","warn"],lectura:["Error de lectura en montos","bad"]};
   const pend=lab.jobsRes.filter(j=>j.total>0&&j.estado!=="APROBADO");
   const cnt={}; pend.forEach(j=>j.reasons.filter(r=>!(cfg.flexEvo&&(r==="sinevo"||r==="evonomenc"))).forEach(r=>{ cnt[r]=cnt[r]||{n:0,m:0}; cnt[r].n++; cnt[r].m+=j.total; }));
@@ -1630,9 +1712,9 @@ function renderLab(){
   $("#tblJobs tbody").innerHTML=rows.map(j=>`<tr class="st-${j.estado==="SIN COBRO"?"X":j.estado}">
     <td class="mono">${j.n}</td>
     <td class="mono">${esc(j.codigo)}<div class="sub">ingreso ${fmtD(j.ingreso)}${j.fechaEnvio?" · envío "+fmtD(j.fechaEnvio):""}</div></td>
-    <td style="min-width:200px">${esc(j.detalle)}<div><input class="rutin" id="jr-${j.n}" data-jn="${j.n}" value="${esc(j.rut)}" placeholder="RUT" aria-label="RUT trabajo ${j.n}"></div></td>
+    <td style="min-width:200px">${j.ficha?`<b>Ficha ${esc(j.ficha)}</b> · ${esc(j.paciente||"")}<div class="sub">${esc(j.detalle)}</div>`:esc(j.detalle)}<div><input class="rutin" id="jr-${j.n}" data-jn="${j.n}" value="${esc(j.rut)}" placeholder="RUT" aria-label="RUT trabajo ${j.n}"></div></td>
     <td style="min-width:260px">${j.items.map(it=>`<div>${esc(it.codigo)} · ${esc(it.concepto)} <span class="sub">× ${it.unidades} · ${clp(it.precio)}${it.dto?` · dto ${it.dto}%`:""}${it.nuevo?' · <b>nuevo en arancel</b>':""}</span></div>`).join("")}
-      ${j.alerts.length?`<ul class="obs">${j.alerts.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>`:""}</td>
+      ${j.alerts.length?`<ul class="obs">${j.alerts.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>`:""}${(j.info||[]).length?`<ul class="obs info">${j.info.map(a=>`<li>ℹ️ ${esc(a)}</li>`).join("")}</ul>`:""}</td>
     <td class="num">${clp(j.total)}</td>
     <td style="min-width:190px">${ordPill(j.ord)}<div class="sub">${esc(j.ordDet)}</div></td>
     <td style="min-width:170px">${evPillL(j.ev)}<div class="sub">${esc(j.evDet)}</div></td>
@@ -1727,7 +1809,8 @@ function entregaPDF({titulo,referencia,parrafos,resumen,detalle,archivo,sinMonto
 }
 const titleCase=x=>x.toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
 function nombrePacJob(j){
-  const o=lab.ordenes.find(o=>o.rut&&o.rut===j.rut&&o.paciente&&o.paciente.split(" ").length>=2); if(o) return titleCase(o.paciente);
+  const o=lab.ordenes.find(o=>((o.rut&&o.rut===j.rut)||(j.ficha&&String(o.codigoPac||"")===j.ficha))&&o.paciente&&o.paciente.split(" ").length>=2); if(o) return titleCase(o.paciente);
+  if(j.paciente&&j.paciente.split(" ").length>=2) return titleCase(j.paciente);
   const jobs=lab.pre.jobs; const toks=d=>d.replace(/^Dra?\.\s*/,"").split(/\s+/);
   const fs=new Map(); jobs.forEach(x=>{ const t=toks(x.detalle); [2,3].forEach(k=>{ const p=t.slice(0,k).join(" "); if(!fs.has(p)) fs.set(p,new Set()); fs.get(p).add(x.rut||x.codigo); }); });
   const freq=new Map([...fs].map(([p,st])=>[p,st.size]));
@@ -1747,7 +1830,7 @@ $("#btnLabEntrega").addEventListener("click",()=>{
   const sinEvo=J.filter(j=>j.estado==="APROBADO"&&j.aprobSinEvo);
   if(cfg.flexEvo&&sinEvo.length) parr.push(`Por criterio del revisor, se consideraron para pago ${sinEvo.length} trabajo(s) sin registro en la ficha clínica que cumplen los demás criterios (${clp(sinEvo.reduce((a,j)=>a+j.total,0))}); quedan identificados en el detalle.`);
   const orden={"APROBADO":0,"OBSERVADO":1,"RECHAZADO":2,"SIN COBRO":3};
-  const body=[...J].sort((a,b)=>orden[a.estado]-orden[b.estado]||a.n-b.n).map(j=>[j.n,nombrePacJob(j).slice(0,38)+(j.rut?"\n"+j.rut:""),j.items.map(i=>i.concepto).join("; ").slice(0,70),clp(j.total),resTxt(j.estado),j.estado==="APROBADO"?(j.aprobSinEvo?"Aprobado sin evolución en ficha (criterio del revisor)":"Orden, glosa, ficha y pago conformes"):(j.alerts.length?j.alerts.slice(0,2).join("; "):j.ord==="SIN ORDEN"?"Sin orden de laboratorio":j.evDet)]);
+  const body=[...J].sort((a,b)=>orden[a.estado]-orden[b.estado]||a.n-b.n).map(j=>[j.n,nombrePacJob(j).slice(0,38)+(j.rut?"\n"+j.rut:j.ficha?"\nFicha "+j.ficha:""),j.items.map(i=>i.concepto).join("; ").slice(0,70),clp(j.total),resTxt(j.estado),j.estado==="APROBADO"?(j.aprobSinEvo?"Aprobado sin evolución en ficha (criterio del revisor)":"Orden, glosa, ficha y pago conformes"):j.estado==="RECHAZADO"?[j.ord==="SIN ORDEN"?"Sin orden de laboratorio del paciente":"La orden del paciente es de otro trabajo",...j.alerts].slice(0,2).join("; "):(j.alerts.length?j.alerts.slice(0,2).join("; "):j.ev!=="REGISTRADA"?j.evDet:"Revisar")]);
   entregaPDF({titulo:"Informe de revisión de prefactura de laboratorio",referencia:`Ref.: Prefactura N° ${lab.pre.numero||"s/n"} · ${fmtD(lab.pre.fecha)}`,parrafos:parr,
     resumen:[["Cumple — pago recomendado",c("APROBADO"),clp(m("APROBADO"))],["Con observaciones — aclarar antes de pagar",c("OBSERVADO"),clp(m("OBSERVADO"))],["No cumple — pago no recomendado",c("RECHAZADO"),clp(m("RECHAZADO"))],["Sin cobro",c("SIN COBRO"),clp(0)],["Total revisado",t.n,clp(t.suma)]],
     detalle:{head:["N°","Paciente","Trabajo","Monto","Resultado","Motivo"],body,resIdx:4,cols:{0:{cellWidth:8},1:{cellWidth:34},2:{cellWidth:42},3:{cellWidth:20,halign:"right"},4:{cellWidth:24},5:{cellWidth:"auto"}}},
@@ -1856,7 +1939,7 @@ async function importSession(file){
 document.querySelector("nav.mods").addEventListener("click",e=>{ const b=e.target.closest("button[data-view]"); if(!b) return;
   if(!["tlab","ent","gar"].includes(b.dataset.view) && !window.ACCESO.user?.es_admin){ TL.pedirAdmin(()=>b.click()); return; }
   document.querySelectorAll("nav.mods button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
-  ["at","tlab","lab","fic","cfg","ent","gar"].forEach(v=>$("#view-"+v).hidden=v!==b.dataset.view); $("#view-home").hidden=true; document.body.classList.remove("on-home"); $("#modTitle").textContent=b.textContent; window.scrollTo(0,0); if(b.dataset.view==="tlab") TL.entrar(); else if(!["ent","gar"].includes(b.dataset.view)) window.cfgDesdeServidor(); if(b.dataset.view==="fic") window.FC&&FC.abrir(); if(b.dataset.view==="ent") TL.entregas(); if(b.dataset.view==="gar") TL.garantias(); });
+  ["at","tlab","lab","fic","cfg","ent","gar","rep"].forEach(v=>$("#view-"+v).hidden=v!==b.dataset.view); $("#view-home").hidden=true; document.body.classList.remove("on-home"); $("#modTitle").textContent=b.textContent; window.scrollTo(0,0); if(b.dataset.view==="tlab") TL.entrar(); else if(!["ent","gar"].includes(b.dataset.view)) window.cfgDesdeServidor(); if(b.dataset.view==="fic") window.FC&&FC.abrir(); if(b.dataset.view==="ent") TL.entregas(); if(b.dataset.view==="gar") TL.garantias(); if(b.dataset.view==="rep") REPO.abrir(); });
 window.abrirModulo = v => document.querySelector(`nav.mods button[data-view="${v}"]`).click();
 $("#btnSalir").addEventListener("click",()=>goHome(false));
 /* ---------- portada ---------- */
@@ -1866,7 +1949,7 @@ $("#btnSalir").addEventListener("click",()=>goHome(false));
   $("#lgRing").setAttribute("gradientUnits","userSpaceOnUse"); ["x1","y1","x2","y2"].forEach((k,i)=>$("#lgRing").setAttribute(k,[40,240,240,30][i]));
 })();
 function goHome(animate){
-  ["at","tlab","lab","fic","cfg","ent","gar"].forEach(v=>$("#view-"+v).hidden=true); $("#view-home").hidden=false; document.body.classList.add("on-home");
+  ["at","tlab","lab","fic","cfg","ent","gar","rep"].forEach(v=>$("#view-"+v).hidden=true); $("#view-home").hidden=false; document.body.classList.add("on-home");
   document.querySelectorAll("nav.mods button").forEach(x=>x.setAttribute("aria-selected","false"));
   const st=$("#homeStage"); st.classList.remove("anim"); clearTimeout(goHome._t); if(animate){ void st.offsetWidth; st.classList.add("anim"); goHome._t=setTimeout(()=>st.classList.remove("anim"),5600); }
   window.scrollTo(0,0);
@@ -2316,7 +2399,7 @@ const optTipos=(sel,lab)=>{ const adm=!!S.user?.es_admin, L=tiposDe(lab); const 
   const cuerpo=[...G].map(([g,a])=>g?`<optgroup label="${h(g)}">${a.map(opt).join("")}</optgroup>`:a.map(opt).join("")).join("");
   return extra+(L.length?cuerpo:`<option value="" disabled>Este laboratorio aún no tiene prestaciones cargadas</option>`)+`<option value="__otro">Otro (no está en la lista)…</option>`; };
 const campoTipo=(sel,req,lbl="Tipo de trabajo",lab="")=>`<label class="tl-f" style="grid-column:1/-1">${lbl}<select name="tipo_trabajo" ${req?"required":""}><option value="">— Elegir —</option>${optTipos(sel,lab)}</select></label>
-  <label class="tl-f" style="grid-column:1/-1" data-otro hidden>Escribe la acción<input name="tipo_otro" maxlength="140" placeholder="Ej. Férula de descarga rígida"></label>`;
+  <label class="tl-f" style="grid-column:1/-1" data-otro hidden>Escribe la acción<textarea name="tipo_otro" maxlength="1000" rows="3" class="tl-otro" placeholder="Ej. Férula de descarga rígida"></textarea></label>`;
 const ajustarTipo=f=>{ if(f.tipo_trabajo==="__otro") f.tipo_trabajo=(f.tipo_otro||"").trim(); delete f.tipo_otro; return f; };
 /* odontograma FDI: superior 18–11 | 21–28 · inferior 48–41 | 31–38 · temporales 55–51 | 61–65 · 85–81 | 71–75 */
 const FDI_P=[[18,17,16,15,14,13,12,11],[21,22,23,24,25,26,27,28],[48,47,46,45,44,43,42,41],[31,32,33,34,35,36,37,38]];
@@ -2336,7 +2419,7 @@ const campoDiente=(val,lbl="Diente(s) (FDI)")=>`<label class="tl-f" style="grid-
 function conectarCampos(form,labSel){
   conectarColor(form);
   const sel=form.querySelector('select[name="tipo_trabajo"]'), otro=form.querySelector("[data-otro]");
-  if(sel&&otro){ const f=()=>{ const on=sel.value==="__otro"; otro.hidden=!on; otro.querySelector("input").required=on; }; sel.addEventListener("change",f); f(); }
+  if(sel&&otro){ const f=()=>{ const on=sel.value==="__otro"; otro.hidden=!on; otro.querySelector("textarea,input").required=on; }; sel.addEventListener("change",f); f(); }
   const lsel=labSel===undefined?form.querySelector('select[name="laboratorio_id"]'):labSel;
   if(sel&&lsel) lsel.addEventListener("change",()=>{ const v=sel.value, ok=tiposDe(lsel.value).some(t=>t.n===v);
     sel.innerHTML=`<option value="">— Elegir —</option>`+optTipos(ok?v:"",lsel.value); if(v==="__otro") sel.value="__otro"; sel.dispatchEvent(new Event("change"));
@@ -3946,6 +4029,7 @@ function pauta(mid){
       ${hist.length?`<div class="tl-card"><h2>Historial de la evaluación</h2><ul class="tl-hist">${hist.slice().reverse().map(e=>`<li><div class="w">${h(e.creado_en)} · ${h(e.evaluador)}</div><b>Versión ${e.version}${e.vigente?" (vigente)":""}</b> — ${e.cumple?"Cumple":"No cumple"} ${e.cumplidos}/${e.aplicables} (${pctTxt(e.pct)})${e.motivo?`<br><span class="tl-small">Motivo: ${h(e.motivo)}</span>`:""}</li>`).join("")}</ul></div>`:""}`;
     q("#fcVolver").onclick=()=>detalle(M.id);
     if(q("#fcCorr")) q("#fcCorr").onclick=()=>{ edit=true; pinta(); };
+    if(q("#fcEvoTx")&&window.REPO) REPO.botones(q("#fcEvoTx"),()=>({}));
     if(q("#fcEvoTx")) q("#fcEvoTx").oninput=()=>{ const E=leerEvol(q("#fcEvoTx").value), A=analizarEvol(E), box=q("#fcEvoRes");
       if(!q("#fcEvoTx").value.trim()){ box.innerHTML=""; return; }
       if(!E.length){ box.innerHTML=`<p class="tl-small tl-bad">No reconocí evoluciones. Copia la tabla completa desde la pantalla Evolución de SMILE.</p>`; return; }
@@ -4085,6 +4169,7 @@ function copia(){
     q("#fcCpRes").innerHTML=!C.evTxt.trim()?"":E.length?`<p class="tl-small tl-ok-t" style="margin:6px 0">✓ ${E.length} evoluciones leídas · ${dmy(A.desde)} al ${dmy(A.hasta)} · ${new Set(E.map(e=>e.tratante)).size} tratante(s)${A.sinAut?` · <span class="tl-warn">${A.sinAut} sin autorización docente (irán marcadas)</span>`:""}${A.vacias?` · <span class="tl-warn">${A.vacias} sin contenido</span>`:""}</p>`
       :`<p class="tl-small tl-bad" style="margin:6px 0">No reconocí evoluciones. Copia la tabla completa desde la pantalla Evolución de SMILE (desde la primera fecha).</p>`; return E; };
   q("#fcCpTx").oninput=pintaRes; pintaRes();
+  window.REPO&&REPO.botones(q("#fcCpTx"),()=>{ const F=q("#fcSolF"); return {rut:F?.querySelector('[name="rutPac"]')?.value||"",nombre:F?.querySelector('[name="pac"]')?.value||""}; });
   q("#fcCpGo").onclick=()=>{ const m=validar(); if(m){ q("#fcCpE").textContent="Primero completa la solicitud: "+m; return; } C.desde=q("#fcCpD").value; C.hasta=q("#fcCpH").value; C.firma=q("#fcCpFi").value.trim();
     const E=pintaRes(); if(!E.length){ q("#fcCpE").textContent="Pega las evoluciones de SMILE."; return; } q("#fcCpE").textContent=""; folioUsar(C.folio); imprimir(docCopia(C,E),`Copia ficha ${C.folio}`); };
   q("#fcCpEnv").onclick=async()=>{ const m=validar(); if(m){ q("#fcCpE").textContent="Primero completa la solicitud: "+m; return; } C.desde=q("#fcCpD").value; C.hasta=q("#fcCpH").value;
@@ -4167,6 +4252,162 @@ window.FC=FC;
 
 /* QR escaneado con la cámara del teléfono: abre directo Trabajos de laboratorio */
 { const p=TL.leerHash(); if(p&&p.e){ TL.setFirma(p.e); window.abrirModulo("ent"); } else if(p&&p.r){ TL.setRetro(p.r); window.abrirModulo("gar"); } else if(p){ TL.setPend(p); window.abrirModulo("tlab"); } }
+</script>
+<script>
+/* ============ Repositorio de evoluciones (solo DT) ============
+   Todo se cifra en este navegador con una clave propia (PBKDF2 → AES-GCM) antes de enviarse:
+   el servidor solo guarda texto cifrado. Carpetas anidadas; pacientes con código de ficha, RUT, nombre, nota y evoluciones. */
+window.REPO=(function(){
+const $r=s=>document.querySelector(s), $$r=s=>[...document.querySelectorAll(s)];
+const e_=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const R={key:null,items:[],dias:90,cab:new Map(),sel:"",q:"",abierto:null,ctx:null};
+async function api(path,opt={}){ const r=await fetch("/api/"+path,{method:opt.method||"GET",credentials:"same-origin",headers:opt.body?{"content-type":"application/json"}:{},body:opt.body?JSON.stringify(opt.body):undefined});
+  let d={}; try{ d=await r.json(); }catch{} if(!r.ok) throw new Error(d.error||("Error "+r.status)); return d; }
+const toastR=m=>(typeof toast==="function"?toast(m):alert(m));
+/* ---- cifrado ---- */
+const b64e=u=>{ let s=""; const a=new Uint8Array(u); for(let i=0;i<a.length;i+=0x8000) s+=String.fromCharCode(...a.subarray(i,i+0x8000)); return btoa(s); };
+const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const hayGz=typeof CompressionStream==="function";
+const flujo=async(bytes,T)=>new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(T)).arrayBuffer());
+async function derivar(clave,salt){ const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(clave),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt:b64d(salt),iterations:310000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]); }
+async function cifrar(obj,key=R.key){ let b=new TextEncoder().encode(JSON.stringify(obj)); const gz=hayGz; if(gz) b=await flujo(b,new CompressionStream("gzip"));
+  const iv=crypto.getRandomValues(new Uint8Array(12)), ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,b)), out=new Uint8Array(12+ct.length); out.set(iv); out.set(ct,12);
+  return (gz?"g1:":"p1:")+b64e(out); }
+async function descifrar(s,key=R.key){ const gz=s.startsWith("g1:"), a=b64d(s.slice(3)); let b=new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},key,a.slice(12)));
+  if(gz) b=await flujo(b,new DecompressionStream("gzip")); return JSON.parse(new TextDecoder().decode(b)); }
+const nuevoId=()=>[...crypto.getRandomValues(new Uint8Array(12))].map(x=>x.toString(16).padStart(2,"0")).join("");
+/* ---- evoluciones: cuántas y de qué fechas (usa el lector del Auditor de fichas si está) ---- */
+function resumenTxt(t){ if(!t||!t.trim()) return {n:0,desde:"",hasta:""};
+  try{ const L=(window.FC&&FC.leerEvol)?FC.leerEvol(t):[]; const iso=f=>{ const s=String(f||""), a=s.match(/(\d{4})-(\d{2})-(\d{2})/); if(a) return a[0]; const m=s.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/); return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:""; }, ds=L.map(x=>iso(x.d instanceof Date?x.d.toISOString():x.d||x.fecha)).filter(Boolean).sort(); if(L.length) return {n:L.length,desde:ds[0]||"",hasta:ds[ds.length-1]||""}; }catch{}
+  const fs=[...t.matchAll(/\b(\d{2})[/-](\d{2})[/-](\d{4})\b/g)].map(m=>`${m[3]}-${m[2]}-${m[1]}`).sort(); return {n:fs.length?new Set(fs).size:0,desde:fs[0]||"",hasta:fs[fs.length-1]||""}; }
+const dmy=d=>d?String(d).slice(0,10).split("-").reverse().join("-"):"";
+const fechaSrv=s=>new Date(String(s).replace(" ","T")+"Z");
+const diasRest=it=>Math.ceil(R.dias-(Date.now()-fechaSrv(it.actualizado))/864e5);
+/* ---- datos ---- */
+async function cargar(){ const d=await api("repo"); R.dias=d.dias; R.items=d.items; R.cab=new Map();
+  for(const it of R.items){ try{ R.cab.set(it.id,await descifrar(it.cab)); }catch{ R.cab.set(it.id,{nombre:"(no se pudo leer)"}); } } }
+const carpetas=()=>R.items.filter(x=>x.tipo==="C"), pacientesDe=id=>R.items.filter(x=>x.tipo==="P"&&(x.padre||"")===(id||""));
+const hijas=id=>carpetas().filter(x=>(x.padre||"")===(id||""));
+const cuentaRec=id=>pacientesDe(id).length+hijas(id).reduce((s,c)=>s+cuentaRec(c.id),0);
+const rutaDe=id=>{ const p=[]; let c=id,g=0; while(c&&g++<50){ const x=R.items.find(i=>i.id===c); if(!x) break; p.unshift(R.cab.get(c)?.nombre||"carpeta"); c=x.padre; } return p.join(" / ")||"Sin carpeta"; };
+async function guardarItem(id,tipo,padre,cab,cuerpo){ await api("repo/"+id,{method:"PUT",body:{tipo,padre:padre||null,cab:await cifrar(cab),...(cuerpo!==undefined?{cuerpo:await cifrar(cuerpo)}:{})}}); }
+async function textoDe(id){ const d=await api("repo/"+id); return d.cuerpo?(await descifrar(d.cuerpo)).texto||"":""; }
+/* ---- desbloqueo ---- */
+async function desbloquear(box,despues){ let M; try{ M=await api("repo/meta"); }catch(x){ box.innerHTML=`<div class="panel"><p class="bad">${e_(x.message)}</p></div>`; return; }
+  const nuevo=!M.salt;
+  box.innerHTML=`<div class="panel" style="max-width:560px"><h2>🗂️ Repositorio de evoluciones <span class="rp-lock">🔒 cifrado</span></h2>
+    <p class="small muted">${nuevo?"Crea la clave del repositorio (distinta de tu PIN, mínimo 8 caracteres).":"Escribe tu clave del repositorio."} Todo se cifra en este computador antes de guardarse; el servidor no puede leerlo. <b>Si olvidas la clave, el contenido no se puede recuperar.</b></p>
+    <div class="row" style="gap:8px;align-items:flex-end"><label class="fl" style="flex:1 1 220px">Clave<input type="password" id="rpK" autocomplete="off"></label>${nuevo?`<label class="fl" style="flex:1 1 220px">Repite la clave<input type="password" id="rpK2" autocomplete="off"></label>`:""}
+    <button class="btn" id="rpGo">${nuevo?"Crear repositorio":"Abrir repositorio"}</button></div><div class="small bad" id="rpE" style="margin-top:6px"></div>
+    ${nuevo?"":`<details style="margin-top:12px"><summary class="small muted">Olvidé la clave</summary><p class="small">La única salida es borrar todo el repositorio y crear una clave nueva. Lo guardado se pierde.</p><button class="btn sm" id="rpReset">Borrar todo y crear clave nueva</button></details>`}</div>`;
+  const go=async()=>{ const k=$r("#rpK").value, E=$r("#rpE"); E.textContent="";
+    if(nuevo){ if(k.length<8) return E.textContent="La clave debe tener al menos 8 caracteres."; if(k!==$r("#rpK2").value) return E.textContent="Las claves no coinciden.";
+      const salt=b64e(crypto.getRandomValues(new Uint8Array(16))), key=await derivar(k,salt); try{ await api("repo/meta",{method:"POST",body:{salt,verif:await cifrar({ok:"auditor-csu"},key)}}); R.key=key; despues(); }catch(x){ E.textContent=x.message; } return; }
+    E.textContent="Verificando…"; const key=await derivar(k,M.salt); try{ const v=await descifrar(M.verif,key); if(v.ok!=="auditor-csu") throw 0; R.key=key; E.textContent=""; despues(); }catch{ E.textContent="Clave incorrecta."; } };
+  $r("#rpGo").onclick=go; $r("#rpK").onkeydown=e=>{ if(e.key==="Enter") go(); }; setTimeout(()=>$r("#rpK")?.focus(),50);
+  const rs=$r("#rpReset"); if(rs) rs.onclick=async()=>{ if(prompt('Se borrará TODO el repositorio. Escribe BORRAR para confirmar')!=="BORRAR") return;
+    const k=prompt("Nueva clave (mínimo 8 caracteres)")||""; if(k.length<8) return toastR("Clave muy corta");
+    const salt=b64e(crypto.getRandomValues(new Uint8Array(16))), key=await derivar(k,salt); try{ await api("repo/meta",{method:"POST",body:{salt,verif:await cifrar({ok:"auditor-csu"},key),reset:true}}); R.key=key; toastR("Repositorio reiniciado"); despues(); }catch(x){ toastR(x.message); } }; }
+/* ---- módulo ---- */
+async function abrir(){ const box=$r("#repApp"); if(!box) return;
+  if(!R.key) return desbloquear(box,abrir);
+  box.innerHTML=`<div class="panel"><p class="muted">Cargando…</p></div>`;
+  try{ await cargar(); }catch(x){ box.innerHTML=`<div class="panel"><p class="bad">${e_(x.message)}</p></div>`; return; }
+  pintar(); }
+function arbol(padre,niv){ return hijas(padre).map(c=>`<div class="rp-f ${R.sel===c.id?"on":""}" data-f="${c.id}" style="margin-left:${niv*16}px">${R.sel===c.id?"📂":"📁"} ${e_(R.cab.get(c.id)?.nombre||"carpeta")} <span class="muted small">(${cuentaRec(c.id)})</span></div>${arbol(c.id,niv+1)}`).join(""); }
+function filaP(it){ const c=R.cab.get(it.id)||{}, dr=diasRest(it);
+  return `<div class="rp-p" data-p="${it.id}"><div><b>${c.codigo?"Cód. "+e_(c.codigo):e_(c.rut||"sin código")}</b> · ${e_(c.nombre||"")}${c.n?` · ${c.n} evoluciones${c.desde?` (${dmy(c.desde)} a ${dmy(c.hasta)})`:""}`:` · <span class="warn">sin evoluciones aún</span>`}
+    <div class="small muted">${R.q?e_(rutaDe(it.padre))+" · ":""}actualizado ${fechaSrv(it.actualizado).toLocaleString("es-CL",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${c.nota?" · "+e_(c.nota):""}${dr<=7?` · <span class="bad">se borra en ${Math.max(dr,0)} día(s) si no lo modificas</span>`:""}</div></div>
+    <div class="row" style="gap:6px"><button class="btn sm" data-ab="${it.id}">Abrir</button><button class="btn sm" data-del="${it.id}">Eliminar</button></div></div>`; }
+function pintar(){ const box=$r("#repApp"), nq=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[.\s-]/g,"");
+  const lista=R.q?R.items.filter(x=>x.tipo==="P"&&nq([R.cab.get(x.id)?.codigo,R.cab.get(x.id)?.rut,R.cab.get(x.id)?.nombre,R.cab.get(x.id)?.nota].join("|")).includes(nq(R.q))):pacientesDe(R.sel);
+  const prox=R.items.filter(x=>x.tipo==="P"&&diasRest(x)<=7).length, selN=R.sel?R.cab.get(R.sel)?.nombre:"Sin carpeta";
+  box.innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">🗂️ Repositorio de evoluciones <span class="rp-lock">🔒 cifrado</span></h2>
+      <div class="row" style="gap:6px;align-items:center"><span class="small muted">Borrado automático tras</span><select id="rpDias">${[30,60,90,180,365].map(d=>`<option value="${d}" ${d===R.dias?"selected":""}>${d} días sin cambios</option>`).join("")}</select><button class="btn sm" id="rpLock">🔒 Bloquear</button></div></div>
+    ${prox?`<p class="small bad" style="margin:6px 0 0">${prox} paciente(s) se borrarán en 7 días o menos por inactividad.</p>`:""}
+    <label class="fl" style="margin-top:8px">Buscar en todo el repositorio<input id="rpQ" value="${e_(R.q)}" placeholder="Código de ficha, RUT, nombre o nota"></label></div>
+   <div class="rp-lay"><div class="panel"><div class="row" style="justify-content:space-between"><b>Carpetas</b><button class="btn sm" id="rpNC">＋ Carpeta</button></div>
+      <div class="rp-f ${!R.sel?"on":""}" data-f="">🗃️ Sin carpeta <span class="muted small">(${pacientesDe("").length})</span></div>${arbol("",0)||""}
+      <p class="small muted" style="margin-top:10px">“＋ Carpeta” la crea dentro de la carpeta seleccionada.</p></div>
+    <div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><b>${R.q?`Resultados (${lista.length})`:(R.sel?"📂 ":"🗃️ ")+e_(selN)}</b>
+      <div class="row" style="gap:6px">${R.q?"":`<button class="btn sm" id="rpNP">＋ Paciente</button>${R.sel?`<button class="btn sm" id="rpRen">Renombrar</button><button class="btn sm" id="rpMov">Mover</button><button class="btn sm" id="rpExp">Descargar carpeta</button><button class="btn sm" id="rpDelC">Eliminar carpeta</button>`:""}`}</div></div>
+      <div id="rpLista">${lista.map(filaP).join("")||`<p class="muted small">${R.q?"Sin resultados.":"Esta carpeta no tiene pacientes."}</p>`}</div><div id="rpEd"></div></div></div>`;
+  $r("#rpQ").oninput=e=>{ R.q=e.target.value; const pos=e.target.selectionStart; pintar(); const i=$r("#rpQ"); i.focus(); i.setSelectionRange(pos,pos); };
+  $r("#rpLock").onclick=()=>{ R.key=null; R.items=[]; R.cab=new Map(); abrir(); };
+  $r("#rpDias").onchange=async e=>{ try{ await api("repo/config",{method:"POST",body:{dias:+e.target.value}}); R.dias=+e.target.value; toastR("Plazo de borrado actualizado"); pintar(); }catch(x){ toastR(x.message); } };
+  $$r("#repApp [data-f]").forEach(b=>b.onclick=()=>{ R.sel=b.dataset.f; R.q=""; pintar(); });
+  $r("#rpNC").onclick=async()=>{ const n=(prompt(`Nombre de la nueva carpeta${R.sel?` (dentro de "${selN}")`:""}`)||"").trim(); if(!n) return; const id=nuevoId(); try{ await guardarItem(id,"C",R.sel,{nombre:n}); await cargar(); R.sel=id; pintar(); }catch(x){ toastR(x.message); } };
+  if($r("#rpNP")) $r("#rpNP").onclick=()=>editor(null);
+  if($r("#rpRen")) $r("#rpRen").onclick=async()=>{ const n=(prompt("Nuevo nombre",selN)||"").trim(); if(!n) return; const it=R.items.find(x=>x.id===R.sel); try{ await guardarItem(it.id,"C",it.padre,{nombre:n}); await cargar(); pintar(); }catch(x){ toastR(x.message); } };
+  if($r("#rpMov")) $r("#rpMov").onclick=()=>moverCarpeta(R.sel);
+  if($r("#rpDelC")) $r("#rpDelC").onclick=async()=>{ const n=cuentaRec(R.sel); if(!confirm(`¿Eliminar la carpeta "${selN}"${n?` y sus ${n} paciente(s) (incluidas subcarpetas)`:""}? No se puede deshacer.`)) return; try{ await api("repo/"+R.sel,{method:"DELETE"}); const p=R.items.find(x=>x.id===R.sel)?.padre||""; await cargar(); R.sel=p; pintar(); toastR("Carpeta eliminada"); }catch(x){ toastR(x.message); } };
+  if($r("#rpExp")) $r("#rpExp").onclick=()=>exportar(R.sel);
+  $$r("#repApp [data-ab]").forEach(b=>b.onclick=()=>editor(b.dataset.ab));
+  $$r("#repApp [data-del]").forEach(b=>b.onclick=async()=>{ const c=R.cab.get(b.dataset.del)||{}; if(!confirm(`¿Eliminar a ${c.codigo?"cód. "+c.codigo:c.nombre||"este paciente"} del repositorio? No se puede deshacer.`)) return; try{ await api("repo/"+b.dataset.del,{method:"DELETE"}); await cargar(); pintar(); toastR("Eliminado"); }catch(x){ toastR(x.message); } }); }
+function opcionesCarpeta(actual,excluir){ const out=[`<option value="">🗃️ Sin carpeta</option>`]; const rec=(p,niv)=>hijas(p).forEach(c=>{ if(c.id===excluir) return; out.push(`<option value="${c.id}" ${c.id===actual?"selected":""}>${"— ".repeat(niv)}${e_(R.cab.get(c.id)?.nombre||"carpeta")}</option>`); rec(c.id,niv+1); }); rec("",0); return out.join(""); }
+async function moverCarpeta(id){ const it=R.items.find(x=>x.id===id); const box=$r("#rpEd");
+  box.innerHTML=`<div class="rp-ed"><b>Mover "${e_(R.cab.get(id)?.nombre)}" a:</b><div class="row" style="gap:6px;margin-top:6px"><select id="rpMvS">${opcionesCarpeta(it.padre||"",id)}</select><button class="btn sm" id="rpMvGo">Mover</button><button class="btn sm" id="rpMvX">Cancelar</button></div></div>`;
+  $r("#rpMvX").onclick=()=>box.innerHTML=""; $r("#rpMvGo").onclick=async()=>{ try{ await guardarItem(id,"C",$r("#rpMvS").value,R.cab.get(id)); await cargar(); pintar(); toastR("Carpeta movida"); }catch(x){ toastR(x.message); } }; }
+async function editor(id,pre){ const box=$r("#rpEd"), it=id?R.items.find(x=>x.id===id):null, c=id?{...R.cab.get(id)}:{...(pre||{})};
+  box.innerHTML=`<div class="rp-ed"><p class="muted small">Cargando…</p></div>`; let texto=pre?.texto||"";
+  if(id){ try{ texto=await textoDe(id); }catch(x){ box.innerHTML=`<p class="bad">${e_(x.message)}</p>`; return; } }
+  box.innerHTML=`<div class="rp-ed"><b>${id?"Paciente":"Nuevo paciente"}</b>
+    <div class="row" style="gap:8px;margin-top:6px"><label class="fl" style="flex:1 1 140px">Código de ficha<input id="rpC" value="${e_(c.codigo||"")}"></label><label class="fl" style="flex:1 1 140px">RUT (opcional)<input id="rpR" value="${e_(c.rut||"")}"></label><label class="fl" style="flex:2 1 220px">Nombre o iniciales<input id="rpN" value="${e_(c.nombre||"")}"></label></div>
+    <div class="row" style="gap:8px"><label class="fl" style="flex:2 1 260px">Nota<input id="rpNo" value="${e_(c.nota||"")}" placeholder="Ej. falta evolución de agosto"></label><label class="fl" style="flex:1 1 200px">Carpeta<select id="rpPa">${opcionesCarpeta(it?it.padre||"":R.sel)}</select></label></div>
+    <label class="fl">Evoluciones (pega la tabla de Evolución de SMILE; puedes ir agregando por partes)<textarea id="rpT" style="min-height:180px">${e_(texto)}</textarea></label><div class="small muted" id="rpTi"></div>
+    <div class="row" style="gap:6px;margin-top:8px"><button class="btn" id="rpG">Guardar</button><button class="btn sm" id="rpCp">Copiar evoluciones</button><button class="btn sm" id="rpX">Cerrar</button>${id?`<button class="btn sm" id="rpD">Eliminar paciente</button>`:""}</div><div class="small bad" id="rpEE"></div></div>`;
+  const info=()=>{ const s=resumenTxt($r("#rpT").value); $r("#rpTi").textContent=s.n?`✓ ${s.n} evoluciones leídas${s.desde?` · ${dmy(s.desde)} a ${dmy(s.hasta)}`:""}`:($r("#rpT").value.trim()?"Texto guardado (no reconocí evoluciones con fecha)":""); };
+  info(); $r("#rpT").oninput=info; box.scrollIntoView({behavior:"smooth",block:"nearest"});
+  $r("#rpX").onclick=()=>box.innerHTML="";
+  $r("#rpCp").onclick=async()=>{ try{ await navigator.clipboard.writeText($r("#rpT").value); toastR("Evoluciones copiadas"); }catch{ $r("#rpT").select(); } };
+  if($r("#rpD")) $r("#rpD").onclick=async()=>{ if(!confirm("¿Eliminar este paciente del repositorio? No se puede deshacer.")) return; try{ await api("repo/"+id,{method:"DELETE"}); await cargar(); pintar(); toastR("Eliminado"); }catch(x){ toastR(x.message); } };
+  $r("#rpG").onclick=async()=>{ const t=$r("#rpT").value, s=resumenTxt(t), cab={codigo:$r("#rpC").value.trim(),rut:$r("#rpR").value.trim(),nombre:$r("#rpN").value.trim(),nota:$r("#rpNo").value.trim(),...s};
+    if(!cab.codigo&&!cab.rut&&!cab.nombre) return $r("#rpEE").textContent="Indica al menos el código de ficha, el RUT o el nombre.";
+    const nid=id||nuevoId(); $r("#rpEE").textContent="Guardando…";
+    try{ await guardarItem(nid,"P",$r("#rpPa").value,cab,{texto:t}); await cargar(); R.sel=$r("#rpPa").value; R.q=""; pintar(); toastR("Guardado en el repositorio"); }catch(x){ $r("#rpEE").textContent=x.message; } }; }
+async function exportar(id){ const ids=[]; const rec=p=>{ pacientesDe(p).forEach(x=>ids.push(x.id)); hijas(p).forEach(h=>rec(h.id)); }; rec(id);
+  const out=[]; for(const i of ids){ const it=R.items.find(x=>x.id===i); out.push({carpeta:rutaDe(it.padre),...R.cab.get(i),texto:await textoDe(i)}); }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify({repositorio:rutaDe(id),exportado:new Date().toISOString(),pacientes:out},null,1)],{type:"application/json"}));
+  a.download=`Repositorio_${(R.cab.get(id)?.nombre||"carpeta").replace(/[^\w-]+/g,"_")}.json`; a.click(); toastR("Carpeta descargada: contiene datos de pacientes, guárdala solo en lugares institucionales"); }
+/* ---- integración con las auditorías: traer y guardar ---- */
+let dlg; function dialogo(html){ if(!dlg){ dlg=document.createElement("dialog"); dlg.className="rp-dlg"; document.body.appendChild(dlg); } dlg.innerHTML=`<div id="repDlgBox">${html}</div>`; if(!dlg.open) dlg.showModal(); return $r("#repDlgBox"); }
+const cerrarDlg=()=>dlg&&dlg.open&&dlg.close();
+async function listo(){ if(R.key&&R.items.length) return true; return new Promise(ok=>{ const b=dialogo(""); const seguir=async()=>{ try{ await cargar(); ok(true); }catch(x){ toastR(x.message); ok(false); } };
+  if(R.key) return seguir(); desbloquear(b,seguir); const x=document.createElement("button"); x.className="btn sm"; x.textContent="Cancelar"; x.style.marginTop="8px"; x.onclick=()=>{ cerrarDlg(); ok(false); }; b.appendChild(x); }); }
+async function traer(ctx){ if(!(await listo())) return null; const nq=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[.\s-]/g,"");
+  return new Promise(ok=>{ let q=ctx?.codigo||ctx?.rut||"";
+    const pinta=()=>{ const L=R.items.filter(x=>x.tipo==="P"&&(!q||nq([R.cab.get(x.id)?.codigo,R.cab.get(x.id)?.rut,R.cab.get(x.id)?.nombre].join("|")).includes(nq(q))));
+      const b=dialogo(`<h3 style="margin-top:0">📂 Traer evoluciones del repositorio</h3><label class="fl">Buscar<input id="rdQ" value="${e_(q)}" placeholder="Código de ficha, RUT o nombre"></label>
+        <div style="max-height:50vh;overflow:auto;margin-top:6px">${L.map(x=>{ const c=R.cab.get(x.id)||{}; return `<div class="rp-p"><div><b>${c.codigo?"Cód. "+e_(c.codigo):e_(c.rut||"")}</b> · ${e_(c.nombre||"")} · ${c.n||0} evoluciones<div class="small muted">${e_(rutaDe(x.padre))}</div></div><button class="btn sm" data-tr="${x.id}">Usar</button></div>`; }).join("")||`<p class="muted small">No encontré pacientes con esa búsqueda.</p>`}</div>
+        <div class="row" style="margin-top:8px"><button class="btn sm" id="rdX">Cancelar</button></div>`);
+      const i=$r("#rdQ"); i.oninput=()=>{ q=i.value; const pos=i.selectionStart; pinta(); const j=$r("#rdQ"); j.focus(); j.setSelectionRange(pos,pos); };
+      $r("#rdX").onclick=()=>{ cerrarDlg(); ok(null); };
+      $$r("#repDlgBox [data-tr]").forEach(b=>b.onclick=async()=>{ b.textContent="…"; try{ const t=await textoDe(b.dataset.tr); cerrarDlg(); ok(t); }catch(x){ toastR(x.message); } }); };
+    pinta(); }); }
+async function guardarDesde(ctx,texto){ if(!texto||!texto.trim()) return toastR("No hay evoluciones pegadas para guardar"); if(!(await listo())) return;
+  const nq=s=>String(s||"").replace(/[.\s-]/g,"").toLowerCase();
+  const ya=R.items.find(x=>x.tipo==="P"&&((ctx.codigo&&nq(R.cab.get(x.id)?.codigo)===nq(ctx.codigo))||(ctx.rut&&nq(R.cab.get(x.id)?.rut)===nq(ctx.rut))));
+  const b=dialogo(`<h3 style="margin-top:0">💾 Guardar en el repositorio</h3>${ya?`<p class="small">Ya existe <b>${e_(R.cab.get(ya.id).codigo?"cód. "+R.cab.get(ya.id).codigo:R.cab.get(ya.id).rut)}</b> en “${e_(rutaDe(ya.padre))}”: se reemplazan sus evoluciones por las de ahora.</p>`:""}
+    <div class="row" style="gap:8px"><label class="fl" style="flex:1 1 120px">Código de ficha<input id="rgC" value="${e_(ya?R.cab.get(ya.id).codigo:ctx.codigo||"")}"></label><label class="fl" style="flex:1 1 120px">RUT<input id="rgR" value="${e_(ya?R.cab.get(ya.id).rut:ctx.rut||"")}"></label></div>
+    <label class="fl">Nombre o iniciales<input id="rgN" value="${e_(ya?R.cab.get(ya.id).nombre:ctx.nombre||"")}"></label><label class="fl">Carpeta<select id="rgP">${opcionesCarpeta(ya?ya.padre||"":R.sel)}</select></label>
+    <div class="row" style="gap:6px;margin-top:8px"><button class="btn" id="rgGo">Guardar</button><button class="btn sm" id="rgX">Cancelar</button></div><div class="small bad" id="rgE"></div>`);
+  $r("#rgX").onclick=cerrarDlg;
+  $r("#rgGo").onclick=async()=>{ const co=$r("#rgC").value.trim(), ru=$r("#rgR").value.trim();
+    const ya2=ya||R.items.find(x=>x.tipo==="P"&&((co&&nq(R.cab.get(x.id)?.codigo)===nq(co))||(ru&&nq(R.cab.get(x.id)?.rut)===nq(ru))));
+    if(ya2&&!ya&&!confirm(`Ya existe ${co?"cód. "+co:ru} en el repositorio. ¿Reemplazar sus evoluciones por las de ahora?`)) return;
+    const s=resumenTxt(texto), cab={...(ya2?R.cab.get(ya2.id):{}),codigo:co,rut:ru,nombre:$r("#rgN").value.trim(),...s};
+    if(!cab.codigo&&!cab.rut&&!cab.nombre) return $r("#rgE").textContent="Indica al menos el código de ficha, el RUT o el nombre.";
+    try{ await guardarItem(ya2?ya2.id:nuevoId(),"P",$r("#rgP").value,cab,{texto}); await cargar(); cerrarDlg(); toastR(ya2?"Evoluciones actualizadas en el repositorio":"Guardado en el repositorio"); }catch(x){ $r("#rgE").textContent=x.message; } }; }
+/* botones junto a un cuadro de evoluciones: ctx() devuelve {codigo,rut,nombre} */
+function botones(ta,ctx){ if(!ta||ta.dataset.repo) return; ta.dataset.repo="1"; const d=document.createElement("div"); d.className="rp-bt";
+  d.innerHTML=`<button type="button" class="btn sm">📂 Traer del repositorio</button><button type="button" class="btn sm">💾 Guardar en el repositorio</button>`;
+  const [bT,bG]=d.querySelectorAll("button");
+  bT.onclick=async()=>{ const t=await traer(ctx?.()||{}); if(t==null) return; if(ta.value.trim()&&!confirm("El cuadro ya tiene texto. ¿Reemplazarlo por las evoluciones del repositorio?")) return; ta.value=t; ta.dispatchEvent(new Event("input",{bubbles:true})); toastR("Evoluciones traídas del repositorio"); };
+  bG.onclick=()=>guardarDesde(ctx?.()||{},ta.value); ta.insertAdjacentElement("afterend",d); }
+return {abrir,traer,guardarDesde,botones};
+})();
+
 </script>
 
 </body></html>
