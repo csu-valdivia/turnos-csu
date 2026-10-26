@@ -882,6 +882,20 @@ body.gx-light .tctoast,.tctoast{color:#fff!important}
 body.gx-light .tccf button.si{color:#fff!important}
 .gxp-add{border:1.5px dashed var(--gx-line);background:transparent;color:#9fb3c4;border-radius:7px;padding:3px 0;font:700 14px Inter,system-ui,sans-serif;cursor:pointer;line-height:1}.gxp-add:hover{border-color:var(--gx-teal);color:var(--gx-teal)}
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
+
+.hrs-box{background:rgba(13,148,136,.08);border:1px solid rgba(13,148,136,.25);border-radius:10px;padding:10px;margin-bottom:8px}
+.hrs-cont{display:flex;gap:6px;margin-bottom:8px}.hrs-cont>div{flex:1;text-align:center;background:rgba(255,255,255,.06);border-radius:8px;padding:6px 2px}
+.hrs-cont b{display:block;font-size:17px}.hrs-cont small{font-size:10px;opacity:.6}.hrs-cont .pend b{color:#f59e0b}
+.hrs-r2{display:flex;gap:6px;align-items:flex-end;margin-bottom:6px;flex-wrap:wrap}.hrs-r2 label,.hrs-l1{font-size:10px;opacity:.85;display:block;flex:1;min-width:80px}
+.hrs-r2 select,.hrs-r2 input,.hrs-l1 select{width:100%!important;margin-top:3px;font-size:13px;padding:8px;border-radius:8px}
+.hrs-tot{font-weight:700;font-size:13px;color:#0d9488;padding-bottom:9px}
+.hrs-sub{font-size:12px;font-weight:700;margin:8px 0 4px}.hrs-sub small{font-weight:400;opacity:.65}
+.hrs-aviso{font-size:12px;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.4);color:#b45309;border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.hrs-fp{font-size:10px;font-weight:700;background:rgba(245,158,11,.18);color:#b45309;border-radius:6px;padding:1px 6px}
+.hrs-dev{font-size:11px;margin-top:3px;opacity:.9}.hrs-t{font-size:12px;font-weight:700;margin:4px 0}
+.hrs-panel{background:rgba(13,148,136,.08);border:1px solid rgba(13,148,136,.3);border-radius:10px;padding:10px;margin-bottom:10px;font-size:12px}
+.hrs-panel p{font-size:10px;opacity:.65;margin:3px 0 6px}.hrs-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:5px 0;border-top:1px solid rgba(128,128,128,.2)}
+.hrs-row .btn-ac{white-space:nowrap;font-size:11px;padding:6px 10px}
 </style>
 </head>
 <body>
@@ -1251,6 +1265,7 @@ body.gx-light .tccf button.si{color:#fff!important}
             <button class="btn-add" onclick="formAusencia()">+ Solicitar permiso o vacaciones</button>
           </div>
           <div id="premioSemanalBox"></div>
+          <div id="hrsContBox"></div>
           <div id="ausenciasList"></div>
         </div>
 
@@ -1526,6 +1541,7 @@ body.gx-light .tccf button.si{color:#fff!important}
               </table></div>
             </div>
 
+            <div id="devolPanel"></div>
             <!-- CARGA RÁPIDA SEMANAL -->
             <details style="margin-bottom:10px;background:rgba(74,144,217,.06);border:1px solid rgba(74,144,217,.15);border-radius:8px;padding:8px">
               <summary style="font-size:11px;font-weight:700;color:#7ec8f7;cursor:pointer;list-style:none">⚡ Carga rápida — replicar turno toda la semana</summary>
@@ -6550,7 +6566,8 @@ function renderPanorama(){
   var fa=FRANJAS.filter(function(f){
     return Object.values(bloques).some(function(b){return b.dia===dia&&!b.libre&&b.horario&&overlaps(b.horario,f);})||
            Object.values(llamados).some(function(l){return l.dia===dia&&l.horario&&overlaps(l.horario,f);})||
-           Object.values(coberturas).some(function(cv){return cv.dia===dia&&cv.horario&&overlaps(cv.horario,f);});
+           Object.values(coberturas).some(function(cv){return cv.dia===dia&&cv.horario&&overlaps(cv.horario,f);})||
+           devolucionesDe(rdFechaDia(dia)).some(function(dv){return overlaps(dv.horario,f);});
   });
   if(!fa.length){tbl.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:rgba(255,255,255,.25);font-size:13px">Sin turnos para este día</td></tr>';return;}
   var html='<tr><th class="fth">Horario</th>';AREAS.forEach(function(a){html+='<th>'+a+'</th>';});html+='</tr>';
@@ -6574,6 +6591,7 @@ function renderPanorama(){
         if(sb)cell+='<span class="sub">'+sb+'</span>';
       });
       ls.forEach(function(l){cell+='<span class="chip chip-llamado">📞 '+l.nombre+'</span>';});
+      devolucionesDe(rdFechaDia(dia)).filter(function(dv){return dv.servicio===area&&overlaps(dv.horario,f);}).forEach(function(dv){cell+='<span class="chip chip-extra" title="Devuelve horas de permiso">↩ '+esc(dv.nombre)+' (devuelve '+dv.horario+')</span>';});
       // Cobertura cruzada destino (sin bloque propio en esa área)
       Object.values(coberturas).filter(function(cv){return cv.dia===dia&&cv.destino===area&&cv.horario&&overlaps(cv.horario,f);}).forEach(function(cv){
         var ya=ps.some(function(b){return b.nombre===cv.persona;});
@@ -7123,9 +7141,9 @@ window.formAusencia=function(){
   var sol=document.getElementById('ausenciaSol').value;if(!sol){alert('Selecciona tu nombre primero.');return;}
   var hoy=new Date().toISOString().split('T')[0];
   var m=mkOverlay();var box=document.createElement('div');box.className='obox obox-wide';
-  box.innerHTML='<h3>📅 Solicitar ausencia</h3><p style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:12px">Mínimo 1 semana de anticipación.</p>';
+  box.innerHTML='<h3>📅 Solicitar ausencia</h3><p style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:12px">Permisos: pídelos con al menos 72 h de anticipación (si es menos, igual se envía y queda para revisión de jefatura). Vacaciones: 1 semana.</p>';
   var tipS=document.createElement('select');tipS.style.cssText='width:100%;margin-bottom:8px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px;font-family:inherit;font-size:13px';
-  tipS.innerHTML='<option value="permiso_medio">Permiso medio día</option><option value="permiso_dia">Permiso día completo</option><option value="cumpleanos">🎂 Permiso por cumpleaños (medio día)</option><option value="vacaciones">Vacaciones</option>';
+  tipS.innerHTML='<option value="permiso_medio">Permiso medio día</option><option value="permiso_horas">⏱ Permiso por horas</option><option value="permiso_dia">Permiso día completo</option><option value="cumpleanos">🎂 Permiso por cumpleaños (medio día)</option><option value="vacaciones">Vacaciones</option>';
   var jorS=document.createElement('select');jorS.style.cssText=tipS.style.cssText;jorS.innerHTML='<option value="am">Medio día AM (hasta las 14:00)</option><option value="pm">Medio día PM (desde las 14:00)</option>';
   var dr=document.createElement('div');dr.style.cssText='display:flex;gap:6px;margin-bottom:8px';
   var d1=document.createElement('div');d1.style.flex='1';d1.innerHTML='<label style="font-size:10px;color:rgba(255,255,255,.3);display:block;margin-bottom:3px">Inicio</label>';
@@ -7133,8 +7151,58 @@ window.formAusencia=function(){
   var d2=document.createElement('div');d2.style.flex='1';d2.innerHTML='<label style="font-size:10px;color:rgba(255,255,255,.3);display:block;margin-bottom:3px">Fin</label>';
   var finIn=document.createElement('input');finIn.type='date';finIn.value=hoy;finIn.style.cssText=iniIn.style.cssText;
   d1.appendChild(iniIn);d2.appendChild(finIn);dr.appendChild(d1);dr.appendChild(d2);
-  tipS.addEventListener('change',function(){var _md=(this.value==='permiso_medio'||this.value==='cumpleanos');d2.style.display=_md?'none':'block';jorS.style.display=_md?'block':'none';if(_md)finIn.value=iniIn.value;});
-  iniIn.addEventListener('change',function(){if(tipS.value!=='vacaciones')finIn.value=this.value;});
+  // — Permiso por horas —
+  var hb=document.createElement('div');hb.className='hrs-box';hb.style.display='none';
+  hb.innerHTML='<div id="hrsCont"></div>'+
+    '<div class="hrs-r2"><label>Desde<select id="hrsD"></select></label><label>Hasta<select id="hrsH"></select></label><span class="hrs-tot" id="hrsTot"></span></div>'+
+    '<p class="hrs-sub">↩ ¿Cuándo devuelves esas horas? <small id="hrsLim"></small></p>'+
+    '<div class="hrs-r2"><label>Fecha<input type="date" id="hrsDevF"></label><label>Desde<select id="hrsDevD"></select></label><label>Hasta<select id="hrsDevH"></select></label></div>'+
+    '<label class="hrs-l1">Servicio donde devuelves<select id="hrsDevS"></select></label>';
+  var $h=function(id){return hb.querySelector('#'+id);};
+  var avisoEl=document.createElement('p');avisoEl.className='hrs-aviso';avisoEl.style.display='none';
+  function hrsRefrescar(){
+    var f=iniIn.value,dia=f?diaDeDate(f):'Lunes';
+    var pts=hrsPuntos(dia),dS=$h('hrsD'),hS=$h('hrsH');
+    var vd=Number(dS.value)||pts[0],vh=Number(hS.value)||pts[2]||pts[1];
+    if(pts.indexOf(vd)<0)vd=pts[0];if(pts.indexOf(vh)<0||vh<=vd)vh=Math.min(vd+120,1200);
+    dS.innerHTML=hrsOpts(dia,vd);hS.innerHTML=hrsOpts(dia,vh);
+    var n=(Number(hS.value)-Number(dS.value))/60;
+    $h('hrsTot').textContent=n>0?'= '+n+' h':'⚠ revisa la franja';
+    $h('hrsCont').innerHTML=hrsContadorHtml(sol,f);
+    if(f)$h('hrsLim').textContent='· plazo hasta el '+hrsSumarDias(f,7);
+    var df=$h('hrsDevF');if(f){df.min=f;df.max=hrsSumarDias(f,7);if(!df.value||df.value<f||df.value>hrsSumarDias(f,7))df.value=f;}
+    hrsRefrescarDev();
+  }
+  function hrsRefrescarDev(){
+    var df=$h('hrsDevF').value,dia=df?diaDeDate(df):'Lunes',pts=hrsPuntos(dia);
+    var dd=$h('hrsDevD'),dh=$h('hrsDevH');
+    var vd=Number(dd.value),vh=Number(dh.value);if(pts.indexOf(vd)<0)vd=pts[0];
+    var n=(Number($h('hrsH').value)-Number($h('hrsD').value));
+    var want=Math.min(vd+(n>0?n:60),1200);if(pts.indexOf(vh)<0||vh<=vd||(dd.dataset.auto!=='0'))vh=want;
+    dd.innerHTML=hrsOpts(dia,vd);dh.innerHTML=hrsOpts(dia,vh);
+  }
+  var devS=$h('hrsDevS');devS.innerHTML=AREAS.map(function(a){return '<option>'+esc(a)+'</option>';}).join('');
+  function avisoPlazo(){
+    var t=tipS.value;if(t==='vacaciones'||!iniIn.value){avisoEl.style.display='none';return;}
+    var mi=t==='permiso_horas'?Number($h('hrsD').value||480):480,hrs=hrsAnticipacion(iniIn.value,mi);
+    if(hrs<PERMISO_AVISO_HRS){avisoEl.style.display='block';avisoEl.textContent='⚠ Faltan '+(hrs>0?Math.round(hrs)+' h':'menos de 1 h')+' para este permiso (se piden con '+PERMISO_AVISO_HRS+' h). Se enviará igual, marcado como «fuera de plazo», para que jefatura lo revise y decida.';}
+    else avisoEl.style.display='none';
+  }
+  function tipoCambio(){
+    var v=tipS.value,_md=(v==='permiso_medio'||v==='cumpleanos'),_h=v==='permiso_horas';
+    d2.style.display=(_md||_h)?'none':'block';jorS.style.display=_md?'block':'none';hb.style.display=_h?'block':'none';
+    if(_md||_h)finIn.value=iniIn.value;
+    if(_h)hrsRefrescar();avisoPlazo();
+  }
+  tipS.addEventListener('change',tipoCambio);
+  iniIn.addEventListener('change',function(){if(tipS.value!=='vacaciones')finIn.value=this.value;if(tipS.value==='permiso_horas')hrsRefrescar();avisoPlazo();});
+  hb.addEventListener('change',function(e){
+    var id=e.target.id;
+    if(id==='hrsD'){var pts=hrsPuntos(iniIn.value?diaDeDate(iniIn.value):'Lunes');var hs=$h('hrsH');if(Number(hs.value)<=Number(e.target.value))hs.value=Math.min(Number(e.target.value)+60,1200);}
+    if(id==='hrsDevD'||id==='hrsDevH')$h('hrsDevD').dataset.auto='0';
+    if(id==='hrsD'||id==='hrsH'){$h('hrsTot').textContent=(Number($h('hrsH').value)>Number($h('hrsD').value))?'= '+((Number($h('hrsH').value)-Number($h('hrsD').value))/60)+' h':'⚠ revisa la franja';$h('hrsDevD').dataset.auto='1';hrsRefrescarDev();avisoPlazo();}
+    if(id==='hrsDevF'){$h('hrsDevD').dataset.auto='1';hrsRefrescarDev();}
+  });
   jorS.style.display='block';d2.style.display='none';
   var ta=document.createElement('textarea');ta.className='atxt';ta.placeholder='Motivo (opcional)...';ta.style.marginBottom='12px';
   var row=document.createElement('div');row.style.cssText='display:flex;gap:8px';
@@ -7142,18 +7210,40 @@ window.formAusencia=function(){
   row.appendChild(pBtn('Enviar',function(){
     var tipo=tipS.value,ini=iniIn.value,fin=finIn.value||ini,mot=ta.value.trim();
     if(!ini)return;
-    // 1 week validation
     var hoyD=new Date();hoyD.setHours(0,0,0,0);
     var fechaS=new Date(ini+'T12:00:00');
-    var semana=new Date(hoyD.getTime()+7*86400000);
-    if(fechaS<semana){alert('⚠ Los permisos y vacaciones deben solicitarse con al menos 1 semana de anticipación.');return;}
+    var fueraPlazo=false;
+    if(tipo==='vacaciones'){
+      var semana=new Date(hoyD.getTime()+7*86400000);
+      if(fechaS<semana){alert('⚠ Las vacaciones deben solicitarse con al menos 1 semana de anticipación.');return;}
+    }else{
+      if(ini<hoyStr()){alert('La fecha del permiso ya pasó.');return;}
+      var _mi=tipo==='permiso_horas'?Number($h('hrsD').value):480;
+      fueraPlazo=hrsAnticipacion(ini,_mi)<PERMISO_AVISO_HRS;
+      // No se bloquea: queda marcado para que jefatura lo revise y lo apruebe saltándose el plazo
+      if(fueraPlazo&&!confirm('Este permiso se pide con menos de '+PERMISO_AVISO_HRS+' h de anticipación.\n\nSe enviará igual, marcado como «fuera de plazo», para que jefatura lo revise y decida. ¿Enviar?'))return;
+    }
+    if(tipo==='permiso_horas'){
+      var hi=Number($h('hrsD').value),hf=Number($h('hrsH').value);
+      if(diaDeDate(ini)==='Domingo'){alert('Elige un día de lunes a sábado.');return;}
+      if(!(hf>hi)){alert('Revisa la franja: la hora de término debe ser posterior a la de inicio.');return;}
+      var nH=(hf-hi)/60,dF=$h('hrsDevF').value,dI=Number($h('hrsDevD').value),dFn=Number($h('hrsDevH').value),dS=$h('hrsDevS').value;
+      if(!dF||!dS){alert('Indica cuándo y en qué servicio devolverás las horas.');return;}
+      if(dF<ini||dF>hrsSumarDias(ini,7)){alert('La devolución debe ser dentro de 1 semana desde el permiso (hasta el '+hrsSumarDias(ini,7)+').');return;}
+      if(diaDeDate(dF)==='Domingo'){alert('La devolución debe ser de lunes a sábado.');return;}
+      if(!(dFn>dI)||(dFn-dI)!==(hf-hi)){alert('La devolución debe sumar las mismas '+nH+' h que pides ('+_hhmm(hi)+'–'+_hhmm(hf)+').');return;}
+      if(dF===ini&&dI<hf&&dFn>hi){alert('La devolución no puede cruzarse con las horas del permiso.');return;}
+      var oD={nombre:sol,tipo:'permiso_horas',tipoLabel:'Permiso por horas ('+nH+' h)',jornada:'horas',horaIni:hi,horaFin:hf,horas:nH,inicio:ini,fin:ini,motivo:mot,estado:'pendiente',fueraPlazo:fueraPlazo,ts:Date.now(),
+        devolucion:{fecha:dF,ini:dI,fin:dFn,servicio:dS,limite:hrsSumarDias(ini,7),estado:'propuesta'}};
+      sRef('ausencias').push(oD).then(function(){m.remove();});return;
+    }
     var jor=(tipo==='permiso_medio'||tipo==='cumpleanos')?jorS.value:'dia';
     if(jor==='pm'&&diaDeDate(ini)==='Sábado'){alert('El sábado no hay jornada PM. Elige AM.');return;}
     var lab={permiso_medio:'Permiso medio día',permiso_dia:'Permiso día completo',cumpleanos:'Permiso por cumpleaños',vacaciones:'Vacaciones'}[tipo]+(jor==='am'?' · AM':jor==='pm'?' · PM':'');
-    sRef('ausencias').push({nombre:sol,tipo:tipo,tipoLabel:lab,jornada:jor,inicio:ini,fin:fin,motivo:mot,estado:'pendiente',ts:Date.now()}).then(function(){m.remove();});
+    sRef('ausencias').push({nombre:sol,tipo:tipo,tipoLabel:lab,jornada:jor,inicio:ini,fin:fin,motivo:mot,estado:'pendiente',fueraPlazo:fueraPlazo,ts:Date.now()}).then(function(){m.remove();});
   }));
-  box.appendChild(tipS);box.appendChild(jorS);box.appendChild(dr);box.appendChild(ta);box.appendChild(row);
-  m.appendChild(box);document.body.appendChild(m);
+  box.appendChild(tipS);box.appendChild(jorS);box.appendChild(dr);box.appendChild(hb);box.appendChild(avisoEl);box.appendChild(ta);box.appendChild(row);
+  m.appendChild(box);document.body.appendChild(m);avisoPlazo();
 };
 // ¿Quién ganó la última semana cerrada, y ya se puede solicitar el día libre (desde el sábado)?
 // Devuelve la semana SIGUIENTE a la ganada (donde se aplicaría el día libre), o null si no corresponde aún.
@@ -7193,9 +7283,10 @@ function renderAusencias(){
         '</div>';
     } else pb.innerHTML='';
   }
+  var _hb=document.getElementById('hrsContBox');if(_hb){var _hay=sol&&Object.values(ausencias||{}).some(function(a){return a&&a.nombre===sol&&ausJornadaDe(a)==='horas';});_hb.innerHTML=_hay?'<p class="hrs-t">⏱ Mis horas de permiso · este mes</p>'+hrsContadorHtml(sol):'';}
   var en=Object.entries(ausencias);var rel=sol?en.filter(function(e){return e[1].nombre===sol;}):en;
   if(!rel.length){d.innerHTML='<p class="empty" style="padding:1rem">Sin solicitudes.</p>';return;}
-  d.innerHTML=rel.sort(function(a,b){return(b[1].ts||0)-(a[1].ts||0);}).map(function(e){var k=e[0],a=e[1];var fs=ausFechaTxt(a);return '<div class="cambio-card"><div class="cambio-hdr">'+(a.tipoLabel||a.tipo)+' <span class="ebdg '+a.estado+'">'+a.estado+'</span></div><div class="cambio-sub">'+a.nombre+' · '+fs+(a.motivo?' · '+a.motivo:'')+'</div></div>';}).join('');
+  d.innerHTML=rel.sort(function(a,b){return(b[1].ts||0)-(a[1].ts||0);}).map(function(e){var k=e[0],a=e[1];var fs=ausFechaTxt(a);return '<div class="cambio-card"><div class="cambio-hdr">'+(a.tipoLabel||a.tipo)+' <span class="ebdg '+a.estado+'">'+a.estado+'</span></div><div class="cambio-sub">'+a.nombre+' · '+fs+(a.motivo?' · '+a.motivo:'')+hrsExtraHtml(a)+'</div></div>';}).join('');
 }
 
 
@@ -7558,13 +7649,15 @@ function fechaDeDiaEnSemana(diaNombre,sem){
 }
 function renderAusenciasAdmin(){
   var dp=document.getElementById('ausAdminList');
-  if(dp){var pend=Object.entries(ausencias).filter(function(e){return e[1].estado==='pendiente';});if(!pend.length){dp.innerHTML='<p class="empty">Sin pendientes.</p>';}else{dp.innerHTML=pend.map(function(e){var k=e[0],a=e[1];var fs=ausFechaTxt(a);return '<div class="cambio-card"><div class="cambio-hdr">'+a.nombre+' — '+(a.tipoLabel||a.tipo)+'</div><div class="cambio-sub">'+fs+'</div><div class="cambio-acts"><button class="btn-ac" onclick="aprAus(\''+k+'\')">✓ Aprobar</button><button class="btn-re" onclick="sRef(\'ausencias/'+k+'/estado\').set(\'rechazado\')">✗ Rechazar</button></div></div>';}).join('');}}
+  if(dp){var pend=Object.entries(ausencias).filter(function(e){return e[1].estado==='pendiente';});if(!pend.length){dp.innerHTML='<p class="empty">Sin pendientes.</p>';}else{dp.innerHTML=pend.map(function(e){var k=e[0],a=e[1];var fs=ausFechaTxt(a);return '<div class="cambio-card"><div class="cambio-hdr">'+a.nombre+' — '+(a.tipoLabel||a.tipo)+(a.fueraPlazo&&ausJornadaDe(a)!=='horas'?' <span class="hrs-fp">⚠ fuera de plazo</span>':'')+'</div><div class="cambio-sub">'+fs+(a.motivo?' · '+esc(a.motivo):'')+hrsExtraHtml(a,true)+'</div><div class="cambio-acts"><button class="btn-ac" onclick="aprAus(\''+k+'\')">'+(a.fueraPlazo?'✓ Aprobar igual (fuera de plazo)':'✓ Aprobar')+(a.devolucion?' + devolución':'')+'</button><button class="btn-re" onclick="sRef(\'ausencias/'+k+'/estado\').set(\'rechazado\')">✗ Rechazar</button></div></div>';}).join('');}}
   var da=document.getElementById('ausActivasList');
-  if(da){var act=Object.entries(ausencias).filter(function(e){return e[1].estado==='aprobado';});if(!act.length){da.innerHTML='<p class="empty">Sin ausencias activas.</p>';}else{da.innerHTML=act.map(function(e){var k=e[0],a=e[1];var fs=ausFechaTxt(a);return '<div class="iitem"><div class="iitem-info"><strong>'+a.nombre+'</strong> — '+(a.tipoLabel||a.tipo)+'<div class="iitem-sub">'+fs+'</div></div><button class="del-btn" onclick="ausBorrar(\''+k+'\')">🗑</button></div>';}).join('');}}
+  if(da){var act=Object.entries(ausencias).filter(function(e){return e[1].estado==='aprobado';});if(!act.length){da.innerHTML='<p class="empty">Sin ausencias activas.</p>';}else{da.innerHTML=act.map(function(e){var k=e[0],a=e[1];var fs=ausFechaTxt(a);return '<div class="iitem"><div class="iitem-info"><strong>'+a.nombre+'</strong> — '+(a.tipoLabel||a.tipo)+'<div class="iitem-sub">'+fs+hrsExtraHtml(a,true)+'</div>'+(a.devolucion&&a.devolucion.estado!=='rechazada'?'<button class="btn-ac" style="margin-top:6px" onclick="ausDevuelta(\''+k+'\','+(a.devolucion.estado==='cumplida'?'false':'true')+')">'+(a.devolucion.estado==='cumplida'?'↺ Marcar devolución pendiente':'✓ Marcar horas devueltas')+'</button>':'')+'</div><button class="del-btn" onclick="ausBorrar(\''+k+'\')">🗑</button></div>';}).join('');}}
+  try{renderDevolPanel();}catch(e){}
 }
 window.aprAus=function(k){
   var a=ausencias[k];if(!a)return;
   sRef('ausencias/'+k+'/estado').set('aprobado').then(function(){
+    if(a.devolucion&&a.devolucion.estado==='propuesta')sRef('ausencias/'+k+'/devolucion/estado').set('aprobada');
     // Día completo: se sacan los turnos de la semana abierta (solo los días que caen dentro del rango de la ausencia).
     // Medio día: los turnos se quedan; el sistema descuenta solo el tramo ausente al contar cobertura, tareas y cumplimiento.
     if(ausJornadaDe(a)==='dia')ausQuitarBloques(k,a);
@@ -9460,6 +9553,7 @@ function rdTarjetaPersona(n,dia){
   var col=null;try{col=dia!=='Sábado'&&bl.length?colacionPorJornada(bl):null;var ck=n.replace(/\s/g,'_')+'_'+dia;if(colacionManual&&colacionManual[ck])col=colacionManual[ck];}catch(e){}
   var h='<div class="rd-res"><h4>'+esc(n)+'</h4>'+rdEstadoAhora(n,dia,bl,col);
   if(fch){ausActivasDe(n,fch).forEach(function(a){h+='<div class="rd-chip aus">'+(a.tipo==='licencia'?'🏥':a.tipo==='vacaciones'?'🌴':a.tipo==='cumpleanos'?'🎂':'📋')+' '+esc(a.tipoLabel||a.tipo)+' · '+esc(ausFechaTxt(a))+'</div>';});}
+  if(fch)devolucionesDe(fch).filter(function(dv){return dv.nombre===n;}).forEach(function(dv){h+='<div class="rd-chip">↩ Devuelve horas aquí: '+esc(dv.servicio||'')+' '+dv.horario+'</div>';});
   if(libre)h+='<div class="rd-chip">🏖 Día libre</div>';
   if(!bl.length&&!libre)h+='<p class="rd-vacio">Sin turnos cargados el '+esc(dia)+'.</p>';
   bl.forEach(function(b){h+='<div class="rd-bl"><span>'+esc(b.area||'')+(b.turno?' '+esc(b.turno):'')+'</span><small>'+esc(b.horario)+'</small></div>';});
@@ -9487,8 +9581,9 @@ function rdPanelAreas(dia){
   areas.forEach(function(a){
     var L=Object.values(bloques||{}).filter(function(b){return b&&b.area===a&&b.dia===dia&&b.nombre&&b.nombre!=='__sa__'&&!b.sinAtencion&&!b.libre&&b.horario;});
     var gaps=def.filter(function(d){return d.area===a;});
+    if(fch)devolucionesDe(fch).filter(function(dv){return dv.servicio===a;}).forEach(function(dv){L.push({nombre:dv.nombre,horario:dv.horario,_dev:true});});
     if(!L.length&&!gaps.length)return;alguno=true;
-    var g={},act={};L.forEach(function(b){var ab=fch&&ausCubre(b.nombre,fch,rdPartes(b.horario)[0],rdPartes(b.horario)[1]);if(!ab)act[b.horario]=true;(g[b.horario]=g[b.horario]||[]).push(esc(b.nombre)+(ab?' <small>(ausente)</small>':''));});
+    var g={},act={};L.forEach(function(b){var ab=fch&&ausCubre(b.nombre,fch,rdPartes(b.horario)[0],rdPartes(b.horario)[1]);if(!ab)act[b.horario]=true;(g[b.horario]=g[b.horario]||[]).push(esc(b.nombre)+(b._dev?' <small>↩ devuelve horas</small>':'')+(ab?' <small>(ausente)</small>':''));});
     var ks=Object.keys(g).sort(function(x,y){return rdPartes(x)[0]-rdPartes(y)[0];});
     var ahora=hoy&&ks.some(function(k){var p=rdPartes(k);return act[k]&&now>=p[0]&&now<p[1];});
     h+='<div class="rd-ar'+(ahora?' now':'')+'"><b>'+esc(a)+'</b>'+(ahora?'<span class="rd-tag">AHORA</span>':'');
@@ -9532,7 +9627,7 @@ setInterval(function(){try{if(_navTabActual==='rol-diario'&&document.getElementB
 // Medio día AM: Lun–Jue 07:45–14:00 · Vie 08:00–14:00 · Sáb 09:00–14:00. PM: Lun–Vie 14:00–20:00 (sábado no hay PM).
 var PREMIO_CFG_DEF={minPct:90,minTareas:5};
 var premioConfig=Object.assign({},PREMIO_CFG_DEF);
-function ausJornadaDe(a){return (a&&a.jornada)||((a&&(a.tipo==='permiso_medio'||a.tipo==='cumpleanos'))?'am':'dia');}
+function ausJornadaDe(a){if(a&&a.jornada==='horas')return 'horas';return (a&&a.jornada)||((a&&(a.tipo==='permiso_medio'||a.tipo==='cumpleanos'))?'am':'dia');}
 function ausVentanaMin(jorn,dia){
   if(jorn==='am'){if(dia==='Sábado')return [540,840];if(dia==='Viernes')return [480,840];return [465,840];}
   if(jorn==='pm'){if(dia==='Sábado')return null;return [840,1200];}
@@ -9545,12 +9640,12 @@ function ausActivasDe(nombre,fecha){
 }
 function ausJorn(nombre,fecha){
   var r={am:false,pm:false};
-  ausActivasDe(nombre,fecha).forEach(function(a){var j=ausJornadaDe(a);if(j==='dia'){r.am=true;r.pm=true;}else r[j]=true;});
+  ausActivasDe(nombre,fecha).forEach(function(a){var j=ausJornadaDe(a);if(j==='horas')return;if(j==='dia'){r.am=true;r.pm=true;}else r[j]=true;});
   return r;
 }
 function ausVentanasMin(nombre,fecha){
   var dia=diaDeDate(fecha),w=[];
-  ausActivasDe(nombre,fecha).forEach(function(a){var v=ausVentanaMin(ausJornadaDe(a),dia);if(v)w.push([v[0],v[1]]);});
+  ausActivasDe(nombre,fecha).forEach(function(a){if(ausJornadaDe(a)==='horas'){if(a.horaIni<a.horaFin)w.push([a.horaIni,a.horaFin]);return;}var v=ausVentanaMin(ausJornadaDe(a),dia);if(v)w.push([v[0],v[1]]);});
   w.sort(function(a,b){return a[0]-b[0];});
   var m=[];w.forEach(function(x){if(m.length&&x[0]<=m[m.length-1][1])m[m.length-1][1]=Math.max(m[m.length-1][1],x[1]);else m.push(x);});
   return m;
@@ -9558,20 +9653,107 @@ function ausVentanasMin(nombre,fecha){
 function ausCubre(nombre,fecha,iniM,finM){return ausVentanasMin(nombre,fecha).some(function(w){return w[0]<=iniM&&w[1]>=finM;});}
 // ¿Esta tarea cae en una jornada en que la persona está ausente? (no cuenta ni se asigna)
 function tareaExcluidaPorAusencia(t,nombre,fecha){
-  var ab=ausJorn(nombre,fecha);if(!ab.am&&!ab.pm)return false;
+  var ab=ausJorn(nombre,fecha);
+  // Permiso por horas: la tarea se excluye si su franja queda cubierta por el permiso
+  if(ausActivasDe(nombre,fecha).some(function(a){return ausJornadaDe(a)==='horas';})){
+    var _dia=diaDeDate(fecha),wa=ausVentanaMin('am',_dia),wp=ausVentanaMin('pm',_dia);
+    ab={am:ab.am||!!(wa&&ausCubre(nombre,fecha,wa[0],wa[1])),pm:ab.pm||!!(wp&&ausCubre(nombre,fecha,wp[0],wp[1]))};
+    try{
+      var _rt=t&&rolesTecnicos[t.tipo];
+      if(_rt&&_rt.tipoRegistro==='ronda'){var _u=rondaUnidadDeSector(t.sector),_v=_u?rondaVentana(fecha,_u,nombre):null;
+        if(_v&&ausCubre(nombre,fecha,t2m(_v.ini),t2m(_v.fin)))return true;}
+    }catch(e){}
+  }
+  if(!ab.am&&!ab.pm)return false;
   var j=(t&&t.jornada)||'dia';
   if(j==='am')return ab.am;
   if(j==='pm')return ab.pm;
   return ab.am&&ab.pm;
 }
-function ausJornadaTxt(a){var j=ausJornadaDe(a);return j==='am'?'½ día AM':j==='pm'?'½ día PM':'';}
+function ausJornadaTxt(a){var j=ausJornadaDe(a);if(j==='horas')return '⏱ '+(a.horas||0)+' h';return j==='am'?'½ día AM':j==='pm'?'½ día PM':'';}
 function ausFechaTxt(a){
   var base=a.inicio===a.fin?a.inicio:a.inicio+' → '+a.fin;
   var j=ausJornadaDe(a);
+  if(j==='horas')return base+' · ⏱ '+_hhmm(a.horaIni)+'–'+_hhmm(a.horaFin)+' ('+a.horas+' h)';
   if(j==='dia')return base;
   var h=ausHorasTxt(j,diaDeDate(a.inicio));
   return base+' · '+ausJornadaTxt(a)+(h?' ('+h+')':'');
 }
+
+
+// ═══════════ PERMISOS POR HORAS + DEVOLUCIÓN ═══════════
+// Franjas de 1 h desde el inicio del día (Lun–Jue 07:45 · Vie 08:00 · Sáb 09:00) hasta las 20:00.
+// Cada permiso por horas lleva una devolución propuesta (fecha, franja y servicio) dentro de 1 semana.
+function hrsPuntos(dia){
+  var ini=dia==='Sábado'?540:dia==='Viernes'?480:465,a=[];
+  for(var m=ini;m<1200;m+=60)a.push(m);
+  a.push(1200);return a;
+}
+function hrsOpts(dia,sel){return hrsPuntos(dia).map(function(m){return '<option value="'+m+'"'+(m===sel?' selected':'')+'>'+_hhmm(m)+'</option>';}).join('');}
+function hrsSumarDias(f,n){var d=new Date(f+'T12:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+// Horas de anticipación de un permiso (fecha + hora de inicio) respecto de ahora
+function hrsAnticipacion(fecha,minIni){
+  var d=new Date(fecha+'T00:00:00');d.setMinutes(minIni==null?480:minIni);
+  return (d.getTime()-Date.now())/3600000;
+}
+var PERMISO_AVISO_HRS=72;
+// Contador mensual de horas de permiso: ocupadas (aprobadas o pendientes) / ya devueltas / por devolver
+function hrsContador(nombre,ref){
+  var mes=(ref||hoyStr()).slice(0,7),oc=0,dv=0;
+  Object.values(ausencias||{}).forEach(function(a){
+    if(!a||a.nombre!==nombre||ausJornadaDe(a)!=='horas'||a.estado==='rechazado'||(a.inicio||'').slice(0,7)!==mes)return;
+    oc+=a.horas||0;
+    if(a.devolucion&&a.devolucion.estado==='cumplida')dv+=a.horas||0;
+  });
+  return {ocupadas:oc,devueltas:dv,porDevolver:Math.max(0,oc-dv)};
+}
+function hrsContadorHtml(nombre,ref){
+  var c=hrsContador(nombre,ref);
+  return '<div class="hrs-cont"><div><b>'+c.ocupadas+' h</b><small>ocupadas este mes</small></div><div><b>'+c.devueltas+' h</b><small>ya devueltas</small></div><div class="'+(c.porDevolver?'pend':'')+'"><b>'+c.porDevolver+' h</b><small>por devolver</small></div></div>';
+}
+// Devoluciones aprobadas de una fecha que aún no se cargaron como bloque
+function devolucionesDe(fecha){
+  var r=[];
+  Object.entries(ausencias||{}).forEach(function(e){
+    var a=e[1],d=a&&a.devolucion;
+    if(!d||d.fecha!==fecha||d.cargada||a.estado!=='aprobado'||(d.estado!=='aprobada'&&d.estado!=='cumplida'))return;
+    r.push({key:e[0],nombre:a.nombre,ini:d.ini,fin:d.fin,servicio:d.servicio,horario:_hhmm(d.ini)+'–'+_hhmm(d.fin)});
+  });
+  return r;
+}
+function hrsExtraHtml(a,admin){
+  if(ausJornadaDe(a)!=='horas')return '';
+  var h='';
+  if(a.fueraPlazo)h+=' <span class="hrs-fp">⚠ fuera de plazo (menos de '+PERMISO_AVISO_HRS+' h)</span>';
+  var d=a.devolucion;
+  if(d){
+    var est={propuesta:'propuesta',aprobada:'aprobada',cumplida:'✓ devuelta',rechazada:'rechazada'}[d.estado]||d.estado;
+    var venc=a.estado==='aprobado'&&d.estado==='aprobada'&&d.limite&&d.limite<hoyStr();
+    h+='<div class="hrs-dev">↩ Devuelve '+a.horas+' h el <b>'+esc(d.fecha)+'</b> · '+_hhmm(d.ini)+'–'+_hhmm(d.fin)+' · '+esc(d.servicio||'')+' <i>('+est+')</i>'+(d.limite?' · plazo '+esc(d.limite):'')+(venc?' <span class="hrs-fp">⏰ plazo vencido</span>':'')+'</div>';
+  }
+  return h;
+}
+window.ausDevuelta=function(k,v){sRef('ausencias/'+k+'/devolucion/estado').set(v?'cumplida':'aprobada');};
+// Panel "Devoluciones programadas" al cargar los turnos de la semana abierta
+function renderDevolPanel(){
+  var d=document.getElementById('devolPanel');if(!d)return;
+  var sem=semanas&&semanas[W];if(!W||!sem||!sem.ini){d.innerHTML='';return;}
+  var ini=sem.ini,fin=sem.fin||hrsSumarDias(ini,5);
+  var l=[];
+  Object.entries(ausencias||{}).forEach(function(e){
+    var a=e[1],dv=a&&a.devolucion;
+    if(!dv||a.estado!=='aprobado'||dv.estado!=='aprobada'||dv.cargada||dv.fecha<ini||dv.fecha>fin)return;
+    l.push([e[0],a,dv]);
+  });
+  if(!l.length){d.innerHTML='';return;}
+  l.sort(function(x,y){return x[2].fecha<y[2].fecha?-1:1;});
+  d.innerHTML='<div class="hrs-panel"><b>↩ Devoluciones programadas esta semana</b><p>Horas que el equipo devolverá. Si no las cargas, igual se ven en Panorama y Rol diario y cuentan como cobertura en esa franja.</p>'+
+    l.map(function(x){var a=x[1],dv=x[2];return '<div class="hrs-row"><span><b>'+esc(a.nombre)+'</b> · '+esc(diaDeDate(dv.fecha))+' '+esc(dv.fecha.slice(8,10)+'-'+dv.fecha.slice(5,7))+' · '+_hhmm(dv.ini)+'–'+_hhmm(dv.fin)+' · '+esc(dv.servicio||'')+'</span><button class="btn-ac" onclick="devolCargar(\''+x[0]+'\')">+ Cargar como bloque</button></div>';}).join('')+'</div>';
+}
+window.devolCargar=function(k){
+  var a=ausencias[k],dv=a&&a.devolucion;if(!a||!dv)return;
+  sRef('bloques').push({dia:diaDeDate(dv.fecha),nombre:a.nombre,area:dv.servicio,horario:_hhmm(dv.ini)+'–'+_hhmm(dv.fin)}).then(function(){sRef('ausencias/'+k+'/devolucion/cargada').set(true);});
+};
 
 // ── Cumplimiento semanal detallado (excluye ausencias) ──
 function cumplSemanaDetalle(nombre){
@@ -10824,6 +11006,9 @@ function personasEnFranja(bDia,dia,area,ini,fin){
     }
     if(contados.indexOf(b.nombre)===-1)contados.push(b.nombre);
   });
+  // Horas que alguien devuelve en este servicio y franja (permiso por horas aprobado)
+  try{var _fD=(semanas[W]&&semanas[W].ini)?fechaDeDiaEnSemana(dia,semanas[W]):'';
+    if(_fD)devolucionesDe(_fD).forEach(function(dv){if(dv.servicio===area&&dv.ini<finM&&dv.fin>iniM&&contados.indexOf(dv.nombre)===-1)contados.push(dv.nombre);});}catch(e){}
   return contados;
 }
 
@@ -11117,6 +11302,7 @@ function renderHeatMap(){
 }
 
 function renderBloquesList(){
+  try{renderDevolPanel();}catch(e){}
   var d=document.getElementById('bloquesList');if(!d)return;
   var en=Object.entries(bloques);if(!en.length){d.innerHTML='<p class="empty">Sin bloques.</p>';return;}
 
