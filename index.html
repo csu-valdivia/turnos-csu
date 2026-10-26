@@ -869,6 +869,9 @@ body.gx-light button.tcb,body.gx-light button.tcb *{color:#fff!important}
 .pp-p{font-size:11px;font-weight:800;border-radius:20px;padding:3px 9px}.pp-p.ok{background:#dcfce7;color:#15803d}.pp-p.wa{background:#fef3c7;color:#92580a}.pp-p.no{background:#fee2e2;color:#b91c1c}
 .pp-b{display:flex;gap:5px}.pp-b button,.pp-f button{border:none;border-radius:8px;padding:6px 9px;font-family:inherit;font-weight:700;font-size:11.5px;cursor:pointer;background:#e6eef5;color:#334155}
 .pp-f{display:flex;gap:8px;margin-top:10px}.pp-f button{flex:1;padding:10px}.pp-f button.p{background:#0d9488;color:#fff}
+.pp-sws{display:flex;gap:10px}.pp-swb{text-align:center}.pp-swb small{display:block;font-size:10px;color:#64748b;margin-top:2px}
+.pp-sw{width:40px;height:22px;border-radius:20px;border:none;background:#cbd5e1;position:relative;cursor:pointer;padding:0}.pp-sw i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px #0003}
+.pp-sw.on{background:#0d9488}.pp-sw.on i{left:20px}.pp-sw.part{background:#f0b44a}.pp-sw.part i{left:11px}.pp-sw:disabled{opacity:.45;cursor:not-allowed}
 .pp-e{text-align:center;color:#64748b;padding:18px}
 .gxp-add{border:1.5px dashed var(--gx-line);background:transparent;color:#9fb3c4;border-radius:7px;padding:3px 0;font:700 14px Inter,system-ui,sans-serif;cursor:pointer;line-height:1}.gxp-add:hover{border-color:var(--gx-teal);color:var(--gx-teal)}
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
@@ -15598,32 +15601,124 @@ function ppPersonas(g){
   return o;
 }
 function ppModuloGrupo(m){return {administrativo:'administrativos',bodega:'administrativos',mantencion:'administrativos',docente:'docentes',gerencia:'gerencia',clinico:'clinicos'}[m]||'administrativos';}
+function ppGruposDoc(doc){
+  var gr=(doc.visibleGrupos||(Array.isArray(doc.visibilidad)?doc.visibilidad:[doc.visibilidad||'todos'])).map(function(x){return x==='colaboradores'?'clinicos':x;});
+  var all=PP_GRUPOS.map(function(x){return x[0];});
+  return gr.indexOf('todos')>-1?all:gr.filter(function(x){return all.indexOf(x)>-1;});
+}
+function ppEnBanco(id,doc){var ba=Object.keys(bancoActivo||{});return !ba.length?!!doc.obligatoria:!!bancoActivo[id];}
 function ppFilas(g){
-  var rows=[],pers=ppPersonas(g);
+  var rows=[],pers=ppPersonas(g),clin=(g==='clinicos'||g==='internos');
   Object.entries(biblioteca||{}).forEach(function(e){
-    var doc=e[1];if(!doc||doc.visible===false)return;
-    var gr=(doc.visibleGrupos||(Array.isArray(doc.visibilidad)?doc.visibilidad:[doc.visibilidad||'todos'])).map(function(x){return x==='colaboradores'?'clinicos':x;});
-    if(gr.indexOf('todos')<0&&gr.indexOf(g)<0)return;
-    if(!doc.obligatoria&&(g==='clinicos'||g==='internos'))return;
+    var doc=e[1];if(!doc)return;
+    if(clin&&!doc.obligatoria)return;
     var nP=Object.keys(doc.preguntas||{}).length,r={id:e[0],t:doc.titulo||'(sin título)',src:'bib',n:nP,doc:doc};
-    if(g==='clinicos'||g==='internos'){
-      var ba=Object.keys(bancoActivo||{});
-      r.sorteo=!!(doc.bancoCerrado&&nP>=2&&(!ba.length||bancoActivo[e[0]]));
-      r.pro=!doc.bancoCerrado?'Banco abierto (no sortea)':(!r.sorteo?'No está en el banco activo':'Entra al sorteo');
+    if(clin){
+      var inG=ppGruposDoc(doc).indexOf(g)>-1,inB=ppEnBanco(e[0],doc);
+      r.on=!!(doc.visible!==false&&inG&&inB);
+      r.sorteo=!!(r.on&&doc.bancoCerrado&&nP>=2);
+      r.pro=!r.on?'Apagado para este grupo':(!doc.bancoCerrado?'Banco abierto (no sortea)':(nP<2?'Faltan preguntas':'Entra al sorteo'));
     }else{
-      var act=pers.filter(function(p){try{return protocolosPara(g,p).some(function(x){return x[0]===e[0]&&nP>=2&&preguntasActivasParaRol(x[1],p);});}catch(er){return false;}}).length;
-      r.act=act;r.tot=pers.length;
+      r.inG=ppGruposDoc(doc).indexOf(g)>-1&&doc.visible!==false;
+      r.mat=pers.filter(function(p){try{return r.inG&&visibleParaPersonaSegunRol(doc,p);}catch(er){return false;}}).length;
+      r.pre=pers.filter(function(p){try{return r.inG&&nP>=2&&visibleParaPersonaSegunRol(doc,p)&&preguntasActivasParaRol(doc,p);}catch(er){return false;}}).length;
+      r.tot=pers.length;
     }
     rows.push(r);
   });
-  Object.entries(bibliotecaAdmin||{}).forEach(function(e){
+  if(!clin)Object.entries(bibliotecaAdmin||{}).forEach(function(e){
     var doc=e[1];if(!doc||ppModuloGrupo(doc.modulo)!==g)return;
     var nP=Object.keys(doc.preguntas||{}).length;
-    var act=pers.filter(function(p){try{return nP>=2&&visibleParaPersonaSegunRol(doc,p)&&preguntasActivasParaRol(doc,p);}catch(er){return false;}}).length;
-    rows.push({id:e[0],t:doc.titulo||'(sin título)',src:'adm',n:nP,doc:doc,act:act,tot:pers.length});
+    var r={id:e[0],t:doc.titulo||'(sin título)',src:'adm',n:nP,doc:doc,inG:true,tot:pers.length};
+    r.mat=pers.filter(function(p){try{return visibleParaPersonaSegunRol(doc,p);}catch(er){return false;}}).length;
+    r.pre=pers.filter(function(p){try{return nP>=2&&visibleParaPersonaSegunRol(doc,p)&&preguntasActivasParaRol(doc,p);}catch(er){return false;}}).length;
+    rows.push(r);
   });
   return rows.sort(function(a,b){return a.t.localeCompare(b.t);});
 }
+function ppSw(est,label,fn,dis){return '<div class="pp-swb"><button class="pp-sw '+est+'"'+(dis?' disabled':'')+' onclick="'+fn+'"><i></i></button><small>'+label+'</small></div>';}
+function ppFilasHtml(g,filas){
+  var clin=(g==='clinicos'||g==='internos'),nProb=0;
+  var h=filas.map(function(r){
+    var q="'"+r.id+"','"+r.src+"','"+g+"'",ctl,pill,cls;
+    if(clin){
+      cls=r.sorteo?'ok':(r.on?'wa':'no');pill=r.pro;
+      ctl=ppSw(r.on?'on':'off','Sorteo','ppToggle('+q+',\'sorteo\')');
+    }else{
+      var okM=r.tot&&r.mat===r.tot,okP=r.tot&&r.pre===r.tot;
+      cls=!r.n?'no':(r.n<2?'no':(r.pre?'ok':'wa'));
+      pill=!r.n?'Sin preguntas':(r.n<2?'Faltan preguntas (mín. 2)':(r.mat+' con material · '+r.pre+' con preguntas (de '+r.tot+')'));
+      ctl=ppSw(okM?'on':(r.mat?'part':'off'),'Material','ppToggle('+q+',\'mat\')')+ppSw(okP?'on':(r.pre?'part':'off'),'Preguntas','ppToggle('+q+',\'pre\')',r.n<2);
+    }
+    if(cls!=='ok')nProb++;
+    var btns=r.src==='bib'
+      ?'<button onclick="ppAbrir(\'preg\',\''+r.id+'\')">✏️ Preguntas</button>'
+      :'<button onclick="ppAbrir(\'ed\',\''+r.id+'\')">✏️ Editar</button><button onclick="ppAbrir(\'banco\',\''+r.id+'\')">🗃️ Preguntas</button>';
+    return '<div class="pp-r"><div class="pp-t"><b>'+esc(r.t)+'</b><i>'+(r.src==='bib'?'Biblioteca clínica':'Otros roles')+' · '+r.n+' preguntas</i></div><span class="pp-p '+cls+'">'+esc(pill)+'</span><div class="pp-sws">'+ctl+'</div><div class="pp-b">'+btns+'</div></div>';
+  }).join('');
+  return {h:h,nProb:nProb};
+}
+window.ppToggle=function(id,src,g,que){
+  var doc=(src==='bib'?biblioteca:bibliotecaAdmin)[id];if(!doc)return;
+  var origen=src==='bib'?'biblioteca':'bibliotecaAdmin',upd={},base=origen+'/'+id;
+  function fin(){db.ref('sedes/'+S).update(upd).then(function(){abrirProtocolosPreguntas(g);});}
+  if(que==='sorteo'){
+    var set=ppGruposDoc(doc),inG=set.indexOf(g)>-1,inB=ppEnBanco(id,doc),on=!!(doc.visible!==false&&inG&&inB);
+    // banco como lista explícita (si estaba vacío = "todos los obligatorios")
+    var banco=Object.keys(bancoActivo||{}).length?Object.assign({},bancoActivo):(function(){var b={};Object.keys(biblioteca||{}).forEach(function(k){if(biblioteca[k]&&biblioteca[k].obligatoria)b[k]=true;});return b;})();
+    if(!on){
+      var nP=Object.keys(doc.preguntas||{}).length;
+      if(nP<2){alert('Este protocolo tiene '+nP+' pregunta(s). Agrega al menos 2 antes de activarlo.');return;}
+      if(!doc.bancoCerrado){if(!confirm('El banco de preguntas está abierto, por eso no sortea. ¿Cerrarlo ahora con '+nP+' preguntas y activarlo?'))return;upd[base+'/bancoCerrado']=true;doc.bancoCerrado=true;}
+      if(set.indexOf(g)<0)set.push(g);
+      banco[id]=true;
+      if(doc.visible===false)upd[base+'/visible']=true;
+    }else{
+      set=set.filter(function(x){return x!==g;});
+      if(set.indexOf('clinicos')<0&&set.indexOf('internos')<0)delete banco[id];
+    }
+    var all=set.length===PP_GRUPOS.length,hasC=set.indexOf('clinicos')>-1,hasI=set.indexOf('internos')>-1;
+    upd[base+'/visibleGrupos']=all?['todos']:(set.length?set:['ninguno']);
+    upd[base+'/visibilidad']=((hasC&&hasI)||(!hasC&&!hasI))?'todos':(hasC?'colaboradores':'internos');
+    upd['bancoActivo']=Object.keys(banco).length?banco:null;
+    if(!Object.keys(banco).length){/* sin ninguno activo: dejar un marcador para no volver a "todos" */upd['bancoActivo']={__ninguno:false};}
+    return fin();
+  }
+  // grupos no clínicos: material y preguntas por persona (mismas reglas que "Activar por persona")
+  var pers=ppPersonas(g);if(!pers.length){alert('Este grupo no tiene personas cargadas.');return;}
+  var dir=(doc.dirigidoPersonas||[]).slice(),blq=(doc.bloqueadoPersonas||[]).slice(),fa=Object.assign({},doc.fechaActivacion||{}),pa=(doc.preguntasActivasPersonas||[]).slice();
+  if(que==='mat'){
+    var todosMat=pers.every(function(p){return visibleParaPersonaSegunRol(doc,p);}),turnOn=!todosMat;
+    if(turnOn&&src==='bib'){var set2=ppGruposDoc(doc);if(set2.indexOf(g)<0){set2.push(g);upd[base+'/visibleGrupos']=set2.length===PP_GRUPOS.length?['todos']:set2;}if(doc.visible===false)upd[base+'/visible']=true;}
+    pers.forEach(function(p){
+      var kp=keyPersonaProt(p),act=visibleParaPersonaSegunRol(doc,p);
+      if(turnOn&&!act){blq=blq.filter(function(x){return x!==p;});if(dir.indexOf(p)<0)dir.push(p);fa[kp]=Date.now();}
+      if(!turnOn&&act){dir=dir.filter(function(x){return x!==p;});if(blq.indexOf(p)<0)blq.push(p);delete fa[kp];pa=pa.filter(function(x){return x!==p;});}
+    });
+    upd[base+'/dirigidoPersonas']=dir;upd[base+'/bloqueadoPersonas']=blq;upd[base+'/fechaActivacion']=Object.keys(fa).length?fa:null;upd[base+'/preguntasActivasPersonas']=pa;
+    return fin();
+  }
+  if(que==='pre'){
+    var con=pers.filter(function(p){return pa.indexOf(p)>-1;}).length,turnOnP=con<pers.length;
+    if(turnOnP){
+      var sinMat=pers.filter(function(p){return !visibleParaPersonaSegunRol(doc,p);});
+      if(sinMat.length&&!confirm(sinMat.length+' persona(s) aún no tienen el material activo, así que no verán las preguntas. ¿Activar también el material para todos y seguir?'))return;
+      if(sinMat.length){
+        if(src==='bib'){var set3=ppGruposDoc(doc);if(set3.indexOf(g)<0){set3.push(g);upd[base+'/visibleGrupos']=set3.length===PP_GRUPOS.length?['todos']:set3;}if(doc.visible===false)upd[base+'/visible']=true;}
+        sinMat.forEach(function(p){blq=blq.filter(function(x){return x!==p;});if(dir.indexOf(p)<0)dir.push(p);fa[keyPersonaProt(p)]=Date.now();});
+        upd[base+'/dirigidoPersonas']=dir;upd[base+'/bloqueadoPersonas']=blq;upd[base+'/fechaActivacion']=fa;
+      }
+      var esperan=pers.filter(function(p){return pa.indexOf(p)<0&&sinMat.indexOf(p)<0&&!puedeActivarPreguntas(doc,p);}).concat(sinMat);
+      var d=Object.assign({},doc,{dirigidoPersonas:dir,bloqueadoPersonas:blq,fechaActivacion:fa});
+      pers.forEach(function(p){if(pa.indexOf(p)<0&&sinMat.indexOf(p)<0&&puedeActivarPreguntas(d,p))pa.push(p);});
+      if(esperan.length){
+        if(confirm(esperan.length+' persona(s) llevan menos de 7 días con el protocolo ('+esperan.slice(0,4).join(', ')+(esperan.length>4?'…':'')+'). Regla: las preguntas se habilitan a los 7 días. ¿Activar igual para todos (forzar)?'))esperan.forEach(function(p){if(pa.indexOf(p)<0)pa.push(p);});
+      }
+    }else{pa=pa.filter(function(p){return pers.indexOf(p)<0;});}
+    upd[base+'/preguntasActivasPersonas']=pa;
+    return fin();
+  }
+};
 function protocolosPara(g,p){return g==='docentes'?protocolosDocente(p):g==='gerencia'?protocolosGerencia(p):[];}
 function ppFranjaTxt(){var D=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];var d=(franjaDG.dias||[]).slice().sort();var ini=franjaDG.ini,fin=franjaDG.fin;return (d.length===5&&d.join()==='1,2,3,4,5'?'lunes a viernes':d.map(function(x){return D[x];}).join(', '))+' de '+ini+' a '+fin;}
 window.abrirProtocolosPreguntas=function(g){
@@ -15639,19 +15734,7 @@ window.abrirProtocolosPreguntas=function(g){
 function ppPintar(){
   var ov=document.getElementById('ppOv');if(!ov)return;var g=window._ppG;
   var filas=ppFilas(g),esDG=(g==='docentes'||g==='gerencia');
-  var nProb=0;
-  var rowsH=filas.map(function(r){
-    var pill,cls;
-    if(!r.n){pill='Sin preguntas';cls='no';}
-    else if(r.n<2){pill='Faltan preguntas (mín. 2)';cls='no';}
-    else if(r.src==='bib'&&(g==='clinicos'||g==='internos')){pill=r.pro;cls=r.sorteo?'ok':'wa';}
-    else{pill=r.act+' de '+r.tot+' reciben preguntas';cls=r.act?'ok':'wa';}
-    if(cls!=='ok')nProb++;
-    var btns=r.src==='bib'
-      ?'<button onclick="ppAbrir(\'preg\',\''+r.id+'\')">✏️ Preguntas</button><button onclick="ppAbrir(\'act\',\''+r.id+'\')">🎯 Activar</button>'
-      :'<button onclick="ppAbrir(\'ed\',\''+r.id+'\')">✏️ Editar</button><button onclick="ppAbrir(\'banco\',\''+r.id+'\')">🗃️ Preguntas</button>';
-    return '<div class="pp-r"><div class="pp-t"><b>'+esc(r.t)+'</b><i>'+(r.src==='bib'?'Biblioteca clínica':'Otros roles')+' · '+r.n+' preguntas</i></div><span class="pp-p '+cls+'">'+esc(pill)+'</span><div class="pp-b">'+btns+'</div></div>';
-  }).join('');
+  var FH=ppFilasHtml(g,filas),rowsH=FH.h,nProb=FH.nProb;
   var franja='';
   if(esDG){
     var D=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],N=[1,2,3,4,5,6,0];
