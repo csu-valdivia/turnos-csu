@@ -853,6 +853,23 @@ body.gx-light button.tcb,body.gx-light button.tcb *{color:#fff!important}
 .gxrev-f{display:flex;gap:8px;margin-top:10px}.gxrev-f button{flex:1;padding:9px}.gxrev-f button.p{background:#0d9488;color:#fff}.gxrev-f select{border:1px solid var(--gx-line,#dbe5ee);border-radius:8px;padding:6px;font-family:inherit}
 .gxrev-ok{width:100%;margin-top:10px;border:none;border-radius:11px;padding:11px;background:#0d9488;color:#fff;font-family:inherit;font-weight:800;cursor:pointer}
 .gxrev-s{font-size:10.5px;color:#64748b;margin:8px 0 0}
+.ppov{position:fixed;inset:0;z-index:9000;background:rgba(15,37,64,.55);overflow-y:auto;padding:14px}
+.pp-box{max-width:680px;margin:0 auto;background:var(--gx-bg,#f4f8fb);border-radius:16px;padding:14px;color:var(--gx-navy,#0f2540);font-size:13px}
+.pp-h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.pp-h b{font-size:17px;display:block}.pp-h small{color:#64748b;font-size:11px}
+.pp-x{border:none;background:#e6eef5;color:#475569;border-radius:9px;padding:7px 11px;cursor:pointer;font-family:inherit}
+.pp-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}.pp-tabs button{border:none;background:#e6eef5;color:#475569;border-radius:10px;padding:8px 11px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer}.pp-tabs button.on{background:#0d9488;color:#fff}
+.pp-reg{background:#e8f7f5;border:1px solid #b6e3dd;border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.45;margin-bottom:8px;color:#134e4a}
+.pp-fr{background:#fff;border:1px solid var(--gx-line,#dbe5ee);border-radius:12px;padding:10px 12px;margin-bottom:8px}.pp-dias{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}
+.pp-ch{background:#e6eef5;color:#94a3b8;border-radius:8px;padding:5px 9px;font-weight:700;font-size:11.5px;cursor:pointer}.pp-ch.on{background:#0d9488;color:#fff}.pp-ch input{display:none}
+.pp-hh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-weight:700}.pp-hh input{width:auto!important;border:1px solid var(--gx-line,#dbe5ee);border-radius:8px;padding:5px 8px;font-family:inherit}.pp-hh button{border:none;background:#0d9488;color:#fff;border-radius:8px;padding:7px 12px;font-family:inherit;font-weight:800;cursor:pointer}
+.pp-fr small,.pp-s{color:#64748b;font-size:11px;display:block;margin-top:6px}
+.pp-k{display:flex;gap:6px;margin-bottom:8px}.pp-k div{flex:1;background:#fff;border:1px solid var(--gx-line,#dbe5ee);border-radius:10px;padding:7px;text-align:center;font-size:10.5px;color:#64748b}.pp-k b{display:block;font-size:18px;color:var(--gx-navy,#0f2540)}
+.pp-r{background:#fff;border:1px solid var(--gx-line,#dbe5ee);border-radius:12px;padding:9px 11px;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pp-t{flex:1;min-width:170px}.pp-t b{display:block}.pp-t i{font-style:normal;font-size:11px;color:#64748b}
+.pp-p{font-size:11px;font-weight:800;border-radius:20px;padding:3px 9px}.pp-p.ok{background:#dcfce7;color:#15803d}.pp-p.wa{background:#fef3c7;color:#92580a}.pp-p.no{background:#fee2e2;color:#b91c1c}
+.pp-b{display:flex;gap:5px}.pp-b button,.pp-f button{border:none;border-radius:8px;padding:6px 9px;font-family:inherit;font-weight:700;font-size:11.5px;cursor:pointer;background:#e6eef5;color:#334155}
+.pp-f{display:flex;gap:8px;margin-top:10px}.pp-f button{flex:1;padding:10px}.pp-f button.p{background:#0d9488;color:#fff}
+.pp-e{text-align:center;color:#64748b;padding:18px}
 .gxp-add{border:1.5px dashed var(--gx-line);background:transparent;color:#9fb3c4;border-radius:7px;padding:3px 0;font:700 14px Inter,system-ui,sans-serif;cursor:pointer;line-height:1}.gxp-add:hover{border-color:var(--gx-teal);color:var(--gx-teal)}
 @media(prefers-reduced-motion:reduce){body.gx-ing .rol-btn{transition:none}}
 </style>
@@ -1408,6 +1425,12 @@ body.gx-light button.tcb,body.gx-light button.tcb *{color:#fff!important}
               <button class="btn-add" id="addNombreBtn" style="width:auto;margin-top:0;padding:8px 14px">+</button>
             </div>
             <div class="ilist" id="nombresList"></div>
+          </div>
+
+          <div class="asec">
+            <p class="asec-title">🧩 Protocolos y preguntas</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">Todos los protocolos y sus preguntas, por grupo (clínicos, internos, docentes, administrativos y gerencia), con la franja horaria de cada uno.</p>
+            <button class="btn-add" onclick="abrirProtocolosPreguntas()" style="background:linear-gradient(135deg,#0d9488,#2563eb)">🧩 Abrir Protocolos y preguntas</button>
           </div>
 
           <div class="asec">
@@ -2577,7 +2600,7 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // Antes estaba fuera de esta lista, así que una vacación pedida hoy para noviembre quedaba guardada
 // dentro de la semana activa de HOY (la única que existía en ese momento) y por eso aparecía como si
 // fuera de la semana actual — y lo mismo le pasaría a cualquier permiso pedido para semanas futuras.
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','liderazgo','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin','solicitudesMediaJornada','premioConfig','salidas','recuperaciones'];
+var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','liderazgo','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin','solicitudesMediaJornada','premioConfig','salidas','recuperaciones','franjaDG'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
@@ -2713,6 +2736,7 @@ function attach(){
   on('recesoAcademico',function(v){if(v&&typeof v==='object')recesoAcademico=v;if(document.getElementById('recesoPanel'))renderRecesoConfig();});
   on('colacionManual',function(v){colacionManual=v||{};});
   on('gerenciaEquipo',function(v){gerenciaEquipo=v||{};});
+  on('franjaDG',function(v){if(v&&v.ini&&v.fin&&Array.isArray(v.dias))franjaDG=v;});
   on('tiemposCalibrados',function(v){if(v&&typeof v==='object'){Object.keys(v).forEach(function(tp){if(TIEMPOS_PROCESO[tp]&&typeof v[tp]==='number')TIEMPOS_PROCESO[tp].h=v[tp];});}});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
   // ── Listeners módulo administrativo (separados de lo clínico) ──
@@ -2840,6 +2864,7 @@ var PIN_JEFA_OPERACIONES='1234c';
 // PIN de Gerencia (distinto de los demás roles). Puedes cambiarlo después si quieres.
 var PIN_GERENCIA='9910g';
 var gerenciaEquipo={},fichaProgresoGerencia={},rankingGerencia={};
+var franjaDG={dias:[1,2,3,4,5],ini:'08:00',fin:'23:00'}; // franja de preguntas de Docentes y Gerencia
 var cumpleanosAdmin={}; // caché local del nodo compartido 'cumpleanos' (mismo que usa el equipo clínico)
 
 // Etapa 1: entrada provisional de los roles nuevos (los módulos se construyen en etapas siguientes)
@@ -5095,20 +5120,24 @@ function renderMaterialAdmin(cont){
 }
 
 // Horario laboral para RESPONDER preguntas en los módulos administrativo/docente: L-V, 08:00-20:00.
-function moduloTrabajoAbierto(){
+function moduloTrabajoAbierto(grupo){
   var d=new Date();var dia=d.getDay(); // 0=dom,6=sab
-  if(dia===0||dia===6)return false;
   var m=d.getHours()*60+d.getMinutes();
+  if(grupo==='docente'||grupo==='gerencia'){
+    if((franjaDG.dias||[]).indexOf(dia)<0)return false;
+    return m>=_minHHMM(franjaDG.ini)&&m<_minHHMM(franjaDG.fin);
+  }
+  if(dia===0||dia===6)return false;
   return m>=8*60&&m<20*60;
 }
-function mensajeFueraHorario(){
+function mensajeFueraHorario(grupo){
   var d=new Date();var dia=d.getDay();
   var hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
   var diaLbl=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][dia];
   return '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:20px;text-align:center">'+
     '<div style="font-size:36px;margin-bottom:8px">🔒</div>'+
     '<div style="font-size:14px;font-weight:700;color:#fca5a5;margin-bottom:6px">Fuera de horario de respuesta</div>'+
-    '<div style="font-size:12px;color:rgba(255,255,255,.6)">Las respuestas se aceptan de lunes a viernes, entre 08:00 y 20:00 hrs.<br>Hoy es '+diaLbl+' '+hh+' — vuelve en horario laboral.</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.6)">'+((grupo==='docente'||grupo==='gerencia')?'Las respuestas se aceptan '+ppFranjaTxt()+' hrs.':'Las respuestas se aceptan de lunes a viernes, entre 08:00 y 20:00 hrs.')+'<br>Hoy es '+diaLbl+' '+hh+' — vuelve en horario laboral.</div>'+
   '</div>';
 }
 
@@ -7887,7 +7916,7 @@ function editarBancoPreguntas(docId){
   if(!doc){alert('Documento no encontrado.');return;}
   var overlay=document.createElement('div');
   overlay.id='editPregOverlay';
-  overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:300;background:rgba(10,20,50,.96);overflow-y:auto;padding:20px 16px;box-sizing:border-box';
+  overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:9100;background:rgba(10,20,50,.96);overflow-y:auto;padding:20px 16px;box-sizing:border-box';
 
   var pregActuales=Object.entries(doc.preguntas||{});
   var html='<div style="max-width:460px;margin:0 auto">';
@@ -13119,7 +13148,7 @@ var ADM_GRUPOS=[
  {id:'calidad',ic:'📊',n:'Cumplimiento y calidad',d:'Informes, tablero, accesos, supervisión, indicadores',m:['Informe de gestión','Tablero de cumplimiento','Registro de accesos','Cumplimiento de lectura','Ronda de supervisión','Indicadores operacionales']},
  {id:'comunica',ic:'📣',n:'Comunicación',d:'Avisos, anuncios, sugerencias, cumpleaños',m:['Aviso general','Anuncio de capacitación','Sugerencias del equipo','Cumpleaños del equipo']},
  {id:'clinica',ic:'🏥',n:'Operación clínica',d:'Pabellón, roles técnicos, temperaturas',m:['Plan de Pabellón','Roles técnicos','Espacios de temperatura']},
- {id:'programas',ic:'🌱',n:'Programas',d:'Liderazgo, plan de estudio, biblioteca',m:['Programa de liderazgo','Plan de estudio','Biblioteca de conocimiento']},
+ {id:'programas',ic:'🌱',n:'Programas',d:'Liderazgo, plan de estudio, biblioteca',m:['Protocolos y preguntas','Programa de liderazgo','Plan de estudio','Biblioteca de conocimiento']},
  {id:'mant',ic:'⚙',n:'Mantenimiento',d:'Limpiar y migrar datos (avanzado, con cuidado)',m:['Migrar datos antiguos','Limpiar semanas duplicadas','Limpiar semana']}
 ];
 var ADM_KW={'Personal de este establecimiento':'directorio correo telefono fono contacto importar planilla','Cumplimiento de lectura':'ficha preguntas banco evaluacion obligatoria','Tablero de cumplimiento':'correo whatsapp aviso incumplimiento semaforo','Registro de accesos':'conexiones ingresos','Programa de liderazgo':'lecturas modo prueba enfermeros diagnostico','Informe de gestión':'dashboard gerencia pdf','Aviso general':'anuncio comunicado novedades','Gestión de semanas':'crear semana publicar','Ausencias (licencia':'vacaciones permiso licencia','Premio de la semana':'ganador jornada libre'};
@@ -15020,7 +15049,7 @@ function renderMaterialGerencia(cont){
 }
 function renderPreguntasGerencia(cont){
   if(!cont)return;
-  if(!moduloTrabajoAbierto()){cont.innerHTML=mensajeFueraHorario();return;}
+  if(!moduloTrabajoAbierto('gerencia')){cont.innerHTML=mensajeFueraHorario('gerencia');return;}
   var nombre=window._gerNombre;var key=window._gerKey;
   var protos=protocolosGerencia(nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&preguntasActivasParaRol(e[1],nombre);});
   if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes preguntas activas aún. El Enfermero Jefe debe activarlas desde el Centro de protocolos.</div>';return;}
@@ -15449,7 +15478,7 @@ function renderMaterialDocente(cont){
 }
 function renderPreguntasDocente(cont){
   if(!cont)return;
-  if(!moduloTrabajoAbierto()){cont.innerHTML=mensajeFueraHorario();return;}
+  if(!moduloTrabajoAbierto('docente')){cont.innerHTML=mensajeFueraHorario('docente');return;}
   var d=window._docActual;var key=window._docKey;
   var protos=protocolosDocente(d.nombre).filter(function(e){return e[1].preguntas&&Object.keys(e[1].preguntas).length>=2&&visibleParaPersonaSegunRol(e[1],d.nombre)&&preguntasActivasParaRol(e[1],d.nombre);});
   if(!protos.length){cont.innerHTML='<div style="background:#16233d;border-radius:12px;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:13px">No tienes preguntas activas aún. El Enfermero Jefe debe activarlas desde el Centro de protocolos.</div>';return;}
@@ -15551,6 +15580,110 @@ function renderRankingDocente(cont){
 }
 
 // ══════════════ CENTRO DE PROTOCOLOS (para roles no clínicos) ══════════════
+// ═══════════ PROTOCOLOS Y PREGUNTAS (vista única por grupo) ═══════════
+var PP_GRUPOS=[['clinicos','🩺 Clínicos'],['internos','🎓 Internos'],['docentes','👨‍🏫 Docentes'],['administrativos','🗂️ Administrativos'],['gerencia','💼 Gerencia']];
+var PP_REGLA={
+  clinicos:'Las preguntas salen solo dentro de su turno (lunes a viernes; sábado solo con ronda). Ya está definido y no cambia.',
+  internos:'Igual que los clínicos: salen dentro de su turno.',
+  administrativos:'Según su turno: abren cuando parte su turno y cierran cuando termina. Sin turno cargado rige el horario general (L–V 08:00–20:00).',
+  docentes:'Franja fija, sin depender de turnos (se configura abajo).',
+  gerencia:'Igual que los docentes (franja fija, se configura abajo).'};
+function ppPersonas(g){
+  var o=[];
+  if(g==='clinicos')(nombres||[]).forEach(function(n){var x=n.nombre||n;if(x&&!esInterno(x))o.push(x);});
+  else if(g==='internos')Object.values(internos||{}).forEach(function(i){if(i&&i.nombre)o.push(i.nombre);});
+  else if(g==='docentes')Object.values(docentes||{}).forEach(function(d){if(d&&d.nombre)o.push(d.nombre);});
+  else if(g==='administrativos')Object.values(secretarias||{}).forEach(function(v){var x=typeof v==='object'?v.nombre:v;if(x)o.push(x);});
+  else if(g==='gerencia')Object.values(gerenciaEquipo||{}).forEach(function(v){if(v&&v.nombre)o.push(v.nombre);});
+  return o;
+}
+function ppModuloGrupo(m){return {administrativo:'administrativos',bodega:'administrativos',mantencion:'administrativos',docente:'docentes',gerencia:'gerencia',clinico:'clinicos'}[m]||'administrativos';}
+function ppFilas(g){
+  var rows=[],pers=ppPersonas(g);
+  Object.entries(biblioteca||{}).forEach(function(e){
+    var doc=e[1];if(!doc||doc.visible===false)return;
+    var gr=(doc.visibleGrupos||(Array.isArray(doc.visibilidad)?doc.visibilidad:[doc.visibilidad||'todos'])).map(function(x){return x==='colaboradores'?'clinicos':x;});
+    if(gr.indexOf('todos')<0&&gr.indexOf(g)<0)return;
+    if(!doc.obligatoria&&(g==='clinicos'||g==='internos'))return;
+    var nP=Object.keys(doc.preguntas||{}).length,r={id:e[0],t:doc.titulo||'(sin título)',src:'bib',n:nP,doc:doc};
+    if(g==='clinicos'||g==='internos'){
+      var ba=Object.keys(bancoActivo||{});
+      r.sorteo=!!(doc.bancoCerrado&&nP>=2&&(!ba.length||bancoActivo[e[0]]));
+      r.pro=!doc.bancoCerrado?'Banco abierto (no sortea)':(!r.sorteo?'No está en el banco activo':'Entra al sorteo');
+    }else{
+      var act=pers.filter(function(p){try{return protocolosPara(g,p).some(function(x){return x[0]===e[0]&&nP>=2&&preguntasActivasParaRol(x[1],p);});}catch(er){return false;}}).length;
+      r.act=act;r.tot=pers.length;
+    }
+    rows.push(r);
+  });
+  Object.entries(bibliotecaAdmin||{}).forEach(function(e){
+    var doc=e[1];if(!doc||ppModuloGrupo(doc.modulo)!==g)return;
+    var nP=Object.keys(doc.preguntas||{}).length;
+    var act=pers.filter(function(p){try{return nP>=2&&visibleParaPersonaSegunRol(doc,p)&&preguntasActivasParaRol(doc,p);}catch(er){return false;}}).length;
+    rows.push({id:e[0],t:doc.titulo||'(sin título)',src:'adm',n:nP,doc:doc,act:act,tot:pers.length});
+  });
+  return rows.sort(function(a,b){return a.t.localeCompare(b.t);});
+}
+function protocolosPara(g,p){return g==='docentes'?protocolosDocente(p):g==='gerencia'?protocolosGerencia(p):[];}
+function ppFranjaTxt(){var D=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];var d=(franjaDG.dias||[]).slice().sort();var ini=franjaDG.ini,fin=franjaDG.fin;return (d.length===5&&d.join()==='1,2,3,4,5'?'lunes a viernes':d.map(function(x){return D[x];}).join(', '))+' de '+ini+' a '+fin;}
+window.abrirProtocolosPreguntas=function(g){
+  g=g||window._ppG||'clinicos';window._ppG=g;
+  var ov=document.getElementById('ppOv');
+  if(!ov){ov=document.createElement('div');ov.id='ppOv';ov.className='ppov';document.body.appendChild(ov);ov.innerHTML='<div class="pp-box">Cargando…</div>';}
+  Promise.all([sedeRef('biblioteca').once('value'),sedeRef('bibliotecaAdmin').once('value'),sedeRef('secretarias').once('value'),sedeRef('docentes').once('value'),sedeRef('gerenciaEquipo').once('value'),sedeRef('bancoActivo').once('value'),sedeRef('franjaDG').once('value'),sedeRef('internos').once('value')]).then(function(s){
+    biblioteca=s[0].val()||{};bibliotecaAdmin=s[1].val()||{};secretarias=s[2].val()||{};docentes=s[3].val()||{};gerenciaEquipo=s[4].val()||{};bancoActivo=s[5].val()||{};
+    var f=s[6].val();if(f&&f.ini&&f.fin&&Array.isArray(f.dias))franjaDG=f;internos=s[7].val()||internos;
+    ppPintar();
+  });
+};
+function ppPintar(){
+  var ov=document.getElementById('ppOv');if(!ov)return;var g=window._ppG;
+  var filas=ppFilas(g),esDG=(g==='docentes'||g==='gerencia');
+  var nProb=0;
+  var rowsH=filas.map(function(r){
+    var pill,cls;
+    if(!r.n){pill='Sin preguntas';cls='no';}
+    else if(r.n<2){pill='Faltan preguntas (mín. 2)';cls='no';}
+    else if(r.src==='bib'&&(g==='clinicos'||g==='internos')){pill=r.pro;cls=r.sorteo?'ok':'wa';}
+    else{pill=r.act+' de '+r.tot+' reciben preguntas';cls=r.act?'ok':'wa';}
+    if(cls!=='ok')nProb++;
+    var btns=r.src==='bib'
+      ?'<button onclick="ppAbrir(\'preg\',\''+r.id+'\')">✏️ Preguntas</button><button onclick="ppAbrir(\'act\',\''+r.id+'\')">🎯 Activar</button>'
+      :'<button onclick="ppAbrir(\'ed\',\''+r.id+'\')">✏️ Editar</button><button onclick="ppAbrir(\'banco\',\''+r.id+'\')">🗃️ Preguntas</button>';
+    return '<div class="pp-r"><div class="pp-t"><b>'+esc(r.t)+'</b><i>'+(r.src==='bib'?'Biblioteca clínica':'Otros roles')+' · '+r.n+' preguntas</i></div><span class="pp-p '+cls+'">'+esc(pill)+'</span><div class="pp-b">'+btns+'</div></div>';
+  }).join('');
+  var franja='';
+  if(esDG){
+    var D=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],N=[1,2,3,4,5,6,0];
+    franja='<div class="pp-fr"><b>🕐 Franja de las preguntas · Docentes y Gerencia</b><div class="pp-dias">'+N.map(function(n,i){return '<label class="pp-ch'+((franjaDG.dias||[]).indexOf(n)>-1?' on':'')+'"><input type="checkbox" value="'+n+'" '+((franjaDG.dias||[]).indexOf(n)>-1?'checked':'')+' onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+D[i]+'</label>';}).join('')+'</div>'
+      +'<div class="pp-hh">Desde <input type="time" id="ppIni" value="'+esc(franjaDG.ini)+'"> Hasta <input type="time" id="ppFin" value="'+esc(franjaDG.fin)+'"> <button onclick="ppGuardarFranja()">Guardar</button></div><small>Hoy: '+esc(ppFranjaTxt())+'. Aplica por igual a Docentes y Gerencia.</small></div>';
+  }
+  ov.innerHTML='<div class="pp-box"><div class="pp-h"><div><b>📚 Protocolos y preguntas</b><small>Un solo lugar, por grupo. Lo que ya tenías cargado se conserva.</small></div><button class="pp-x" onclick="document.getElementById(\'ppOv\').remove()">✕</button></div>'
+    +'<div class="pp-tabs">'+PP_GRUPOS.map(function(x){return '<button class="'+(x[0]===g?'on':'')+'" onclick="abrirProtocolosPreguntas(\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</div>'
+    +'<div class="pp-reg"><b>🕐 Cuándo salen:</b> '+esc(PP_REGLA[g])+(esDG?' <b>Hoy: '+esc(ppFranjaTxt())+'.</b>':'')+'</div>'
+    +franja
+    +'<div class="pp-k"><div><b>'+filas.length+'</b>protocolos</div><div><b>'+(filas.length-nProb)+'</b>activos</div><div><b>'+nProb+'</b>por revisar</div></div>'
+    +(rowsH||'<div class="pp-e">No hay protocolos para este grupo todavía.</div>')
+    +'<div class="pp-f"><button class="p" onclick="ppAbrir(\'nuevo\')">+ Nuevo protocolo (otros roles)</button><button onclick="ppAbrir(\'personas\')">👤 Activar por persona</button></div>'
+    +'<small class="pp-s">Para subir un documento nuevo a la Biblioteca clínica usa la sección "Biblioteca de conocimiento".</small></div>';
+}
+window.ppGuardarFranja=function(){
+  var dias=[].slice.call(document.querySelectorAll('.pp-dias input:checked')).map(function(i){return Number(i.value);});
+  var ini=document.getElementById('ppIni').value,fin=document.getElementById('ppFin').value;
+  if(!dias.length){alert('Elige al menos un día.');return;}
+  if(!ini||!fin||ini>=fin){alert('La hora de inicio debe ser anterior a la de término.');return;}
+  franjaDG={dias:dias,ini:ini,fin:fin};
+  sedeRef('franjaDG').set(franjaDG).then(function(){ppPintar();});
+};
+window.ppAbrir=function(w,id){
+  if(w==='preg'){editarBancoPreguntas(id);}
+  else if(w==='act'){abrirActivacionPreguntas(id);}
+  else if(w==='ed'){if(typeof abrirCentroProtocolos==='function')abrirCentroProtocolos();setTimeout(function(){editarProtocoloAdmin(id);},600);}
+  else if(w==='banco'){abrirBancoPreguntas();}
+  else if(w==='nuevo'){if(typeof abrirCentroProtocolos==='function')abrirCentroProtocolos();setTimeout(function(){nuevoProtocoloAdmin();},600);}
+  else if(w==='personas'){abrirCentroProtocolos();setTimeout(function(){renderCentroProtocolos('persona');},600);}
+};
+
 window.abrirCentroProtocolos=function(){
   var ov=document.getElementById('centroProtOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='centroProtOv';
