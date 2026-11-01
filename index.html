@@ -10507,6 +10507,7 @@ window.gxpAgregar=function(p,dia){
     }
     var f2=c.fechaDe&&c.fechaDe[dia];
     if(f2&&tareaExcluidaPorAusencia(o,p,f2)&&!confirm(p+' está ausente en esa jornada. ¿Agregarla igual?'))return;
+    if(o.tipo!==rt){var fq=(c.perf&&c.perf.freq&&c.perf.freq[p])||{};o.costumbre=(fq[o.tipo]||0)>0;} // verde ★ si la persona la hace de costumbre
     window._propuestaActual.push(o);m.remove();gxpPintar();
   }));
   box.appendChild(row);m.appendChild(box);document.body.appendChild(m);
