@@ -10340,10 +10340,12 @@ function renderPropuestaTareas(){
 var GXP_AREA={autoclave:'Esterilización',temp_ester:'Esterilización',conductividad:'Esterilización',almacen_ester:'Esterilización',inst_recibido:'Esterilización',inst_lavado:'Esterilización',inst_empaque:'Esterilización',inst_secado:'Esterilización',entrega_esteril:'Esterilización',temp_pabellon:'Pabellón',pabellon:'Pabellón',pabellon_asig:'Pabellón',radiografias:'Rayos',dispensario_2:'Dispensario 2'};
 // Cada ronda de apertura pertenece a un área (y a un turno T1/T2 en Esterilización)
 var GXP_RONDA_AREA={sub_dispensario1:['Dispensario 1'],disp1_t2:['Dispensario 1'],sub_dispensario2:['Dispensario 2'],disp2_t2:['Dispensario 2'],est_lavado:['Esterilización','T2'],est_empaque:['Esterilización','T1'],est_autoclave:['Esterilización','T1'],est_entrega:['Esterilización','T1'],sub_pabellon:['Pabellón'],sub_clinica:['Clínica Privada'],sub_rayos:['Rayos'],rayos_t2:['Rayos']};
-function gxpBloquesArea(p,dia,area){return rdBloquesDe(p,dia).filter(function(b){return !area||b.area===area;});}
-function gxpCobertura(p,dia,area){
+// Subárea de Esterilización a la que pertenece cada tarea (T1 = empaque/autoclave/almacén/entrega · T2 = recepción/lavado/secado)
+var GXP_SUB={inst_recibido:'T2',inst_lavado:'T2',inst_secado:'T2',inst_empaque:'T1',autoclave:'T1',almacen_ester:'T1',entrega_esteril:'T1'};
+function gxpBloquesArea(p,dia,area,sub){return rdBloquesDe(p,dia).filter(function(b){return (!area||b.area===area)&&(!sub||!b.turno||b.turno===sub);});}
+function gxpCobertura(p,dia,area,sub){
   var r={am:false,pm:false};
-  gxpBloquesArea(p,dia,area).forEach(function(b){var x=rdPartes(b.horario);if(x[0]<840&&x[1]>465)r.am=true;if(x[1]>840&&x[0]<1200)r.pm=true;});
+  gxpBloquesArea(p,dia,area,sub).forEach(function(b){var x=rdPartes(b.horario);if(x[0]<840&&x[1]>465)r.am=true;if(x[1]>840&&x[0]<1200)r.pm=true;});
   return r;
 }
 function gxpRondaTipo(){return Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&r.tipoRegistro==='ronda';})[0]||'';}
@@ -10412,11 +10414,12 @@ function gxpTareas(hist){
     DIAS_H.forEach(function(dia){
       if(dia==='Sábado')return;
       var f=fechaDe[dia];
-      var hayEnArea=areaMap?equipo.some(function(p){return gxpBloquesArea(p,dia,areaMap).length>0;}):false;
+      var subT=GXP_SUB[tipo]||'';
+      var hayEnArea=areaMap?equipo.some(function(p){return gxpBloquesArea(p,dia,areaMap,subT).length>0;}):false;
       var area=hayEnArea?areaMap:'';
       function cands(req){
         return equipo.map(function(p){
-          var cov=gxpCobertura(p,dia,area);if(!cov.am&&!cov.pm)return null;
+          var cov=gxpCobertura(p,dia,area,area?subT:'');if(!cov.am&&!cov.pm)return null;
           var ab=f?ausJorn(p,f):{am:false,pm:false};
           var amOK=cov.am&&!ab.am,pmOK=cov.pm&&!ab.pm,j;
           if(req==='am'){if(!amOK)return null;j='am';}
