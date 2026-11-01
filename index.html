@@ -6489,7 +6489,7 @@ function renderEditorTurnoSemana(nombre){
     '</div>';
   }).join('');
   var opcDiasTarea=DIAS.map(function(d){return '<option value="'+d+'">'+d+'</option>';}).join('');
-  var opcTiposTarea=Object.keys(TIPOS).map(function(k){return '<option value="'+k+'">'+TIPOS[k].e+' '+TIPOS[k].l+(TIPOS_SIN_MEDICION[k]?' (solo asignación)':'')+'</option>';}).join('');
+  var opcTiposTarea=Object.keys(TIPOS).filter(tipoActivo).map(function(k){return '<option value="'+k+'">'+TIPOS[k].e+' '+TIPOS[k].l+(TIPOS_SIN_MEDICION[k]?' (solo asignación)':'')+'</option>';}).join('');
   Object.keys(rolesTecnicos||{}).filter(function(k){return rolesTecnicos[k]&&rolesTecnicos[k].nombre;}).forEach(function(k){var r=rolesTecnicos[k];opcTiposTarea+='<option value="'+k+'">'+esc(r.emoji||'🔧')+' '+esc(r.nombre)+(r.frecuencia==='semanal'?' (semanal)':r.frecuencia==='mensual'?' (mensual)':'')+'</option>';});
   var tareasSection='<p style="font-size:13px;font-weight:700;color:#93c5fd;margin:14px 0 8px">🔧 Tareas / dónde debe trabajar</p>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Esto asigna el PUESTO donde trabaja ese día. Las que dicen "solo asignación" no piden cantidad — el desempeño se mide con métricas aparte, independientes de la actividad.</div>'+
@@ -10444,10 +10444,13 @@ function gxpTareas(hist){
 }
 function gxpPintar(){
   var cont=document.getElementById('propuestaContenido');if(!cont)return;
+  // Red de seguridad: nada de lo que está apagado en «Asignaciones en uso» llega a la propuesta
+  window._propuestaActual=(window._propuestaActual||[]).filter(function(x){return tipoActivo(x.tipo);});
   var c=window._gxpCtx||{},propuesta=window._propuestaActual||[];
   var sem=semanas[W]||{};
+  var apag=Object.keys(tiposActivos||{}).filter(function(k){return tiposActivos[k]===false;}).map(function(k){return cfgTipo(k).l;});
   var h='<div class="gxp-info"><b>Cómo la arma:</b> mira las últimas <b>'+(c.perf?c.perf.semanas:0)+' semanas</b> para ver qué tareas hace cada persona de costumbre y cuántas. Solo asigna en días con <b>turno</b> y sin <b>ausencia</b>, y deja a cada uno cerca de su carga habitual.'
-    +(c.perf&&!c.perf.semanas?' <i>(Aún no hay semanas anteriores: se reparte por equilibrio.)</i>':'')+'</div>';
+    +(c.perf&&!c.perf.semanas?' <i>(Aún no hay semanas anteriores: se reparte por equilibrio.)</i>':'')+'<br><span style="font-size:11px">'+(apag.length?'⏻ Apagadas, no se proponen: '+esc(apag.join(', '))+'.':'⏻ No hay asignaciones apagadas (se pueden apagar en Admin → Asignaciones en uso).')+'</span></div>';
   if(!W||!sem.ini){cont.innerHTML=h+'<p class="empty">Confirma una semana primero.</p>';return;}
   if(!propuesta.length){cont.innerHTML=h+'<p class="empty">No hay tareas nuevas para proponer (ya están asignadas, o falta cargar los turnos de la semana).</p>';return;}
   var dias=c.DIAS_H;
@@ -10478,9 +10481,9 @@ window.gxpAgregar=function(p,dia){
   var am=cov.am&&!ab.am,pm=cov.pm&&!ab.pm;
   var jdef=am&&pm?'dia':am?'am':pm?'pm':'dia';
   var rt=gxpRondaTipo();
-  var tiposL=Object.keys(TIPOS_MEDIBLES).concat(Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&r.tipoRegistro!=='ronda'&&!TIPOS_MEDIBLES[k];}));
+  var tiposL=Object.keys(TIPOS_MEDIBLES).concat(Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.nombre&&r.tipoRegistro!=='ronda'&&!TIPOS_MEDIBLES[k];})).filter(tipoActivo);
   var opt=tiposL.filter(function(t,i,a){return a.indexOf(t)===i;}).map(function(t){return '<option value="'+esc(t)+'">'+esc(nombreRol(t))+'</option>';}).join('');
-  if(rt)opt='<option value="__ronda">🌅 Ronda de apertura de unidad</option>'+opt;
+  if(rt&&tipoActivo(rt))opt='<option value="__ronda">🌅 Ronda de apertura de unidad</option>'+opt;
   var unidades=rondaUnidades().map(function(u){return '<option value="'+u+'">'+esc(rondaCorto(u))+'</option>';}).join('');
   var m=mkOverlay();m.style.zIndex=9300;var box=document.createElement('div');box.className='obox';
   box.innerHTML='<h3>Agregar tarea · '+esc(p)+' · '+esc(dia)+'</h3>'
