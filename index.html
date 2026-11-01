@@ -10117,6 +10117,7 @@ window.mtFirmaAbrir=function(){
   };
 };
 // ── Informe semanal ──
+function fmtCorta(f){return (f||'').slice(5).split('-').reverse().join('-');}
 function mtSpark(arr){return arr.filter(function(v){return v!=null;}).map(function(v){return Math.round(v);}).join(' / ');}
 window.mtGenerar=function(){
   var id=document.getElementById('mtSem').value,sem=semanas[id];if(!sem){return;}
@@ -10127,7 +10128,7 @@ window.mtGenerar=function(){
     var hist=prev.map(function(e,i){return mtCalcular(e[1],T[i+1]);});
     cur.personas.forEach(function(p){p.tend=hist.map(function(h){var x=h.personas.filter(function(q){return q.nombre===p.nombre;})[0];return x?x.pct:null;}).concat([p.pct]);});
     var sinP=PP_GRUPOS.filter(function(g){return !preguntasOnSem(g[0],sem);}).map(function(g){return g[1].replace(/^\S+\s/,'');});
-    window._mtRep={semId:id,semIni:sem.ini,semFin:sem.fin,semNombre:sem.nombre||'',practica:!!document.getElementById('mtPrac').checked,sinPreguntas:sinP,equipo:cur.equipo,nOk:cur.nOk,nRiesgo:cur.nRiesgo,nBajo:cur.nBajo,cats:cur.cats,personas:cur.personas.map(function(p){return {nombre:p.nombre,asig:p.asig,cumpl:p.cumpl,pct:p.pct,meta:p.meta,piso:p.piso,estado:p.estado,tend:p.tend};})};
+    window._mtRep={semId:id,semIni:sem.ini,semFin:sem.fin,semNombre:sem.nombre||'',practica:!!document.getElementById('mtPrac').checked,sinPreguntas:sinP,equipo:cur.equipo,tendEquipo:hist.map(function(h){return h.equipo.pct;}).concat([cur.equipo.pct]),tendRot:prev.map(function(e){return 'Sem. '+fmtCorta(e[1].ini);}).concat(['Esta semana']),nOk:cur.nOk,nRiesgo:cur.nRiesgo,nBajo:cur.nBajo,cats:cur.cats,personas:cur.personas.map(function(p){return {nombre:p.nombre,asig:p.asig,cumpl:p.cumpl,pct:p.pct,meta:p.meta,piso:p.piso,estado:p.estado,tend:p.tend};})};
     var R=window._mtRep;
     if(!R.personas.length){res.innerHTML='<p class="ta-vacio">Esa semana no tiene asignaciones de registro para medir.</p>';return;}
     res.innerHTML='<div class="mt-kp"><div><b>'+(R.equipo.pct==null?'—':Math.round(R.equipo.pct)+'%')+'</b>Cumplimiento equipo</div><div><b>'+R.nOk+'/'+R.personas.length+'</b>En meta</div><div><b>'+R.nRiesgo+'</b>En riesgo</div><div><b>'+R.nBajo+'</b>Bajo el piso</div></div>'+
@@ -10157,60 +10158,122 @@ var INF_LOGO="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgM
 function mtPdfDoc(R){
   var J=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
   if(!J){alert('No se pudo cargar el generador de PDF. Revisa tu conexión.');return;}
-  var doc=new J('p','mm','a4'),W0=210,M=16,y=14;
-  function nueva(){doc.addPage();y=16;}
-  function chk(h){if(y+h>282)nueva();}
-  try{doc.addImage(INF_LOGO,'JPEG',M,y,52,15.1);}catch(e){}
-  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(15,37,64);doc.text('Informe de cumplimiento de metas',W0-M,y+6,{align:'right'});
-  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(90,100,115);
-  var rango=R.semIni.split('-').reverse().join('-')+' al '+R.semFin.split('-').reverse().join('-');
-  doc.text('Centro de Salud USS - Valdivia',W0-M,y+11,{align:'right'});
-  doc.text('Semana '+rango+(R.semNombre?' · '+R.semNombre:''),W0-M,y+15.5,{align:'right'});
-  y+=20;doc.setDrawColor(13,148,136);doc.setLineWidth(0.7);doc.line(M,y,W0-M,y);y+=6;
-  doc.setFontSize(8.5);doc.text('Folio '+R.folio+' · Emitido '+mtFechaHora(R.ts),M,y);
-  if(R.practica){doc.setFont('helvetica','bold');doc.setTextColor(180,83,9);doc.text('MEDICIÓN DE PRÁCTICA · no cuenta oficialmente',W0-M,y,{align:'right'});doc.setFont('helvetica','normal');}
-  y+=7;
-  // KPIs
-  var kp=[[R.equipo.pct==null?'—':Math.round(R.equipo.pct)+'%','Cumplimiento del equipo'],[R.nOk+'/'+R.personas.length,'Personas en meta'],[String(R.nRiesgo),'En riesgo'],[String(R.nBajo),'Bajo el piso']];
-  var bw=(W0-2*M-9)/4;
-  kp.forEach(function(k,i){var x=M+i*(bw+3);doc.setFillColor(241,245,249);doc.roundedRect(x,y,bw,16,2,2,'F');doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(15,37,64);doc.text(k[0],x+bw/2,y+7.5,{align:'center'});doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(90,100,115);doc.text(k[1],x+bw/2,y+12.5,{align:'center'});});
-  y+=22;
+  var doc=new J('p','mm','a4'),W0=210,M=16,CW=W0-2*M,y=14;
+  var NAVY=[15,37,64],TEAL=[13,148,136],GRIS=[90,100,115],TXT=[30,40,55];
   var COL={ok:[22,128,61],riesgo:[180,83,9],bajo:[185,28,28],na:[100,100,100]};
-  function titulo(t){chk(14);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(15,37,64);doc.text(t,M,y);y+=2;doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,y,W0-M,y);y+=5;}
-  function fila(cols,xs,o){o=o||{};chk(7);doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.fs||8.5);cols.forEach(function(c,i){var txt=String(c.t);if(c.col)doc.setTextColor.apply(doc,c.col);else doc.setTextColor(o.b?90:30,o.b?100:40,o.b?115:55);doc.text(txt,xs[i],y);});y+=o.h||6;}
-  titulo('Cumplimiento por asignación frente a la meta');
-  var X1=[M,M+66,M+112,M+138];
-  fila([{t:'Asignación'},{t:'Cumplido'},{t:'Meta / piso'},{t:'Estado'}],X1,{b:1,fs:7.5});
-  R.cats.forEach(function(c){
-    var pct=c.pct==null?0:c.pct;chk(8);
-    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(30,40,55);doc.text(c.l.substring(0,42),X1[0],y);
-    doc.setFillColor(226,232,240);doc.roundedRect(X1[1],y-3,22,3,1,1,'F');var cc=COL[c.estado];doc.setFillColor(cc[0],cc[1],cc[2]);doc.roundedRect(X1[1],y-3,Math.max(0.5,22*Math.min(100,pct)/100),3,1,1,'F');
-    doc.setDrawColor(15,37,64);doc.setLineWidth(0.4);doc.line(X1[1]+22*c.meta/100,y-4,X1[1]+22*c.meta/100,y+0.5);
-    doc.setTextColor(30,40,55);doc.text(c.cumpl+'/'+c.asig+' · '+(c.pct==null?'—':c.pct+'%'),X1[1]+24,y);
-    doc.text(c.meta+'% / '+c.piso+'%',X1[2],y);doc.setFont('helvetica','bold');doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(MT_EST_TXT[c.estado],X1[3],y);y+=7;
+  var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  function fechaLarga(ts){var d=new Date(ts||Date.now());return d.getDate()+' de '+MESES[d.getMonth()]+' de '+d.getFullYear();}
+  function fmt(f){return (f||'').split('-').reverse().join('-');}
+  function sp(t,cs){doc.setCharSpace(cs);return t;}
+  function cabecera(){
+    y=14;try{doc.addImage(INF_LOGO,'JPEG',M,y,52,15.1);}catch(e){}
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);
+    var tc='CENTRO DE SALUD USS - VALDIVIA';doc.setCharSpace(0);var wc=doc.getTextWidth(tc)+tc.length*1.2*0.3528*2.83;doc.setCharSpace(1.2);doc.text(tc,W0-M-wc+1.2,y+5);doc.setCharSpace(0);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,GRIS);
+    doc.text('Valdivia, '+fechaLarga(R.ts),W0-M,y+10.5,{align:'right'});
+    y+=19;doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,y,W0-M,y);y+=7;
+  }
+  function nueva(){doc.addPage();cabecera();}
+  function chk(h){if(y+h>276)nueva();}
+  function seccion(t){chk(16);y+=3;doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.4);doc.text(t.toUpperCase(),M,y);doc.setCharSpace(0);y+=2.2;doc.setDrawColor.apply(doc,TEAL);doc.setLineWidth(0.6);doc.line(M,y,W0-M,y);y+=6;}
+  function parrafo(t){doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor.apply(doc,TXT);var ln=doc.splitTextToSize(t,CW);chk(ln.length*4.6+3);doc.text(ln,M,y,{lineHeightFactor:1.35});y+=ln.length*4.9+2.5;}
+  cabecera();
+  // Título
+  doc.setFont('helvetica','bold');doc.setFontSize(12.5);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.6);
+  doc.text('INFORME DE CUMPLIMIENTO DE METAS',M,y);doc.setCharSpace(0);y+=5;
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,GRIS);
+  doc.text('Para: Gerencia · Centro de Salud USS - Valdivia · Semana '+fmt(R.semIni)+' al '+fmt(R.semFin)+(R.semNombre?' ('+R.semNombre+')':''),M,y);y+=4.2;
+  doc.text('Folio '+R.folio+' · Emitido '+mtFechaHora(R.ts),M,y);
+  if(R.practica){doc.setFont('helvetica','bold');doc.setTextColor(180,83,9);doc.text('MEDICIÓN DE PRÁCTICA · no cuenta oficialmente',W0-M,y,{align:'right'});doc.setFont('helvetica','normal');}
+  y+=8;
+  // Texto
+  var cats=(R.cats||[]).filter(function(c){return c.pct!=null;});
+  var asigT=0,cumT=0;(R.cats||[]).forEach(function(c){asigT+=c.asig||0;cumT+=c.cumpl||0;});
+  var nP=R.personas.length,pctEq=R.equipo.pct==null?null:Math.round(R.equipo.pct);
+  parrafo('Se informa a Gerencia · Centro de Salud USS - Valdivia el cumplimiento de las asignaciones de registro de acciones del equipo clínico correspondiente a la semana del '+fmt(R.semIni)+' al '+fmt(R.semFin)+'. El seguimiento compara las acciones registradas con las asignadas cada día (se excluyen ausencias aprobadas y feriados) y las contrasta con la meta y el piso definidos para cada asignación.');
+  var t2='En la semana se registraron '+cumT+' de '+asigT+' acciones asignadas'+(pctEq!=null?', lo que da un cumplimiento del equipo de '+pctEq+'%':'')+'. De las '+nP+' personas medidas, '+R.nOk+' ('+(nP?Math.round(R.nOk/nP*100):0)+'%) cumplieron su meta, '+R.nRiesgo+' quedaron en riesgo y '+R.nBajo+' bajo el piso.';
+  if(cats.length){var mej=cats.slice().sort(function(a,b){return b.pct-a.pct;})[0],rez=cats.slice().sort(function(a,b){return a.pct-b.pct;})[0];
+    t2+=mej===rez?' La asignación medida fue '+mej.l+' ('+mej.pct+'%).':' La asignación con mejor cumplimiento fue '+mej.l+' ('+mej.pct+'%) y la más rezagada, '+rez.l+' ('+rez.pct+'%, meta '+rez.meta+'%).';}
+  parrafo(t2);
+  var tE=R.tendEquipo||[];
+  var bajos=R.personas.filter(function(p){return p.estado==='bajo';}).map(function(p){return p.nombre+' ('+p.pct+'%)';});
+  var t3='';
+  if(tE.length>=2&&tE[tE.length-2]!=null&&tE[tE.length-1]!=null){var a=Math.round(tE[tE.length-2]),b=Math.round(tE[tE.length-1]);t3+='Respecto de la semana anterior, el cumplimiento del equipo '+(b>a?'subió de '+a+'% a '+b+'%':b<a?'bajó de '+a+'% a '+b+'%':'se mantuvo en '+b+'%')+'. ';}
+  if(bajos.length)t3+='Quedaron bajo el piso: '+bajos.join(', ')+'.';else if(R.nBajo===0)t3+='Ninguna persona quedó bajo el piso.';
+  if(t3)parrafo(t3);
+  y+=1;
+  // Resultado
+  seccion('Resultado');
+  function filaRes(txt,val,col,bold){chk(7);doc.setFillColor.apply(doc,col);doc.rect(M+1,y-3,2.6,2.6,'F');doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(9.5);doc.setTextColor.apply(doc,TXT);doc.text(txt,M+7,y);doc.text(String(val),W0-M-1,y,{align:'right'});y+=2.5;doc.setDrawColor(226,232,240);doc.setLineWidth(0.2);doc.line(M,y,W0-M,y);y+=4.5;}
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.setCharSpace(0.8);doc.text('INDICADOR',M,y);doc.text('VALOR',W0-M-1,y,{align:'right'});doc.setCharSpace(0);y+=2.5;doc.setDrawColor(150,160,175);doc.setLineWidth(0.3);doc.line(M,y,W0-M,y);y+=5;
+  filaRes('Cumplimiento del equipo',pctEq==null?'—':pctEq+'%',TEAL,true);
+  filaRes('Acciones registradas / asignadas',cumT+' / '+asigT,[190,196,205]);
+  filaRes('Personas en meta',R.nOk+' de '+nP,COL.ok);
+  filaRes('Personas en riesgo (entre el piso y la meta)',R.nRiesgo,COL.riesgo);
+  filaRes('Personas bajo el piso',R.nBajo,COL.bajo);
+  // Gráficos
+  seccion('Gráficos');
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);doc.text('Cumplimiento por asignación frente a la meta (la línea marca la meta)',M,y);y+=6;
+  var BX=M+68,BW=80;
+  (R.cats||[]).forEach(function(c){
+    chk(8);var pct=c.pct==null?0:c.pct,cc=COL[c.estado]||COL.na;
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,TXT);doc.text(c.l.substring(0,42),M,y);
+    doc.setFillColor(226,232,240);doc.roundedRect(BX,y-3.4,BW,4.2,1,1,'F');
+    doc.setFillColor.apply(doc,cc);doc.roundedRect(BX,y-3.4,Math.max(0.8,BW*Math.min(100,pct)/100),4.2,1,1,'F');
+    doc.setDrawColor.apply(doc,NAVY);doc.setLineWidth(0.5);doc.line(BX+BW*c.meta/100,y-4.4,BX+BW*c.meta/100,y+1.4);
+    doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,TXT);doc.text(c.pct==null?'—':c.pct+'%',W0-M,y,{align:'right'});y+=8;
   });
-  y+=3;titulo('Cumplimiento por persona');
-  var X2=[M,M+62,M+88,M+112,M+146];
-  fila([{t:'Persona'},{t:'Cumplido'},{t:'Meta / piso'},{t:'Últimas semanas (%)'},{t:'Estado'}],X2,{b:1,fs:7.5});
-  R.personas.forEach(function(p){
-    chk(7);doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(30,40,55);
-    doc.text(p.nombre.substring(0,34),X2[0],y);doc.text(p.cumpl+'/'+p.asig+' · '+p.pct+'%',X2[1],y);doc.text(p.meta+'% / '+p.piso+'%',X2[2],y);doc.text(mtSpark(p.tend||[p.pct]),X2[3],y);
-    var cc=COL[p.estado];doc.setFont('helvetica','bold');doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(MT_EST_TXT[p.estado],X2[4],y);y+=6;
-  });
-  y+=4;chk(34);
-  doc.setFont('helvetica','italic');doc.setFontSize(7.5);doc.setTextColor(100,110,125);
-  var nota='Cumplimiento = acciones registradas ÷ acciones asignadas (se excluyen ausencias aprobadas y feriados). Cumple: igual o sobre la meta · En riesgo: entre el piso y la meta · Bajo el piso: bajo el mínimo. Las asignaciones con cantidad (rayos, atenciones, instrumental) no tienen meta por ahora.'+(R.sinPreguntas&&R.sinPreguntas.length?' Semana sin preguntas para: '+R.sinPreguntas.join(', ')+'.':'');
-  var ln=doc.splitTextToSize(nota,W0-2*M);doc.text(ln,M,y);y+=ln.length*3.6+8;
-  chk(36);
+  y+=2;chk(26);
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);doc.text('Distribución de las personas según su resultado',M,y);y+=4.5;
+  var tot=Math.max(1,nP),xx=M,seg=[[R.nOk,COL.ok,'Cumplen la meta'],[R.nRiesgo,COL.riesgo,'En riesgo'],[R.nBajo,COL.bajo,'Bajo el piso']];
+  seg.forEach(function(s){var w=CW*s[0]/tot;if(w>0){doc.setFillColor.apply(doc,s[1]);doc.rect(xx,y,w,6,'F');xx+=w;}});y+=10;
+  var lx=M;seg.forEach(function(s){doc.setFillColor.apply(doc,s[1]);doc.rect(lx,y-2.6,3,3,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor.apply(doc,TXT);var t=s[2]+': '+s[0]+' ('+Math.round(s[0]/tot*100)+'%)';doc.text(t,lx+4.5,y);lx+=doc.getTextWidth(t)+14;});y+=8;
+  if(tE.length>=2){
+    chk(40);doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);doc.text('Evolución del cumplimiento del equipo (semanas recientes)',M,y);y+=4;
+    var n=tE.length,bw2=Math.min(30,(CW-4)/n-6),H=24,base=y+H;
+    doc.setDrawColor(226,232,240);doc.setLineWidth(0.2);doc.line(M,base,W0-M,base);
+    var rotulos=R.tendRot||[];
+    tE.forEach(function(v,i){var x=M+6+i*((CW-12)/n)+((CW-12)/n-bw2)/2,h=v==null?0:H*Math.min(100,v)/100;
+      doc.setFillColor.apply(doc,i===n-1?TEAL:[148,163,184]);if(h>0)doc.rect(x,base-h,bw2,h,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor.apply(doc,TXT);doc.text(v==null?'—':Math.round(v)+'%',x+bw2/2,base-h-1.5,{align:'center'});
+      doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.text(rotulos[i]||(i===n-1?'Esta semana':'Sem. -'+(n-1-i)),x+bw2/2,base+4,{align:'center'});});
+    y=base+9;
+  }
+  // Tablas
+  function tabla(heads,xs,aligns){chk(10);doc.setFillColor.apply(doc,NAVY);doc.rect(M,y-4.2,CW,6.4,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);heads.forEach(function(h,i){doc.text(h,aligns[i]==='r'?xs[i]:xs[i],y,{align:aligns[i]==='r'?'right':'left'});});y+=6.2;}
+  var zebra=0;
+  function celdas(vals,xs,aligns,cols,bold){chk(7);if(zebra++%2===0){doc.setFillColor(241,245,249);doc.rect(M,y-4.2,CW,6,'F');}doc.setFontSize(8.5);vals.forEach(function(v,i){doc.setFont('helvetica',(cols&&cols[i])||bold?'bold':'normal');doc.setTextColor.apply(doc,(cols&&cols[i])||TXT);doc.text(String(v),xs[i],y,{align:aligns[i]==='r'?'right':'left'});});y+=6;}
+  seccion('Cumplimiento por asignación');
+  var XA=[M+2,M+84,M+104,M+122,M+140],AA=['l','r','r','r','l'];
+  tabla(['Asignación','Acciones','% cumplido','Meta / piso','Estado'],[M+2,M+92,M+112,M+138,M+142],['l','r','r','r','l']);
+  XA=[M+2,M+92,M+112,M+138,M+142];zebra=0;
+  (R.cats||[]).forEach(function(c){var cc=COL[c.estado]||COL.na;celdas([c.l.substring(0,50),c.cumpl+' / '+c.asig,c.pct==null?'—':c.pct+'%',c.meta+'% / '+c.piso+'%',MT_EST_TXT[c.estado]||''],XA,['l','r','r','r','l'],[null,null,null,null,cc]);});
+  y+=3;
+  seccion('Cumplimiento por persona');
+  var XP=[M+2,M+70,M+90,M+114,M+146];
+  tabla(['Persona','Acciones','% cumplido','Meta / piso','Últimas semanas · estado'],[M+2,M+74,M+94,M+120,M+124],['l','r','r','r','l']);
+  XP=[M+2,M+74,M+94,M+120,M+124];zebra=0;
+  R.personas.forEach(function(p){var cc=COL[p.estado]||COL.na;
+    chk(7);if(zebra++%2===0){doc.setFillColor(241,245,249);doc.rect(M,y-4.2,CW,6,'F');}
+    doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor.apply(doc,TXT);doc.text(p.nombre.substring(0,34),XP[0],y);
+    doc.text(p.cumpl+' / '+p.asig,XP[1],y,{align:'right'});doc.text(p.pct+'%',XP[2],y,{align:'right'});doc.text(p.meta+'% / '+p.piso+'%',XP[3],y,{align:'right'});
+    doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.text(mtSpark(p.tend||[p.pct]),XP[4],y);
+    doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,cc);doc.text(MT_EST_TXT[p.estado]||'',W0-M-2,y,{align:'right'});y+=6;});
+  y+=5;chk(14);
+  doc.setFont('helvetica','italic');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);
+  var nota='Cumplimiento = acciones registradas ÷ acciones asignadas (se excluyen ausencias aprobadas y feriados). Cumple: igual o sobre la meta · En riesgo: entre el piso y la meta · Bajo el piso: bajo el mínimo. Las asignaciones con cantidad (rayos, atenciones, instrumental) no tienen meta por ahora.'+(R.sinPreguntas&&R.sinPreguntas.length?' Esta semana no hubo preguntas para: '+R.sinPreguntas.join(', ')+'.':'');
+  var ln=doc.splitTextToSize(nota,CW);doc.text(ln,M,y);y+=ln.length*3.6+8;
+  chk(40);
   var cx=W0/2;
-  if(R.firmado){
-    if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-26,y,52,18);}catch(e){}}
-    y+=18;
-  }else y+=14;
+  if(R.firmado){if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-26,y,52,18);}catch(e){}}y+=18;}else y+=14;
   doc.setDrawColor(30,30,30);doc.setLineWidth(0.3);doc.line(cx-40,y,cx+40,y);y+=4.5;
   doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(20,20,20);doc.text('Patricio Baeza Aguilar',cx,y,{align:'center'});y+=4.5;
   doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.text('Enfermero Jefe',cx,y,{align:'center'});y+=4.2;
-  doc.setFontSize(7.5);doc.setTextColor(100,110,125);doc.text('Centro de Salud USS - Valdivia · '+R.folio+(R.firmado?' · firmado '+mtFechaHora(R.ts):''),cx,y,{align:'center'});
+  doc.setFontSize(8);doc.setTextColor.apply(doc,GRIS);doc.text('Centro de Salud USS - Valdivia',cx,y,{align:'center'});y+=3.8;
+  doc.setFontSize(7.5);doc.text(R.folio+(R.firmado?' · firmado '+mtFechaHora(R.ts):''),cx,y,{align:'center'});
+  // Pie de página
+  var NP=doc.getNumberOfPages();
+  for(var i=1;i<=NP;i++){doc.setPage(i);doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,287,W0-M,287);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.text('Centro de Salud USS - Valdivia · Documento de uso interno',M,291);doc.text('Página '+i+' de '+NP,W0-M,291,{align:'right'});}
   doc.save('Informe_cumplimiento_'+R.semIni+'_'+R.folio+'.pdf');
 }
 function mtHistorial(){
