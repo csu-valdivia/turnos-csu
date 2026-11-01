@@ -896,6 +896,20 @@ body.gx-light .tccf button.si{color:#fff!important}
 .hrs-panel{background:rgba(13,148,136,.08);border:1px solid rgba(13,148,136,.3);border-radius:10px;padding:10px;margin-bottom:10px;font-size:12px}
 .hrs-panel p{font-size:10px;opacity:.65;margin:3px 0 6px}.hrs-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:5px 0;border-top:1px solid rgba(128,128,128,.2)}
 .hrs-row .btn-ac{white-space:nowrap;font-size:11px;padding:6px 10px}
+
+.ta-g{font-size:10px;font-weight:800;letter-spacing:.5px;color:#0d9488;margin:12px 0 2px}
+.ta-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid #e2ebf3}.ta-row.off .ta-n{opacity:.45}
+.ta-n{flex:1}.ta-n b{display:block;font-size:13px}.ta-n small{font-size:10px;color:#64748b}
+.ta-tag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;background:#ccfbf1;color:#0f766e;white-space:nowrap}.ta-tag.c{background:#dbeafe;color:#1d4ed8}.ta-tag.o{background:#f1f5f9;color:#64748b}
+.ta-vacio{font-size:11px;color:#64748b;margin:6px 0}
+.ta-tb{width:100%;border-collapse:collapse;font-size:12px}.ta-tb th{text-align:left;font-size:10px;color:#64748b;padding:3px 4px}.ta-tb td{padding:5px 4px;border-top:1px solid #e2ebf3}.ta-d{color:#b45309;font-size:10px;font-weight:700}
+.ac-eq{background:#fff;border:1px solid #cfe0ee;border-radius:12px;padding:10px;margin-bottom:8px}.ac-eq b{font-size:13px}
+.ac-n{display:flex;align-items:center;gap:14px;margin:6px 0}.ac-n span{font-size:28px;font-weight:800;min-width:50px;text-align:center}
+.ac-n button{width:42px;height:42px;border-radius:10px;border:none;background:#e2f4f1;color:#0f766e;font-size:22px;font-weight:800;cursor:pointer}
+.ac-eq small{font-size:11px;color:#64748b}.ac-w{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:8px;padding:6px 8px;font-size:11px;margin-top:6px}
+.ac-rec{background:#ecfdf5;border:1px solid #86efac;color:#166534;border-radius:10px;padding:8px 10px;font-size:12px;margin-bottom:8px}
+.ac-modo{display:flex;gap:8px;margin-bottom:10px}.ac-modo button{flex:1;padding:10px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#334155;font-family:inherit;font-size:13px;cursor:pointer}.ac-modo button.on{background:#0d9488;color:#fff;border-color:#0d9488}
+.ac-go{width:100%;padding:13px;border:none;border-radius:12px;background:#2563eb;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1450,6 +1464,12 @@ body.gx-light .tccf button.si{color:#fff!important}
               <button class="btn-add" id="addNombreBtn" style="width:auto;margin-top:0;padding:8px 14px">+</button>
             </div>
             <div class="ilist" id="nombresList"></div>
+          </div>
+
+          <div class="asec">
+            <p class="asec-title">🎛 Asignaciones en uso</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">Enciende o apaga cada asignación (autoclave, rayos, temperaturas, rondas…). Ves cuáles cuentan cantidad y los cierres diarios del autoclave.</p>
+            <button class="btn-add" onclick="abrirAsignacionesEnUso()" style="background:linear-gradient(135deg,#0d9488,#2563eb)">🎛 Abrir Asignaciones en uso</button>
           </div>
 
           <div class="asec">
@@ -2185,6 +2205,7 @@ function actualizarTiposTarea(){
     opt.textContent=r.emoji+' '+r.nombre;
     sel.appendChild(opt);
   });
+  try{aplicarTiposActivosUI();}catch(e){}
 }
 
 function jornadaLabel(j){
@@ -2626,11 +2647,12 @@ var cobHorEl=document.getElementById('cobHor');COB_HOR.forEach(function(h){var o
 // Antes estaba fuera de esta lista, así que una vacación pedida hoy para noviembre quedaba guardada
 // dentro de la semana activa de HOY (la única que existía en ese momento) y por eso aparecía como si
 // fuera de la semana actual — y lo mismo le pasaría a cualquier permiso pedido para semanas futuras.
-var SEDE_LEVEL_FIELDS=['nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','liderazgo','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin','solicitudesMediaJornada','premioConfig','salidas','recuperaciones','franjaDG'];
+var SEDE_LEVEL_FIELDS=['tiposActivos','cierreAutoclave','autoclaveCierreDesde','nombres','correos','biblioteca','fichaProgreso','logros','alertasCapacitacion','planPabellon','cumpleanos','accesos','internos','bancoActivo','anuncios','anunciosCapacitacion','kpiSemanal','invCatalogo','invStock','invMovimientos','invAsignaciones','invLotes','invReas','supervisores','pinSupervisor','conductividad','regAutoclave','regTemperatura','regAseo','refrigeradores','rolesTecnicos','regCustom','induccion','rolPersona','liderazgo','planEstudio','borradores','rankPesos','factorIndirecto','horasIndirectasDia','horaAvisoTareas','tiemposCalibrados','feriados','reportesMensuales','dotacionData','ponderaActiva','produccionAdmin','rankingAdmin','fichasEquipo','solicitudesMantencion','fichaProgresoAdmin','fichaProgresoDocente','fichaProgresoGerencia','rankingDocente','pesosAdmin','secretarias','bibliotecaAdmin','metricasAdmin','gruposModulo','docentes','ventanasHorarias','recesoAcademico','colacionManual','gerenciaEquipo','rankingGerencia','ausencias','horariosExtra','supervisionAdmin','tareasAdmin','pesosCumplAdmin','solicitudesMediaJornada','premioConfig','salidas','recuperaciones','franjaDG'];
 var supervisionData={};
 var ponderaActiva=false; // interruptor: cuando true, las evaluaciones cuentan para las notas oficiales
 var supervisores={},pinSupervisor='',conductividad={};
 var supervisorActivo='',supervisorAreas=[];
+var tiposActivos={},tareasRaw={},cierreAutoclave={},autoclaveCierreDesde='';
 var regAutoclave={},regTemperatura={},regAseo={},refrigeradores={},rolesTecnicos={},regCustom={},regProduccion={},regPedido={},regPabellonAsig={},regLecturaTareas={},historialGanadores={},premiosGanadores={},telefonosEquipo={};
 var sugerencias={};
 var invCatalogo={},invStock={},invMovimientos={},invAsignaciones={},invLotes={},invReas={},rondasApertura={};
@@ -2714,7 +2736,7 @@ function attach(){
     primerCargaBloques=false;
     ultimosBloquesCount=totalAhora;
   });
-  on('tareas',function(v){tareas=v;renderTareasList();if(curNombre)renderMisTurnos(curNombre);if(typeof actualizarBotonConductividad==='function')actualizarBotonConductividad();});
+  on('tareas',function(v){tareasRaw=v||{};tareas=filtrarTareasActivas(tareasRaw);renderTareasList();if(curNombre)renderMisTurnos(curNombre);if(typeof actualizarBotonConductividad==='function')actualizarBotonConductividad();});
   on('pendientes',function(v){pendientes=v;renderPendientes();renderPendList();checkAlerta();});
   on('asistencia',function(v){asistencia=v;renderAsist();renderPanorama();if(curNombre)renderMisTurnos(curNombre);});
   on('notas',function(v){
@@ -2762,6 +2784,14 @@ function attach(){
   on('recesoAcademico',function(v){if(v&&typeof v==='object')recesoAcademico=v;if(document.getElementById('recesoPanel'))renderRecesoConfig();});
   on('colacionManual',function(v){colacionManual=v||{};});
   on('gerenciaEquipo',function(v){gerenciaEquipo=v||{};});
+  on('tiposActivos',function(v){tiposActivos=v||{};tareas=filtrarTareasActivas(tareasRaw);try{aplicarTiposActivosUI();renderTareasList();if(curNombre)renderMisTurnos(curNombre);if(document.getElementById('taOv'))taPintar();}catch(e){}});
+  on('cierreAutoclave',function(v){cierreAutoclave=v||{};try{if(curNombre)renderMisTurnos(curNombre);if(document.getElementById('taOv'))taPintar();}catch(e){}});
+  on('autoclaveCierreDesde',function(v){
+    if(typeof v==='string'&&v){autoclaveCierreDesde=v;return;}
+    // Primera vez: el cierre de cargas rige desde hoy; los días anteriores siguen medidos como antes
+    autoclaveCierreDesde=hoyStr();
+    try{sRef('autoclaveCierreDesde').transaction(function(cur){return cur||hoyStr();});}catch(e){}
+  });
   on('franjaDG',function(v){if(v&&v.ini&&v.fin&&Array.isArray(v.dias))franjaDG=v;});
   on('tiemposCalibrados',function(v){if(v&&typeof v==='object'){Object.keys(v).forEach(function(tp){if(TIEMPOS_PROCESO[tp]&&typeof v[tp]==='number')TIEMPOS_PROCESO[tp].h=v[tp];});}});
   on('feriados',function(v){feriados=v||{};renderFeriadosList();renderHeatMap();verificar();renderPanorama();});
@@ -6704,7 +6734,7 @@ function renderMisTurnos(nombre){
         if(ROLES_TECNICOS_BASE[t.tipo]){
           var r=ROLES_TECNICOS_BASE[t.tipo];
           var dEt=(t.dia&&t.dia!==diaHoyRol&&({botiquin_pab:1,control_bio:1,bolso_azul:1}[t.tipo]))?' <span style="font-size:10px;color:#94a3b8">· asignado '+t.dia+'</span>':'';
-          return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+dEt+'</span>'+estBadge+'</button>';
+          return '<button onclick="'+r.fn+'(\''+t.tipo+'\')" style="'+rowStyle+'"><span style="flex:1">'+r.emoji+' '+r.label+' '+jornadaLabel(t.jornada)+dEt+'</span>'+estBadge+'</button>'+(t.tipo==='autoclave'?'<button onclick="abrirCierreAutoclave()" style="'+rowStyle+';background:rgba(13,148,136,.15)"><span style="flex:1">🔒 Cierre de jornada · total de cargas</span><span style="font-size:10px;color:#0f766e">Al terminar tu turno</span></button>':'');
         } else {
           var rc=rolesTecnicos[t.tipo];
           return '<button onclick="abrirRegCustom(\''+t.tipo+'\',\''+esc(t.sector||'').replace(/'/g,'')+'\')" style="'+rowStyle+'"><span style="flex:1">'+esc(rc.emoji)+' '+esc(rc.nombre)+(t.sector?' · '+esc(String(t.sector).replace(/^\S+\s/,'')):'')+' '+jornadaLabel(t.jornada)+((t.dia&&t.dia!==diaHoyRol&&rc.frecuencia==='semanal')?' <span style="font-size:10px;color:#94a3b8">· asignado '+t.dia+'</span>':'')+'</span>'+estBadge+'</button>';
@@ -9755,6 +9785,122 @@ window.devolCargar=function(k){
   sRef('bloques').push({dia:diaDeDate(dv.fecha),nombre:a.nombre,area:dv.servicio,horario:_hhmm(dv.ini)+'–'+_hhmm(dv.fin)}).then(function(){sRef('ausencias/'+k+'/devolucion/cargada').set(true);});
 };
 
+
+// ═══════════ ASIGNACIONES EN USO + CIERRE DE AUTOCLAVE ═══════════
+function tipoActivo(t){return !tiposActivos||tiposActivos[t]!==false;}
+function filtrarTareasActivas(v){var o={};Object.keys(v||{}).forEach(function(k){var t=v[k];if(t&&t.tipo&&!tipoActivo(t.tipo))return;o[k]=t;});return o;}
+// Oculta en el selector de "Tipo" las asignaciones apagadas
+function aplicarTiposActivosUI(){
+  var sel=document.getElementById('tTip');if(!sel)return;
+  Array.prototype.forEach.call(sel.options,function(o){if(!o.value)return;var on=tipoActivo(o.value);o.hidden=!on;o.disabled=!on;});
+  if(sel.value&&!tipoActivo(sel.value))sel.value='';
+}
+// Catálogo: [clave, etiqueta, qué mide, tipo]  (c = cantidad, v = valor, k = hecho/no hecho, n = sin cumplimiento)
+var TA_CATALOGO=[
+ ['CONTABLES · registran cantidad',[
+  ['autoclave','🔥 Autoclave','cargas por equipo (cierre de jornada)','c'],
+  ['radiografias','🩻 Radiografías','N° de radiografías','c'],
+  ['dispensario_2','💊 Dispensario 2° piso','N° de atenciones','c'],
+  ['dispensario_3','💊 Dispensario 3° piso','N° de atenciones','c'],
+  ['apoyo_clinico','🩺 Apoyo clínico','pacientes (meta 4 diarios)','c'],
+  ['inst_recibido','📥 Recepción de contaminado','piezas · sin cumplimiento','n'],
+  ['inst_lavado','🧼 Lavado de instrumental','piezas · sin cumplimiento','n'],
+  ['inst_secado','💨 Secado de instrumental','piezas · sin cumplimiento','n'],
+  ['inst_empaque','📦 Empaque de instrumental','paquetes · sin cumplimiento','n'],
+  ['entrega_esteril','📤 Entrega de material estéril','estudiantes · sin cumplimiento','n']]],
+ ['CON REGISTRO · valor o hecho / no hecho',[
+  ['temp_ester','🌡️ Temp. Esterilización','valor °C · diario','v'],
+  ['temp_pabellon','🔵 Temp. Pabellón','valor °C · diario','v'],
+  ['temp_box','🚪 Temp. Box','valor °C · diario','v'],
+  ['temp_refri','🧊 Temp. Refrigeradores','valor °C · AM y PM','v'],
+  ['conductividad','💧 Conductividad','hecho / no hecho','k'],
+  ['reas','♻️ REAS','semanal','k'],
+  ['aseo','🧹 Aseo semanal','semanal','k'],
+  ['pedido','🟠 Pedido semanal','semanal · antes de las 13:00','k'],
+  ['botiquin_pab','💊 Botiquín de pabellón','semanal','k'],
+  ['bolso_azul','🔑 Bolso clave azul','semanal','k'],
+  ['control_bio','🧬 Control biológico','semanal','k'],
+  ['pabellon_asig','🏥 Pabellón asignado','pre y post','k'],
+  ['pabellon','🔵 Pabellón','puesto','k'],
+  ['almacen_ester','🗄️ Almacenamiento de material','hecho / no hecho','k'],
+  ['clinica_privada','🏷️ Clínica privada','hecho / no hecho','k']]]
+];
+function taConteo(){var c={};Object.values(tareasRaw||{}).forEach(function(t){if(t&&t.tipo)c[t.tipo]=(c[t.tipo]||0)+1;});return c;}
+function taFila(k,lab,mide,tp,cnt){
+  var on=tipoActivo(k);
+  var tag=tp==='c'?'<span class="ta-tag c">cantidad</span>':tp==='n'?'<span class="ta-tag o">sin cumplimiento</span>':tp==='v'?'<span class="ta-tag">valor</span>':'<span class="ta-tag">check</span>';
+  return '<div class="ta-row'+(on?'':' off')+'"><button class="pp-sw'+(on?' on':'')+'" onclick="taToggle(\''+k+'\','+(on?'false':'true')+')" title="'+(on?'En uso':'Apagada')+'"><i></i></button><div class="ta-n"><b>'+lab+'</b><small>'+esc(mide)+(cnt?' · '+cnt+' asignada'+(cnt>1?'s':'')+' en la semana':'')+'</small></div>'+tag+'</div>';
+}
+window.taToggle=function(k,on){
+  if(on){sRef('tiposActivos/'+k).remove();}
+  else{
+    var n=taConteo()[k]||0;
+    if(n&&!confirm('Hay '+n+' tarea'+(n>1?'s':'')+' de este tipo asignada'+(n>1?'s':'')+' esta semana. Al apagarla dejan de verse, de proponerse y de medirse (no se borran; al encenderla vuelven). ¿Apagar?'))return;
+    sRef('tiposActivos/'+k).set(false);
+  }
+};
+window.abrirAsignacionesEnUso=function(){
+  var ov=document.getElementById('taOv');
+  if(!ov){ov=document.createElement('div');ov.id='taOv';ov.className='ppov';document.body.appendChild(ov);}
+  taPintar();
+};
+function taPintar(){
+  var ov=document.getElementById('taOv');if(!ov)return;
+  var cnt=taConteo(),h='';
+  TA_CATALOGO.forEach(function(g){h+='<div class="ta-g">'+g[0]+'</div>'+g[1].map(function(r){return taFila(r[0],r[1],r[2],r[3],cnt[r[0]]);}).join('');});
+  var cu=Object.keys(rolesTecnicos||{}).filter(function(k){return rolesTecnicos[k]&&rolesTecnicos[k].nombre;});
+  if(cu.length)h+='<div class="ta-g">ROLES PROPIOS</div>'+cu.map(function(k){var r=rolesTecnicos[k];return taFila(k,(r.emoji||'🔧')+' '+esc(r.nombre),(r.tipoRegistro==='ronda'?'ronda':'registro')+' · '+(r.frecuencia||'diaria'),'k',cnt[k]);}).join('');
+  ov.innerHTML='<div class="pp-box"><div class="pp-h"><div><b>🎛 Asignaciones en uso</b><small>Apaga lo que no usas: desaparece al asignar, de la propuesta, de «Mi día» y del cumplimiento. Lo ya registrado se conserva.</small></div><button class="pp-x" onclick="document.getElementById(\'taOv\').remove()">✕</button></div>'+h+taCierresHtml()+'</div>';
+}
+function taCierresHtml(){
+  var fs=Object.keys(cierreAutoclave||{}).sort().reverse().slice(0,7);
+  var h='<div class="ta-g">🔥 CIERRES DE AUTOCLAVE · últimos días</div>';
+  if(!fs.length)return h+'<p class="ta-vacio">Aún no hay cierres. Se registran al terminar la jornada.</p>';
+  return h+'<table class="ta-tb"><tr><th>Día</th><th>A1</th><th>A2</th><th>A3</th><th>Total</th><th>Quién</th></tr>'+fs.map(function(f){
+    var cs=autoclaveCierresDe(f),t={1:0,2:0,3:0};cs.forEach(function(c){[1,2,3].forEach(function(e){t[e]+=Number((c.a||{})[e])||0;});});
+    var fi={1:autoclaveFichasDe(f,1),2:autoclaveFichasDe(f,2),3:autoclaveFichasDe(f,3)};
+    function cel(e){return t[e]+(fi[e]!==t[e]?' <span class="ta-d" title="Fichas detalladas: '+fi[e]+'">≠'+fi[e]+'</span>':'');}
+    return '<tr><td>'+esc(f.slice(8,10)+'-'+f.slice(5,7))+'</td><td>'+cel(1)+'</td><td>'+cel(2)+'</td><td>'+cel(3)+'</td><td><b>'+(t[1]+t[2]+t[3])+'</b></td><td>'+cs.map(function(c){return esc(String(c.quien||'').split(' ')[0])+(c.modo==='traspaso'?' ↪':'');}).join(', ')+'</td></tr>';
+  }).join('')+'</table><p class="ta-vacio">≠ = el total declarado no coincide con las fichas detalladas de ese equipo. ↪ = entregó al turno de la tarde.</p>';
+}
+function autoclaveCierresDe(fecha){return Object.values((cierreAutoclave||{})[fecha]||{}).filter(function(c){return c&&c.quien;});}
+function autoclaveFichasDe(fecha,eq){return Object.values(regAutoclave||{}).filter(function(r){return r&&r.fecha===fecha&&String(r.equipo)===String(eq);}).length;}
+function autoclaveTotalTxt(c){var a=c.a||{};return 'A1 '+(a[1]||0)+' · A2 '+(a[2]||0)+' · A3 '+(a[3]||0);}
+// ── Cierre de jornada del autoclave ──
+window._acC={1:0,2:0,3:0};window._acModo='termino';window._acKey=null;
+window.abrirCierreAutoclave=function(){
+  if(!curNombre){alert('Selecciona tu nombre primero.');return;}
+  var f=hoyStr(),cs=Object.entries((cierreAutoclave||{})[f]||{});
+  var mio=cs.filter(function(e){return e[1]&&e[1].quien===curNombre;})[0];
+  window._acKey=mio?mio[0]:null;
+  window._acC=mio?{1:Number((mio[1].a||{})[1])||0,2:Number((mio[1].a||{})[2])||0,3:Number((mio[1].a||{})[3])||0}:{1:0,2:0,3:0};
+  window._acModo=mio&&mio[1].modo?mio[1].modo:'termino';
+  var ov=document.getElementById('acOv');if(!ov){ov=document.createElement('div');ov.id='acOv';ov.className='ppov';document.body.appendChild(ov);}
+  acPintar();
+};
+function acOtros(){var f=hoyStr();return Object.entries((cierreAutoclave||{})[f]||{}).filter(function(e){return e[1]&&e[1].quien&&e[0]!==window._acKey&&e[1].quien!==curNombre;}).map(function(e){return e[1];});}
+function acPintar(){
+  var ov=document.getElementById('acOv');if(!ov)return;
+  var f=hoyStr(),otros=acOtros(),C=window._acC;
+  var tOtros={1:0,2:0,3:0};otros.forEach(function(c){[1,2,3].forEach(function(e){tOtros[e]+=Number((c.a||{})[e])||0;});});
+  var eq=[1,2,3].map(function(e){
+    var fi=autoclaveFichasDe(f,e),tot=tOtros[e]+C[e];
+    return '<div class="ac-eq"><b>🔥 Autoclave '+e+'</b><div class="ac-n"><button onclick="acMas('+e+',-1)">−</button><span>'+C[e]+'</span><button onclick="acMas('+e+',1)">+</button></div><small>cargas hoy'+(tOtros[e]?' (+'+tOtros[e]+' de otro turno)':'')+' · '+fi+' con ficha detallada</small>'+(fi!==tot?'<div class="ac-w">⚠ El total del día ('+tot+') no coincide con las '+fi+' fichas. Se guarda igual y queda marcado para revisión.</div>':'')+'</div>';
+  }).join('');
+  var total=C[1]+C[2]+C[3]+[1,2,3].reduce(function(a,e){return a+tOtros[e];},0);
+  var rec=otros.length?'<div class="ac-rec">Ya cerraron hoy: '+otros.map(function(c){return '<b>'+esc(String(c.quien).split(' ')[0])+'</b> ('+c.hora+') '+autoclaveTotalTxt(c)+(c.modo==='traspaso'?' · entregó al turno de la tarde':'');}).join(' · ')+'</div>':'';
+  ov.innerHTML='<div class="pp-box"><div class="pp-h"><div><b>🔥 Cierre de jornada · autoclave</b><small>Al terminar tu turno deja el total de cargas que hiciste en cada autoclave. '+esc(f)+'</small></div><button class="pp-x" onclick="document.getElementById(\'acOv\').remove()">✕</button></div>'+rec+eq+
+    '<div class="ta-g">AL CERRAR</div><div class="ac-modo"><button class="'+(window._acModo==='termino'?'on':'')+'" onclick="acModo(\'termino\')">Termino mi jornada</button><button class="'+(window._acModo==='traspaso'?'on':'')+'" onclick="acModo(\'traspaso\')">Entrego al turno tarde</button></div>'+
+    '<button class="tcb ac-go" onclick="acGuardar()">Guardar cierre · total del día: '+total+' cargas</button>'+(window._acKey?'<p class="ta-vacio">Ya dejaste un cierre hoy; guardar lo corrige.</p>':'')+'</div>';
+}
+window.acMas=function(e,d){window._acC[e]=Math.max(0,(window._acC[e]||0)+d);acPintar();};
+window.acModo=function(m){window._acModo=m;acPintar();};
+window.acGuardar=function(){
+  var f=hoyStr(),d=new Date(),C=window._acC;
+  var o={fecha:f,quien:curNombre,ts:Date.now(),hora:pad(d.getHours())+':'+pad(d.getMinutes()),a:{1:C[1],2:C[2],3:C[3]},modo:window._acModo};
+  var ref=window._acKey?sRef('cierreAutoclave/'+f+'/'+window._acKey):sRef('cierreAutoclave/'+f).push();
+  ref.set(o).then(function(){var ov=document.getElementById('acOv');if(ov)ov.remove();try{renderMisTurnos(curNombre);}catch(e){}alert('✓ Cierre guardado: '+autoclaveTotalTxt(o));});
+};
 // ── Cumplimiento semanal detallado (excluye ausencias) ──
 function cumplSemanaDetalle(nombre){
   var sem=semanas[W]||{};if(!sem.ini||!sem.fin)return null;
@@ -9883,9 +10029,9 @@ function gxpRondaTipo(){return Object.keys(rolesTecnicos||{}).filter(function(k)
 function gxpTareas(hist){
   var sem=semanas[W]||{};
   var equipo=(nombres||[]).map(function(n){return n.nombre||n;}).filter(function(n){return rolDe(n)!=='direccion';});
-  var tipos=Object.keys(TIPOS_MEDIBLES).filter(function(t){return !TIPOS_SEMANALES[t];});
+  var tipos=Object.keys(TIPOS_MEDIBLES).filter(function(t){return !TIPOS_SEMANALES[t]&&tipoActivo(t);});
   // roles personalizados diarios (no ronda): también se reparten
-  Object.keys(rolesTecnicos||{}).forEach(function(k){var r=rolesTecnicos[k];if(r&&r.nombre&&r.tipoRegistro!=='ronda'&&(r.frecuencia||'diaria')==='diaria'&&tipos.indexOf(k)<0)tipos.push(k);});
+  Object.keys(rolesTecnicos||{}).forEach(function(k){var r=rolesTecnicos[k];if(r&&r.nombre&&r.tipoRegistro!=='ronda'&&(r.frecuencia||'diaria')==='diaria'&&tipos.indexOf(k)<0&&tipoActivo(k))tipos.push(k);});
   var DIAS_H=['Lunes','Martes','Miércoles','Jueves','Viernes'];
   if(Object.values(bloques||{}).some(function(b){return b&&b.dia==='Sábado';}))DIAS_H.push('Sábado');
   var perf=gxpPerfilTareas(hist);
@@ -9903,7 +10049,7 @@ function gxpTareas(hist){
 
   // 1) RONDAS DE APERTURA (tareas con cumplimiento): las hace quien abre la unidad en la hora de la ventana
   var rtipo=gxpRondaTipo();
-  if(rtipo){
+  if(rtipo&&tipoActivo(rtipo)){
     var histRonda={};hist.forEach(function(tw){Object.values(tw||{}).forEach(function(t){if(t&&t.tipo===rtipo&&t.sector){var u=rondaUnidadDeSector(t.sector);if(u){(histRonda[u]=histRonda[u]||{})[t.nombre]=(histRonda[u][t.nombre]||0)+1;}}});});
     DIAS_H.forEach(function(dia){
       var f=fechaDe[dia];if(!f)return;
@@ -13344,7 +13490,7 @@ var ADM_GRUPOS=[
  {id:'calidad',ic:'📊',n:'Cumplimiento y calidad',d:'Informes, tablero, accesos, supervisión, indicadores',m:['Informe de gestión','Tablero de cumplimiento','Registro de accesos','Cumplimiento de lectura','Ronda de supervisión','Indicadores operacionales']},
  {id:'comunica',ic:'📣',n:'Comunicación',d:'Avisos, anuncios, sugerencias, cumpleaños',m:['Aviso general','Anuncio de capacitación','Sugerencias del equipo','Cumpleaños del equipo']},
  {id:'clinica',ic:'🏥',n:'Operación clínica',d:'Pabellón, roles técnicos, temperaturas',m:['Plan de Pabellón','Roles técnicos','Espacios de temperatura']},
- {id:'programas',ic:'🌱',n:'Programas',d:'Liderazgo, plan de estudio, biblioteca',m:['Protocolos y preguntas','Programa de liderazgo','Plan de estudio','Biblioteca de conocimiento']},
+ {id:'programas',ic:'🌱',n:'Programas',d:'Liderazgo, plan de estudio, biblioteca',m:['Asignaciones en uso','Protocolos y preguntas','Programa de liderazgo','Plan de estudio','Biblioteca de conocimiento']},
  {id:'mant',ic:'⚙',n:'Mantenimiento',d:'Limpiar y migrar datos (avanzado, con cuidado)',m:['Migrar datos antiguos','Limpiar semanas duplicadas','Limpiar semana']}
 ];
 var ADM_KW={'Personal de este establecimiento':'directorio correo telefono fono contacto importar planilla','Cumplimiento de lectura':'ficha preguntas banco evaluacion obligatoria','Tablero de cumplimiento':'correo whatsapp aviso incumplimiento semaforo','Registro de accesos':'conexiones ingresos','Programa de liderazgo':'lecturas modo prueba enfermeros diagnostico','Informe de gestión':'dashboard gerencia pdf','Aviso general':'anuncio comunicado novedades','Gestión de semanas':'crear semana publicar','Ausencias (licencia':'vacaciones permiso licencia','Premio de la semana':'ganador jornada libre'};
@@ -19254,6 +19400,7 @@ window.abrirRegAutoclave=function(){
   ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:480px;width:100%;margin-top:20px">'+
     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">🔥 Registro de autoclave</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px">Un registro por carga · '+hoyStr()+'</div>'+
+    '<button type="button" onclick="document.getElementById(\'regAutoOv\').remove();abrirCierreAutoclave()" style="width:100%;padding:10px;margin-bottom:10px;border-radius:10px;border:1px solid rgba(13,148,136,.5);background:rgba(13,148,136,.15);color:#0f766e !important;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔒 Terminé mi turno: dejar el cierre de cargas</button>'+
     bannerBorrador('autoclave',camposAutoclave)+
     // Tipo de carga
     '<label style="font-size:12px;color:rgba(255,255,255,.7)">Tipo de carga</label>'+
@@ -20708,6 +20855,13 @@ function verificarCumplimiento(tipo,fecha,tarea){
     var hayP=Object.values(regProduccion||{}).some(function(r){return r.tipo===tipo&&r.fecha===fecha;});
     return {cumplido:hayP,detalle:hayP?'Registrado':'Sin registro'};
   }
+  if(tipo==='autoclave'&&autoclaveCierreDesde&&fecha>=autoclaveCierreDesde){
+    // Desde que rige el cierre de jornada: cumple quien deja el total de cargas por autoclave
+    var _cs=autoclaveCierresDe(fecha),_q=tarea&&tarea.nombre;
+    var _ok=_q?_cs.some(function(c){return c.quien===_q;}):_cs.length>0;
+    var _c=_q?_cs.filter(function(c){return c.quien===_q;})[0]:_cs[0];
+    return {cumplido:_ok,detalle:_ok?'Cierre de cargas · '+(_c?_c.hora+' · '+autoclaveTotalTxt(_c):''):'Falta el cierre de cargas'};
+  }
   if(tipo==='autoclave'){
     var hay=Object.values(regAutoclave||{}).some(function(r){return r.fecha===fecha;});
     return {cumplido:hay,detalle:hay?'Registrado':'Sin registro de carga'};
@@ -20799,6 +20953,7 @@ function verificarCumplimiento(tipo,fecha,tarea){
 
 // ¿La tarea cuenta para el cumplimiento? Tipos base medibles + roles personalizados (ronda, etc.). sinRonda=true la excluye de los recordatorios (la ronda se cierra sola al terminar su ventana).
 function medibleTarea(tipo,sinRonda){
+  if(!tipoActivo(tipo))return false;
   if(TIPOS_MEDIBLES[tipo])return true;
   var r=rolesTecnicos&&rolesTecnicos[tipo];
   if(!r||!r.nombre)return false;
@@ -23400,7 +23555,7 @@ window.cambiarJornadaPropuesta=function(idx,j){if(window._propuestaActual&&windo
 window.cambiarTurnoNombre=function(idx,nombre){if(window._propuestaTurnos&&window._propuestaTurnos[idx])window._propuestaTurnos[idx].nombre=nombre;};
 window.cambiarTurnoHorario=function(idx,h){if(window._propuestaTurnos&&window._propuestaTurnos[idx])window._propuestaTurnos[idx].horario=h;};
 window.aplicarPropuesta=function(){
-  var prop=window._propuestaActual||[];
+  var prop=(window._propuestaActual||[]).filter(function(x){return tipoActivo(x.tipo);});
   if(!prop.length)return;
   if(!confirm('¿Aplicar '+prop.length+' tareas? Podrás editarlas después.'))return;
   Promise.all(prop.map(function(p){
