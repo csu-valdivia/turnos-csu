@@ -6819,8 +6819,26 @@ function renderMisTurnos(nombre){
     ps.forEach(function(b){var isPab=b.area==='Pabellón';var sb=b.area==='Esterilización'&&b.turno?renderSubareaTareas(b.turno,b.nombre,dia):null;var claveB=adminUnlocked?buscarClaveBloque(b.nombre,dia,b.area,b.horario):null;var editBtn=claveB?'<button onclick="abrirEditarTurnoSemana(\''+nombre.replace(/'/g,"\\'")+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'';html+='<div class="brow"><span class="barea">'+b.area+'</span><div><span class="bdg'+(isPab?' bdg-pab':'')+'">'+b.horario+'</span>'+editBtn+(sb?'<div class="sub2">'+sb+'</div>':'')+'</div></div>';});
     if(col)html+='<div class="brow"><span class="barea" style="color:#92400e">🍴 Colación</span><div><span class="bdg bdg-col">'+col+'</span>'+(adminUnlocked?'<button onclick="editarColacion(\''+colKey+'\',\''+col+'\')" style="margin-left:6px;font-size:11px;background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:2px 7px;font-family:inherit;cursor:pointer">✎</button>':'')+'</div></div>';
     var _hoyS=hoyStr(),_semD=semanas[W]||{},_esHoy=(dia===diaDeDate(_hoyS))&&_semD.ini&&_semD.ini<=_hoyS&&_hoyS<=(_semD.fin||'9999');
-    function regBtn(t){var js=_esHoy?miDiaAbrirJs(t):'';return js?'<button class="vbtn" style="background:linear-gradient(135deg,#0d9488,#2563eb);color:#fff;border:none;font-weight:700;margin-right:6px" onclick="'+js+'">📝 Registrar</button>':'';}
-    tds.forEach(function(t){var cfg=cfgTipo(t.tipo);var vk=(nombre+'_'+dia+'_'+(t.texto||'').substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';var sectorT=t.sector?'<span style="font-size:10px;color:#94a3b8;margin-left:5px">📍'+esc(t.sector)+'</span>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+' '+jornadaLabel(t.jornada||'dia')+sectorT+'</div>'+t.texto+pabH+'<br>'+regBtn(t)+'<button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
+    function detTarea(t){
+      try{
+        var u=t.sector?rondaUnidadDeSector(t.sector):'';
+        var area=GXP_AREA[t.tipo]||(u&&GXP_RONDA_AREA[u]?GXP_RONDA_AREA[u][0]:'');
+        var bl=ps.filter(function(b){return !area||b.area===area;});if(!bl.length)bl=ps;
+        var hrs=bl.map(function(b){return b.horario;}).filter(Boolean).join(' y ');
+        var fch=_semD.ini?fechaDeDiaEnSemana(dia,_semD):'';
+        var j=t.jornada||'dia',cj,txt;
+        if(j==='am'){cj=['#FEF3C7','#92400E'];txt='AM';var h1=t.tipo==='r_ronda'||u?'':'';txt+=' · antes de las 14:00';}
+        else if(j==='pm'){cj=['#FCE7F3','#BE185D'];txt='PM';var ini='14:00';if(u&&fch){var v=rondaVentana(fch,u,null);if(v&&v.ini)ini=v.ini;}txt+=' · desde las '+ini;}
+        else {cj=['#DBEAFE','#1D4ED8'];txt='Durante tu turno'+(hrs?' · '+hrs:'');}
+        var dn=area?area+(GXP_SUB[t.tipo]&&SUBAREAS[GXP_SUB[t.tipo]]?' · zona '+SUBAREAS[GXP_SUB[t.tipo]].replace(/ · /g,', '):''):'';
+        var sinReg=GXP_SUB[t.tipo]||TIPOS_SIN_MEDICION[t.tipo];
+        return '<div style="margin-top:4px"><span style="display:inline-block;border-radius:6px;padding:1px 8px;font-weight:700;font-size:11.5px;background:'+cj[0]+';color:'+cj[1]+'">'+esc(txt)+'</span></div>'
+          +(dn?'<div style="font-size:12px;margin-top:3px;color:#475569">📍 Dónde: '+esc(dn)+(hrs&&j!=='dia'?' · tu turno '+esc(hrs):'')+'</div>':'')
+          +(sinReg&&!miDiaAbrirJs(t)?'<div style="font-size:11.5px;margin-top:3px;color:#64748B">Es tu puesto de trabajo: no lleva registro.</div>':'');
+      }catch(e){return '';}
+    }
+    function regBtn(t){var js=(_esHoy||adminUnlocked)?miDiaAbrirJs(t):'';return js?'<button class="vbtn" style="background:linear-gradient(135deg,#0d9488,#2563eb);color:#fff;border:none;font-weight:700;margin-right:6px" onclick="'+js+'">📝 Registrar</button>':'';}
+    tds.forEach(function(t){var cfg=cfgTipo(t.tipo);var vk=(nombre+'_'+dia+'_'+(t.texto||'').substring(0,20)).replace(/\s/g,'_');var yv=visto[vk];var pabH=(t.tipo==='pabellon'&&(t.pabInicio||t.pabTermino))?'<div style="font-size:11px;color:#6ee7b7;margin-top:2px">🏥 Programado: '+(t.pabInicio||'?')+' – '+(t.pabTermino||'?')+'</div>':'';var sectorT=t.sector?'<span style="font-size:10px;color:#94a3b8;margin-left:5px">📍'+esc(t.sector)+'</span>':'';html+='<div class="trow"><div class="tico">'+cfg.e+'</div><div class="tcont"><div class="ttipo">'+cfg.l+sectorT+'</div>'+detTarea(t)+(/\(asignación automática\)\s*$/.test(t.texto||'')?'':'<div style="margin-top:3px">'+t.texto+'</div>')+pabH+'<br>'+regBtn(t)+'<button class="vbtn'+(yv?' leido':'')+'" onclick="marcarVisto(\''+vk+'\',this)">'+(yv?'✓ Leído':'Marcar leído')+'</button></div></div>';});
     notaLista.forEach(function(nt){
       var respuestas=nt.respuestas?Object.values(nt.respuestas).sort(function(a,b){return (a.fecha||0)-(b.fecha||0);}):[];
       var respHtml=respuestas.map(function(rp){return '<div style="margin-top:6px;padding:6px 10px;background:rgba(96,165,250,.1);border-left:2px solid #60a5fa;border-radius:4px;font-size:12px;color:rgba(255,255,255,.85)"><b style="color:#93c5fd">↳ '+esc(rp.quien||'Jefatura')+':</b> '+esc(rp.texto)+'</div>';}).join('');
