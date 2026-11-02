@@ -9429,6 +9429,8 @@ function calcScorePonderado(p,diasHabiles,promSupEquipo){
 }
 
 function agregarRankingPorPersona(soloInternos){
+  // Semana sin preguntas para este grupo: no hay ranking de preguntas (se ignoran las respuestas de esa semana)
+  if(!preguntasOnSem(soloInternos?'internos':'clinicos',semanas[W]))return [];
   var porPersona={};
   // Set de internos según el REGISTRO de internos (fuente de verdad de quién es interno),
   // no según la grilla de turnos. Un interno que respondió debe aparecer aunque no tenga
@@ -10811,7 +10813,7 @@ function renderRanking(){
     var html='';
     if(temporizador)html+='<div style="text-align:center;font-size:12px;color:#7ec8f7;font-weight:700;padding:6px 0 10px">'+temporizador+'</div>';
     if(!ordenado.length){
-      html+='<p class="empty">Aún nadie ha completado una evaluación esta semana.</p>';
+      html+=!preguntasOnSem('clinicos',semanas[W])?'<p class="empty">🗓 Esta semana no hay preguntas: no hay ranking ni ganador. Siguen las actividades diarias y la supervisión.</p>':'<p class="empty">Aún nadie ha completado una evaluación esta semana.</p>';
     } else {
       var grupoPrev=null;
       html+=ordenado.map(function(r,i){
@@ -10859,7 +10861,7 @@ function renderRanking(){
     var miniHtml='<div class="card" style="margin-bottom:10px;padding:12px 14px">';
     miniHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.7px">🏆 Ranking semanal</p>'+(temporizador?'<span style="font-size:10px;color:#7ec8f7">'+temporizador+'</span>':'')+'</div>';
     if(!ordenado.length){
-      miniHtml+='<p style="font-size:12px;color:rgba(255,255,255,.3)">Aún sin participantes esta semana.</p>';
+      miniHtml+='<p style="font-size:12px;color:rgba(255,255,255,.3)">'+(!preguntasOnSem('clinicos',semanas[W])?'🗓 Semana sin preguntas: no hay ranking.':'Aún sin participantes esta semana.')+'</p>';
     } else {
       var hoyObj2=new Date();hoyObj2.setHours(0,0,0,0);var inicioHoy2=hoyObj2.getTime();
       var grupoPrevMini=null;
