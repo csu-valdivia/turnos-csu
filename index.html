@@ -10773,6 +10773,7 @@ function quienFaltaHoy(){
   var hoyStr2=hoyStr();
   var conTurno=nombresConTurnoSemana();
   return conTurno.filter(function(n){
+    if(!preguntasOn(grupoPregDe(n)))return false; // su grupo no tiene preguntas esta semana: no se le exige responder
     var key=n.replace(/\s/g,'_');
     // Revisar fichaProgreso (fecha como string local)
     var yaRespondioFicha=Object.keys(biblioteca).some(function(docId){
@@ -10840,6 +10841,9 @@ function renderRanking(){
         return sep+'<div class="iitem" style="padding:7px 0;display:block"><div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;width:24px;text-align:center">'+medalla+'</span><div><strong style="font-size:13px">'+r.nombre+'</strong><div class="iitem-sub">'+sub+'</div></div></div><span style="font-size:13px;font-weight:700;color:#7ec8f7">'+r.scoreFinal+' pts</span></div>'+desglose+'</div>';
       }).join('');
     }
+    var _sp=semDeFecha(hoyStr()),_off=PP_GRUPOS.filter(function(g){return !preguntasOnSem(g[0],_sp);}).map(function(g){return g[1].replace(/^\S+\s/,'');});
+    if(_off.length)html+='<div style="margin-top:12px;padding:8px 10px;background:rgba(13,148,136,.1);border:1px solid rgba(13,148,136,.3);border-radius:8px;font-size:11.5px;color:#0f766e">🗓 Esta semana <b>sin preguntas</b> para: '+esc(_off.join(', '))+'. No cuentan para ganador ni se les exige responder.</div>';
+    if(adminUnlocked)html+='<div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.4)">Semana usada para las preguntas: '+esc(_sp?(_sp.nombre||(_sp.ini+' al '+_sp.fin)):'(ninguna)')+' · '+(_sp&&_sp.ini<=hoyStr()&&hoyStr()<=_sp.fin?'contiene hoy':'⚠ NO contiene hoy (se está usando la semana abierta)')+'</div>';
     if(falta.length&&!semanaCerrada){
       html+='<div style="margin-top:12px;padding:10px;background:rgba(255,165,0,.07);border:1px solid rgba(255,165,0,.2);border-radius:8px">';
       html+='<p style="font-size:10px;font-weight:700;color:#fcd34d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⏳ Falta responder hoy ('+falta.length+')</p>';
