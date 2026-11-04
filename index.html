@@ -1323,7 +1323,7 @@ body.gx-light .tccf button.si{color:#fff!important}
         <div id="pendientesSection"></div>
 
         <nav id="navBottom"></nav>
-        <div class="atoggle"><button id="adminBtn" style="position:relative">⚙ Admin<span id="adminNuevoBadge" style="display:none;position:absolute;top:-10px;right:-6px;gap:2px;box-shadow:0 0 0 2px #0b1220;border-radius:10px;overflow:hidden"><span id="adminBadgePreg" title="Pendientes: activar preguntas" style="display:none;background:#2563eb;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span><span id="adminBadgeAmbos" title="Pendientes: ambos (esperando 7 días)" style="display:none;background:#b45309;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span><span id="adminBadgeProt" title="Pendientes: falta protocolo" style="display:none;background:#dc2626;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span></span></button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button> <button id="conductBtn" style="background:rgba(37,99,235,.15);border:1px solid rgba(96,165,250,.35);color:#93c5fd">💧 Conductividad</button></div>
+        <div class="atoggle"><button id="adminBtn" style="position:relative">⚙ Admin<span id="adminNuevoBadge" style="display:none;position:absolute;top:-10px;right:-6px;gap:2px;box-shadow:0 0 0 2px #0b1220;border-radius:10px;overflow:hidden"><span id="adminBadgePreg" title="Pendientes: activar preguntas" style="display:none;background:#2563eb;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span><span id="adminBadgeAmbos" title="Pendientes: ambos (esperando 7 días)" style="display:none;background:#b45309;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span><span id="adminBadgeProt" title="Pendientes: falta protocolo" style="display:none;background:#dc2626;color:#fff;font-size:9px;font-weight:800;padding:2px 4px"></span></span></button> <button id="bodegaBtn" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#fbbf24">📦 Bodega</button> <button id="reasBtn" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#6ee7b7">♻️ REAS</button> <button id="superBtn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.35);color:#c4b5fd">📋 Supervisar</button><button id="lavadoBtn" style="background:rgba(8,145,178,.15);border:1px solid rgba(34,211,238,.35);color:#67e8f9">🧼 Pauta lavado</button> <button id="conductBtn" style="background:rgba(37,99,235,.15);border:1px solid rgba(96,165,250,.35);color:#93c5fd">💧 Conductividad</button></div>
         <div class="apanel" id="adminPanel">
 
           <div class="asec" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(16,185,129,.1));border:1px solid rgba(59,130,246,.3)">
@@ -24405,9 +24405,14 @@ function lmVeredicto(ic,umbral){
 
 function lmUnion(a,b){var r=a.slice();(b||[]).forEach(function(x){if(r.indexOf(x)<0)r.push(x);});return r;}
 // ===== Lavado de manos (GCL 3.2) — datos, calibración, registro y avance =====
-var LM={cfg:{},meds:{},obs:{},_ref:null,ui:{vista:'lista',medId:'',pasos:[],servicio:'',cargo:''}};
+var LM={sesion:'',cfg:{},meds:{},obs:{},_ref:null,ui:{vista:'lista',medId:'',pasos:[],servicio:'',cargo:''}};
 var LM_DEF={servicios:['Dental'],cargos:['Estudiante','Docente','TENS','Enfermero/a','Otro'],carreras:['Odontología','Enfermería','Kinesiología','Otra']};
 var LM_REGLA='Cumple solo si realiza el 100 % de los pasos aplicables (lo que no aplica se marca N/A con justificación y no cuenta).';
+
+function lmRunNorm(v){return (v||'').replace(/[^0-9kK]/g,'').toUpperCase();}
+function lmRunOk(r){if(!r||r.length<2)return false;var cuerpo=r.slice(0,-1),dv=r.slice(-1);if(!/^\d+$/.test(cuerpo))return false;var suma=0,mul=2;for(var i=cuerpo.length-1;i>=0;i--){suma+=+cuerpo.charAt(i)*mul;mul=mul===7?2:mul+1;}var res=11-suma%11,esp=res===11?'0':res===10?'K':String(res);return esp===dv;}
+function lmRunFmt(r){if(!r)return '';var c=r.slice(0,-1),d=r.slice(-1);return c.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+'-'+d;}
+window.lmFmtRun=function(el){var n=lmRunNorm(el.value);el.value=n.length>1?lmRunFmt(n):n;};
 function lmRef(){if(!LM._ref)lmIniciar();return LM._ref;}
 function lmIniciar(){
   try{if(LM._ref)LM._ref.off();}catch(e){}
@@ -24417,8 +24422,8 @@ function lmIniciar(){
 }
 function lmLista(k){var a=LM.cfg[k];if(a&&a.length)return a;return LM_DEF[k]||[];}
 function lmEsAdmin(){return !!adminUnlocked;}
-function lmPuede(){return lmEsAdmin()||!!(curNombre&&LM.cfg.asignados&&LM.cfg.asignados[curNombre]);}
-function lmAutor(){return curNombre||'Administrador';}
+function lmPuede(){return lmEsAdmin()||!!LM.sesion;}
+function lmAutor(){return LM.sesion||(lmEsAdmin()?'Administrador':'')||curNombre||'Administrador';}
 function lmObsDe(id){var o=LM.obs[id]||{};return Object.keys(o).map(function(k){var r=o[k];r.id=k;return r;}).filter(function(r){return !r.anulada;}).sort(function(a,b){return (a.ts||0)-(b.ts||0);});}
 function lmPct(x){return (x*100).toFixed(1).replace('.',',')+' %';}
 // Resumen de una lista de observaciones
@@ -24439,6 +24444,7 @@ function lmSha(txt){
 }
 // ---- Acceso para enfermeros asignados (Mis Turnos) ----
 function lmAccesoColab(){
+  var _x=document.getElementById('lmAcceso');if(_x)_x.remove();return;
   var host=document.getElementById('supResultColaborador');if(!host)return;
   var el=document.getElementById('lmAcceso');
   var ok=curNombre&&LM.cfg.asignados&&LM.cfg.asignados[curNombre];
@@ -24449,7 +24455,7 @@ function lmAccesoColab(){
 }
 // ---- Panel ----
 window.lmAbrir=function(){
-  if(!lmPuede()){alert('Esta pauta es para los enfermeros asignados. Pídele al administrador que te asigne.');return;}
+  if(!lmPuede()){lmPedirPin();return;}
   var ov=document.getElementById('lmOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='lmOv';
   ov.style.cssText='position:fixed;inset:0;background:#0b1220;z-index:9001;overflow-y:auto;padding:14px;color:#e5e7eb';
@@ -24457,8 +24463,9 @@ window.lmAbrir=function(){
   LM.ui={vista:'lista',medId:'',pasos:[],servicio:'',cargo:''};
   lmRender();
 };
-window.lmCerrar=function(){var o=document.getElementById('lmOv');if(o)o.remove();};
-window.lmVista=function(v,id){LM.ui.vista=v;if(id!==undefined)LM.ui.medId=id;if(v==='reg'){LM.ui.pasos=[];}lmRender();window.scrollTo(0,0);var o=document.getElementById('lmOv');if(o)o.scrollTop=0;};
+window.lmCerrar=function(){var o=document.getElementById('lmOv');if(o)o.remove();if(!lmEsAdmin())LM.sesion='';};
+window.lmVista=function(v,id){
+  if((v==='avance'||v==='config')&&!lmEsAdmin()){alert('Esta vista es solo para el administrador.');return;}LM.ui.vista=v;if(id!==undefined)LM.ui.medId=id;if(v==='reg'){LM.ui.pasos=[];}lmRender();window.scrollTo(0,0);var o=document.getElementById('lmOv');if(o)o.scrollTop=0;};
 var LM_CSS='<style>#lmOv{background:#0b1220!important;color:#e5e7eb!important}#lmOv .lmh{color:#22d3ee!important}.lmc{background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px}.lmb{border:none;border-radius:8px;padding:9px 14px;font-family:inherit;font-weight:700;cursor:pointer;color:#fff;background:rgba(255,255,255,.1)}.lmb.p{background:linear-gradient(135deg,#0891b2,#22d3ee)}.lmb.g{background:linear-gradient(135deg,#059669,#34d399)}.lmb.r{background:rgba(239,68,68,.25);color:#fca5a5}.lmi{width:100%;box-sizing:border-box;background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:9px;font-family:inherit;font-size:14px}.lml{font-size:11px;color:rgba(255,255,255,.55);margin:8px 0 3px;display:block}.lmt{width:100%;border-collapse:collapse;font-size:12px}.lmt td,.lmt th{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}.lmp{flex:1;padding:12px 4px;border:none;border-radius:8px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;background:rgba(255,255,255,.08);color:#fff}</style>';
 function lmRender(){
   var ov=document.getElementById('lmOv');if(!ov)return;
@@ -24476,20 +24483,21 @@ function lmRender(){
 function lmBadge(m){var c={borrador:'#fbbf24',sellada:'#34d399',anulada:'#f87171'}[m.estado]||'#9ca3af';return '<span style="background:'+c+'22;color:'+c+';border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">'+esc(m.estado==='sellada'?'🔒 sellada':m.estado)+'</span>';}
 function lmHtmlLista(){
   var ids=Object.keys(LM.meds).sort(function(a,b){return (LM.meds[b].creado||0)-(LM.meds[a].creado||0);});
-  var h='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="lmb p" onclick="lmNueva()">➕ Nueva medición</button>'+(lmEsAdmin()?'<button class="lmb" onclick="lmVista(\'config\')">⚙️ Listas y enfermeros asignados</button>':'')+'</div>';
+  var h='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+(lmEsAdmin()?'<button class="lmb p" onclick="lmNueva()">➕ Nueva medición</button>':'')+(lmEsAdmin()?'<button class="lmb" onclick="lmVista(\'config\')">⚙️ Listas y enfermeros asignados</button>':'')+'</div>';
   if(!ids.length)return h+'<div class="lmc" style="color:rgba(255,255,255,.6)">Aún no hay mediciones. Crea la primera: eliges el tamaño de muestra, la sellas y recién ahí se empieza a observar.</div>';
   ids.forEach(function(id){
     var m=LM.meds[id],c=m.calib||{},l=lmObsDe(id),s=lmResumen(l,c);
     h+='<div class="lmc"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><div style="font-weight:800;font-size:15px">'+esc(c.periodo||'')+(c.practica?' <span style="color:#fbbf24;font-size:11px">· PRÁCTICA, sin validez</span>':'')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5)">'+esc((c.servicios||[]).join(', '))+'</div></div>'+lmBadge(m)+'</div>'+
-    '<div style="font-size:12px;margin:8px 0">Observaciones: <b>'+s.n+'</b> de '+(c.nObj||'?')+(s.n?' · cumplimiento <b>'+lmPct(s.p)+'</b> (IC '+lmPct(s.ic.lo)+' – '+lmPct(s.ic.hi)+')':'')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+
-    (m.estado==='borrador'?'<button class="lmb p" onclick="lmVista(\'calib\',\''+id+'\')">Calibrar y sellar</button>':'')+
+    '<div style="font-size:12px;margin:8px 0">Observaciones: <b>'+s.n+'</b> de '+(c.nObj||'?')+(s.n&&lmEsAdmin()?' · cumplimiento <b>'+lmPct(s.p)+'</b> (IC '+lmPct(s.ic.lo)+' – '+lmPct(s.ic.hi)+')':'')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+
+    (m.estado==='borrador'&&lmEsAdmin()?'<button class="lmb p" onclick="lmVista(\'calib\',\''+id+'\')">Calibrar y sellar</button>':'')+
     (m.estado==='sellada'?'<button class="lmb g" onclick="lmVista(\'reg\',\''+id+'\')">📝 Registrar observación</button>':'')+
-    (m.estado!=='borrador'?'<button class="lmb" onclick="lmVista(\'avance\',\''+id+'\')">📈 Avance</button><button class="lmb" onclick="lmVista(\'calib\',\''+id+'\')">Ver calibración</button>':'')+
+    (m.estado!=='borrador'&&lmEsAdmin()?'<button class="lmb" onclick="lmVista(\'avance\',\''+id+'\')">📈 Avance</button><button class="lmb" onclick="lmVista(\'calib\',\''+id+'\')">Ver calibración</button>':'')+
     '</div></div>';
   });
   return h;
 }
 window.lmNueva=function(){
+  if(!lmEsAdmin()){alert('Solo el administrador crea y sella mediciones.');return;}
   var id=lmRef().child('mediciones').push().key,d=new Date();
   var meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   var m={estado:'borrador',creado:Date.now(),autor:lmAutor(),calib:{periodo:meses[d.getMonth()]+' '+d.getFullYear(),p:80,e:5,conf:95,umbral:80,N:0,nObj:246,servicios:lmLista('servicios').slice(0,1),cargos:lmLista('cargos').slice(),practica:false}};
@@ -24513,7 +24521,7 @@ function lmHtmlCalib(m){
   '<label class="lml" style="margin-top:12px"><input type="checkbox" id="lmPrac"'+dis+(c.practica?' checked':'')+'> Medición de práctica (saldrá marcada «sin validez» en los informes)</label>'+
   '<div style="font-size:12px;margin-top:10px;padding:10px;background:rgba(34,211,238,.08);border-radius:8px"><b>Regla de cumplimiento (fija):</b> '+esc(LM_REGLA)+'<br><b>Unidad de medición:</b> el lavado observado. Se muestran celdas solo con ≥5 observaciones en los informes a la carrera.</div>';
   if(bor)h+='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="lmb" onclick="lmGuardarCalib(false)">Guardar borrador</button><button class="lmb g" onclick="lmGuardarCalib(true)">🔒 Sellar y comenzar a observar</button><button class="lmb r" onclick="lmEliminarBorrador()">Descartar</button></div>';
-  else if(m.estado==='sellada')h+='<div style="margin-top:12px"><button class="lmb r" onclick="lmAnular()">Anular medición…</button></div>';
+  else if(m.estado==='sellada')h+=(lmEsAdmin()?'<div style="margin-top:12px"><button class="lmb r" onclick="lmAnular()">Anular medición…</button></div>':'<div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.45)">Solo el administrador puede anular una medición.</div>');
   else h+='<div style="margin-top:10px;color:#f87171;font-size:12px">Anulada: '+esc((m.anulacion||{}).motivo||'')+'</div>';
   return h+'</div>';
 }
@@ -24542,6 +24550,7 @@ window.lmGuardarCalib=function(sellar){
 };
 window.lmEliminarBorrador=function(){if(!confirm('¿Descartar este borrador?'))return;lmRef().child('mediciones/'+LM.ui.medId).remove().then(function(){lmVista('lista');});};
 window.lmAnular=function(){
+  if(!lmEsAdmin()){alert('Solo el administrador puede anular.');return;}
   var mot=prompt('Motivo de la anulación (queda registrado):');if(!mot)return;
   lmRef().child('mediciones/'+LM.ui.medId).update({estado:'anulada',anulacion:{ts:Date.now(),autor:lmAutor(),motivo:mot}}).then(function(){lmVista('lista');});
 };
@@ -24555,7 +24564,7 @@ function lmHtmlReg(m){
   var h='<div class="lmc"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Registrar observación · '+esc(c.periodo)+(c.practica?' <span style="color:#fbbf24">(práctica)</span>':'')+'</b><span style="font-size:12px;color:rgba(255,255,255,.6)">'+l.length+' de '+c.nObj+(l.length>=c.nObj?' · ✅ muestra completa':'')+'</span></div>'+
   '<div style="height:6px;background:rgba(255,255,255,.1);border-radius:4px;margin:8px 0"><div style="height:6px;border-radius:4px;background:#22d3ee;width:'+Math.min(100,l.length/c.nObj*100)+'%"></div></div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="lml">Servicio</label><select class="lmi" id="lmSv" onchange="LM.ui.servicio=this.value">'+op(c.servicios,u.servicio)+'</select></div><div><label class="lml">Cargo observado</label><select class="lmi" id="lmCgo" onchange="LM.ui.cargo=this.value">'+op(c.cargos,u.cargo)+'</select></div></div>'+
-  '<label class="lml">Código del observado (opcional, no uses RUN ni nombre)</label><input class="lmi" id="lmCod" placeholder="ej: D-014"></div>';
+  '<label class="lml">RUN del paciente (como en el formato en papel)</label><input class="lmi" id="lmRun" inputmode="text" autocomplete="off" placeholder="ej: 12.345.678-5" oninput="lmFmtRun(this)"><label class="lml">Nombre del evaluado</label><input class="lmi" id="lmNom" autocomplete="off" placeholder="nombre y apellido"></div>';
   h+='<div class="lmc">';
   LM_PASOS.forEach(function(t,i){
     var s=u.pasos[i]||'';
@@ -24580,17 +24589,19 @@ function lmEvalPasos(p){
 }
 window.lmPaso=function(i,v){
   var sv=document.getElementById('lmSv'),cg=document.getElementById('lmCgo');if(sv)LM.ui.servicio=sv.value;if(cg)LM.ui.cargo=cg.value;
-  var cod=document.getElementById('lmCod'),j=document.getElementById('lmNaJ'),cv=cod?cod.value:'',jv=j?j.value:'';
+  var cod=document.getElementById('lmRun'),nm=document.getElementById('lmNom'),j=document.getElementById('lmNaJ'),cv=cod?cod.value:'',nv=nm?nm.value:'',jv=j?j.value:'';
   LM.ui.pasos[i]=v;lmRender();
-  var c2=document.getElementById('lmCod'),j2=document.getElementById('lmNaJ');if(c2)c2.value=cv;if(j2)j2.value=jv;
+  var c2=document.getElementById('lmRun'),n2=document.getElementById('lmNom'),j2=document.getElementById('lmNaJ');if(c2)c2.value=cv;if(n2)n2.value=nv;if(j2)j2.value=jv;
 };
 window.lmGuardarObs=function(){
   var m=LM.meds[LM.ui.medId],u=LM.ui,res=lmEvalPasos(u.pasos);
   if(!res.ok){alert(res.tx);return;}
+  var run=lmRunNorm(document.getElementById('lmRun').value);
+  if(!lmRunOk(run)){alert('El RUN no es válido (revisa el dígito verificador).');return;}
   var j=(document.getElementById('lmNaJ')||{}).value||'';
   if(res.na&&!j.trim()){alert('Escribe la justificación del N/A.');return;}
   var d=new Date(),pad2=function(x){return ('0'+x).slice(-2);};
-  var o={ts:Date.now(),fecha:d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()),hora:pad2(d.getHours())+':'+pad2(d.getMinutes()),autor:lmAutor(),servicio:document.getElementById('lmSv').value,cargo:document.getElementById('lmCgo').value,codigo:(document.getElementById('lmCod').value||'').trim(),pasos:u.pasos.join(''),naJust:j.trim(),cumple:res.cumple};
+  var o={ts:Date.now(),fecha:d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()),hora:pad2(d.getHours())+':'+pad2(d.getMinutes()),autor:lmAutor(),servicio:document.getElementById('lmSv').value,cargo:document.getElementById('lmCgo').value,run:run,evaluado:(document.getElementById('lmNom').value||'').trim(),pasos:u.pasos.join(''),naJust:j.trim(),cumple:res.cumple};
   lmRef().child('obs/'+u.medId).push(o).then(function(){u.pasos=[];lmRender();var b=document.getElementById('lmOv');if(b)b.scrollTop=0;});
 };
 window.lmAnularObs=function(oid){
@@ -24617,7 +24628,7 @@ function lmHtmlAvance(m){
   h+='<div class="lmc"><b style="font-size:13px">Pasos con menor cumplimiento</b>';
   ps.forEach(function(x){var cc=x.p>=c.umbral/100?'#34d399':x.p>=c.umbral/100-.2?'#fbbf24':'#f87171';h+='<div style="margin:8px 0"><div style="font-size:12px;display:flex;justify-content:space-between"><span>'+(x.i+1)+'. '+esc(x.t)+'</span><b style="color:'+cc+'">'+lmPct(x.p)+'</b></div><div style="height:6px;background:rgba(255,255,255,.1);border-radius:3px"><div style="height:6px;border-radius:3px;background:'+cc+';width:'+x.p*100+'%"></div></div></div>';});
   h+='<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:6px">Complementario: % de pasos cumplidos entre los aplicables. El indicador oficial es el % de lavados que cumplen los 8.</div></div>';
-  h+='<div class="lmc" style="font-size:11px;color:rgba(255,255,255,.5)">Limitaciones: la misma persona se observa varias veces (el intervalo subestima la variabilidad) y puede haber efecto Hawthorne (el observado cambia su conducta al saberlo). Informe PDF, Excel y notificación a la carrera: próxima etapa.</div>';
+  h+='<div class="lmc" style="font-size:11px;color:rgba(255,255,255,.5)">Limitaciones: la misma persona se observa varias veces (el intervalo subestima la variabilidad) y puede haber efecto Hawthorne (el observado cambia su conducta al saberlo). </div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="lmb p" onclick="lmExcel(LM.ui.medId)">📊 Excel de registro</button>'+(lmEsAdmin()?'<button class="lmb g" onclick="lmPdfInforme(LM.ui.medId)">📄 Informe del indicador (PDF)</button>':'')+'</div>';
   return h;
 }
 function lmChartConv(l,c){
@@ -24647,17 +24658,170 @@ function lmHtmlConfig(){
   '<label class="lml">Servicios donde se mide</label><textarea class="lmi" id="lmCfS" rows="4">'+esc(lmLista('servicios').join('\n'))+'</textarea>'+
   '<label class="lml">Cargos observados</label><textarea class="lmi" id="lmCfC" rows="5">'+esc(lmLista('cargos').join('\n'))+'</textarea>'+
   '<label class="lml">Carreras que reciben la notificación</label><textarea class="lmi" id="lmCfR" rows="4">'+esc(lmLista('carreras').join('\n'))+'</textarea></div>'+
-  '<div class="lmc"><b>Enfermeros asignados a la pauta</b><div style="margin-top:6px">'+nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';}).map(function(n){return '<label style="display:inline-flex;gap:5px;margin:4px 12px 4px 0;font-size:13px"><input type="checkbox" class="lmAs" value="'+esc(n)+'"'+(asg[n]?' checked':'')+'> '+esc(n)+'</label>';}).join('')+'</div></div>'+
+  '<div class="lmc"><b>Enfermeros asignados a la pauta</b><div style="margin-top:6px">'+nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';}).map(function(n){return '<div style="display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap"><label style="display:inline-flex;gap:6px;font-size:13px;min-width:200px"><input type="checkbox" class="lmAs" value="'+esc(n)+'"'+(asg[n]?' checked':'')+'> '+esc(n)+'</label><input class="lmi lmPin" data-n="'+esc(n)+'" style="width:130px" placeholder="PIN" value="'+esc(((LM.cfg.pins||{})[n])||'')+'"></div>';}).join('')+'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:6px">Cada asignada entra con su PIN desde el botón «🧼 Pauta lavado» de la pantalla de inicio.</div></div></div>'+
   '<button class="lmb g" onclick="lmGuardarCfg()">Guardar</button>';
   return h;
 }
 window.lmGuardarCfg=function(){
   var ln=function(id){return document.getElementById(id).value.split('\n').map(function(x){return x.trim();}).filter(Boolean);};
   var as={};Array.prototype.forEach.call(document.querySelectorAll('.lmAs:checked'),function(x){as[x.value]=true;});
+  var pins={};Array.prototype.forEach.call(document.querySelectorAll('.lmPin'),function(x){var v=x.value.trim();if(v&&as[x.dataset.n])pins[x.dataset.n]=v;});var vals=Object.keys(pins).map(function(k){return pins[k];});if(vals.some(function(v,i){return vals.indexOf(v)!==i;})){alert('Hay PIN repetidos. Cada persona necesita uno distinto.');return;}var sinPin=Object.keys(as).filter(function(k){return !pins[k];});if(sinPin.length&&!confirm('Sin PIN no podrán entrar: '+sinPin.join(', ')+'. ¿Guardar igual?'))return;
   var s=ln('lmCfS'),c=ln('lmCfC'),r=ln('lmCfR');if(!s.length||!c.length){alert('Deja al menos un servicio y un cargo.');return;}
-  lmRef().child('config').set({servicios:s,cargos:c,carreras:r,asignados:as}).then(function(){lmVista('lista');});
+  lmRef().child('config').set({servicios:s,cargos:c,carreras:r,asignados:as,pins:pins}).then(function(){lmVista('lista');});
 };
 document.addEventListener('click',function(e){var t=e.target;if(t&&t.id==='abrirLavadoBtn')lmAbrir();});
+
+
+function lmPedirPin(){
+  var m=document.createElement('div');m.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px';
+  var hay=Object.keys(LM.cfg.pins||{}).length>0;
+  m.innerHTML='<div style="background:#16233d;border-radius:16px;padding:24px;max-width:340px;width:100%;text-align:center;color:#fff"><div style="font-size:32px">🧼</div><div style="font-weight:800;margin:6px 0">Pauta de lavado de manos</div>'+(hay?'<input type="password" id="lmPinIn" placeholder="Tu PIN" style="width:100%;box-sizing:border-box;text-align:center;font-size:18px;letter-spacing:3px;padding:10px;margin:10px 0;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff"><button id="lmPinOk" class="lmb p" style="width:100%;padding:12px">Entrar</button>':'<div style="font-size:12px;color:#fbbf24;padding:10px">Aún no hay personas asignadas con PIN. El administrador lo configura en Pauta lavado → Listas y enfermeros asignados.</div>')+'<button id="lmPinNo" class="lmb" style="width:100%;margin-top:6px">Cancelar</button></div>';
+  document.body.appendChild(m);document.getElementById('lmPinNo').onclick=function(){m.remove();};
+  var ok=document.getElementById('lmPinOk');
+  if(ok)ok.onclick=function(){var pin=document.getElementById('lmPinIn').value.trim(),pins=LM.cfg.pins||{};
+    var n=Object.keys(pins).filter(function(k){return pins[k]===pin&&LM.cfg.asignados&&LM.cfg.asignados[k];})[0];
+    if(!pin||!n){alert('PIN no reconocido.');return;}
+    LM.sesion=n;m.remove();lmAbrir();};
+}
+document.addEventListener('click',function(e){var t=e.target;if(t&&t.id==='lavadoBtn'){if(typeof S!=='undefined'&&S)lmAbrir();else alert('Primero elige la sede.');}});
+
+// ===== Lavado de manos — informe PDF (formato REG) y Excel =====
+function lmSerie(l,c){
+  var n=l.length,step=Math.max(1,Math.ceil(n/120)),pts=[],k=0;
+  l.forEach(function(r,i){if(r.cumple===1)k++;var j=i+1;if(j%step===0||j===n){var ic=lmCP(k,j,c.conf);pts.push({j:j,p:k/j,lo:ic.lo,hi:ic.hi});}});
+  return pts;
+}
+function lmFechaLarga(ts){var M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],d=new Date(ts||Date.now());return d.getDate()+' de '+M[d.getMonth()]+' de '+d.getFullYear();}
+window.lmPdfInforme=function(id){
+  if(!lmEsAdmin()){alert('El informe lo emite el Director Técnico (administrador).');return;}
+  var m=LM.meds[id];if(!m)return;var c=m.calib,l=lmObsDe(id),s=lmResumen(l,c);
+  if(!s.n){alert('Aún no hay observaciones.');return;}
+  var J=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
+  if(!J){alert('No se pudo cargar el generador de PDF. Revisa tu conexión.');return;}
+  var doc=new J('p','mm','a4'),W0=210,M=16,CW=W0-2*M,y=14;
+  var NAVY=[15,37,64],TEAL=[13,148,136],GRIS=[90,100,115],TXT=[30,40,55],OK=[22,128,61],RI=[180,83,9],BA=[185,28,28];
+  var parcial=s.n<c.nObj,ts=Date.now(),u=c.umbral/100;
+  var colV=s.ver.cod==='sobre'?OK:s.ver.cod==='bajo'?BA:RI;
+  function cabecera(){
+    y=14;try{doc.addImage(INF_LOGO,'JPEG',M,y,52,15.1);}catch(e){}
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);
+    var tc='CENTRO DE SALUD USS - VALDIVIA';doc.setCharSpace(0);var wc=doc.getTextWidth(tc)+tc.length*1.2*0.3528*2.83;doc.setCharSpace(1.2);doc.text(tc,W0-M-wc+1.2,y+5);doc.setCharSpace(0);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,GRIS);doc.text('Valdivia, '+lmFechaLarga(ts),W0-M,y+10.5,{align:'right'});
+    y+=19;doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,y,W0-M,y);y+=7;
+  }
+  function chk(h){if(y+h>276){doc.addPage();cabecera();}}
+  function seccion(t){chk(16);y+=3;doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.4);doc.text(t.toUpperCase(),M,y);doc.setCharSpace(0);y+=2.2;doc.setDrawColor.apply(doc,TEAL);doc.setLineWidth(0.5);doc.line(M,y,M+14,y);y+=5;}
+  function parrafo(t){doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor.apply(doc,TXT);var ln=doc.splitTextToSize(t,CW);chk(ln.length*4.6+3);doc.text(ln,M,y,{lineHeightFactor:1.3});y+=ln.length*4.6+2;}
+  function peq(t){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor.apply(doc,GRIS);var ln=doc.splitTextToSize(t,CW);chk(ln.length*3.8+3);doc.text(ln,M,y);y+=ln.length*3.8+2;}
+  var zebra=0;
+  function tabla(heads,xs,al){chk(10);zebra=0;doc.setFillColor.apply(doc,NAVY);doc.rect(M,y-4.2,CW,6.4,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);heads.forEach(function(h,i){doc.text(h,xs[i],y,{align:al[i]==='r'?'right':'left'});});y+=6;}
+  function fila(vals,xs,al,cols){chk(7);if(zebra++%2===0){doc.setFillColor(241,245,249);doc.rect(M,y-4.2,CW,6,'F');}doc.setFontSize(8.5);vals.forEach(function(v,i){doc.setFont('helvetica',(cols&&cols[i])?'bold':'normal');doc.setTextColor.apply(doc,(cols&&cols[i])||TXT);doc.text(String(v),xs[i],y,{align:al[i]==='r'?'right':'left'});});y+=6;}
+  var pc=function(x){return lmPct(x);};
+  cabecera();
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.4);
+  doc.text('INFORME DE INDICADOR · HIGIENE DE MANOS',M,y);doc.setCharSpace(0);y+=5;
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,GRIS);
+  doc.text('Para: Gerencia · Pauta de supervisión de lavado clínico de manos (GCL 3.2) · '+c.periodo,M,y);y+=4.2;
+  var fol='LM-'+id.slice(-6).toUpperCase();doc.text('Folio '+fol+' · Emitido '+mtFechaHora(ts)+' · Uso interno',M,y);
+  var flag=c.practica?'MEDICIÓN DE PRÁCTICA · SIN VALIDEZ':(parcial?'RESULTADO PARCIAL ('+s.n+' de '+c.nObj+')':'');
+  if(flag){doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,RI);doc.text(flag,W0-M,y,{align:'right'});doc.setFont('helvetica','normal');}
+  y+=8;
+  var ps=lmPorPaso(l).filter(function(x){return x.ap;}).sort(function(a,b){return a.p-b.p;});
+  parrafo('Se informa a Gerencia · Centro de Salud USS - Valdivia el resultado de la medición de higiene de manos clínica correspondiente a '+c.periodo+', aplicada en '+c.servicios.join(', ')+' mediante observación directa de '+s.n+' lavados, con la pauta de 8 pasos del programa GCL 3.2. Cada lavado se clasifica como cumple solo si realiza el 100 % de los pasos que le aplican.');
+  var t2='El '+pc(s.p)+' de los lavados observados cumplió la técnica completa ('+s.k+' de '+s.n+'). El intervalo de confianza del '+c.conf+' % va de '+pc(s.ic.lo)+' a '+pc(s.ic.hi)+'. Frente al umbral de '+c.umbral+' % el resultado es: '+s.ver.txt.toLowerCase()+'.';
+  if(parcial)t2+=' Es un resultado parcial: se han observado '+s.n+' de los '+c.nObj+' lavados previstos, por lo que la conclusión puede cambiar al completar la muestra.';
+  parrafo(t2);
+  if(ps.length){var peor=ps.slice(0,2).map(function(x){return x.t.toLowerCase()+' ('+pc(x.p)+')';});parrafo('Los pasos con menor cumplimiento fueron: '+peor.join(' y ')+'.');}
+  seccion('Resultado');
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.setCharSpace(0.8);doc.text('INDICADOR',M,y);doc.text('VALOR',W0-M-1,y,{align:'right'});doc.setCharSpace(0);y+=2.5;doc.setDrawColor(210,220,230);doc.line(M,y,W0-M,y);y+=5;
+  [['Lavados observados / meta de la muestra',s.n+' / '+c.nObj,[190,196,205],false],['Lavados que cumplen los pasos aplicables',s.k+' de '+s.n,TEAL,false],['Cumplimiento del indicador',pc(s.p),colV,true],['Intervalo de confianza '+c.conf+' % (exacto)',pc(s.ic.lo)+' – '+pc(s.ic.hi),[190,196,205],false],['Umbral de cumplimiento',c.umbral+' %',[190,196,205],false],['Conclusión',s.ver.txt.split(' (')[0],colV,true]].forEach(function(r){chk(7);doc.setFillColor.apply(doc,r[2]);doc.rect(M+1,y-3,2.6,2.6,'F');doc.setFont('helvetica',r[3]?'bold':'normal');doc.setFontSize(9.5);doc.setTextColor.apply(doc,TXT);doc.text(r[0],M+7,y);doc.setFont('helvetica','bold');doc.text(String(r[1]),W0-M-1,y,{align:'right'});y+=7;});
+  seccion('Gráficos');
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);doc.text('Cómo se formó el resultado: cumplimiento acumulado y su intervalo de confianza',M,y);y+=4;
+  // gráfico de convergencia
+  chk(58);var gx=M+10,gw=CW-12,gy=y,gh=44,X=Math.max(s.n,c.nObj);
+  var sx=function(i){return gx+gw*i/X;},sy=function(v){return gy+gh*(1-v);};
+  doc.setFillColor(220,240,226);doc.rect(gx,sy(1),gw,sy(u)-sy(1),'F');
+  doc.setFillColor(252,239,214);doc.rect(gx,sy(u),gw,sy(Math.max(0,u-.2))-sy(u),'F');
+  doc.setFillColor(250,226,226);doc.rect(gx,sy(Math.max(0,u-.2)),gw,sy(0)-sy(Math.max(0,u-.2)),'F');
+  doc.setDrawColor(255,255,255);doc.setLineWidth(0.2);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor.apply(doc,GRIS);
+  [0,.25,.5,.75,1].forEach(function(v){doc.line(gx,sy(v),gx+gw,sy(v));doc.text(Math.round(v*100)+'%',gx-1.5,sy(v)+1,{align:'right'});});
+  var pts=lmSerie(l,c);
+  if(pts.length>1){
+    var up=pts.map(function(q){return [sx(q.j),sy(q.hi)];}),dn=pts.slice().reverse().map(function(q){return [sx(q.j),sy(q.lo)];}),all=up.concat(dn),segs=[];
+    for(var i=1;i<all.length;i++)segs.push([all[i][0]-all[i-1][0],all[i][1]-all[i-1][1]]);
+    doc.setFillColor(176,226,221);doc.lines(segs,all[0][0],all[0][1],[1,1],'F',true);
+    doc.setDrawColor.apply(doc,TEAL);doc.setLineWidth(0.7);for(var j=1;j<pts.length;j++)doc.line(sx(pts[j-1].j),sy(pts[j-1].p),sx(pts[j].j),sy(pts[j].p));
+  }
+  doc.setDrawColor.apply(doc,NAVY);doc.setLineWidth(0.4);doc.setLineDashPattern([1.5,1.2],0);doc.line(gx,sy(u),gx+gw,sy(u));doc.line(sx(c.nObj),gy,sx(c.nObj),gy+gh);doc.setLineDashPattern([],0);
+  var q=pts[pts.length-1];doc.setFillColor.apply(doc,colV);doc.circle(sx(q.j),sy(q.p),1.3,'F');
+  doc.setFontSize(7);doc.setTextColor.apply(doc,NAVY);doc.text('umbral '+c.umbral+'%',gx+gw-1,sy(u)-1,{align:'right'});doc.text('meta n='+c.nObj,sx(c.nObj)-1,gy+3,{align:'right'});
+  doc.setTextColor.apply(doc,GRIS);doc.text('lavados observados (acumulados)',gx+gw/2,gy+gh+4.5,{align:'center'});
+  y=gy+gh+8;
+  chk(10+ps.length*6.6);
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);doc.text('Cumplimiento por paso de la técnica (la línea marca el umbral)',M,y);y+=6;
+  var BX=M+78,BW=70;
+  ps.forEach(function(x){chk(8);var cc=x.p>=u?OK:x.p>=u-.2?RI:BA;
+    doc.setFont('helvetica','normal');doc.setFontSize(8.2);doc.setTextColor.apply(doc,TXT);doc.text((x.i+1)+'. '+x.t.substring(0,48),M,y);
+    doc.setFillColor(226,232,240);doc.roundedRect(BX,y-3.4,BW,4.2,1,1,'F');doc.setFillColor.apply(doc,cc);doc.roundedRect(BX,y-3.4,Math.max(0.8,BW*x.p),4.2,1,1,'F');
+    doc.setDrawColor.apply(doc,NAVY);doc.setLineWidth(0.5);doc.line(BX+BW*u,y-4.4,BX+BW*u,y+1.4);
+    doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,TXT);doc.text(pc(x.p),W0-M,y,{align:'right'});y+=6.6;});
+  seccion('Resultado por servicio y por cargo');
+  [['Servicio','servicio'],['Cargo','cargo']].forEach(function(g){
+    var arr=lmPorGrupo(l,g[1],c);chk(20);
+    var xs=[M+2,M+84,M+108,M+128],al=['l','r','r','l'];tabla([g[0],'n','Cumplimiento','Intervalo de confianza'],xs,al);
+    arr.forEach(function(r){fila([r.g,r.n,r.n<5?'n insuficiente':pc(r.p),pc(r.ic.lo)+' – '+pc(r.ic.hi)],xs,al,[null,null,r.n<5?GRIS:(r.ver.cod==='sobre'?OK:r.ver.cod==='bajo'?BA:RI),null]);});
+    y+=4;
+  });
+  seccion('Criterios y nota metodológica');
+  parrafo('Unidad de medición: el lavado observado. Regla de cumplimiento (fijada al calibrar): '+c.regla+' Los pasos evaluados son: '+LM_PASOS.map(function(t,i){return (i+1)+') '+t.toLowerCase();}).join('; ')+'.');
+  parrafo('Tamaño de muestra: n = z^2 x p x (1 - p) / e^2, con z = '+lmZ(c.conf)+' ('+c.conf+' % de confianza), p = '+c.p+' % esperado y e = '+c.e+' %'+(c.N?', con corrección por población finita (N = '+c.N+')':', sin corrección por población finita')+', lo que da '+c.nObj+' lavados. Intervalo de confianza exacto binomial (Clopper-Pearson). La conclusión es «concluyente» si todo el intervalo queda sobre o bajo el umbral de '+c.umbral+' % y «no concluyente» si el umbral cae dentro del intervalo.');
+  parrafo('Limitaciones: una misma persona es observada varias veces, por lo que el intervalo subestima la variabilidad real; y la observación directa puede modificar la conducta de la persona observada (efecto Hawthorne), lo que tiende a sobreestimar el cumplimiento.');
+  seccion('Calibración sellada');
+  peq('Sellada el '+mtFechaHora((m.sello||{}).ts||ts)+' por '+((m.sello||{}).autor||'')+'. Servicios: '+c.servicios.join(', ')+'. Cargos observados: '+c.cargos.join(', ')+'. Huella SHA-256: '+((m.sello||{}).hash||'—')+'.');
+  chk(36);y+=3;var cx=W0/2;
+  if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-20,y,40,14);}catch(e){}}y+=14;
+  doc.setDrawColor(30,30,30);doc.setLineWidth(0.3);doc.line(cx-40,y,cx+40,y);y+=4.5;
+  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(20,20,20);doc.text('Patricio Baeza Aguilar',cx,y,{align:'center'});y+=4.5;
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.text('Director Técnico',cx,y,{align:'center'});y+=4.2;
+  doc.setFontSize(8);doc.setTextColor.apply(doc,GRIS);doc.text('Centro de Salud USS - Valdivia',cx,y,{align:'center'});y+=3.8;doc.setFontSize(7.5);doc.text(fol,cx,y,{align:'center'});
+  var NP=doc.getNumberOfPages();
+  for(var i=1;i<=NP;i++){doc.setPage(i);doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,287,W0-M,287);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.text('Centro de Salud USS - Valdivia · Documento de uso interno'+(c.practica?' · PRÁCTICA, SIN VALIDEZ':''),M,291);doc.text('Página '+i+' de '+NP,W0-M,291,{align:'right'});}
+  doc.save('Informe_lavado_manos_'+c.periodo.replace(/\s+/g,'_')+'_'+fol+'.pdf');
+};
+// ---- Excel de registro: Detalle, Indicador, Calibración ----
+window.lmExcel=function(id){
+  if(!lmEsAdmin()){alert('El Excel lo descarga el administrador.');return;}
+  var m=LM.meds[id];if(!m)return;var c=m.calib,l=lmObsDe(id),s=lmResumen(l,c);
+  if(typeof XLSX==='undefined'){alert('No se pudo cargar el generador de Excel. Revisa tu conexión.');return;}
+  var tr={S:'Sí',N:'No',A:'N/A'};
+  var det=[['N°','Fecha','Hora','Observador','Servicio','Cargo','RUN del paciente','Nombre del evaluado']];
+  det[0]=det[0].concat(LM_PASOS.map(function(t,i){return 'P'+(i+1)+' '+t;})).concat(['Justificación N/A','Cumple (1/0)']);
+  l.forEach(function(r,i){det.push([i+1,r.fecha,r.hora,r.autor,r.servicio,r.cargo,r.run?lmRunFmt(r.run):(r.codigo||''),r.evaluado||''].concat((r.pasos||'').split('').map(function(x){return tr[x]||'';})).concat([r.naJust||'',r.cumple]));});
+  var wsD=XLSX.utils.aoa_to_sheet(det),last=l.length+1,cCol='R';
+  wsD['!cols']=[{wch:5},{wch:11},{wch:7},{wch:16},{wch:14},{wch:14},{wch:14},{wch:24}].concat(LM_PASOS.map(function(){return {wch:14};})).concat([{wch:28},{wch:10}]);
+  var ind=[['INDICADOR: Cumplimiento de la técnica de lavado clínico de manos (GCL 3.2)'],[],
+   ['Período',c.periodo],['Servicios',c.servicios.join(', ')],['Fórmula','Lavados que cumplen ÷ lavados observados (aplicables)'],['Regla de cumplimiento',c.regla],['Umbral (%)',c.umbral],['Confianza (%)',c.conf],[],
+   ['Lavados observados',null],['Lavados que cumplen',null],['Cumplimiento',null],['IC inferior (Clopper-Pearson)',s.ic.lo],['IC superior (Clopper-Pearson)',s.ic.hi],['Conclusión',s.ver.txt],['Estado de la muestra',s.n<c.nObj?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')']];
+  var wsI=XLSX.utils.aoa_to_sheet(ind);
+  var D="Detalle!";
+  wsI['B10']={t:'n',v:s.n,f:'COUNT('+D+'$'+cCol+'$2:$'+cCol+'$'+(last)+')'};
+  wsI['B11']={t:'n',v:s.k,f:'SUM('+D+'$'+cCol+'$2:$'+cCol+'$'+(last)+')'};
+  wsI['B12']={t:'n',v:s.p,f:'IF(B10=0,0,B11/B10)',z:'0.0%'};
+  wsI['B13'].z='0.0%';wsI['B14'].z='0.0%';
+  var row=ind.length;
+  function bloque(titulo,campo,colLetra){
+    var arr=lmPorGrupo(l,campo,c);var base=row;
+    wsI['A'+(row+1)]={t:'s',v:titulo};['n','Cumplen','% cumplimiento','IC inferior','IC superior'].forEach(function(h,i){wsI[String.fromCharCode(66+i)+(row+1)]={t:'s',v:h};});row++;
+    arr.forEach(function(r){row++;var rr=row;wsI['A'+rr]={t:'s',v:r.g};wsI['B'+rr]={t:'n',v:r.n,f:'COUNTIF('+D+'$'+colLetra+'$2:$'+colLetra+'$'+last+',A'+rr+')'};wsI['C'+rr]={t:'n',v:r.k,f:'SUMIF('+D+'$'+colLetra+'$2:$'+colLetra+'$'+last+',A'+rr+','+D+'$'+cCol+'$2:$'+cCol+'$'+last+')'};wsI['D'+rr]={t:'n',v:r.p,f:'IF(B'+rr+'=0,0,C'+rr+'/B'+rr+')',z:'0.0%'};wsI['E'+rr]={t:'n',v:r.ic.lo,z:'0.0%'};wsI['F'+rr]={t:'n',v:r.ic.hi,z:'0.0%'};});
+    row+=2;
+  }
+  row=ind.length+1;bloque('Por servicio','servicio','E');bloque('Por cargo','cargo','F');
+  wsI['!ref']='A1:F'+row;wsI['!cols']=[{wch:34},{wch:44},{wch:12},{wch:16},{wch:12},{wch:12}];
+  var cal=[['CALIBRACIÓN SELLADA'],[],['Estado',m.estado],['Período',c.periodo],['% esperado',c.p],['Margen de error (±%)',c.e],['Confianza (%)',c.conf],['z',lmZ(c.conf)],['N real (población)',c.N||'sin corrección finita'],['Tamaño de muestra (n)',c.nObj],['Umbral (%)',c.umbral],['Servicios',c.servicios.join(', ')],['Cargos',c.cargos.join(', ')],['Regla de cumplimiento',c.regla],['Práctica (sin validez)',c.practica?'Sí':'No'],['Sellada por',(m.sello||{}).autor||''],['Fecha y hora del sello',(m.sello||{}).ts?new Date(m.sello.ts).toLocaleString('es-CL'):''],['Huella SHA-256',(m.sello||{}).hash||''],[],['Pasos evaluados']].concat(LM_PASOS.map(function(t,i){return [i+1,t];}));
+  var wsC=XLSX.utils.aoa_to_sheet(cal);wsC['!cols']=[{wch:28},{wch:90}];
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,wsD,'Detalle');XLSX.utils.book_append_sheet(wb,wsI,'Indicador');XLSX.utils.book_append_sheet(wb,wsC,'Calibración');
+  XLSX.writeFile(wb,'Registro_lavado_manos_'+c.periodo.replace(/\s+/g,'_')+'.xlsx');
+};
 
 </script>
 </body>
