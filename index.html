@@ -25390,6 +25390,36 @@ window.lmCopiarGo=function(){
 };
 ;(function(){var st=document.createElement('style');st.textContent='#lmCpOv .lmi{background:#0b1220!important;color:#fff!important;border:1px solid rgba(255,255,255,.2)!important}#lmCpOv .lmb{background:rgba(255,255,255,.14)!important;color:#fff!important}#lmCpOv .lmb.g{background:linear-gradient(135deg,#059669,#34d399)!important}#lmCpOv .lml{color:rgba(255,255,255,.6)!important}';document.head.appendChild(st);})();
 
+
+// ===== v6: una sola medición sellada por período y eliminación de mediciones anuladas =====
+var _lmGC6=window.lmGuardarCalib;
+window.lmGuardarCalib=function(sellar){
+  if(sellar){
+    var c=lmLeerCalibV2(),id=LM.ui.medId;
+    var otras=Object.keys(LM.meds).filter(function(k){var m=LM.meds[k],x=m.calib||{};return k!==id&&m.estado==='sellada'&&!x.practica&&!c.practica&&x.inicio&&x.fin&&x.inicio<=c.fin&&x.fin>=c.inicio;});
+    if(otras.length){alert('Ya hay una medición sellada que se cruza con este período ('+otras.map(function(k){var x=LM.meds[k].calib;return x.periodo+': '+x.inicio.split('-').reverse().join('-')+' a '+x.fin.split('-').reverse().join('-');}).join('; ')+'). Solo puede haber una medición activa por período. Cópiale las pautas a la nueva si las necesitas y anula la anterior con motivo, o marca esta como práctica.');return;}
+  }
+  return _lmGC6(sellar);
+};
+var _lmHC6=lmHtmlCalib;
+lmHtmlCalib=function(m){
+  var h=_lmHC6(m);
+  if(m&&m.estado==='anulada'&&lmEsAdmin()){
+    var n=Object.keys(LM.obs[LM.ui.medId]||{}).length;
+    h+='<div class="lmc" style="border:1px solid rgba(239,68,68,.35)"><b style="color:#fca5a5">Eliminar esta medición</b><div style="font-size:12px;color:rgba(255,255,255,.65);margin:4px 0 8px">Borra para siempre la medición anulada y sus '+n+' pautas. No se puede deshacer. Las pautas que ya copiaste a otra medición no se tocan.</div><button class="lmb r" onclick="lmEliminarMed(\''+LM.ui.medId+'\')">Eliminar definitivamente…</button></div>';
+  }
+  return h;
+};
+window.lmEliminarMed=function(id){
+  if(!lmEsAdmin()){alert('Solo el administrador.');return;}
+  var m=LM.meds[id];if(!m||m.estado!=='anulada'){alert('Solo se pueden eliminar mediciones anuladas.');return;}
+  var n=Object.keys(LM.obs[id]||{}).length;
+  var t=prompt('Vas a borrar para siempre «'+((m.calib||{}).periodo||id)+'» y sus '+n+' pautas.\nEscribe ELIMINAR para confirmar:');
+  if(t!=='ELIMINAR'){return;}
+  var r=lmRef();LM.ui.vista='lista';LM.ui.medId='';
+  Promise.all([r.child('mediciones/'+id).remove(),r.child('obs/'+id).remove(),r.child('notif/'+id).remove()]).then(function(){lmRender();}).catch(function(e){alert('No se pudo eliminar: '+e);});
+};
+
 </script>
 </body>
 </html>
