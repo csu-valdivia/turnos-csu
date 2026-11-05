@@ -1333,7 +1333,7 @@ body.gx-light .tccf button.si{color:#fff!important}
             <button class="btn-add" id="abrirDashboardBtn" style="background:linear-gradient(135deg,#2563eb,#10b981)">📊 Abrir dashboard de gestión</button>
             <button class="btn-add" id="abrirDashInvBtn" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">📦 Dashboard de inventario</button>
             <button class="btn-add" id="abrirDashTecBtn" style="background:linear-gradient(135deg,#7c3aed,#2563eb);margin-top:6px">🔬 Dashboard técnico (esterilización)</button>
-            <button class="btn-add" id="abrirLavadoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">🧼 Pauta lavado de manos (acreditación)</button>
+            <button class="btn-add" id="abrirLavadoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">🧼 Pauta lavado de manos (acreditación GCL 3.2)</button>
             <button class="btn-add" id="abrirCumplimientoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">✅ Control de cumplimiento diario</button>
             <button class="btn-add" id="abrirSinAsignarBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">👥 Quién no tiene asignaciones</button>
             <button class="btn-add" id="abrirCargaTrabajoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">⚖️ Carga de trabajo del equipo</button>
@@ -24470,7 +24470,7 @@ var LM_CSS='<style>#lmOv{background:#0b1220!important;color:#e5e7eb!important}#l
 function lmRender(){
   var ov=document.getElementById('lmOv');if(!ov)return;
   var v=LM.ui.vista,m=LM.meds[LM.ui.medId];
-  var h='<div style="max-width:860px;margin:0 auto">'+LM_CSS+'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span class="lmh" style="font-size:17px;font-weight:800">🧼 Pauta de lavado clínico de manos</span><button class="lmb" onclick="lmCerrar()">✕ Salir</button></div>';
+  var h='<div style="max-width:860px;margin:0 auto">'+LM_CSS+'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span class="lmh" style="font-size:17px;font-weight:800">🧼 Pauta de lavado clínico de manos · GCL 3.2</span><button class="lmb" onclick="lmCerrar()">✕ Salir</button></div>';
   if(v!=='lista')h+='<button class="lmb" style="margin-bottom:10px" onclick="lmVista(\'lista\')">← Mediciones</button>';
   if(v==='lista')h+=lmHtmlLista();
   else if(v==='calib')h+=lmHtmlCalib(m);
@@ -24729,13 +24729,13 @@ window.lmPdfInforme=function(id,mes){
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.4);
   doc.text('INFORME DE INDICADOR · HIGIENE DE MANOS',M,y);doc.setCharSpace(0);y+=5;
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,GRIS);
-  doc.text('Para: Gerencia · Pauta de supervisión de lavado clínico de manos · '+perTxt+(mes?' (período de medición: '+c.periodo+')':''),M,y);y+=4.2;
+  doc.text('Para: Gerencia · Pauta de supervisión de lavado clínico de manos (GCL 3.2) · '+perTxt+(mes?' (período de medición: '+c.periodo+')':''),M,y);y+=4.2;
   var fol='LM-'+id.slice(-6).toUpperCase();doc.text('Folio '+fol+' · Emitido '+mtFechaHora(ts)+' · Uso interno',M,y);
   var flag=c.practica?'MEDICIÓN DE PRÁCTICA · SIN VALIDEZ':(parcial?'RESULTADO PARCIAL ('+s.n+' de '+metaN+')':'');
   if(flag){doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,RI);doc.text(flag,W0-M,y,{align:'right'});doc.setFont('helvetica','normal');}
   y+=8;
   var ps=lmPorPaso(l).filter(function(x){return x.ap;}).sort(function(a,b){return a.p-b.p;});
-  parrafo('Se informa a Gerencia · Centro de Salud USS - Valdivia el resultado de la medición de higiene de manos clínica correspondiente a '+perTxt+', aplicada en '+c.servicios.join(', ')+' mediante observación directa de '+s.n+' lavados, con la pauta de 8 pasos. Cada lavado se clasifica como cumple solo si realiza el 100 % de los pasos que le aplican.');
+  parrafo('Se informa a Gerencia · Centro de Salud USS - Valdivia el resultado de la medición de higiene de manos clínica correspondiente a '+perTxt+', aplicada en '+c.servicios.join(', ')+' mediante observación directa de '+s.n+' lavados, con la pauta de 8 pasos del programa GCL 3.2. Cada lavado se clasifica como cumple solo si realiza el 100 % de los pasos que le aplican.');
   var t2='El '+pc(s.p)+' de los lavados observados cumplió la técnica completa ('+s.k+' de '+s.n+'). El intervalo de confianza del '+c.conf+' % va de '+pc(s.ic.lo)+' a '+pc(s.ic.hi)+'. Frente al umbral de '+c.umbral+' % el resultado es: '+s.ver.txt.toLowerCase()+'.';
   if(parcial)t2+=' Es un resultado parcial: se han observado '+s.n+' de los '+metaN+' previstos '+(mes?'para el mes':'para el período')+', por lo que la conclusión puede cambiar al completar la muestra.';
   parrafo(t2);
@@ -24813,7 +24813,7 @@ window.lmExcel=function(id){
   l.forEach(function(r,i){det.push([i+1,r.fecha,r.hora,r.autor,r.servicio,r.cargo,r.run?lmRunFmt(r.run):(r.codigo||''),r.evaluado||''].concat((r.pasos||'').split('').map(function(x){return tr[x]||'';})).concat([r.naJust||'',r.cumple]));});
   var wsD=XLSX.utils.aoa_to_sheet(det),last=l.length+1,cCol='R';
   wsD['!cols']=[{wch:5},{wch:11},{wch:7},{wch:16},{wch:14},{wch:14},{wch:14},{wch:24}].concat(LM_PASOS.map(function(){return {wch:14};})).concat([{wch:28},{wch:10}]);
-  var ind=[['INDICADOR: Cumplimiento de la técnica de lavado clínico de manos'],[],
+  var ind=[['INDICADOR: Cumplimiento de la técnica de lavado clínico de manos (GCL 3.2)'],[],
    ['Período',c.periodo],['Servicios',c.servicios.join(', ')],['Fórmula','Lavados que cumplen ÷ lavados observados (aplicables)'],['Regla de cumplimiento',c.regla],['Umbral (%)',c.umbral],['Confianza (%)',c.conf],[],
    ['Lavados observados',null],['Lavados que cumplen',null],['Cumplimiento',null],['IC inferior (Clopper-Pearson)',s.ic.lo],['IC superior (Clopper-Pearson)',s.ic.hi],['Conclusión',s.ver.txt],['Estado de la muestra',s.n<c.nObj?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')']];
   var wsI=XLSX.utils.aoa_to_sheet(ind);
@@ -25052,7 +25052,7 @@ window.lmExcel=function(id){
   var last=all.length+1,wsD=XLSX.utils.aoa_to_sheet(det);
   wsD['!cols']=[{wch:5},{wch:11},{wch:9},{wch:7},{wch:16},{wch:14},{wch:14},{wch:15},{wch:24}].concat(LM_PASOS.map(function(){return {wch:13};})).concat([{wch:26},{wch:10},{wch:14},{wch:12}]);
   var D='Detalle!',rg=function(col){return D+'$'+col+'$2:$'+col+'$'+last;};
-  var ind=[['INDICADOR: Cumplimiento de la higiene de manos durante la atención clínica (pauta de 8 pasos)'],[],['Período',c.periodo],['Unidades',c.servicios.join(', ')],['Fórmula','Observaciones que cumplen los pasos aplicables ÷ observaciones supervisadas en igual período'],['Regla de cumplimiento',c.regla],['Umbral (≥ %)',c.umbral],['Confianza (%)',c.conf],[],['Observaciones (cuentan para el indicador)',null],['Observaciones que cumplen',null],['Cumplimiento',null],['IC inferior (Clopper-Pearson)',s.ic.lo],['IC superior (Clopper-Pearson)',s.ic.hi],['Conclusión',s.n?s.ver.txt:''],['Estado de la muestra',s.n<c.nObj?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')'],['Excedente (fuera del indicador)',all.length-l.length]];
+  var ind=[['INDICADOR GCL 3.2: Cumplimiento de la higiene de manos durante la atención clínica (pauta de 8 pasos)'],[],['Período',c.periodo],['Unidades',c.servicios.join(', ')],['Fórmula','Observaciones que cumplen los pasos aplicables ÷ observaciones supervisadas en igual período'],['Regla de cumplimiento',c.regla],['Umbral (≥ %)',c.umbral],['Confianza (%)',c.conf],[],['Observaciones (cuentan para el indicador)',null],['Observaciones que cumplen',null],['Cumplimiento',null],['IC inferior (Clopper-Pearson)',s.ic.lo],['IC superior (Clopper-Pearson)',s.ic.hi],['Conclusión',s.n?s.ver.txt:''],['Estado de la muestra',s.n<c.nObj?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')'],['Excedente (fuera del indicador)',all.length-l.length]];
   var wsI=XLSX.utils.aoa_to_sheet(ind);
   wsI['B10']={t:'n',v:s.n,f:'SUM('+rg('T')+')'};wsI['B11']={t:'n',v:s.k,f:'SUMPRODUCT('+rg('S')+','+rg('T')+')'};wsI['B12']={t:'n',v:s.p,f:'IF(B10=0,0,B11/B10)',z:'0.0%'};wsI['B13'].z='0.0%';wsI['B14'].z='0.0%';
   var row=ind.length+1;
@@ -25168,7 +25168,7 @@ window.lmPdfNotif=function(id,srv,plan,plazo,seq){
   doc.text('Folio '+fol+' · Para: Dirección de Carrera de '+srv+' · Período: '+c.periodo,M,y);y+=4.2;
   var flag=c.practica?'MEDICIÓN DE PRÁCTICA · SIN VALIDEZ':(parcial?'RESULTADO PARCIAL ('+s.n+' de '+d.cuota+' atenciones observadas)':'');
   if(flag){doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,RI);doc.text(flag,M,y);}y+=7;
-  par('Se informa el resultado del Indicador de cumplimiento de higiene de manos (técnica de 8 pasos) en la unidad de su carrera. La unidad de medición es la atención observada: cada lavado clínico observado con la pauta de 8 pasos cuenta como cumplimiento solo si se realiza el 100 % de los pasos aplicables. Por resguardo no se informan nombres ni RUN, y no se muestran resultados de grupos con menos de 5 clínicos distintos observados.');
+  par('Se informa el resultado del Indicador de cumplimiento de higiene de manos, GCL 3.2 (técnica de 8 pasos) en la unidad de su carrera. La unidad de medición es la atención observada: cada lavado clínico observado con la pauta de 8 pasos cuenta como cumplimiento solo si se realiza el 100 % de los pasos aplicables. Por resguardo no se informan nombres ni RUN, y no se muestran resultados de grupos con menos de 5 clínicos distintos observados.');
   sec('Resultado');
   var X=[M+22,M+66,M+112,W0-M-6];chk(22);
   doc.setFillColor(226,232,240);doc.rect(M,y-4.5,CW,7,'F');doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,TXT);
@@ -25291,6 +25291,104 @@ function lmHtmlPauta(m){
   return h+'<button class="lmb" style="width:100%" onclick="lmVista(\'pautas\')">Volver</button>';
 }
 ;(function(){var st=document.createElement('style');st.textContent='#lmOv .lmi{background:#0b1220!important;color:#fff!important;border:1px solid rgba(255,255,255,.2)!important;color-scheme:dark}#lmOv select.lmi option{background:#0b1220;color:#fff}';document.head.appendChild(st);})();
+
+
+// ===== v5: contador por mes y semana, y copia de pautas entre mediciones =====
+function lmMatriz(c){
+  var us=c.unidades,ms=c.meses;if(!us||!ms||!ms.length)return null;
+  var res={},tot=ms.reduce(function(a,m){return a+m.cuota;},0),acum={};ms.forEach(function(m){acum[m.ym]=0;});
+  us.forEach(function(u,ui){res[u.nombre]={};
+    if(ui===us.length-1){ms.forEach(function(m){res[u.nombre][m.ym]=Math.max(0,m.cuota-acum[m.ym]);});return;}
+    var r=ms.map(function(m){var x=u.cuota*m.cuota/(tot||1);return {ym:m.ym,q:Math.floor(x),fr:x-Math.floor(x)};});
+    var falta=u.cuota-r.reduce(function(a,x){return a+x.q;},0);
+    r.slice().sort(function(a,b){return b.fr-a.fr;}).slice(0,Math.max(0,falta)).forEach(function(x){x.q++;});
+    r.forEach(function(x){res[u.nombre][x.ym]=x.q;acum[x.ym]+=x.q;});
+  });
+  return res;
+}
+function lmSemanasDeMes(c,ym){
+  var out=[],a=lmLunes(c.inicio),fin=lmLunes(c.fin);
+  for(var d=lmDt(a);lmFs(d)<=fin;d.setDate(d.getDate()+7)){var w=lmFs(d),key=w<c.inicio?c.inicio:w;if(key.slice(0,7)===ym)out.push(w);}
+  return out;
+}
+function lmSumaDias(f,n){var d=lmDt(f);d.setDate(d.getDate()+n);return lmFs(d);}
+function lmDM(f){var a=f.split('-');return +a[2]+' '+LM_MN[+a[1]-1].slice(0,3);}
+window.lmCMes=function(ym){LM.ui.cMes=ym;lmRender();};
+var _lmCt5=lmHtmlContador;
+lmHtmlContador=function(id){
+  var h=_lmCt5(id),m=LM.meds[id],c=m&&m.calib;if(!h||!c||!c.meses||!c.fin)return h;
+  var k=lmContador(id),fin=c.fin.split('-').reverse().join('-');
+  h=h.replace(/(con día de evaluación)\./,'$1 (fin del período: '+fin+').');
+  var i0=h.indexOf('<div class="lmc"><b>Mes en curso');if(i0>=0)h=h.slice(0,i0);
+  var ms=c.meses,hoy=hoyStr(),ymHoy=hoy.slice(0,7);
+  var sel=LM.ui.cMes;if(!sel||!ms.some(function(x){return x.ym===sel;}))sel=ms.some(function(x){return x.ym===ymHoy;})?ymHoy:ms[ms.length-1].ym;
+  var mx=lmMatriz(c),all=lmObsAll(id).filter(function(r){return !r.exc;}),mc=ms.filter(function(x){return x.ym===sel;})[0];
+  var tabs=ms.map(function(x){var on=x.ym===sel;return '<button class="lmb" style="margin-right:6px;'+(on?'background:#0891b2!important;':'')+'" onclick="lmCMes(\''+x.ym+'\')">'+esc(lmMesTxt(x.ym).split(' ')[0].slice(0,3))+'</button>';}).join('');
+  var hm=all.filter(function(r){return (r.fecha||'').slice(0,7)===sel;}),pasado=sel<ymHoy;
+  var det=(c.unidades||[]).map(function(u){var q=mx&&mx[u.nombre]?mx[u.nombre][sel]:0,n=hm.filter(function(r){return r.servicio===u.nombre;}).length;return esc(u.nombre)+' '+n+' de '+q;}).join(' · ');
+  h+='<div class="lmc"><div style="margin-bottom:8px">'+tabs+'</div><b>'+esc(lmMesTxt(sel))+'</b> <span style="font-size:11px;color:rgba(255,255,255,.55)">· cuota del mes '+mc.cuota+' · hechas '+hm.length+'</span><div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:4px">'+det+'</div><div style="height:8px;background:rgba(255,255,255,.1);border-radius:4px;margin-top:8px"><div style="height:8px;border-radius:4px;background:#22d3ee;width:'+Math.min(100,mc.cuota?hm.length/mc.cuota*100:0)+'%"></div></div>';
+  if(pasado&&hm.length<mc.cuota)h+='<div style="font-size:11px;color:#fbbf24;margin-top:8px">'+esc(lmMesTxt(sel).split(' ')[0])+' quedó '+(mc.cuota-hm.length)+' pautas bajo su cuota ('+hm.length+' de '+mc.cuota+').'+(k&&k.semRest>0?' Se recuperan en las semanas que quedan.':'')+'</div>';
+  h+='</div>';
+  if(!pasado||sel===ymHoy){
+    var W=k?k.semRest:0,sem=lmSemanasDeMes(c,sel),w0=lmLunes(hoy);
+    h+='<div class="lmc"><b>Meta por semana · '+esc(lmMesTxt(sel).split(' ')[0])+'</b>';
+    if(!W){h+='<div style="font-size:12px;color:#fbbf24;margin-top:6px">El período terminó el '+fin+'.</div></div>';return h;}
+    h+='<div style="font-size:11px;color:rgba(255,255,255,.55);margin:2px 0 6px">'+k.us.map(function(u){return esc(u.nombre)+' faltan '+u.faltan;}).join(' · ')+' · '+W+' semana'+(W===1?'':'s')+'</div>';
+    sem.forEach(function(w){
+      var e=lmSumaDias(w,6),ds=w+' '===w0+' '?'':'',cur=(w===w0),past=(w<w0),j=Math.round((lmDt(w)-lmDt(w0))/(7*864e5));
+      var cel='';
+      if(past){cel='hechas '+k.us.map(function(u){return all.filter(function(r){return r.servicio===u.nombre&&r.fecha>=w&&r.fecha<=e;}).length;}).join(' + ');}
+      else{cel='meta <b>'+k.us.map(function(u){var T=u.faltan+u.hSem;return Math.floor(T/W)+(j<T%W?1:0);}).join('</b> + <b>')+'</b>'+(cur?' · llevas <b style="color:#22d3ee">'+k.us.map(function(u){return u.hSem;}).join(' + ')+'</b>':'');}
+      h+='<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid rgba(255,255,255,.08);font-size:13px"><span>'+lmDM(w)+' – '+lmDM(e)+(cur?' <b style="color:#22d3ee">(esta semana)</b>':'')+'</span><span>'+cel+'</span></div>';
+    });
+    h+='<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:6px">Los números siguen el orden '+k.us.map(function(u){return esc(u.nombre);}).join(' + ')+'. Si una semana no se evalúa, lo que falta se reparte en las siguientes.</div></div>';
+  }
+  return h;
+};
+// ---- copiar pautas a otra medición (solo administrador) ----
+var _lmLi5=lmHtmlLista;
+lmHtmlLista=function(){
+  var h=_lmLi5();if(!lmEsAdmin())return h;
+  var ids=Object.keys(LM.meds).filter(function(id){return LM.meds[id].estado!=='borrador'&&Object.keys(LM.obs[id]||{}).length;});
+  if(ids.length&&Object.keys(LM.meds).some(function(id){return LM.meds[id].estado==='sellada';}))h+='<div class="lmc"><b style="font-size:13px">Copiar pautas a otra medición</b><div style="font-size:11px;color:rgba(255,255,255,.55);margin:2px 0 8px">Copia las pautas con su fecha, pasos y observaciones. Las originales quedan intactas.</div>'+ids.map(function(id){var m=LM.meds[id],n=Object.keys(LM.obs[id]).filter(function(k){return !LM.obs[id][k].anulada;}).length;return '<button class="lmb" style="margin:0 6px 6px 0" onclick="lmCopiarAbrir(\''+id+'\')">📋 '+esc((m.calib||{}).periodo||id)+' ('+m.estado+', '+n+' pautas)</button>';}).join('')+'</div>';
+  return h;
+};
+function lmCopiaPlan(src,dst){
+  var ms=LM.meds[dst],c=ms.calib||{},o=LM.obs[src]||{},ya={};
+  Object.keys(LM.obs[dst]||{}).forEach(function(k){var r=LM.obs[dst][k];if(r.copiadaDe)ya[r.copiadaDe]=1;});
+  var ok=[],fuera=0,dup=0,sinSv=0;
+  Object.keys(o).forEach(function(k){var r=o[k];if(r.anulada)return;
+    if(ya[src+'/'+k]){dup++;return;}
+    if((c.servicios||[]).indexOf(r.servicio)<0){sinSv++;return;}
+    if((c.inicio&&r.fecha<c.inicio)||(c.fin&&r.fecha>c.fin)){fuera++;return;}
+    ok.push(k);});
+  return {ok:ok,fuera:fuera,dup:dup,sinSv:sinSv};
+}
+window.lmCopiarAbrir=function(src){
+  if(!lmEsAdmin()){alert('Solo el administrador puede copiar pautas.');return;}
+  var dsts=Object.keys(LM.meds).filter(function(id){return id!==src&&LM.meds[id].estado==='sellada';});
+  if(!dsts.length){alert('No hay otra medición sellada como destino. Crea y sella primero la medición nueva.');return;}
+  var ov=document.getElementById('lmCpOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='lmCpOv';ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(8,15,30,.94);display:flex;align-items:center;justify-content:center;padding:16px';
+  LM.cp={src:src};
+  ov.innerHTML='<div style="background:#16233d;border-radius:14px;padding:18px;max-width:420px;width:100%;color:#fff"><b style="font-size:15px">Copiar pautas</b><div style="font-size:12px;color:rgba(255,255,255,.6);margin:4px 0 8px">Desde: '+esc((LM.meds[src].calib||{}).periodo||src)+' ('+LM.meds[src].estado+')</div><label class="lml">Medición de destino</label><select class="lmi" id="lmCpDst" onchange="lmCopiarRes()">'+dsts.map(function(id){var c=LM.meds[id].calib||{};return '<option value="'+id+'">'+esc(c.periodo||id)+' ('+(c.inicio||'').split('-').reverse().join('-')+' a '+(c.fin||'').split('-').reverse().join('-')+')</option>';}).join('')+'</select><div id="lmCpRes" style="font-size:13px;margin:12px 0;line-height:1.6"></div><div style="display:flex;gap:8px"><button class="lmb" onclick="document.getElementById(\'lmCpOv\').remove()">Cancelar</button><button class="lmb g" id="lmCpGo" onclick="lmCopiarGo()">Copiar</button></div></div>';
+  document.body.appendChild(ov);lmCopiarRes();
+};
+window.lmCopiarRes=function(){
+  var dst=document.getElementById('lmCpDst').value,p=lmCopiaPlan(LM.cp.src,dst);LM.cp.dst=dst;LM.cp.plan=p;
+  document.getElementById('lmCpRes').innerHTML='Se copiarán <b>'+p.ok.length+'</b> pautas.'+(p.fuera?'<br><span style="color:#fbbf24">'+p.fuera+' quedan fuera del período de la medición nueva y no se copian.</span>':'')+(p.sinSv?'<br><span style="color:#fbbf24">'+p.sinSv+' son de una carrera que la medición nueva no incluye.</span>':'')+(p.dup?'<br><span style="color:rgba(255,255,255,.6)">'+p.dup+' ya estaban copiadas y se omiten.</span>':'');
+  document.getElementById('lmCpGo').disabled=!p.ok.length;
+};
+window.lmCopiarGo=function(){
+  var p=LM.cp.plan,src=LM.cp.src,dst=LM.cp.dst;if(!p||!p.ok.length)return;
+  if(!confirm('Copiar '+p.ok.length+' pautas a la medición de destino? Las originales no se modifican.'))return;
+  var up={},ts=Date.now(),au=lmAutor();
+  p.ok.forEach(function(k){var r=JSON.parse(JSON.stringify(LM.obs[src][k]));delete r.id;delete r.exc;r.copiadaDe=src+'/'+k;r.copiaPor=au;r.copiaTs=ts;r.retro=(r.fecha<hoyStr());up[k]=r;});
+  var base=lmRef().child('obs/'+dst);
+  var tareas=Object.keys(up).map(function(k){return base.child(k).set(up[k]);});
+  Promise.all(tareas).then(function(){var o=document.getElementById('lmCpOv');if(o)o.remove();alert('Se copiaron '+p.ok.length+' pautas.');lmRender();}).catch(function(e){alert('No se pudo copiar: '+e);});
+};
+;(function(){var st=document.createElement('style');st.textContent='#lmCpOv .lmi{background:#0b1220!important;color:#fff!important;border:1px solid rgba(255,255,255,.2)!important}#lmCpOv .lmb{background:rgba(255,255,255,.14)!important;color:#fff!important}#lmCpOv .lmb.g{background:linear-gradient(135deg,#059669,#34d399)!important}#lmCpOv .lml{color:rgba(255,255,255,.6)!important}';document.head.appendChild(st);})();
 
 </script>
 </body>
