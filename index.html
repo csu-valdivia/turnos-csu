@@ -25073,6 +25073,170 @@ window.lmExcel=function(id){
 };
 
 ;(function(){var st=document.createElement("style");st.textContent="#lmOv .lmbx{flex:1;background:#0b1220!important;color:#cbd5e1!important;border-radius:8px;padding:8px;text-align:center;font-size:11px}#lmOv .lmbx b{color:#22d3ee!important}#lmOv .lmnt{color:#fff!important}";document.head.appendChild(st);})();
+
+
+// ===== v3: Notificación a la carrera =====
+var LM_ACC=['Reforzar el retiro de accesorios y el cuidado de uñas antes de la atención, con revisión al ingreso a clínica.','Recordar el mojado previo de manos y antebrazos antes de aplicar el jabón.','Reforzar la demostración del paso en la inducción clínica y corregir en el momento durante la supervisión.','Practicar el lavado interdigital y de lecho ungueal con demostración y retroalimentación directa.','Reforzar el tiempo de fricción de 40 segundos; incorporar cronómetro o cartel en el lavamanos.','Recordar el enjuague completo de manos y antebrazos.','Asegurar toallas desechables disponibles y reforzar el secado con ellas.','Reforzar el cierre de llaves con la toalla para no recontaminar las manos.'];
+function lmNorm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();}
+function lmProxMes(ym){var a=ym.split('-'),y=+a[0],m=+a[1]+1;if(m>12){m=1;y++;}return y+'-'+('0'+m).slice(-2);}
+// Datos de la notificación de una unidad (servicio)
+function lmNotifDatos(id,srv){
+  var m=LM.meds[id],c=m.calib,l=lmObsDe(id).filter(function(r){return r.servicio===srv;}),s=lmResumen(l,c);
+  var cl={};l.forEach(function(r){var k=lmNorm(r.evaluado);cl[k]=1;});
+  var g={};l.forEach(function(r){var k=r.cargo||'(sin dato)';var o=g[k]=g[k]||{nombre:k,n:0,k:0,cl:{}};o.n++;if(r.cumple===1)o.k++;o.cl[lmNorm(r.evaluado)]=1;});
+  var gr=Object.keys(g).map(function(k){var o=g[k];o.d=Object.keys(o.cl).length;return o;});
+  var merged=false;
+  gr.sort(function(a,b){return a.d-b.d;});
+  while(gr.length>1&&gr[0].d<5){
+    var a=gr.shift(),b=gr.shift(),cl2={};Object.keys(a.cl).concat(Object.keys(b.cl)).forEach(function(x){cl2[x]=1;});
+    gr.unshift({nombre:'Otros cargos',n:a.n+b.n,k:a.k+b.k,cl:cl2,d:Object.keys(cl2).length,det:(a.det||[a.nombre]).concat(b.det||[b.nombre])});
+    merged=true;gr.sort(function(x,y){return x.d-y.d;});
+  }
+  var desglose=gr.length>1;
+  gr.sort(function(a,b){return b.d-a.d||a.nombre.localeCompare(b.nombre);});
+  if(!desglose)gr=[];
+  gr.forEach(function(o){o.ic=lmCP(o.k,o.n,c.conf);o.p=o.n?o.k/o.n:0;});
+  var ps=lmPorPaso(l).filter(function(x){return x.ap;});
+  var cuota=((c.unidades||[]).filter(function(u){return u.nombre===srv;})[0]||{}).cuota||s.n;
+  return {m:m,c:c,l:l,s:s,srv:srv,dist:Object.keys(cl).length,gr:gr,merged:merged,desglose:desglose,ps:ps,cuota:cuota};
+}
+function lmNotifPlanBase(d){
+  var u=d.c.umbral/100,rows=[];
+  d.ps.filter(function(x){return x.p<1;}).sort(function(a,b){return a.p-b.p;}).forEach(function(x){rows.push({brecha:'Paso '+(x.i+1)+': '+x.t.toLowerCase()+', '+lmPct(x.p),accion:LM_ACC[x.i]});});
+  d.gr.filter(function(o){return o.p<u;}).forEach(function(o){rows.push({brecha:'Cargo '+o.nombre.toLowerCase()+': '+lmPct(o.p)+' de cumplimiento, bajo el umbral de '+d.c.umbral+' %',accion:'Reunión con la carrera para revisar las causas y reforzar la técnica en este grupo.'});});
+  return rows;
+}
+window.lmNotifAbrir=function(id,srv){
+  if(!lmEsAdmin()){alert('La notificación la emite el Director Técnico (administrador).');return;}
+  var d=lmNotifDatos(id,srv);
+  if(!d.s.n){alert('Aún no hay atenciones observadas en '+srv+'.');return;}
+  if(d.dist<5){alert('No se puede notificar: '+srv+' tiene menos de 5 clínicos distintos observados ('+d.dist+'). Por resguardo no se publican resultados.');return;}
+  lmRef().child('notif/'+id+'/'+lmNorm(srv).replace(/[^a-z]/g,'')).once('value').then(function(sn){
+    var sv=sn.val()||{};var base=lmNotifPlanBase(d);
+    var rows=base.map(function(r,i){var o=(sv.plan||[]).filter(function(x){return x.brecha===r.brecha;})[0];return o||r;});
+    var hoyYm=hoyStr().slice(0,7),pl=sv.plazo||lmMesTxt(lmProxMes(hoyYm));
+    LM.notif={id:id,srv:srv,rows:rows,plazo:pl,seq:sv.seq||0};
+    var o=document.getElementById('lmNotOv');if(o)o.remove();
+    o=document.createElement('div');o.id='lmNotOv';o.style.cssText='position:fixed;inset:0;z-index:99999;background:#0b1220;color:#e5e7eb;overflow:auto;padding:14px';
+    var h='<div style="max-width:720px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px;color:#22d3ee">Notificación a la carrera · '+esc(srv)+'</b><button class="lmb" onclick="document.getElementById(\'lmNotOv\').remove()">Cerrar</button></div>'+
+    '<div class="lmc" style="margin-top:10px;font-size:12px">'+d.s.n+' atenciones observadas de '+d.cuota+' · '+d.dist+' clínicos distintos · resultado '+lmPct(d.s.p)+' (IC '+lmPct(d.s.ic.lo)+' – '+lmPct(d.s.ic.hi)+')<br>'+(d.desglose?(d.merged?'Cargos con menos de 5 clínicos distintos quedan agrupados en «Otros cargos».':'Todos los cargos tienen 5 o más clínicos distintos.'):'<span style="color:#fbbf24">No se publica desglose por cargo: ningún grupo alcanza 5 clínicos distintos.</span>')+'</div>'+
+    '<div class="lmc"><b>Plan de mejora</b><div style="font-size:11px;color:#9ca3af;margin:2px 0 8px">Una fila por cada paso bajo 100 % y por cada cargo bajo el umbral. Edita Brecha y Acción; el Responsable lo designa la carrera.</div><div id="lmNotRows"></div><label class="lml" style="margin-top:8px">Plazo: próxima revisión</label><input class="lmi" id="lmNotPl" value="'+esc(pl)+'"></div>'+
+    '<div style="display:flex;gap:8px;margin:10px 0"><button class="lmb" onclick="lmNotGuardar()">Guardar plan</button><button class="lmb lmp" onclick="lmNotGenerar()">Generar PDF</button></div></div>';
+    o.innerHTML=h;document.body.appendChild(o);lmNotFilas();
+  });
+};
+function lmNotFilas(){
+  var h='';LM.notif.rows.forEach(function(r,i){h+='<div style="border-top:1px solid rgba(255,255,255,.1);padding:8px 0"><label class="lml">Brecha</label><textarea class="lmi" id="lmNB'+i+'" rows="3">'+esc(r.brecha)+'</textarea><label class="lml">Acción propuesta</label><textarea class="lmi" id="lmNA'+i+'" rows="3">'+esc(r.accion)+'</textarea><button class="lmb" style="margin-top:4px" onclick="lmNotQuitar('+i+')">Quitar fila</button></div>';});
+  if(!LM.notif.rows.length)h='<div style="color:#9ca3af;font-size:12px">Sin brechas: todos los pasos están en 100 % y ningún cargo está bajo el umbral.</div>';
+  document.getElementById('lmNotRows').innerHTML=h;
+}
+function lmNotLeer(){var n=LM.notif;n.rows=n.rows.map(function(r,i){var b=document.getElementById('lmNB'+i),a=document.getElementById('lmNA'+i);return {brecha:b?b.value.trim():r.brecha,accion:a?a.value.trim():r.accion};});n.plazo=(document.getElementById('lmNotPl').value||'').trim();}
+window.lmNotQuitar=function(i){lmNotLeer();LM.notif.rows.splice(i,1);lmNotFilas();};
+window.lmNotGuardar=function(then){
+  lmNotLeer();var n=LM.notif;
+  return lmRef().child('notif/'+n.id+'/'+lmNorm(n.srv).replace(/[^a-z]/g,'')).update({plan:n.rows,plazo:n.plazo,seq:n.seq,actualizado:Date.now(),autor:lmAutor()}).then(function(){if(typeof then!=='function')alert('Plan guardado.');});
+};
+window.lmNotGenerar=function(){
+  lmNotLeer();var n=LM.notif;
+  if(!n.plazo){alert('Indica el plazo de la próxima revisión.');return;}
+  if(!n.seq){n.seq=1;}
+  lmNotGuardar(true).then(function(){lmPdfNotif(n.id,n.srv,n.rows,n.plazo,n.seq);});
+};
+window.lmPdfNotif=function(id,srv,plan,plazo,seq){
+  var d=lmNotifDatos(id,srv),c=d.c,s=d.s,u=c.umbral/100;
+  var J=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
+  if(!J){alert('No se pudo cargar el generador de PDF. Revisa tu conexión.');return;}
+  var doc=new J('p','mm','a4'),W0=210,M=16,CW=W0-2*M,y=14,ts=Date.now();
+  var NAVY=[15,37,64],TEAL=[13,148,136],GRIS=[90,100,115],TXT=[30,40,55],OK=[22,128,61],RI=[180,83,9],BA=[185,28,28];
+  var colV=s.ver.cod==='sobre'?OK:s.ver.cod==='bajo'?BA:RI,pc=lmPct;
+  var parcial=s.n<d.cuota,abv=lmNorm(srv).slice(0,3).toUpperCase();
+  var fol='NT-'+abv+'-'+id.slice(-4).toUpperCase()+'-'+('00'+seq).slice(-2);
+  function cab(){y=14;try{doc.addImage(INF_LOGO,'JPEG',M,y,52,15.1);}catch(e){}
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);var tc='CENTRO DE SALUD USS - VALDIVIA';doc.setCharSpace(0);var wc=doc.getTextWidth(tc)+tc.length*1.2*0.3528*2.83;doc.setCharSpace(1.2);doc.text(tc,W0-M-wc+1.2,y+5);doc.setCharSpace(0);
+    doc.setFont('helvetica','normal');doc.setTextColor.apply(doc,GRIS);doc.text('Valdivia, '+lmFechaLarga(ts),W0-M,y+10.5,{align:'right'});
+    y+=19;doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,y,W0-M,y);y+=7;}
+  function chk(h){if(y+h>276){doc.addPage();cab();}}
+  function sec(t){chk(16);y+=3;doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.4);doc.text(t.toUpperCase(),M,y);doc.setCharSpace(0);y+=2.2;doc.setDrawColor.apply(doc,TEAL);doc.setLineWidth(0.5);doc.line(M,y,M+14,y);y+=5.5;}
+  function par(t,sz,col){doc.setFont('helvetica','normal');doc.setFontSize(sz||9.5);doc.setTextColor.apply(doc,col||TXT);var ln=doc.splitTextToSize(t,CW);chk(ln.length*(sz?sz*.45:4.6)+3);doc.text(ln,M,y,{lineHeightFactor:1.3});y+=ln.length*(sz?sz*.45:4.6)+2;}
+  function bold(t,col){doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor.apply(doc,col||TXT);var ln=doc.splitTextToSize(t,CW);chk(ln.length*4.6+3);doc.text(ln,M,y);y+=ln.length*4.6+1.5;}
+  var zb=0;
+  function thead(h,xs,al){chk(10);zb=0;doc.setFillColor.apply(doc,NAVY);doc.rect(M,y-4.2,CW,6.4,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);h.forEach(function(t,i){doc.text(t,xs[i],y,{align:al[i]==='r'?'right':'left'});});y+=6;}
+  function trow(v,xs,al,b,col){chk(7);if(zb++%2===0){doc.setFillColor(241,245,249);doc.rect(M,y-4.2,CW,6,'F');}doc.setFontSize(8.5);v.forEach(function(t,i){doc.setFont('helvetica',(b||(col&&col[i]))?'bold':'normal');doc.setTextColor.apply(doc,(col&&col[i])||TXT);doc.text(String(t),xs[i],y,{align:al[i]==='r'?'right':'left'});});y+=6;}
+  cab();
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.4);doc.text('NOTIFICACIÓN DE RESULTADOS · HIGIENE DE MANOS',M,y);doc.setCharSpace(0);y+=5;
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,GRIS);
+  doc.text('Folio '+fol+' · Para: Dirección de Carrera de '+srv+' · Período: '+c.periodo,M,y);y+=4.2;
+  var flag=c.practica?'MEDICIÓN DE PRÁCTICA · SIN VALIDEZ':(parcial?'RESULTADO PARCIAL ('+s.n+' de '+d.cuota+' atenciones observadas)':'');
+  if(flag){doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,RI);doc.text(flag,M,y);}y+=7;
+  par('Se informa el resultado del Indicador de cumplimiento de higiene de manos (técnica de 8 pasos) en la unidad de su carrera. La unidad de medición es la atención observada: cada lavado clínico observado con la pauta de 8 pasos cuenta como cumplimiento solo si se realiza el 100 % de los pasos aplicables. Por resguardo no se informan nombres ni RUN, y no se muestran resultados de grupos con menos de 5 clínicos distintos observados.');
+  sec('Resultado');
+  var X=[M+22,M+66,M+112,W0-M-6];chk(22);
+  doc.setFillColor(226,232,240);doc.rect(M,y-4.5,CW,7,'F');doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,TXT);
+  ['Cumplen','No cumplen','Atenciones observadas','Resultado (umbral '+c.umbral+' % o más)'].forEach(function(t,i){doc.text(t,[M+22,M+60,M+100,M+150][i],y,{align:'center'});});y+=7.5;
+  doc.setFont('helvetica','bold');doc.setFontSize(14);[s.k,s.n-s.k,s.n].forEach(function(t,i){doc.setTextColor.apply(doc,TXT);doc.text(String(t),[M+22,M+60,M+100][i],y,{align:'center'});});doc.setTextColor.apply(doc,colV);doc.text(pc(s.p),M+150,y,{align:'center'});y+=7;
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor.apply(doc,TXT);doc.text('Intervalo de confianza '+c.conf+' % (exacto): ',M,y);var wI=doc.getTextWidth('Intervalo de confianza '+c.conf+' % (exacto): ');doc.setFont('helvetica','bold');doc.text(pc(s.ic.lo)+' – '+pc(s.ic.hi),M+wI,y);y+=5.5;
+  var ok=s.p>=u;bold((ok?'Cumple':'No cumple')+' el umbral (umbral '+c.umbral+' % o más) · '+s.ver.txt.replace('Concluyente: ','Concluyente: ').replace('(el umbral cae dentro del intervalo)','(el umbral cae dentro del intervalo)'),colV);
+  if(parcial)par('Es un resultado parcial: faltan '+(d.cuota-s.n)+' atenciones para completar la muestra de la carrera y el resultado puede cambiar. Veredicto provisional.',9,RI);
+  sec('Resultado por cargo');
+  if(d.desglose){
+    var xs=[M+2,M+70,M+96,M+128,W0-M-2],al=['l','r','r','r','r'];thead(['Cargo','Atenciones obs.','Clínicos dist.','Cumplimiento','Intervalo de confianza'],xs,al);
+    d.gr.forEach(function(o){trow([o.nombre+(o.nombre==='Otros cargos'?' *':''),o.n,o.d,pc(o.p),pc(o.ic.lo)+' – '+pc(o.ic.hi)],xs,al,false,[null,null,null,o.p>=u?OK:BA,null]);});
+    trow(['Total carrera',s.n,d.dist,pc(s.p),pc(s.ic.lo)+' – '+pc(s.ic.hi)],xs,al,true);
+    var sumd=d.gr.reduce(function(a,o){return a+o.d;},0);
+    var nota=(d.merged?'* Agrupa '+(d.gr.filter(function(o){return o.nombre==='Otros cargos';})[0].det||[]).join(', ')+' (cargos con menos de 5 clínicos distintos), para que ningún resultado pueda deducirse restando del total. ':'')+'El total es la suma de las filas'+(sumd===d.dist?' y los clínicos distintos suman el total porque cada uno pertenece a un solo cargo.':'.')+' Resultado referencial por carrera: la muestra se diseñó para el CSU completo.';
+    par(nota,8,GRIS);
+  }else par('No se publica desglose por cargo: ningún cargo alcanza 5 clínicos distintos observados. Resultado referencial por carrera: la muestra se diseñó para el CSU completo.',8.5,GRIS);
+  var peor=d.ps.slice().sort(function(a,b){return a.p-b.p;}).filter(function(x){return x.p<1;}).slice(0,3);
+  sec('Pasos con menor cumplimiento');
+  par(peor.length?peor.map(function(x){return 'Paso '+(x.i+1)+', '+x.t.toLowerCase()+' ('+pc(x.p)+')';}).join(' · '):'Todos los pasos aplicables están en 100 %.');
+  sec('Método');
+  var mm=(c.meses||[]).map(function(x){return x.cuota;}).join(', ');
+  par('Etapa 1, tamaño de la muestra: calculadora de la Superintendencia de Salud con universo de atenciones del año anterior '+String(c.N).replace(/\B(?=(\d{3})+(?!\d))/g,'.')+', cumplimiento esperado '+c.p+' %, error ±'+c.e+' % y confianza '+c.conf+' %: '+c.nObj+' atenciones observadas para el CSU. Etapa 2, reparto y ejecución: cuotas por mes ('+mm+') y por carrera ('+srv+' '+d.cuota+'); las atenciones se observan según la disponibilidad de quien supervisa, un día por semana, sin sorteo en este período. Período '+c.periodo+'.',8.5);
+  par('Efecto de diseño: las atenciones se agrupan por día y por clínico, por lo que no son del todo independientes. Los intervalos exactos mostrados suponen independencia; el intervalo real es algo más ancho y un resultado cercano al umbral debe leerse con cautela.',8.5);
+  // ---- página 2: gráficos
+  doc.addPage();cab();sec('Gráficos');
+  bold('Cumplimiento por paso de la pauta (la línea marca el umbral, '+c.umbral+' %)',NAVY);y+=1;
+  var BX=M+78,BW=70;
+  lmPorPaso(d.l).forEach(function(x){chk(8);var p=x.ap?x.p:null,cc=p===null?GRIS:p>=u?OK:p>=u-.2?RI:BA;
+    doc.setFont('helvetica','normal');doc.setFontSize(8.2);doc.setTextColor.apply(doc,TXT);doc.text((x.i+1)+'. '+x.t.substring(0,48),M,y);
+    doc.setFillColor(226,232,240);doc.roundedRect(BX,y-3.4,BW,4.2,1,1,'F');if(p!==null){doc.setFillColor.apply(doc,cc);doc.roundedRect(BX,y-3.4,Math.max(0.8,BW*p),4.2,1,1,'F');}
+    doc.setDrawColor.apply(doc,NAVY);doc.setLineWidth(0.5);doc.line(BX+BW*u,y-4.4,BX+BW*u,y+1.4);
+    doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,TXT);doc.text(p===null?'sin dato':pc(p),W0-M,y,{align:'right'});y+=6.6;});
+  y+=4;bold('Resultado con su intervalo de confianza '+c.conf+' %',NAVY);y+=2;
+  chk(26);var gx=M+4,gw=CW-30,gy=y,gh=12,sx=function(v){return gx+gw*v;};
+  doc.setFillColor(250,226,226);doc.rect(gx,gy,gw*u,gh,'F');doc.setFillColor(220,240,226);doc.rect(sx(u),gy,gw*(1-u),gh,'F');
+  doc.setFillColor(176,226,221);doc.rect(sx(s.ic.lo),gy+4,gw*(s.ic.hi-s.ic.lo),4,'F');
+  doc.setFillColor.apply(doc,colV);doc.rect(sx(s.p)-0.9,gy+1.5,1.8,gh-3,'F');
+  doc.setDrawColor.apply(doc,NAVY);doc.setLineWidth(0.5);doc.setLineDashPattern([1.5,1.2],0);doc.line(sx(u),gy-2,sx(u),gy+gh+2);doc.setLineDashPattern([],0);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);[0,.25,.5,.75,1].forEach(function(v){doc.text(Math.round(v*100)+'%',sx(v),gy+gh+5,{align:'center'});});
+  doc.setTextColor.apply(doc,NAVY);doc.text('umbral '+c.umbral+' %',sx(u),gy-3,{align:'center'});doc.text(pc(s.p)+' ('+pc(s.ic.lo)+' – '+pc(s.ic.hi)+')',sx(s.p),gy+gh+9.5,{align:'center'});
+  y=gy+gh+15;
+  sec('Plan de mejora');
+  par('Propuesto por el CSU a partir de este resultado. La carrera designa el responsable de cada acción.',8.5,GRIS);
+  var cx=[M+2,M+60,M+128,M+152];chk(14);doc.setFillColor(226,232,240);doc.rect(M,y-4.2,CW,6.4,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor.apply(doc,TXT);['Brecha','Acción propuesta','Responsable','Plazo'].forEach(function(t,i){doc.text(t,cx[i],y);});y+=4;
+  if(!plan.length){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.text('Sin brechas: todos los pasos están en 100 % y ningún cargo está bajo el umbral.',M+2,y+3);y+=9;}
+  plan.forEach(function(r){
+    var a=doc.splitTextToSize(r.brecha,54),b=doc.splitTextToSize(r.accion,66),p3=doc.splitTextToSize('Próxima revisión: '+plazo,CW-(152-0)+0),h=Math.max(a.length,b.length,2)*3.7+3;
+    chk(h+2);doc.setDrawColor(203,213,225);doc.setLineWidth(0.2);doc.rect(M,y,CW,h);[M+58,M+126,M+150].forEach(function(xx){doc.line(xx,y,xx,y+h);});
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor.apply(doc,TXT);doc.text(a,M+2,y+4);doc.text(b,M+60,y+4);doc.text(doc.splitTextToSize('Próxima revisión: '+plazo,22),M+152,y+4);y+=h;});
+  chk(46);y+=14;
+  var lx1=M,lx2=M+CW/2+6,lw=CW/2-6;
+  if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',lx1+8,y-14,40,14);}catch(e){}}
+  doc.setDrawColor(30,30,30);doc.setLineWidth(0.3);doc.line(lx1,y,lx1+lw,y);doc.line(lx2,y,lx2+lw,y);
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(20,20,20);doc.text('Patricio Baeza Aguilar · Director Técnico',lx1,y+4.5);doc.text('Recibido por la Dirección de Carrera',lx2,y+4.5);
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.text('Centro de Salud USS - Valdivia',lx1,y+8.8);doc.text('Nombre · firma · fecha',lx2,y+8.8);
+  var NP=doc.getNumberOfPages();
+  for(var i=1;i<=NP;i++){doc.setPage(i);doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,287,W0-M,287);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.text('Centro de Salud USS - Valdivia · Documento de uso interno'+(c.practica?' · PRÁCTICA, SIN VALIDEZ':''),M,291);doc.text('Página '+i+' de '+NP,W0-M,291,{align:'right'});}
+  doc.save('Notificacion_'+lmNorm(srv).replace(/[^a-z]/g,'')+'_'+fol+'.pdf');
+};
+// botón en Avance (solo administrador)
+var _lmAv0=lmHtmlAvance;
+lmHtmlAvance=function(m){
+  var h=_lmAv0(m);
+  try{if(lmEsAdmin()&&m&&m.calib&&m.calib.unidades&&m.estado!=='anulada'){h+='<div class="lmc"><b style="font-size:13px">Notificación a la carrera</b><div style="font-size:11px;color:rgba(255,255,255,.55);margin:2px 0 8px">Resultados de cada unidad, sin nombres ni RUN, con plan de mejora editable.</div>'+m.calib.unidades.map(function(u){return '<button class="lmb" style="margin:0 6px 6px 0" onclick="lmNotifAbrir(\''+LM.ui.medId+'\',\''+u.nombre+'\')">📨 '+esc(u.nombre)+'</button>';}).join('')+'</div>';}}catch(e){}
+  return h;
+};
+;(function(){var st=document.createElement('style');st.textContent='#lmNotOv{background:#0b1220!important;color:#e5e7eb!important}#lmNotOv .lmi{background:#0b1220!important;color:#fff!important;border:1px solid rgba(255,255,255,.2)!important}#lmNotOv .lmb{background:rgba(255,255,255,.14)!important;color:#fff!important}#lmNotOv .lmb.lmp{background:linear-gradient(135deg,#0891b2,#22d3ee)!important}#lmNotOv .lmc{background:#16233d!important}#lmNotOv .lml{color:rgba(255,255,255,.6)!important}';document.head.appendChild(st);})();
 </script>
 </body>
 </html>
