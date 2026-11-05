@@ -24406,7 +24406,7 @@ function lmVeredicto(ic,umbral){
 function lmUnion(a,b){var r=a.slice();(b||[]).forEach(function(x){if(r.indexOf(x)<0)r.push(x);});return r;}
 // ===== Lavado de manos (GCL 3.2) — datos, calibración, registro y avance =====
 var LM={sesion:'',cfg:{},meds:{},obs:{},_ref:null,ui:{vista:'lista',medId:'',pasos:[],servicio:'',cargo:''}};
-var LM_DEF={servicios:['Dental'],cargos:['Estudiante','Docente','TENS','Enfermero/a','Otro'],carreras:['Odontología','Enfermería','Kinesiología','Otra']};
+var LM_DEF={servicios:['Odontología','Kinesiología'],cargos:['Estudiante','Docente','TENS','Enfermero/a','Otro'],carreras:['Odontología','Enfermería','Kinesiología','Otra']};
 var LM_REGLA='Cumple solo si realiza el 100 % de los pasos aplicables (lo que no aplica se marca N/A con justificación y no cuenta).';
 
 function lmRunNorm(v){return (v||'').replace(/[^0-9kK]/g,'').toUpperCase();}
@@ -24563,8 +24563,9 @@ function lmHtmlReg(m){
   var op=function(a,s){return a.map(function(x){return '<option'+(x===s?' selected':'')+'>'+esc(x)+'</option>';}).join('');};
   var h='<div class="lmc"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Registrar observación · '+esc(c.periodo)+(c.practica?' <span style="color:#fbbf24">(práctica)</span>':'')+'</b><span style="font-size:12px;color:rgba(255,255,255,.6)">'+l.length+' de '+c.nObj+(l.length>=c.nObj?' · ✅ muestra completa':'')+'</span></div>'+
   '<div style="height:6px;background:rgba(255,255,255,.1);border-radius:4px;margin:8px 0"><div style="height:6px;border-radius:4px;background:#22d3ee;width:'+Math.min(100,l.length/c.nObj*100)+'%"></div></div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:2px"><div><label class="lml">Período evaluado</label><div class="lmi" style="font-weight:700;color:#67e8f9!important">'+esc(c.periodo)+'</div></div><div><label class="lml">Fecha de la evaluación</label><input class="lmi" type="date" id="lmFec" value="'+esc(u.fecha||hoyStr())+'" max="'+hoyStr()+'" onchange="LM.ui.fecha=this.value"></div></div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="lml">Servicio</label><select class="lmi" id="lmSv" onchange="LM.ui.servicio=this.value">'+op(c.servicios,u.servicio)+'</select></div><div><label class="lml">Cargo observado</label><select class="lmi" id="lmCgo" onchange="LM.ui.cargo=this.value">'+op(c.cargos,u.cargo)+'</select></div></div>'+
-  '<label class="lml">RUN del paciente (como en el formato en papel)</label><input class="lmi" id="lmRun" inputmode="text" autocomplete="off" placeholder="ej: 12.345.678-5" oninput="lmFmtRun(this)"><label class="lml">Nombre del evaluado</label><input class="lmi" id="lmNom" autocomplete="off" placeholder="nombre y apellido"></div>';
+  '<label class="lml">RUN del paciente (como en el formato en papel)</label><input class="lmi" id="lmRun" inputmode="text" autocomplete="off" placeholder="ej: 12.345.678-5" oninput="lmFmtRun(this)"><label class="lml">Nombre del estudiante evaluado</label><input class="lmi" id="lmNom" autocomplete="off" placeholder="nombre y apellido"></div>';
   h+='<div class="lmc">';
   LM_PASOS.forEach(function(t,i){
     var s=u.pasos[i]||'';
@@ -24576,7 +24577,7 @@ function lmHtmlReg(m){
   '<div id="lmRes" style="margin-top:12px;padding:10px;border-radius:8px;text-align:center;font-weight:800;background:'+res.bg+'">'+res.tx+'</div>'+
   '<button class="lmb g" style="width:100%;margin-top:10px;padding:13px" onclick="lmGuardarObs()">Guardar observación</button></div>';
   if(l.length){h+='<div class="lmc"><b style="font-size:13px">Últimas observaciones</b><table class="lmt">';
-    l.slice(-6).reverse().forEach(function(r){h+='<tr><td>'+esc(r.hora||'')+' '+esc(r.fecha||'')+'</td><td>'+esc(r.servicio)+' · '+esc(r.cargo)+'</td><td>'+(r.cumple===1?'✅ cumple':'❌ no cumple')+'</td><td>'+(lmEsAdmin()||r.autor===lmAutor()?'<button class="lmb r" style="padding:4px 8px;font-size:11px" onclick="lmAnularObs(\''+r.id+'\')">anular</button>':'')+'</td></tr>';});
+    lmObsAll(LM.ui.medId).slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);}).slice(-6).reverse().forEach(function(r){h+='<tr><td>'+esc((r.fecha||'').split('-').reverse().join('-'))+'</td><td>'+esc(r.evaluado||'')+'<br><span style="color:rgba(255,255,255,.45);font-size:11px">'+esc(r.servicio)+' · '+esc(r.cargo)+'</span></td><td>'+(r.cumple===1?'✅ cumple':'❌ no cumple')+(r.exc?'<br><span style="color:#fbbf24;font-size:10px">excedente</span>':'')+'</td><td>'+(lmEsAdmin()||r.autor===lmAutor()?'<button class="lmb r" style="padding:4px 8px;font-size:11px" onclick="lmAnularObs(\''+r.id+'\')">anular</button>':'')+'</td></tr>';});
     h+='</table></div>';}
   return h;
 }
@@ -24598,11 +24599,17 @@ window.lmGuardarObs=function(){
   if(!res.ok){alert(res.tx);return;}
   var run=lmRunNorm(document.getElementById('lmRun').value);
   if(!lmRunOk(run)){alert('El RUN no es válido (revisa el dígito verificador).');return;}
+  var nom=(document.getElementById('lmNom').value||'').trim();
+  if(!nom){alert('Falta el nombre del estudiante evaluado.');return;}
+  var fec=(document.getElementById('lmFec')||{}).value||hoyStr();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fec)||fec>hoyStr()){alert('Revisa la fecha de la evaluación (no puede ser futura).');return;}
+  var c0=(m&&m.calib)||{};
+  if((c0.inicio&&fec<c0.inicio)||(c0.fin&&fec>c0.fin)){alert('La fecha debe estar dentro del período de la medición ('+(c0.inicio||'').split('-').reverse().join('-')+' a '+(c0.fin||'').split('-').reverse().join('-')+').');return;}
   var j=(document.getElementById('lmNaJ')||{}).value||'';
   if(res.na&&!j.trim()){alert('Escribe la justificación del N/A.');return;}
   var d=new Date(),pad2=function(x){return ('0'+x).slice(-2);};
-  var o={ts:Date.now(),fecha:d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()),hora:pad2(d.getHours())+':'+pad2(d.getMinutes()),autor:lmAutor(),servicio:document.getElementById('lmSv').value,cargo:document.getElementById('lmCgo').value,run:run,evaluado:(document.getElementById('lmNom').value||'').trim(),pasos:u.pasos.join(''),naJust:j.trim(),cumple:res.cumple};
-  lmRef().child('obs/'+u.medId).push(o).then(function(){u.pasos=[];lmRender();var b=document.getElementById('lmOv');if(b)b.scrollTop=0;});
+  var o={ts:Date.now(),fecha:fec,hora:pad2(d.getHours())+':'+pad2(d.getMinutes()),autor:lmAutor(),servicio:document.getElementById('lmSv').value,cargo:document.getElementById('lmCgo').value,run:run,evaluado:nom,pasos:u.pasos.join(''),naJust:j.trim(),cumple:res.cumple,retro:fec<hoyStr()};
+  lmRef().child('obs/'+u.medId).push(o).then(function(){u.pasos=[];u.msg='Pauta guardada ✔';lmRender();var b=document.getElementById('lmOv');if(b)b.scrollTop=0;});
 };
 window.lmAnularObs=function(oid){
   var mot=prompt('Motivo para anular esta observación:');if(!mot)return;
@@ -24655,7 +24662,7 @@ function lmHtmlConfig(){
   if(!lmEsAdmin())return '<div class="lmc">Solo el administrador.</div>';
   var asg=LM.cfg.asignados||{};
   var h='<div class="lmc"><b>Listas (una por línea)</b>'+
-  '<label class="lml">Servicios donde se mide</label><textarea class="lmi" id="lmCfS" rows="4">'+esc(lmLista('servicios').join('\n'))+'</textarea>'+
+  '<label class="lml">Unidades / carreras donde se mide</label><textarea class="lmi" id="lmCfS" rows="4">'+esc(lmLista('servicios').join('\n'))+'</textarea>'+
   '<label class="lml">Cargos observados</label><textarea class="lmi" id="lmCfC" rows="5">'+esc(lmLista('cargos').join('\n'))+'</textarea>'+
   '<label class="lml">Carreras que reciben la notificación</label><textarea class="lmi" id="lmCfR" rows="4">'+esc(lmLista('carreras').join('\n'))+'</textarea></div>'+
   '<div class="lmc"><b>Enfermeros asignados a la pauta</b><div style="margin-top:6px">'+nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';}).map(function(n){return '<div style="display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap"><label style="display:inline-flex;gap:6px;font-size:13px;min-width:200px"><input type="checkbox" class="lmAs" value="'+esc(n)+'"'+(asg[n]?' checked':'')+'> '+esc(n)+'</label><input class="lmi lmPin" data-n="'+esc(n)+'" style="width:130px" placeholder="PIN" value="'+esc(((LM.cfg.pins||{})[n])||'')+'"></div>';}).join('')+'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:6px">Cada asignada entra con su PIN desde el botón «🧼 Pauta lavado» de la pantalla de inicio.</div></div></div>'+
@@ -24692,15 +24699,16 @@ function lmSerie(l,c){
   return pts;
 }
 function lmFechaLarga(ts){var M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],d=new Date(ts||Date.now());return d.getDate()+' de '+M[d.getMonth()]+' de '+d.getFullYear();}
-window.lmPdfInforme=function(id){
+window.lmPdfInforme=function(id,mes){
   if(!lmEsAdmin()){alert('El informe lo emite el Director Técnico (administrador).');return;}
-  var m=LM.meds[id];if(!m)return;var c=m.calib,l=lmObsDe(id),s=lmResumen(l,c);
+  var m=LM.meds[id];if(!m)return;var c=m.calib,l=lmObsDe(id).filter(function(r){return !mes||(r.fecha||'').slice(0,7)===mes;}),s=lmResumen(l,c);
   if(!s.n){alert('Aún no hay observaciones.');return;}
+  var mcu=mes?((c.meses||[]).filter(function(x){return x.ym===mes;})[0]||{}).cuota:null,metaN=mes?(mcu||s.n):c.nObj,perTxt=mes?lmMesTxt(mes):c.periodo;
   var J=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
   if(!J){alert('No se pudo cargar el generador de PDF. Revisa tu conexión.');return;}
   var doc=new J('p','mm','a4'),W0=210,M=16,CW=W0-2*M,y=14;
   var NAVY=[15,37,64],TEAL=[13,148,136],GRIS=[90,100,115],TXT=[30,40,55],OK=[22,128,61],RI=[180,83,9],BA=[185,28,28];
-  var parcial=s.n<c.nObj,ts=Date.now(),u=c.umbral/100;
+  var parcial=s.n<metaN,ts=Date.now(),u=c.umbral/100;
   var colV=s.ver.cod==='sobre'?OK:s.ver.cod==='bajo'?BA:RI;
   function cabecera(){
     y=14;try{doc.addImage(INF_LOGO,'JPEG',M,y,52,15.1);}catch(e){}
@@ -24721,24 +24729,24 @@ window.lmPdfInforme=function(id){
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.4);
   doc.text('INFORME DE INDICADOR · HIGIENE DE MANOS',M,y);doc.setCharSpace(0);y+=5;
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,GRIS);
-  doc.text('Para: Gerencia · Pauta de supervisión de lavado clínico de manos (GCL 3.2) · '+c.periodo,M,y);y+=4.2;
+  doc.text('Para: Gerencia · Pauta de supervisión de lavado clínico de manos (GCL 3.2) · '+perTxt+(mes?' (período de medición: '+c.periodo+')':''),M,y);y+=4.2;
   var fol='LM-'+id.slice(-6).toUpperCase();doc.text('Folio '+fol+' · Emitido '+mtFechaHora(ts)+' · Uso interno',M,y);
-  var flag=c.practica?'MEDICIÓN DE PRÁCTICA · SIN VALIDEZ':(parcial?'RESULTADO PARCIAL ('+s.n+' de '+c.nObj+')':'');
+  var flag=c.practica?'MEDICIÓN DE PRÁCTICA · SIN VALIDEZ':(parcial?'RESULTADO PARCIAL ('+s.n+' de '+metaN+')':'');
   if(flag){doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,RI);doc.text(flag,W0-M,y,{align:'right'});doc.setFont('helvetica','normal');}
   y+=8;
   var ps=lmPorPaso(l).filter(function(x){return x.ap;}).sort(function(a,b){return a.p-b.p;});
-  parrafo('Se informa a Gerencia · Centro de Salud USS - Valdivia el resultado de la medición de higiene de manos clínica correspondiente a '+c.periodo+', aplicada en '+c.servicios.join(', ')+' mediante observación directa de '+s.n+' lavados, con la pauta de 8 pasos del programa GCL 3.2. Cada lavado se clasifica como cumple solo si realiza el 100 % de los pasos que le aplican.');
+  parrafo('Se informa a Gerencia · Centro de Salud USS - Valdivia el resultado de la medición de higiene de manos clínica correspondiente a '+perTxt+', aplicada en '+c.servicios.join(', ')+' mediante observación directa de '+s.n+' lavados, con la pauta de 8 pasos del programa GCL 3.2. Cada lavado se clasifica como cumple solo si realiza el 100 % de los pasos que le aplican.');
   var t2='El '+pc(s.p)+' de los lavados observados cumplió la técnica completa ('+s.k+' de '+s.n+'). El intervalo de confianza del '+c.conf+' % va de '+pc(s.ic.lo)+' a '+pc(s.ic.hi)+'. Frente al umbral de '+c.umbral+' % el resultado es: '+s.ver.txt.toLowerCase()+'.';
-  if(parcial)t2+=' Es un resultado parcial: se han observado '+s.n+' de los '+c.nObj+' lavados previstos, por lo que la conclusión puede cambiar al completar la muestra.';
+  if(parcial)t2+=' Es un resultado parcial: se han observado '+s.n+' de los '+metaN+' previstos '+(mes?'para el mes':'para el período')+', por lo que la conclusión puede cambiar al completar la muestra.';
   parrafo(t2);
   if(ps.length){var peor=ps.slice(0,2).map(function(x){return x.t.toLowerCase()+' ('+pc(x.p)+')';});parrafo('Los pasos con menor cumplimiento fueron: '+peor.join(' y ')+'.');}
   seccion('Resultado');
   doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.setCharSpace(0.8);doc.text('INDICADOR',M,y);doc.text('VALOR',W0-M-1,y,{align:'right'});doc.setCharSpace(0);y+=2.5;doc.setDrawColor(210,220,230);doc.line(M,y,W0-M,y);y+=5;
-  [['Lavados observados / meta de la muestra',s.n+' / '+c.nObj,[190,196,205],false],['Lavados que cumplen los pasos aplicables',s.k+' de '+s.n,TEAL,false],['Cumplimiento del indicador',pc(s.p),colV,true],['Intervalo de confianza '+c.conf+' % (exacto)',pc(s.ic.lo)+' – '+pc(s.ic.hi),[190,196,205],false],['Umbral de cumplimiento',c.umbral+' %',[190,196,205],false],['Conclusión',s.ver.txt.split(' (')[0],colV,true]].forEach(function(r){chk(7);doc.setFillColor.apply(doc,r[2]);doc.rect(M+1,y-3,2.6,2.6,'F');doc.setFont('helvetica',r[3]?'bold':'normal');doc.setFontSize(9.5);doc.setTextColor.apply(doc,TXT);doc.text(r[0],M+7,y);doc.setFont('helvetica','bold');doc.text(String(r[1]),W0-M-1,y,{align:'right'});y+=7;});
+  [[(mes?'Observaciones del mes / cuota del mes':'Observaciones / meta de la muestra'),s.n+' / '+metaN,[190,196,205],false],['Lavados que cumplen los pasos aplicables',s.k+' de '+s.n,TEAL,false],['Cumplimiento del indicador',pc(s.p),colV,true],['Intervalo de confianza '+c.conf+' % (exacto)',pc(s.ic.lo)+' – '+pc(s.ic.hi),[190,196,205],false],['Umbral de cumplimiento',c.umbral+' %',[190,196,205],false],['Conclusión',s.ver.txt.split(' (')[0],colV,true]].forEach(function(r){chk(7);doc.setFillColor.apply(doc,r[2]);doc.rect(M+1,y-3,2.6,2.6,'F');doc.setFont('helvetica',r[3]?'bold':'normal');doc.setFontSize(9.5);doc.setTextColor.apply(doc,TXT);doc.text(r[0],M+7,y);doc.setFont('helvetica','bold');doc.text(String(r[1]),W0-M-1,y,{align:'right'});y+=7;});
   seccion('Gráficos');
   doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);doc.text('Cómo se formó el resultado: cumplimiento acumulado y su intervalo de confianza',M,y);y+=4;
   // gráfico de convergencia
-  chk(58);var gx=M+10,gw=CW-12,gy=y,gh=44,X=Math.max(s.n,c.nObj);
+  chk(58);var gx=M+10,gw=CW-12,gy=y,gh=44,X=Math.max(s.n,metaN);
   var sx=function(i){return gx+gw*i/X;},sy=function(v){return gy+gh*(1-v);};
   doc.setFillColor(220,240,226);doc.rect(gx,sy(1),gw,sy(u)-sy(1),'F');
   doc.setFillColor(252,239,214);doc.rect(gx,sy(u),gw,sy(Math.max(0,u-.2))-sy(u),'F');
@@ -24752,9 +24760,9 @@ window.lmPdfInforme=function(id){
     doc.setFillColor(176,226,221);doc.lines(segs,all[0][0],all[0][1],[1,1],'F',true);
     doc.setDrawColor.apply(doc,TEAL);doc.setLineWidth(0.7);for(var j=1;j<pts.length;j++)doc.line(sx(pts[j-1].j),sy(pts[j-1].p),sx(pts[j].j),sy(pts[j].p));
   }
-  doc.setDrawColor.apply(doc,NAVY);doc.setLineWidth(0.4);doc.setLineDashPattern([1.5,1.2],0);doc.line(gx,sy(u),gx+gw,sy(u));doc.line(sx(c.nObj),gy,sx(c.nObj),gy+gh);doc.setLineDashPattern([],0);
+  doc.setDrawColor.apply(doc,NAVY);doc.setLineWidth(0.4);doc.setLineDashPattern([1.5,1.2],0);doc.line(gx,sy(u),gx+gw,sy(u));doc.line(sx(metaN),gy,sx(metaN),gy+gh);doc.setLineDashPattern([],0);
   var q=pts[pts.length-1];doc.setFillColor.apply(doc,colV);doc.circle(sx(q.j),sy(q.p),1.3,'F');
-  doc.setFontSize(7);doc.setTextColor.apply(doc,NAVY);doc.text('umbral '+c.umbral+'%',gx+gw-1,sy(u)-1,{align:'right'});doc.text('meta n='+c.nObj,sx(c.nObj)-1,gy+3,{align:'right'});
+  doc.setFontSize(7);doc.setTextColor.apply(doc,NAVY);doc.text('umbral '+c.umbral+'%',gx+gw-1,sy(u)-1,{align:'right'});doc.text('meta n='+metaN,sx(metaN)-1,gy+3,{align:'right'});
   doc.setTextColor.apply(doc,GRIS);doc.text('lavados observados (acumulados)',gx+gw/2,gy+gh+4.5,{align:'center'});
   y=gy+gh+8;
   chk(10+ps.length*6.6);
@@ -24774,10 +24782,16 @@ window.lmPdfInforme=function(id){
   });
   seccion('Criterios y nota metodológica');
   parrafo('Unidad de medición: el lavado observado. Regla de cumplimiento (fijada al calibrar): '+c.regla+' Los pasos evaluados son: '+LM_PASOS.map(function(t,i){return (i+1)+') '+t.toLowerCase();}).join('; ')+'.');
+  if(c.unidades){
+    parrafo('Tamaño de muestra: se calculó con la calculadora de tamaño muestral de la Superintendencia de Salud (proporciones, universo conocido): n = N x z^2 x p x (1 - p) / (e^2 x (N - 1) + z^2 x p x (1 - p)), con z = '+(LM_Z[c.conf]||1.96)+' ('+c.conf+' % de confianza), p = '+c.p+' % de cumplimiento esperado, e = '+c.e+' % y N = '+c.N.toLocaleString('es-CL')+' atenciones del año anterior ('+c.unidades.map(function(u){return u.nombre+' '+u.N.toLocaleString('es-CL');}).join(', ')+'). Resultado: n = '+c.nObj+' observaciones'+(c.nOrigen==='manual'?' (valor ingresado manualmente; el calculado era '+c.nCalc+')':'')+', repartidas en forma proporcional al universo: '+c.unidades.map(function(u){return u.nombre+' '+u.cuota;}).join(', ')+'. Cuota mensual: '+(c.meses||[]).map(function(x){return lmMesTxt(x.ym).split(' ')[0]+' '+x.cuota;}).join(', ')+'.');
+    parrafo('Diseño y período: las observaciones se aplican según la disponibilidad de quien supervisa, un día de evaluación por semana. El período de medición de este informe es '+c.periodo+(c.inicio>'2026-03-01'?'; los meses anteriores de la periodicidad definida (marzo a julio) no tienen medición, por lo que el año es parcial':'')+'. Las observaciones que superan la cuota de su unidad se registran como excedente y no cuentan para el indicador del CSU. '+(function(){var r=lmObsAll(id).filter(function(x){return x.retro;}).length;return r?'Hay '+r+' observaciones de carga retroactiva, registradas con su fecha real de aplicación.':'';})()+' El resultado por unidad es referencial: la muestra se diseñó para el CSU completo.');
+    parrafo('Intervalo de confianza exacto binomial (Clopper-Pearson), sin corrección por población finita. La conclusión es concluyente si todo el intervalo queda sobre o bajo el umbral de '+c.umbral+' % y no concluyente si el umbral cae dentro del intervalo.');
+  }else{
   parrafo('Tamaño de muestra: n = z^2 x p x (1 - p) / e^2, con z = '+lmZ(c.conf)+' ('+c.conf+' % de confianza), p = '+c.p+' % esperado y e = '+c.e+' %'+(c.N?', con corrección por población finita (N = '+c.N+')':', sin corrección por población finita')+', lo que da '+c.nObj+' lavados. Intervalo de confianza exacto binomial (Clopper-Pearson). La conclusión es «concluyente» si todo el intervalo queda sobre o bajo el umbral de '+c.umbral+' % y «no concluyente» si el umbral cae dentro del intervalo.');
+  }
   parrafo('Limitaciones: una misma persona es observada varias veces, por lo que el intervalo subestima la variabilidad real; y la observación directa puede modificar la conducta de la persona observada (efecto Hawthorne), lo que tiende a sobreestimar el cumplimiento.');
   seccion('Calibración sellada');
-  peq('Sellada el '+mtFechaHora((m.sello||{}).ts||ts)+' por '+((m.sello||{}).autor||'')+'. Servicios: '+c.servicios.join(', ')+'. Cargos observados: '+c.cargos.join(', ')+'. Huella SHA-256: '+((m.sello||{}).hash||'—')+'.');
+  peq('Sellada el '+mtFechaHora((m.sello||{}).ts||ts)+' por '+((m.sello||{}).autor||'')+'. Unidades: '+c.servicios.join(', ')+'. Cargos observados: '+c.cargos.join(', ')+'. Huella SHA-256: '+((m.sello||{}).hash||'—')+'.');
   chk(36);y+=3;var cx=W0/2;
   if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-20,y,40,14);}catch(e){}}y+=14;
   doc.setDrawColor(30,30,30);doc.setLineWidth(0.3);doc.line(cx-40,y,cx+40,y);y+=4.5;
@@ -24786,7 +24800,7 @@ window.lmPdfInforme=function(id){
   doc.setFontSize(8);doc.setTextColor.apply(doc,GRIS);doc.text('Centro de Salud USS - Valdivia',cx,y,{align:'center'});y+=3.8;doc.setFontSize(7.5);doc.text(fol,cx,y,{align:'center'});
   var NP=doc.getNumberOfPages();
   for(var i=1;i<=NP;i++){doc.setPage(i);doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,287,W0-M,287);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.text('Centro de Salud USS - Valdivia · Documento de uso interno'+(c.practica?' · PRÁCTICA, SIN VALIDEZ':''),M,291);doc.text('Página '+i+' de '+NP,W0-M,291,{align:'right'});}
-  doc.save('Informe_lavado_manos_'+c.periodo.replace(/\s+/g,'_')+'_'+fol+'.pdf');
+  doc.save('Informe_lavado_manos_'+(mes||c.periodo.replace(/[^\wáéíóúñ]+/gi,'_'))+'_'+fol+'.pdf');
 };
 // ---- Excel de registro: Detalle, Indicador, Calibración ----
 window.lmExcel=function(id){
@@ -24823,6 +24837,242 @@ window.lmExcel=function(id){
   XLSX.writeFile(wb,'Registro_lavado_manos_'+c.periodo.replace(/\s+/g,'_')+'.xlsx');
 };
 
+
+
+// ===== Lavado de manos v2: universo por unidad, cuotas por unidad y mes, contador semanal =====
+var LM_Z={90:1.645,95:1.96,99:2.576};
+function lmTamano(conf,e,p,N){var z=LM_Z[conf]||1.96,n0=z*z*p*(1-p)/(e*e);if(N&&N>0){var nf=N*z*z*p*(1-p)/(e*e*(N-1)+z*z*p*(1-p));return Math.max(1,Math.min(N,Math.round(nf)));}return Math.round(n0);}
+function lmP2(x){return ('0'+x).slice(-2);}
+function lmDt(s){var a=String(s).split('-');return new Date(+a[0],+a[1]-1,+a[2],12);}
+function lmFs(d){return d.getFullYear()+'-'+lmP2(d.getMonth()+1)+'-'+lmP2(d.getDate());}
+function lmLunes(s){var d=lmDt(s),w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return lmFs(d);}
+function lmSemRest(desde,fin){if(desde>fin)return 0;return Math.round((lmDt(lmLunes(fin))-lmDt(lmLunes(desde)))/(7*864e5))+1;}
+var LM_MN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function lmMesesPeriodo(ini,fin){var r=[],a=lmDt(ini),b=lmDt(fin);a.setDate(1);while(a<=b){r.push(a.getFullYear()+'-'+lmP2(a.getMonth()+1));a.setMonth(a.getMonth()+1);}return r;}
+function lmMesTxt(ym){var a=ym.split('-');return LM_MN[+a[1]-1]+' '+a[0];}
+function lmCuotasMes(n,meses){var k=meses.length,rem=n%k;return meses.map(function(ym,i){return {ym:ym,cuota:Math.floor(n/k)+(i<rem?1:0)};});}
+function lmCuotasUnidad(us,n){
+  var tot=us.reduce(function(a,u){return a+u.N;},0);if(!tot)return us.map(function(u){return {nombre:u.nombre,N:u.N,cuota:0};});
+  var r=us.map(function(u){var x=n*u.N/tot;return {nombre:u.nombre,N:u.N,cuota:Math.floor(x),fr:x-Math.floor(x)};});
+  var falta=n-r.reduce(function(a,u){return a+u.cuota;},0);
+  r.slice().sort(function(a,b){return b.fr-a.fr;}).slice(0,falta).forEach(function(u){u.cuota++;});
+  return r.map(function(u){return {nombre:u.nombre,N:u.N,cuota:u.cuota};});
+}
+var LM_DEFN={'Odontología':9290,'Kinesiología':5256};
+// ---- observaciones: orden por fecha y marca de excedente sobre la cuota de la unidad ----
+function lmObsAll(id){
+  var o=LM.obs[id]||{},m=LM.meds[id]||{},c=m.calib||{};
+  var l=Object.keys(o).map(function(k){var r=o[k];r.id=k;return r;}).filter(function(r){return !r.anulada;});
+  l.sort(function(a,b){return ((a.fecha||'')+('0000000000000'+(a.ts||0)).slice(-13)).localeCompare((b.fecha||'')+('0000000000000'+(b.ts||0)).slice(-13));});
+  var cuota={};(c.unidades||[]).forEach(function(u){cuota[u.nombre]=u.cuota;});var cnt={};
+  l.forEach(function(r){var u=r.servicio;cnt[u]=(cnt[u]||0)+1;r.exc=(cuota[u]!==undefined&&cnt[u]>cuota[u]);});
+  return l;
+}
+lmObsDe=function(id){return lmObsAll(id).filter(function(r){return !r.exc;});};
+// ---- contador por unidad ----
+function lmContador(id){
+  var m=LM.meds[id],c=m&&m.calib;if(!c||!c.unidades)return null;
+  var hoy=hoyStr(),desde=hoy<(c.inicio||hoy)?c.inicio:hoy,sem0=lmLunes(hoy),sem1=lmFs(new Date(lmDt(sem0).getTime()+6*864e5));
+  var all=lmObsAll(id),semRest=lmSemRest(desde,c.fin||hoy);
+  var us=c.unidades.map(function(u){
+    var mias=all.filter(function(r){return r.servicio===u.nombre;});
+    var hechas=mias.filter(function(r){return !r.exc;}).length,exc=mias.length-hechas;
+    var hSem=mias.filter(function(r){return !r.exc&&r.fecha>=sem0&&r.fecha<=sem1;}).length;
+    var faltan=Math.max(0,u.cuota-hechas);
+    var meta=semRest>0?Math.ceil((faltan+hSem)/semRest):faltan;
+    return {nombre:u.nombre,cuota:u.cuota,hechas:hechas,exc:exc,faltan:faltan,hSem:hSem,meta:meta,faltaSem:Math.max(0,meta-hSem)};
+  });
+  var ym=hoy.slice(0,7),mc=(c.meses||[]).filter(function(x){return x.ym===ym;})[0];
+  var mes=mc?{ym:ym,cuota:mc.cuota,hechas:all.filter(function(r){return !r.exc&&(r.fecha||'').slice(0,7)===ym;}).length}:null;
+  return {us:us,semRest:semRest,mes:mes};
+}
+function lmHtmlContador(id){
+  var k=lmContador(id);if(!k)return '';
+  var h='<div class="lmc"><b>Pautas que faltan por aplicar</b><div class="lml">Solo conteos, sin resultados. Se actualiza al guardar cada pauta. Quedan '+k.semRest+' semana'+(k.semRest===1?'':'s')+' con día de evaluación.</div></div>';
+  k.us.forEach(function(u){
+    var ok=u.faltan===0;
+    h+='<div class="lmc"'+(ok?' style="border:1px solid #34d39966"':'')+'><div style="display:flex;justify-content:space-between;align-items:flex-end"><div><b style="font-size:14px">'+esc(u.nombre)+'</b><div class="lml" style="margin-top:2px">'+(ok?'<span style="color:#34d399;font-weight:700">✔ Meta cumplida</span> · ':'')+u.hechas+' de '+u.cuota+' hechas'+(u.exc?' · '+u.exc+' excedente':'')+'</div></div><div style="font-size:34px;font-weight:800;color:'+(ok?'#34d399':'#22d3ee')+';line-height:1">'+u.faltan+'</div></div>'+
+    '<div style="height:8px;background:rgba(255,255,255,.1);border-radius:4px;margin:8px 0"><div style="height:8px;border-radius:4px;background:'+(ok?'#34d399':'#22d3ee')+';width:'+Math.min(100,u.cuota?u.hechas/u.cuota*100:0)+'%"></div></div>'+
+    (ok?'<div style="font-size:11px;color:#cbd5e1">Las pautas siguientes quedan como excedente y no cuentan para el indicador del CSU.</div>':'<div style="display:flex;gap:8px"><div class="lmbx"><b style="display:block;font-size:20px;color:#22d3ee">'+u.meta+'</b>meta de esta semana</div><div class="lmbx"><b style="display:block;font-size:20px;color:#22d3ee">'+u.hSem+'</b>llevas esta semana</div><div class="lmbx"><b style="display:block;font-size:20px;color:#22d3ee">'+u.faltaSem+'</b>faltan esta semana</div></div>')+'</div>';
+  });
+  if(k.mes)h+='<div class="lmc"><b>Mes en curso: '+esc(lmMesTxt(k.mes.ym))+'</b><div class="lml">Cuota del mes: '+k.mes.cuota+' en total · hechas: '+k.mes.hechas+' · faltan '+Math.max(0,k.mes.cuota-k.mes.hechas)+'</div><div style="height:8px;background:rgba(255,255,255,.1);border-radius:4px;margin-top:6px"><div style="height:8px;border-radius:4px;background:#22d3ee;width:'+Math.min(100,k.mes.cuota?k.mes.hechas/k.mes.cuota*100:0)+'%"></div></div></div>';
+  return h;
+}
+// ---- lista de mediciones ----
+lmHtmlLista=function(){
+  var ids=Object.keys(LM.meds).sort(function(a,b){return (LM.meds[b].creado||0)-(LM.meds[a].creado||0);});
+  var h='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+(lmEsAdmin()?'<button class="lmb p" onclick="lmNueva()">➕ Nueva medición</button><button class="lmb" onclick="lmVista(\'config\')">⚙️ Listas y enfermeros asignados</button>':'')+'</div>';
+  if(!ids.length)return h+'<div class="lmc" style="color:rgba(255,255,255,.6)">Aún no hay mediciones. Crea la primera: calibras (universo, parámetros), la sellas y recién ahí se empieza a observar.</div>';
+  ids.forEach(function(id){
+    var m=LM.meds[id],c=m.calib||{},l=lmObsDe(id),s=lmResumen(l,c);
+    if(m.estado==='sellada'&&!lmEsAdmin()&&c.unidades){h+='<div class="lmc" style="padding:10px"><b>'+esc(c.periodo||'')+'</b> '+lmBadge(m)+(c.practica?' <span style="color:#fbbf24;font-size:11px">· PRÁCTICA</span>':'')+'<div style="margin-top:8px"><button class="lmb g" style="width:100%;padding:12px" onclick="lmVista(\'reg\',\''+id+'\')">📝 Registrar observación</button></div></div>'+lmHtmlContador(id);return;}
+    h+='<div class="lmc"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><div style="font-weight:800;font-size:15px">'+esc(c.periodo||'')+(c.practica?' <span style="color:#fbbf24;font-size:11px">· PRÁCTICA, sin validez</span>':'')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5)">'+esc((c.servicios||[]).join(', '))+'</div></div>'+lmBadge(m)+'</div>'+
+    '<div style="font-size:12px;margin:8px 0">Observaciones: <b>'+s.n+'</b> de '+(c.nObj||'?')+(s.n&&lmEsAdmin()?' · cumplimiento <b>'+lmPct(s.p)+'</b> (IC '+lmPct(s.ic.lo)+' – '+lmPct(s.ic.hi)+')':'')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+
+    (m.estado==='borrador'&&lmEsAdmin()?'<button class="lmb p" onclick="lmVista(\'calib\',\''+id+'\')">Calibrar y sellar</button>':'')+
+    (m.estado==='sellada'?'<button class="lmb g" onclick="lmVista(\'reg\',\''+id+'\')">📝 Registrar observación</button>':'')+
+    (m.estado!=='borrador'&&lmEsAdmin()?'<button class="lmb" onclick="lmVista(\'avance\',\''+id+'\')">📈 Avance</button><button class="lmb" onclick="lmVista(\'calib\',\''+id+'\')">Ver calibración</button>':'')+
+    '</div></div>'+(m.estado==='sellada'?lmHtmlContador(id):'');
+  });
+  return h;
+};
+// ---- nueva medición y calibración ----
+window.lmNueva=function(){
+  if(!lmEsAdmin()){alert('Solo el administrador crea y sella mediciones.');return;}
+  var id=lmRef().child('mediciones').push().key;
+  var us=lmLista('servicios').map(function(n){return {nombre:n,N:LM_DEFN[n]||0,cuota:0};});
+  var Nt=us.reduce(function(a,u){return a+u.N;},0),n=Nt?lmTamano(95,.05,.85,Nt):0;
+  var meses=lmMesesPeriodo('2026-08-01','2026-12-31');
+  var m={estado:'borrador',creado:Date.now(),autor:lmAutor(),calib:{periodo:'agosto–diciembre 2026',inicio:'2026-08-01',fin:'2026-12-31',p:85,e:5,conf:95,umbral:60,N:Nt,nObj:n,nOrigen:'calculado',unidades:lmCuotasUnidad(us,n),meses:lmCuotasMes(n||1,meses),servicios:us.map(function(u){return u.nombre;}),cargos:lmLista('cargos').slice(),practica:false}};
+  lmRef().child('mediciones/'+id).set(m).then(function(){LM.meds[id]=m;lmVista('calib',id);});
+};
+lmHtmlCalib=function(m){
+  if(!m)return '';var c=m.calib||{},bor=m.estado==='borrador',dis=bor?'':' disabled';
+  var lista=lmUnion(lmLista('servicios'),c.servicios),unid={};(c.unidades||[]).forEach(function(u){unid[u.nombre]=u.N;});
+  var chkC=function(l,sel,pre){return l.map(function(x){return '<label style="display:inline-flex;align-items:center;gap:5px;margin:3px 10px 3px 0;font-size:13px"><input type="checkbox" class="'+pre+'"'+dis+' value="'+esc(x)+'"'+((sel||[]).indexOf(x)>=0?' checked':'')+'> '+esc(x)+'</label>';}).join('');};
+  var h='<div class="lmc"><div style="font-weight:800;margin-bottom:4px">Calibración '+lmBadge(m)+'</div>'+
+  (bor?'<div style="font-size:12px;color:rgba(255,255,255,.6)">Ajusta los parámetros. Al sellar quedan fijos: para cambiar algo hay que anular la medición y crear otra.</div>':'<div style="font-size:12px;color:#34d399">Sellada el '+new Date((m.sello||{}).ts||0).toLocaleString('es-CL')+' por '+esc((m.sello||{}).autor||'')+'. Huella SHA-256: <span style="font-family:monospace;word-break:break-all">'+esc((m.sello||{}).hash||'—')+'</span></div>')+
+  '<label class="lml">Período</label><input class="lmi" id="lmPer" value="'+esc(c.periodo||'')+'"'+dis+'>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="lml">Inicio de las mediciones</label><input class="lmi" type="date" id="lmIni" value="'+esc(c.inicio||'')+'" onchange="lmCalcLive()"'+dis+'></div><div><label class="lml">Fin del período</label><input class="lmi" type="date" id="lmFin" value="'+esc(c.fin||'')+'" onchange="lmCalcLive()"'+dis+'></div></div></div>'+
+  '<div class="lmc"><b>1. Universo (atenciones del año anterior)</b><div class="lml">Marca las unidades que se miden e ingresa su universo.</div>'+
+  lista.map(function(n,i){return '<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><label style="display:flex;gap:6px;min-width:130px;font-size:13px"><input type="checkbox" class="lmS" data-n="'+esc(n)+'"'+dis+((c.servicios||[]).indexOf(n)>=0?' checked':'')+' onchange="lmCalcLive()"> '+esc(n)+'</label><input class="lmi lmN" data-n="'+esc(n)+'" type="number" min="0" placeholder="atenciones" value="'+(unid[n]||'')+'" oninput="lmCalcLive()"'+dis+'></div>';}).join('')+
+  '<div class="lml">Total (N): <b id="lmNtot" class="lmnt"></b></div></div>'+
+  '<div class="lmc"><b>2. Parámetros</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">'+
+  '<div><label class="lml">Cumplimiento esperado (%)</label><input class="lmi" id="lmP" type="number" min="1" max="99" value="'+c.p+'" oninput="lmCalcLive()"'+dis+'></div>'+
+  '<div><label class="lml">Margen de error (±%)</label><input class="lmi" id="lmE" type="number" min="1" max="20" step="0.5" value="'+c.e+'" oninput="lmCalcLive()"'+dis+'></div>'+
+  '<div><label class="lml">Confianza</label><select class="lmi" id="lmC" onchange="lmCalcLive()"'+dis+'><option value="90"'+(c.conf==90?' selected':'')+'>90 %</option><option value="95"'+(c.conf==95?' selected':'')+'>95 %</option><option value="99"'+(c.conf==99?' selected':'')+'>99 %</option></select></div>'+
+  '<div><label class="lml">Umbral de cumplimiento (≥ %)</label><input class="lmi" id="lmU" type="number" min="1" max="100" value="'+c.umbral+'"'+dis+'></div>'+
+  '<div><label class="lml">n manual (opcional)</label><input class="lmi" id="lmNm" type="number" min="1" placeholder="vacío = calculado" value="'+(c.nOrigen==='manual'?c.nObj:'')+'" oninput="lmCalcLive()"'+dis+'></div></div>'+
+  '<div style="background:#0b1220;border-radius:10px;padding:12px;margin-top:10px;text-align:center"><div style="font-size:11px;color:rgba(255,255,255,.5)">Observaciones necesarias <span id="lmOrig" style="color:#67e8f9;font-weight:700"></span></div><div id="lmNobj" style="font-size:30px;font-weight:800;color:#22d3ee">'+(c.nObj||'')+'</div><div id="lmNobjTx" style="font-size:11px;color:rgba(255,255,255,.5)"></div></div></div>'+
+  '<div class="lmc"><b>3. Reparto</b><div id="lmReparto" class="lml"></div></div>'+
+  '<div class="lmc"><span class="lml" style="margin-top:0">Cargos observados</span>'+chkC(lmUnion(lmLista('cargos'),c.cargos),c.cargos,'lmCg')+
+  '<label class="lml" style="margin-top:12px"><input type="checkbox" id="lmPrac"'+dis+(c.practica?' checked':'')+'> Medición de práctica (saldrá marcada «sin validez» en los informes)</label>'+
+  '<div style="font-size:12px;margin-top:10px;padding:10px;background:rgba(34,211,238,.08);border-radius:8px"><b>Regla de cumplimiento (fija):</b> '+esc(LM_REGLA)+'<br><b>Unidad de medición:</b> la observación (un lavado observado con los 8 pasos). Las celdas con menos de 5 observaciones no se muestran en la notificación a la carrera.</div></div>';
+  if(bor)h+='<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap"><button class="lmb" onclick="lmGuardarCalib(false)">Guardar borrador</button><button class="lmb g" onclick="lmGuardarCalib(true)">🔒 Sellar y comenzar a observar</button><button class="lmb r" onclick="lmEliminarBorrador()">Descartar</button></div>';
+  else if(m.estado==='sellada')h+=(lmEsAdmin()?'<div style="margin-top:4px"><button class="lmb r" onclick="lmAnular()">Anular medición…</button></div>':'');
+  else h+='<div style="margin-top:4px;color:#f87171;font-size:12px">Anulada: '+esc((m.anulacion||{}).motivo||'')+'</div>';
+  return h;
+};
+function lmLeerCalibV2(){
+  var us=[];Array.prototype.forEach.call(document.querySelectorAll('.lmS'),function(cb){if(cb.checked){var n=cb.dataset.n,inp=document.querySelector('.lmN[data-n="'+n.replace(/"/g,'\\"')+'"]');us.push({nombre:n,N:+(inp&&inp.value)||0});}});
+  var p=+document.getElementById('lmP').value,e=+document.getElementById('lmE').value,cf=+document.getElementById('lmC').value;
+  var ini=document.getElementById('lmIni').value,fin=document.getElementById('lmFin').value;
+  var Nt=us.reduce(function(a,u){return a+u.N;},0),nm=+document.getElementById('lmNm').value||0;
+  var nCalc=(Nt&&p>0&&p<100&&e>0)?lmTamano(cf,e/100,p/100,Nt):0;
+  var n=nm?Math.max(1,Math.min(Nt||nm,nm)):nCalc;
+  var meses=(ini&&fin&&ini<=fin)?lmMesesPeriodo(ini,fin):[];
+  var g=function(c){return Array.prototype.map.call(document.querySelectorAll('.'+c+':checked'),function(x){return x.value;});};
+  return {periodo:document.getElementById('lmPer').value.trim(),inicio:ini,fin:fin,p:p,e:e,conf:cf,umbral:+document.getElementById('lmU').value,N:Nt,nObj:n,nOrigen:nm?'manual':'calculado',nCalc:nCalc,unidades:lmCuotasUnidad(us,n),meses:meses.length?lmCuotasMes(n||1,meses):[],servicios:us.map(function(u){return u.nombre;}),cargos:g('lmCg'),practica:document.getElementById('lmPrac').checked,regla:LM_REGLA,pasos:LM_PASOS,minCelda:5};
+}
+lmLeerCalib=lmLeerCalibV2;
+window.lmCalcLive=function(){
+  var c=lmLeerCalibV2();
+  var Nt=document.getElementById('lmNtot');if(Nt)Nt.textContent=c.N?c.N.toLocaleString('es-CL'):'—';
+  var ok=c.N>0&&c.p>0&&c.p<100&&c.e>0;
+  document.getElementById('lmNobj').textContent=ok?c.nObj:'—';
+  document.getElementById('lmOrig').textContent=ok?(c.nOrigen==='manual'?'(ingresado)':'(calculado)'):'';
+  document.getElementById('lmNobjTx').textContent=ok?'n = N·z²·p(1−p) / (e²(N−1)+z²·p(1−p)), z = '+(LM_Z[c.conf]||1.96)+', N = '+c.N.toLocaleString('es-CL')+(c.nOrigen==='manual'?' · el n calculado sería '+c.nCalc:''):'Ingresa el universo de al menos una unidad.';
+  var r=document.getElementById('lmReparto');if(!r)return;
+  var h='<table class="lmt"><tr><th>Mes</th>'+c.meses.map(function(x){return '<th>'+LM_MN[+x.ym.split('-')[1]-1].slice(0,3)+'</th>';}).join('')+'</tr><tr><td>Cuota</td>'+c.meses.map(function(x){return '<td>'+x.cuota+'</td>';}).join('')+'</tr></table>';
+  h+='<div class="lml" style="margin-top:8px">Por unidad (proporcional a su universo)</div><table class="lmt"><tr><th>Unidad</th><th>Universo</th><th>Observaciones</th></tr>'+c.unidades.map(function(u){return '<tr><td>'+esc(u.nombre)+'</td><td>'+u.N.toLocaleString('es-CL')+'</td><td><b>'+u.cuota+'</b></td></tr>';}).join('')+'</table>';
+  if(c.inicio&&c.inicio>'2026-03-01')h+='<div style="color:#fbbf24;margin-top:6px">Año parcial: el período empieza el '+c.inicio.split('-').reverse().join('-')+'. El informe lo declara.</div>';
+  r.innerHTML=h;
+};
+window.lmGuardarCalib=function(sellar){
+  var id=LM.ui.medId,c=lmLeerCalibV2();
+  if(!c.periodo){alert('Falta el período.');return;}
+  if(!c.inicio||!c.fin||c.inicio>c.fin){alert('Revisa las fechas de inicio y fin.');return;}
+  if(!(c.p>0&&c.p<100)||!(c.e>0)||!(c.umbral>0&&c.umbral<=100)){alert('Revisa % esperado, margen y umbral.');return;}
+  if(!c.servicios.length||!c.cargos.length){alert('Marca al menos una unidad y un cargo.');return;}
+  if(c.unidades.some(function(u){return !(u.N>0);})){alert('Cada unidad marcada necesita su universo (atenciones del año anterior).');return;}
+  if(!c.nObj){alert('No se pudo calcular el n.');return;}
+  if(!sellar){lmRef().child('mediciones/'+id+'/calib').set(c).then(function(){lmVista('lista');});return;}
+  var cu=c.unidades.map(function(u){return u.nombre+' '+u.cuota;}).join(' · ');
+  if(!confirm('Al sellar NO podrás cambiar estos parámetros: n = '+c.nObj+' ('+cu+'), umbral '+c.umbral+' %, '+c.conf+' % de confianza. Si algo está mal habrá que anular y crear otra medición. ¿Sellar?'))return;
+  var ts=Date.now(),autor=lmAutor();
+  lmSha(JSON.stringify(c)+'|'+ts+'|'+autor).then(function(hash){
+    lmRef().child('mediciones/'+id).update({calib:c,estado:'sellada',sello:{ts:ts,autor:autor,hash:hash}}).then(function(){lmVista('lista');});
+  });
+};
+// ---- registro: contador, mensaje y cambio de unidad ----
+var _lmRegOld=lmHtmlReg;
+lmHtmlReg=function(m){
+  if(!m||m.estado!=='sellada')return _lmRegOld(m);
+  var id=LM.ui.medId,msg=LM.ui.msg?'<div class="lmc" style="border:1px solid #34d39966;color:#6ee7b7;font-weight:700">'+esc(LM.ui.msg)+'</div>':'';LM.ui.msg='';
+  var cnt='',k=lmContador(id);
+  if(k){var u=k.us.filter(function(x){return x.nombre===LM.ui.servicio;})[0]||k.us[0];
+    if(u)cnt='<div class="lmc" style="border:1px solid #22d3ee55"><div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div class="lml" style="margin:0">Unidad</div><b style="font-size:15px">'+esc(u.nombre)+'</b></div><div style="text-align:right"><div style="font-size:28px;font-weight:800;color:'+(u.faltan?'#22d3ee':'#34d399')+';line-height:1">'+u.faltan+'</div><div class="lml" style="margin:0">por aplicar</div></div></div><div style="height:8px;background:rgba(255,255,255,.1);border-radius:4px;margin:8px 0 4px"><div style="height:8px;border-radius:4px;background:#22d3ee;width:'+Math.min(100,u.cuota?u.hechas/u.cuota*100:0)+'%"></div></div><div class="lml" style="margin:0">'+u.hechas+' de '+u.cuota+' hechas · meta de esta semana: '+u.meta+' · llevas '+u.hSem+(u.faltan?'':' · meta cumplida: las siguientes serán excedente')+'</div></div>';}
+  return msg+cnt+_lmRegOld(m).replace('onchange="LM.ui.servicio=this.value"','onchange="lmCambiaSv(this.value)"');
+};
+window.lmCambiaSv=function(v){
+  var cod=document.getElementById('lmRun'),nm=document.getElementById('lmNom'),j=document.getElementById('lmNaJ'),cv=cod?cod.value:'',nv=nm?nm.value:'',jv=j?j.value:'';
+  var cg=document.getElementById('lmCgo');if(cg)LM.ui.cargo=cg.value;
+  LM.ui.servicio=v;lmRender();
+  var c2=document.getElementById('lmRun'),n2=document.getElementById('lmNom'),j2=document.getElementById('lmNaJ');if(c2)c2.value=cv;if(n2)n2.value=nv;if(j2)j2.value=jv;
+};
+// ---- avance (administrador) ----
+lmHtmlAvance=function(m){
+  if(!m)return '';var c=m.calib,l=lmObsDe(LM.ui.medId),all=lmObsAll(LM.ui.medId),s=lmResumen(l,c);
+  var parcial=s.n<c.nObj,exc=all.length-l.length,retro=all.filter(function(r){return r.retro;}).length;
+  var h='<div class="lmc"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><b>'+esc(c.periodo)+' · '+esc(c.servicios.join(', '))+'</b>'+lmBadge(m)+'</div>'+
+  (c.practica?'<div style="color:#fbbf24;font-size:12px;margin-top:4px">PRÁCTICA · SIN VALIDEZ</div>':'')+
+  '<div style="font-size:12px;margin:6px 0;color:'+(parcial?'#fbbf24':'#34d399')+'">'+(parcial?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')')+(exc?' · '+exc+' excedente fuera del indicador':'')+(retro?' · '+retro+' carga retroactiva':'')+'</div>';
+  if(!s.n)return h+'<div style="color:rgba(255,255,255,.6)">Aún no hay observaciones.</div></div>';
+  var col=s.ver.cod==='sobre'?'#34d399':s.ver.cod==='bajo'?'#f87171':'#fbbf24';
+  h+='<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center"><div style="font-size:44px;font-weight:800;color:'+col+'">'+lmPct(s.p)+'</div><div style="font-size:13px"><div>'+s.k+' cumplen de '+s.n+' observaciones</div><div>IC '+c.conf+' % (exacto): <b>'+lmPct(s.ic.lo)+' – '+lmPct(s.ic.hi)+'</b></div><div>Umbral ≥ '+c.umbral+' % → <b style="color:'+col+'">'+esc(s.ver.txt)+'</b></div></div></div></div>';
+  h+='<div class="lmc"><b style="font-size:13px">Cómo se va formando el resultado</b><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">Línea: cumplimiento acumulado. Banda: intervalo de confianza, que se estrecha al sumar observaciones.</div>'+lmChartConv(l,c)+'</div>';
+  // por mes
+  h+='<div class="lmc"><b style="font-size:13px">Por mes</b><table class="lmt"><tr><th>Mes</th><th>Hechas / cuota</th><th>Cumple</th><th>IC</th><th></th></tr>';
+  (c.meses||[]).forEach(function(mc){
+    var lm=l.filter(function(r){return (r.fecha||'').slice(0,7)===mc.ym;}),sm=lmResumen(lm,c);
+    h+='<tr><td>'+esc(lmMesTxt(mc.ym))+'</td><td>'+lm.length+' / '+mc.cuota+'</td><td>'+(lm.length?lmPct(sm.p):'—')+'</td><td style="color:rgba(255,255,255,.5)">'+(lm.length?lmPct(sm.ic.lo)+' – '+lmPct(sm.ic.hi):'')+'</td><td>'+(lm.length&&lmEsAdmin()?'<button class="lmb" style="padding:4px 8px;font-size:11px" onclick="lmPdfInforme(LM.ui.medId,\''+mc.ym+'\')">📄 Informe</button>':'')+'</td></tr>';
+  });
+  h+='</table><div class="lml">Cada mes tiene pocas observaciones, así que su intervalo es más ancho que el del acumulado.</div></div>';
+  // por unidad
+  var k=lmContador(LM.ui.medId);
+  var tg=function(titulo,arr,campo){var t='<div class="lmc"><b style="font-size:13px">'+titulo+'</b><table class="lmt"><tr><th></th><th>n</th>'+(campo==='servicio'?'<th>Meta</th>':'')+'<th>Cumple</th><th>IC</th></tr>';
+    arr.forEach(function(r){var meta=campo==='servicio'?((c.unidades||[]).filter(function(u){return u.nombre===r.g;})[0]||{}).cuota:null;
+      t+='<tr><td>'+esc(r.g)+'</td><td>'+r.n+'</td>'+(campo==='servicio'?'<td>'+(meta===undefined?'':meta)+'</td>':'')+'<td>'+(r.n<5?'<span style="color:#9ca3af">n insuficiente</span>':lmPct(r.p))+'</td><td style="color:rgba(255,255,255,.5)">'+(r.n<5?'':lmPct(r.ic.lo)+' – '+lmPct(r.ic.hi))+'</td></tr>';});
+    return t+'</table></div>';};
+  h+=tg('Por unidad (referencial: la muestra se diseñó para el CSU completo)',lmPorGrupo(l,'servicio',c),'servicio')+tg('Por cargo',lmPorGrupo(l,'cargo',c),'cargo');
+  var ps=lmPorPaso(l).filter(function(x){return x.ap;}).sort(function(a,b){return a.p-b.p;});
+  h+='<div class="lmc"><b style="font-size:13px">Pasos con menor cumplimiento</b>';
+  ps.forEach(function(x){var cc=x.p>=c.umbral/100?'#34d399':x.p>=c.umbral/100-.2?'#fbbf24':'#f87171';h+='<div style="margin:8px 0"><div style="font-size:12px;display:flex;justify-content:space-between"><span>'+(x.i+1)+'. '+esc(x.t)+'</span><b style="color:'+cc+'">'+lmPct(x.p)+'</b></div><div style="height:6px;background:rgba(255,255,255,.1);border-radius:3px"><div style="height:6px;border-radius:3px;background:'+cc+';width:'+x.p*100+'%"></div></div></div>';});
+  h+='<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:6px">Complementario: % de pasos cumplidos entre los aplicables. El indicador oficial es el % de observaciones que cumplen los 8.</div></div>';
+  h+='<div class="lmc" style="font-size:11px;color:rgba(255,255,255,.5)">Limitaciones: una misma persona se observa varias veces (esperable en un contexto docente-asistencial; el intervalo es algo más optimista que la variabilidad real) y puede haber efecto Hawthorne.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="lmb p" onclick="lmExcel(LM.ui.medId)">📊 Excel de registro</button>'+(lmEsAdmin()?'<button class="lmb g" onclick="lmPdfInforme(LM.ui.medId)">📄 Informe acumulado (PDF)</button>':'')+'</div>';
+  return h;
+};
+// ---- Excel v2 ----
+window.lmExcel=function(id){
+  if(!lmEsAdmin()){alert('El Excel lo descarga el administrador.');return;}
+  var m=LM.meds[id];if(!m)return;var c=m.calib,all=lmObsAll(id),l=all.filter(function(r){return !r.exc;}),s=lmResumen(l,c);
+  if(typeof XLSX==='undefined'){alert('No se pudo cargar el generador de Excel. Revisa tu conexión.');return;}
+  var tr={S:'Sí',N:'No',A:'N/A'};
+  var det=[['N°','Fecha','Mes','Hora','Observador','Unidad','Cargo','RUN del paciente','Nombre del evaluado'].concat(LM_PASOS.map(function(t,i){return 'P'+(i+1)+' '+t;})).concat(['Justificación N/A','Cumple (1/0)','Cuenta para el indicador (1/0)','Carga retroactiva'])];
+  all.forEach(function(r,i){det.push([i+1,r.fecha,(r.fecha||'').slice(0,7),r.hora,r.autor,r.servicio,r.cargo,r.run?lmRunFmt(r.run):(r.codigo||''),r.evaluado||''].concat((r.pasos||'').split('').map(function(x){return tr[x]||'';})).concat([r.naJust||'',r.cumple,r.exc?0:1,r.retro?'Sí':'No']));});
+  var last=all.length+1,wsD=XLSX.utils.aoa_to_sheet(det);
+  wsD['!cols']=[{wch:5},{wch:11},{wch:9},{wch:7},{wch:16},{wch:14},{wch:14},{wch:15},{wch:24}].concat(LM_PASOS.map(function(){return {wch:13};})).concat([{wch:26},{wch:10},{wch:14},{wch:12}]);
+  var D='Detalle!',rg=function(col){return D+'$'+col+'$2:$'+col+'$'+last;};
+  var ind=[['INDICADOR GCL 3.2: Cumplimiento de la higiene de manos durante la atención clínica (pauta de 8 pasos)'],[],['Período',c.periodo],['Unidades',c.servicios.join(', ')],['Fórmula','Observaciones que cumplen los pasos aplicables ÷ observaciones supervisadas en igual período'],['Regla de cumplimiento',c.regla],['Umbral (≥ %)',c.umbral],['Confianza (%)',c.conf],[],['Observaciones (cuentan para el indicador)',null],['Observaciones que cumplen',null],['Cumplimiento',null],['IC inferior (Clopper-Pearson)',s.ic.lo],['IC superior (Clopper-Pearson)',s.ic.hi],['Conclusión',s.n?s.ver.txt:''],['Estado de la muestra',s.n<c.nObj?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')'],['Excedente (fuera del indicador)',all.length-l.length]];
+  var wsI=XLSX.utils.aoa_to_sheet(ind);
+  wsI['B10']={t:'n',v:s.n,f:'SUM('+rg('T')+')'};wsI['B11']={t:'n',v:s.k,f:'SUMPRODUCT('+rg('S')+','+rg('T')+')'};wsI['B12']={t:'n',v:s.p,f:'IF(B10=0,0,B11/B10)',z:'0.0%'};wsI['B13'].z='0.0%';wsI['B14'].z='0.0%';
+  var row=ind.length+1;
+  function bloque(titulo,campo,col){
+    var arr=lmPorGrupo(l,campo,c);row++;
+    wsI['A'+row]={t:'s',v:titulo};['n','Cumplen','% cumplimiento','IC inferior','IC superior'].forEach(function(h,i){wsI[String.fromCharCode(66+i)+row]={t:'s',v:h};});
+    arr.forEach(function(r){row++;var rr=row;wsI['A'+rr]={t:'s',v:r.g};wsI['B'+rr]={t:'n',v:r.n,f:'COUNTIFS('+rg(col)+',A'+rr+','+rg('T')+',1)'};wsI['C'+rr]={t:'n',v:r.k,f:'SUMPRODUCT(('+rg(col)+'=A'+rr+')*'+rg('S')+'*'+rg('T')+')'};wsI['D'+rr]={t:'n',v:r.p,f:'IF(B'+rr+'=0,0,C'+rr+'/B'+rr+')',z:'0.0%'};wsI['E'+rr]={t:'n',v:r.ic.lo,z:'0.0%'};wsI['F'+rr]={t:'n',v:r.ic.hi,z:'0.0%'};});
+    row+=2;
+  }
+  bloque('Por unidad (referencial)','servicio','F');bloque('Por cargo','cargo','G');
+  (function(){var meses=(c.meses||[]).map(function(x){return x.ym;});row++;wsI['A'+row]={t:'s',v:'Por mes'};['n','Cuota','Cumplen','% cumplimiento'].forEach(function(h,i){wsI[String.fromCharCode(66+i)+row]={t:'s',v:h};});
+    (c.meses||[]).forEach(function(mc){row++;var rr=row,lm=l.filter(function(r){return (r.fecha||'').slice(0,7)===mc.ym;}),sm=lmResumen(lm,c);wsI['A'+rr]={t:'s',v:mc.ym};wsI['B'+rr]={t:'n',v:lm.length,f:'COUNTIFS('+rg('C')+',A'+rr+','+rg('T')+',1)'};wsI['C'+rr]={t:'n',v:mc.cuota};wsI['D'+rr]={t:'n',v:sm.k,f:'SUMPRODUCT(('+rg('C')+'=A'+rr+')*'+rg('S')+'*'+rg('T')+')'};wsI['E'+rr]={t:'n',v:sm.p,f:'IF(B'+rr+'=0,0,D'+rr+'/B'+rr+')',z:'0.0%'};});row+=2;})();
+  wsI['!ref']='A1:F'+row;wsI['!cols']=[{wch:40},{wch:44},{wch:12},{wch:16},{wch:12},{wch:12}];
+  var cal=[['CALIBRACIÓN SELLADA'],[],['Estado',m.estado],['Período',c.periodo],['Inicio',c.inicio||''],['Fin',c.fin||''],['Cumplimiento esperado (%)',c.p],['Margen de error (±%)',c.e],['Confianza (%)',c.conf],['Umbral (≥ %)',c.umbral],['Universo total N (atenciones año anterior)',c.N||'sin corrección finita'],['Tamaño de muestra (n)',c.nObj],['Origen de n',c.nOrigen||'calculado'],['Regla de cumplimiento',c.regla],['Práctica (sin validez)',c.practica?'Sí':'No'],['Sellada por',(m.sello||{}).autor||''],['Fecha y hora del sello',(m.sello||{}).ts?new Date(m.sello.ts).toLocaleString('es-CL'):''],['Huella SHA-256',(m.sello||{}).hash||''],[],['Unidad','Universo','Cuota']].concat((c.unidades||[]).map(function(u){return [u.nombre,u.N,u.cuota];})).concat([[],['Mes','Cuota']]).concat((c.meses||[]).map(function(x){return [x.ym,x.cuota];})).concat([[],['Cargos',c.cargos.join(', ')],[],['Pasos evaluados']]).concat(LM_PASOS.map(function(t,i){return [i+1,t];}));
+  var wsC=XLSX.utils.aoa_to_sheet(cal);wsC['!cols']=[{wch:40},{wch:70},{wch:10}];
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,wsD,'Detalle');XLSX.utils.book_append_sheet(wb,wsI,'Indicador');XLSX.utils.book_append_sheet(wb,wsC,'Calibración');
+  XLSX.writeFile(wb,'Registro_lavado_manos_'+c.periodo.replace(/[^\wáéíóúñ]+/gi,'_')+'.xlsx');
+};
+
+;(function(){var st=document.createElement("style");st.textContent="#lmOv .lmbx{flex:1;background:#0b1220!important;color:#cbd5e1!important;border-radius:8px;padding:8px;text-align:center;font-size:11px}#lmOv .lmbx b{color:#22d3ee!important}#lmOv .lmnt{color:#fff!important}";document.head.appendChild(st);})();
 </script>
 </body>
 </html>
