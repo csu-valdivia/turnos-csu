@@ -24921,8 +24921,8 @@ window.lmNueva=function(){
   var id=lmRef().child('mediciones').push().key;
   var us=lmLista('servicios').map(function(n){return {nombre:n,N:LM_DEFN[n]||0,cuota:0};});
   var Nt=us.reduce(function(a,u){return a+u.N;},0),n=Nt?lmTamano(95,.05,.85,Nt):0;
-  var meses=lmMesesPeriodo('2026-08-01','2026-12-31');
-  var m={estado:'borrador',creado:Date.now(),autor:lmAutor(),calib:{periodo:'agosto–diciembre 2026',inicio:'2026-08-01',fin:'2026-12-31',p:85,e:5,conf:95,umbral:60,N:Nt,nObj:n,nOrigen:'calculado',unidades:lmCuotasUnidad(us,n),meses:lmCuotasMes(n||1,meses),servicios:us.map(function(u){return u.nombre;}),cargos:lmLista('cargos').slice(),practica:false}};
+  var meses=lmMesesPeriodo('2026-09-01','2026-12-31');
+  var m={estado:'borrador',creado:Date.now(),autor:lmAutor(),calib:{periodo:'septiembre–diciembre 2026',inicio:'2026-09-01',fin:'2026-12-31',p:85,e:5,conf:95,umbral:60,N:Nt,nObj:n,nOrigen:'calculado',unidades:lmCuotasUnidad(us,n),meses:lmCuotasMes(n||1,meses),servicios:us.map(function(u){return u.nombre;}),cargos:lmLista('cargos').slice(),practica:false}};
   lmRef().child('mediciones/'+id).set(m).then(function(){LM.meds[id]=m;lmVista('calib',id);});
 };
 lmHtmlCalib=function(m){
