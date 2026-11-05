@@ -1333,7 +1333,7 @@ body.gx-light .tccf button.si{color:#fff!important}
             <button class="btn-add" id="abrirDashboardBtn" style="background:linear-gradient(135deg,#2563eb,#10b981)">📊 Abrir dashboard de gestión</button>
             <button class="btn-add" id="abrirDashInvBtn" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">📦 Dashboard de inventario</button>
             <button class="btn-add" id="abrirDashTecBtn" style="background:linear-gradient(135deg,#7c3aed,#2563eb);margin-top:6px">🔬 Dashboard técnico (esterilización)</button>
-            <button class="btn-add" id="abrirLavadoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">🧼 Pauta lavado de manos (acreditación GCL 3.2)</button>
+            <button class="btn-add" id="abrirLavadoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">🧼 Pauta lavado de manos (acreditación)</button>
             <button class="btn-add" id="abrirCumplimientoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">✅ Control de cumplimiento diario</button>
             <button class="btn-add" id="abrirSinAsignarBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">👥 Quién no tiene asignaciones</button>
             <button class="btn-add" id="abrirCargaTrabajoBtn" style="background:linear-gradient(135deg,#0891b2,#22d3ee);margin-top:6px">⚖️ Carga de trabajo del equipo</button>
@@ -24366,7 +24366,7 @@ document.getElementById('clearBtn').addEventListener('click',function(){if(!conf
   }
 })();
 
-// ===== Lavado de manos (GCL 3.2) — estadística =====
+// ===== Lavado de manos — estadística =====
 var LM_PASOS=[
  'Manos sin accesorios, uñas sin esmalte',
  'Moja con agua manos y antebrazos',
@@ -24404,7 +24404,7 @@ function lmVeredicto(ic,umbral){
 }
 
 function lmUnion(a,b){var r=a.slice();(b||[]).forEach(function(x){if(r.indexOf(x)<0)r.push(x);});return r;}
-// ===== Lavado de manos (GCL 3.2) — datos, calibración, registro y avance =====
+// ===== Lavado de manos — datos, calibración, registro y avance =====
 var LM={sesion:'',cfg:{},meds:{},obs:{},_ref:null,ui:{vista:'lista',medId:'',pasos:[],servicio:'',cargo:''}};
 var LM_DEF={servicios:['Odontología','Kinesiología'],cargos:['Estudiante','Docente','TENS','Enfermero/a','Otro'],carreras:['Odontología','Enfermería','Kinesiología','Otra']};
 var LM_REGLA='Cumple solo si realiza el 100 % de los pasos aplicables (lo que no aplica se marca N/A con justificación y no cuenta).';
@@ -24451,7 +24451,7 @@ function lmAccesoColab(){
   if(!ok){if(el)el.remove();return;}
   if(!el){el=document.createElement('div');el.id='lmAcceso';host.parentNode.insertBefore(el,host.nextSibling);}
   var act=Object.keys(LM.meds).filter(function(k){return LM.meds[k].estado==='sellada';}).length;
-  el.innerHTML='<button onclick="lmAbrir()" style="width:100%;margin-top:8px;background:linear-gradient(135deg,#0891b2,#22d3ee);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-weight:700;cursor:pointer">🧼 Pauta de lavado clínico de manos (GCL 3.2)'+(act?' · '+act+' medición activa':'')+'</button>';
+  el.innerHTML='<button onclick="lmAbrir()" style="width:100%;margin-top:8px;background:linear-gradient(135deg,#0891b2,#22d3ee);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-weight:700;cursor:pointer">🧼 Pauta de lavado clínico de manos'+(act?' · '+act+' medición activa':'')+'</button>';
 }
 // ---- Panel ----
 window.lmAbrir=function(){
@@ -24470,7 +24470,7 @@ var LM_CSS='<style>#lmOv{background:#0b1220!important;color:#e5e7eb!important}#l
 function lmRender(){
   var ov=document.getElementById('lmOv');if(!ov)return;
   var v=LM.ui.vista,m=LM.meds[LM.ui.medId];
-  var h='<div style="max-width:860px;margin:0 auto">'+LM_CSS+'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span class="lmh" style="font-size:17px;font-weight:800">🧼 Pauta de lavado clínico de manos · GCL 3.2</span><button class="lmb" onclick="lmCerrar()">✕ Salir</button></div>';
+  var h='<div style="max-width:860px;margin:0 auto">'+LM_CSS+'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span class="lmh" style="font-size:17px;font-weight:800">🧼 Pauta de lavado clínico de manos</span><button class="lmb" onclick="lmCerrar()">✕ Salir</button></div>';
   if(v!=='lista')h+='<button class="lmb" style="margin-bottom:10px" onclick="lmVista(\'lista\')">← Mediciones</button>';
   if(v==='lista')h+=lmHtmlLista();
   else if(v==='calib')h+=lmHtmlCalib(m);
@@ -24729,13 +24729,13 @@ window.lmPdfInforme=function(id,mes){
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor.apply(doc,NAVY);doc.setCharSpace(1.4);
   doc.text('INFORME DE INDICADOR · HIGIENE DE MANOS',M,y);doc.setCharSpace(0);y+=5;
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor.apply(doc,GRIS);
-  doc.text('Para: Gerencia · Pauta de supervisión de lavado clínico de manos (GCL 3.2) · '+perTxt+(mes?' (período de medición: '+c.periodo+')':''),M,y);y+=4.2;
+  doc.text('Para: Gerencia · Pauta de supervisión de lavado clínico de manos · '+perTxt+(mes?' (período de medición: '+c.periodo+')':''),M,y);y+=4.2;
   var fol='LM-'+id.slice(-6).toUpperCase();doc.text('Folio '+fol+' · Emitido '+mtFechaHora(ts)+' · Uso interno',M,y);
   var flag=c.practica?'MEDICIÓN DE PRÁCTICA · SIN VALIDEZ':(parcial?'RESULTADO PARCIAL ('+s.n+' de '+metaN+')':'');
   if(flag){doc.setFont('helvetica','bold');doc.setTextColor.apply(doc,RI);doc.text(flag,W0-M,y,{align:'right'});doc.setFont('helvetica','normal');}
   y+=8;
   var ps=lmPorPaso(l).filter(function(x){return x.ap;}).sort(function(a,b){return a.p-b.p;});
-  parrafo('Se informa a Gerencia · Centro de Salud USS - Valdivia el resultado de la medición de higiene de manos clínica correspondiente a '+perTxt+', aplicada en '+c.servicios.join(', ')+' mediante observación directa de '+s.n+' lavados, con la pauta de 8 pasos del programa GCL 3.2. Cada lavado se clasifica como cumple solo si realiza el 100 % de los pasos que le aplican.');
+  parrafo('Se informa a Gerencia · Centro de Salud USS - Valdivia el resultado de la medición de higiene de manos clínica correspondiente a '+perTxt+', aplicada en '+c.servicios.join(', ')+' mediante observación directa de '+s.n+' lavados, con la pauta de 8 pasos. Cada lavado se clasifica como cumple solo si realiza el 100 % de los pasos que le aplican.');
   var t2='El '+pc(s.p)+' de los lavados observados cumplió la técnica completa ('+s.k+' de '+s.n+'). El intervalo de confianza del '+c.conf+' % va de '+pc(s.ic.lo)+' a '+pc(s.ic.hi)+'. Frente al umbral de '+c.umbral+' % el resultado es: '+s.ver.txt.toLowerCase()+'.';
   if(parcial)t2+=' Es un resultado parcial: se han observado '+s.n+' de los '+metaN+' previstos '+(mes?'para el mes':'para el período')+', por lo que la conclusión puede cambiar al completar la muestra.';
   parrafo(t2);
@@ -24813,7 +24813,7 @@ window.lmExcel=function(id){
   l.forEach(function(r,i){det.push([i+1,r.fecha,r.hora,r.autor,r.servicio,r.cargo,r.run?lmRunFmt(r.run):(r.codigo||''),r.evaluado||''].concat((r.pasos||'').split('').map(function(x){return tr[x]||'';})).concat([r.naJust||'',r.cumple]));});
   var wsD=XLSX.utils.aoa_to_sheet(det),last=l.length+1,cCol='R';
   wsD['!cols']=[{wch:5},{wch:11},{wch:7},{wch:16},{wch:14},{wch:14},{wch:14},{wch:24}].concat(LM_PASOS.map(function(){return {wch:14};})).concat([{wch:28},{wch:10}]);
-  var ind=[['INDICADOR: Cumplimiento de la técnica de lavado clínico de manos (GCL 3.2)'],[],
+  var ind=[['INDICADOR: Cumplimiento de la técnica de lavado clínico de manos'],[],
    ['Período',c.periodo],['Servicios',c.servicios.join(', ')],['Fórmula','Lavados que cumplen ÷ lavados observados (aplicables)'],['Regla de cumplimiento',c.regla],['Umbral (%)',c.umbral],['Confianza (%)',c.conf],[],
    ['Lavados observados',null],['Lavados que cumplen',null],['Cumplimiento',null],['IC inferior (Clopper-Pearson)',s.ic.lo],['IC superior (Clopper-Pearson)',s.ic.hi],['Conclusión',s.ver.txt],['Estado de la muestra',s.n<c.nObj?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')']];
   var wsI=XLSX.utils.aoa_to_sheet(ind);
@@ -25052,7 +25052,7 @@ window.lmExcel=function(id){
   var last=all.length+1,wsD=XLSX.utils.aoa_to_sheet(det);
   wsD['!cols']=[{wch:5},{wch:11},{wch:9},{wch:7},{wch:16},{wch:14},{wch:14},{wch:15},{wch:24}].concat(LM_PASOS.map(function(){return {wch:13};})).concat([{wch:26},{wch:10},{wch:14},{wch:12}]);
   var D='Detalle!',rg=function(col){return D+'$'+col+'$2:$'+col+'$'+last;};
-  var ind=[['INDICADOR GCL 3.2: Cumplimiento de la higiene de manos durante la atención clínica (pauta de 8 pasos)'],[],['Período',c.periodo],['Unidades',c.servicios.join(', ')],['Fórmula','Observaciones que cumplen los pasos aplicables ÷ observaciones supervisadas en igual período'],['Regla de cumplimiento',c.regla],['Umbral (≥ %)',c.umbral],['Confianza (%)',c.conf],[],['Observaciones (cuentan para el indicador)',null],['Observaciones que cumplen',null],['Cumplimiento',null],['IC inferior (Clopper-Pearson)',s.ic.lo],['IC superior (Clopper-Pearson)',s.ic.hi],['Conclusión',s.n?s.ver.txt:''],['Estado de la muestra',s.n<c.nObj?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')'],['Excedente (fuera del indicador)',all.length-l.length]];
+  var ind=[['INDICADOR: Cumplimiento de la higiene de manos durante la atención clínica (pauta de 8 pasos)'],[],['Período',c.periodo],['Unidades',c.servicios.join(', ')],['Fórmula','Observaciones que cumplen los pasos aplicables ÷ observaciones supervisadas en igual período'],['Regla de cumplimiento',c.regla],['Umbral (≥ %)',c.umbral],['Confianza (%)',c.conf],[],['Observaciones (cuentan para el indicador)',null],['Observaciones que cumplen',null],['Cumplimiento',null],['IC inferior (Clopper-Pearson)',s.ic.lo],['IC superior (Clopper-Pearson)',s.ic.hi],['Conclusión',s.n?s.ver.txt:''],['Estado de la muestra',s.n<c.nObj?'Resultado parcial ('+s.n+' de '+c.nObj+')':'Muestra completa ('+s.n+' de '+c.nObj+')'],['Excedente (fuera del indicador)',all.length-l.length]];
   var wsI=XLSX.utils.aoa_to_sheet(ind);
   wsI['B10']={t:'n',v:s.n,f:'SUM('+rg('T')+')'};wsI['B11']={t:'n',v:s.k,f:'SUMPRODUCT('+rg('S')+','+rg('T')+')'};wsI['B12']={t:'n',v:s.p,f:'IF(B10=0,0,B11/B10)',z:'0.0%'};wsI['B13'].z='0.0%';wsI['B14'].z='0.0%';
   var row=ind.length+1;
@@ -25237,6 +25237,61 @@ lmHtmlAvance=function(m){
   return h;
 };
 ;(function(){var st=document.createElement('style');st.textContent='#lmNotOv{background:#0b1220!important;color:#e5e7eb!important}#lmNotOv .lmi{background:#0b1220!important;color:#fff!important;border:1px solid rgba(255,255,255,.2)!important}#lmNotOv .lmb{background:rgba(255,255,255,.14)!important;color:#fff!important}#lmNotOv .lmb.lmp{background:linear-gradient(135deg,#0891b2,#22d3ee)!important}#lmNotOv .lmc{background:#16233d!important}#lmNotOv .lml{color:rgba(255,255,255,.6)!important}';document.head.appendChild(st);})();
+
+
+// ===== v4: observaciones libres, búsqueda de pautas (solo lectura) =====
+(function(){
+  function sw(fn,pairs){var s=fn.toString();pairs.forEach(function(p){if(s.indexOf(p[0])<0)throw new Error('patch no aplica: '+p[0].slice(0,40));s=s.replace(p[0],p[1]);});return (0,eval)('('+s+')');}
+  window.lmGuardarObs=sw(window.lmGuardarObs,[["naJust:j.trim(),","naJust:j.trim(),obs:((document.getElementById('lmObs')||{}).value||'').trim().slice(0,500),"]]);
+  window.lmExcel=sw(window.lmExcel,[["'Carga retroactiva'])]","'Carga retroactiva','Observaciones'])]"],["r.retro?'Sí':'No']))","r.retro?'Sí':'No',r.obs||'']))"],["{wch:10},{wch:14},{wch:12}]);","{wch:10},{wch:14},{wch:12},{wch:40}]);"]]);
+  lmRender=sw(lmRender,[["else if(v==='reg')h+=lmHtmlReg(m);","else if(v==='reg')h+=lmHtmlReg(m);else if(v==='pautas')h+=lmHtmlPautas(m);else if(v==='pauta')h+=lmHtmlPauta(m);"]]);
+})();
+var _lmReg4=lmHtmlReg;
+lmHtmlReg=function(m){
+  var h=_lmReg4(m);
+  var ob='<label class="lml">Observaciones (opcional)</label><textarea class="lmi" id="lmObs" rows="3" maxlength="500" placeholder="Ej.: sin jabón en el dispensador, lavamanos distinto al habitual…"></textarea><div style="font-size:11px;color:#fbbf24;margin-top:4px">Uso interno. No escribas nombres ni RUN de pacientes. No sale en notificaciones ni informes.</div>';
+  var k='<button class="lmb g" style="width:100%;margin-top:10px;padding:13px" onclick="lmGuardarObs()">';
+  h=h.replace(k,ob+k);
+  if(!lmEsAdmin())h=h.replace(/(✅ cumple|❌ no cumple)/g,'');
+  return '<button class="lmb" style="margin-bottom:10px" onclick="lmVista(\'pautas\',\''+LM.ui.medId+'\')">🔎 Pautas aplicadas</button>'+h;
+};
+var _lmLista4=lmHtmlLista;
+lmHtmlLista=function(){
+  return _lmLista4().replace(/(onclick="lmVista\('reg','([^']+)'\)">📝 Registrar observación<\/button>)/g,'$1<button class="lmb" style="width:100%;padding:10px;margin-top:6px" onclick="lmVista(\'pautas\',\'$2\')">🔎 Pautas aplicadas</button>');
+};
+function lmRunMask(r){var f=lmRunFmt(r||'');if(lmEsAdmin())return f;var g=f.replace(/^(\d{1,2}\.\d{3})\.\d{3}-(.)$/,'$1.***-$2');return g===f?'***':g;}
+function lmFd(f){return (f||'').split('-').reverse().join('-');}
+window.lmPFiltro=function(k,v){LM.ui[k]=v;lmRender();};
+function lmHtmlPautas(m){
+  if(!m||m.estado==='borrador')return '<div class="lmc">Esta medición no tiene pautas.</div>';
+  var c=m.calib||{},id=LM.ui.medId,u=LM.ui,sv=c.servicios||[];
+  if(!u.pServ||sv.indexOf(u.pServ)<0)u.pServ=sv[0];
+  var ct=lmContador(id),un=ct&&ct.us?ct.us.filter(function(x){return x.nombre===u.pServ;})[0]:null;
+  var d0=u.pDesde||'',d1=u.pHasta||'';
+  var l=lmObsAll(id).filter(function(r){return r.servicio===u.pServ&&(!d0||r.fecha>=d0)&&(!d1||r.fecha<=d1);}).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'')||(b.ts||0)-(a.ts||0);});
+  var h='<div class="lmc"><b>Pautas aplicadas · '+esc(c.periodo||'')+'</b><label class="lml">Carrera</label><select class="lmi" onchange="lmPFiltro(\'pServ\',this.value)">'+sv.map(function(x){return '<option'+(x===u.pServ?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="lml">Desde</label><input class="lmi" type="date" value="'+esc(d0)+'" onchange="lmPFiltro(\'pDesde\',this.value)"></div><div><label class="lml">Hasta</label><input class="lmi" type="date" value="'+esc(d1)+'" onchange="lmPFiltro(\'pHasta\',this.value)"></div></div></div>';
+  h+='<div class="lmc" style="text-align:center">'+esc(u.pServ)+': <b style="color:#22d3ee;font-size:20px">'+(un?un.hechas:l.filter(function(r){return !r.exc;}).length)+'</b> pautas aplicadas'+(un&&un.cuota?' de '+un.cuota+' · faltan '+un.faltan:'')+(un&&un.exc?'<div style="font-size:11px;color:#fbbf24">'+un.exc+' excedente(s) no cuentan para el indicador</div>':'')+'<div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:4px">En el filtro: '+l.length+' pauta'+(l.length===1?'':'s')+'</div></div>';
+  if(!l.length)return h+'<div class="lmc" style="color:rgba(255,255,255,.6)">No hay pautas con este filtro.</div>';
+  h+='<div class="lmc" style="padding:4px 14px">';
+  l.slice(0,150).forEach(function(r){h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid rgba(255,255,255,.08);padding:10px 0"><div><b>'+esc(lmFd(r.fecha))+'</b> · '+esc(r.cargo||'')+(r.exc?' <span style="color:#fbbf24;font-size:10px">excedente</span>':'')+(r.retro?' <span style="color:rgba(255,255,255,.4);font-size:10px">retroactiva</span>':'')+'<br><span style="color:rgba(255,255,255,.55);font-size:12px">'+esc(r.evaluado||'')+' · cargó '+esc(r.autor||'')+'</span></div><button class="lmb" style="padding:7px 12px" onclick="LM.ui.pautaId=\''+r.id+'\';lmVista(\'pauta\')">Abrir ›</button></div>';});
+  if(l.length>150)h+='<div style="font-size:11px;color:rgba(255,255,255,.5);padding:8px 0">Se muestran las 150 más recientes. Acota por fechas.</div>';
+  return h+'</div>';
+}
+function lmHtmlPauta(m){
+  var id=LM.ui.medId,r=lmObsAll(id).filter(function(x){return x.id===LM.ui.pautaId;})[0];
+  var back='<button class="lmb" style="margin-bottom:10px" onclick="lmVista(\'pautas\')">← Pautas aplicadas</button>';
+  if(!r)return back+'<div class="lmc">No se encontró la pauta.</div>';
+  var tr={S:['Sí','#34d399'],N:['No','#f87171'],A:['N/A','#9ca3af']};
+  var h=back+'<div class="lmc"><b style="font-size:15px">Pauta '+esc(lmFd(r.fecha))+' · '+esc(r.servicio)+'</b><div style="font-size:11px;color:#fbbf24;margin:4px 0 8px">🔒 Solo lectura · no se puede modificar</div><div style="font-size:13px;line-height:1.7">Cargo: '+esc(r.cargo||'')+'<br>Evaluado: '+esc(r.evaluado||'')+'<br>RUN paciente: '+esc(lmRunMask(r.run))+'<br>Cargada por: '+esc(r.autor||'')+' · '+esc(lmFd(r.fecha))+' '+esc(r.hora||'')+(r.retro?'<br><span style="color:rgba(255,255,255,.5)">Carga retroactiva</span>':'')+(r.exc?'<br><span style="color:#fbbf24">Excedente: no cuenta para el indicador</span>':'')+(lmEsAdmin()?'<br>Resultado: <b>'+(r.cumple===1?'cumple':'no cumple')+'</b>':'')+'</div></div><div class="lmc">';
+  LM_PASOS.forEach(function(t,i){var x=tr[(r.pasos||'')[i]]||['—','#9ca3af'];h+='<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07)"><span style="font-size:13px"><b>'+(i+1)+'.</b> '+esc(t)+'</span><b style="color:'+x[1]+'!important">'+x[0]+'</b></div>';});
+  if(r.naJust)h+='<div style="font-size:12px;margin-top:8px;color:rgba(255,255,255,.7)">Justificación N/A: '+esc(r.naJust)+'</div>';
+  h+='</div>';
+  if(r.obs)h+='<div class="lmc"><label class="lml" style="margin-top:0">Observaciones</label><div style="font-size:13px;white-space:pre-wrap">'+esc(r.obs)+'</div></div>';
+  return h+'<button class="lmb" style="width:100%" onclick="lmVista(\'pautas\')">Volver</button>';
+}
+;(function(){var st=document.createElement('style');st.textContent='#lmOv .lmi{background:#0b1220!important;color:#fff!important;border:1px solid rgba(255,255,255,.2)!important;color-scheme:dark}#lmOv select.lmi option{background:#0b1220;color:#fff}';document.head.appendChild(st);})();
+
 </script>
 </body>
 </html>
