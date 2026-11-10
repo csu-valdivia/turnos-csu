@@ -2057,6 +2057,8 @@ body.gx-light .tccf button.si{color:#fff!important}
             <input type="text" id="rolAddDetalle" placeholder="Si es valor: unidad (ej: °C, %). Si es checklist: puntos separados por coma" style="width:100%;margin-bottom:4px">
             <button class="btn-add" id="rolAddBtn">+ Crear rol</button>
 <button class="btn-add" id="rolDeaBtn" style="background:linear-gradient(135deg,#dc2626,#f87171);margin-top:6px">🫀 Cargar plantilla: DEA mensual (piso 1 y 2) + tras uso</button>
+<button class="btn-add" id="rolLabBtn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);margin-top:6px">🦷 Cargar plantilla: Laboratorios (conteos por laboratorio)</button>
+<button class="btn-add" id="rolConsBtn" style="background:linear-gradient(135deg,#9333ea,#c084fc);margin-top:6px">🟣 Cargar plantilla: Consentimientos (flujo y SMILE)</button>
             <button class="btn-add" onclick="abrirConfigBolso()" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa);margin-top:6px">🔑 Bolso clave azul: insumos, stock mínimo y equipos</button>
             <button class="btn-add" onclick="abrirConfigBotiquin()" style="background:linear-gradient(135deg,#059669,#34d399);margin-top:6px">💊 Botiquín de pabellón: medicamentos y stock mín/óptimo</button>
             <button class="btn-add" onclick="abrirFaltantesBotiquin()" style="background:linear-gradient(135deg,#d97706,#fbbf24);margin-top:6px">🛒 Botiquín: faltantes por comprar</button>
@@ -12652,6 +12654,25 @@ function initConfigRoles(){
     if(existente&&!confirm('Ya existe el rol "'+rolesTecnicos[existente].nombre+'". ¿Actualizarlo a revisión mensual con 2 DEA (piso 1 y piso 2) y registro tras uso? Los registros anteriores se conservan.'))return;
     sedeRef('rolesTecnicos/'+id).set(PLANTILLA_DEA).then(function(){showSaved('rolSaved');});
   };
+  var bl=document.getElementById('rolLabBtn');
+  if(bl)bl.onclick=function(){
+    var existente=Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.plantilla==='lab';})[0];
+    var act=existente?rolesTecnicos[existente]:null;
+    var nom=prompt('Nombres de los laboratorios, separados por coma:',act&&act.unidades?act.unidades.join(', '):'Laboratorio 1, Laboratorio 2');
+    if(nom===null)return;
+    var un=nom.split(',').map(function(x){return x.trim();}).filter(Boolean);
+    if(!un.length){alert('Escribe al menos un laboratorio.');return;}
+    var url=prompt('Dirección de la página de laboratorios (opcional, para el botón «Abrir página»):',act&&act.url?act.url:'');
+    if(url===null)return;
+    url=(url||'').trim();if(url&&!/^https?:\/\//i.test(url))url='https://'+url;
+    var o=JSON.parse(JSON.stringify(PLANTILLA_LAB));o.unidades=un;o.url=url;
+    sedeRef('rolesTecnicos/'+(existente||('rol_lab_'+Date.now()))).set(o).then(function(){showSaved('rolSaved');});
+  };
+  var bc=document.getElementById('rolConsBtn');
+  if(bc)bc.onclick=function(){
+    var existente=Object.keys(rolesTecnicos||{}).filter(function(k){var r=rolesTecnicos[k];return r&&r.plantilla==='cons';})[0];
+    sedeRef('rolesTecnicos/'+(existente||('rol_cons_'+Date.now()))).set(PLANTILLA_CONS).then(function(){showSaved('rolSaved');});
+  };
   var ab=document.getElementById('rolAddBtn');
   if(ab)ab.onclick=function(){
     var emoji=document.getElementById('rolAddEmoji').value.trim()||'🔧';
@@ -12681,6 +12702,83 @@ var PLANTILLA_DEA={emoji:'🫀',nombre:'Inspección del DEA (mensual y tras uso)
     'Confirmar que la bolsa de accesorios esté junto al DEA y contenga: tijeras, rasuradora, mascarilla de RCP, guantes y toallitas.',
     'Mirar a través de la ventana del empaque de los parches que la fecha de vencimiento siga vigente.']};
 
+// ══════════ ROLES DE CONTEOS: Laboratorios y Consentimientos ══════════
+var PLANTILLA_LAB={emoji:'🦷',nombre:'Laboratorios: revisar estados',tipoRegistro:'conteos',plantilla:'lab',frecuencia:'diaria',unidades:['Laboratorio 1','Laboratorio 2'],url:''};
+var PLANTILLA_CONS={emoji:'🟣',nombre:'Consentimientos: vigilar el flujo',tipoRegistro:'conteos',plantilla:'cons',frecuencia:'diaria'};
+var CONTEOS_LAB=[['enLab','En el laboratorio',0],['atrasados','de ellos, atrasados',1],['salieron','Salieron del CSU al laboratorio',0],['llegaron','Llegaron al CSU para entregar',0],['probados','De los que volvieron, probados en boca',0],['firmaPend','Con firma pendiente en alguna etapa',0],['msgDoc','Mensajes enviados a docentes',0],['msgEst','Mensajes enviados a estudiantes',0],['msgLab','Mensajes enviados al laboratorio',0]];
+var CONTEOS_CONS=[['recepcion','Pacientes que pasaron por recepción',0],['completos','Consentimiento completo y correcto',0],['conObs','Con observación o faltante',0],['subidos','Subidos a SMILE',0]];
+var CONTEOS_FLUJO=[['','Sin detenciones'],['recepcion','Recepción'],['docente','Docente'],['firma','Firma'],['smile','SMILE']];
+function conteosResumen(r){
+  var v=r.valores||{},o=[];
+  if(r.rolPlantilla==='cons'){return 'recepción '+v.recepcion+' · completos '+v.completos+' · con observación '+v.conObs+' · subidos '+v.subidos+' · pendientes '+(v.completos-v.subidos)+(r.flujo?' · se detuvo en '+r.flujo:'');}
+  return (r.unidad?r.unidad+': ':'')+'en lab '+v.enLab+' ('+v.atrasados+' atrasados) · salieron '+v.salieron+' · llegaron '+v.llegaron+' · en boca '+v.probados+' · firma pend. '+v.firmaPend+' · msgs doc '+v.msgDoc+', est '+v.msgEst+', lab '+v.msgLab;
+}
+function conteosOverlay(rolId,rol){
+  var ov=document.getElementById('regCustomOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='regCustomOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(8,15,30,.92);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  var inp='background:#0b1220;border:1px solid #334155;border-radius:8px;padding:7px;color:#fff;width:64px;text-align:center;font-weight:700;font-family:inherit';
+  function fila(id,l,sub){return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,.07)"><span style="font-size:13px;color:'+(sub?'#fbbf24':'#fff')+';padding-left:'+(sub?'12':'0')+'px">'+esc(l)+'</span><input type="number" inputmode="numeric" min="0" id="'+id+'" style="'+inp+'" oninput="conteosCalc()"></div>';}
+  var cuerpo='';
+  if(rol.plantilla==='cons'){
+    cuerpo='<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:8px 12px;margin-bottom:8px">'+CONTEOS_CONS.map(function(c){return fila('cn_'+c[0],c[1],c[2]);}).join('')+
+      '<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid rgba(255,255,255,.07);font-size:13px"><span>Pendientes de subir</span><b id="cn_pend" style="color:#22d3ee">—</b></div></div>'+
+      '<label style="font-size:12px;color:rgba(255,255,255,.7)">¿Dónde se detuvo el flujo? (si hubo)</label><select id="cn_flujo" style="width:100%;font-size:14px;padding:8px;margin-bottom:10px">'+CONTEOS_FLUJO.map(function(f){return '<option value="'+f[0]+'">'+f[1]+'</option>';}).join('')+'</select>'+
+      '<div style="font-size:11px;color:#fbbf24;margin-bottom:8px">Solo conteos: no escribas nombres ni RUN de pacientes. Debe cuadrar: subidos ≤ completos ≤ recepción.</div>';
+  } else {
+    cuerpo=(rol.unidades||['']).map(function(u,i){return '<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:8px 12px;margin-bottom:8px"><b style="color:#c4b5fd">'+esc(u||'Laboratorio')+'</b>'+CONTEOS_LAB.map(function(c){return fila('cl_'+i+'_'+c[0],c[1],c[2]);}).join('')+'</div>';}).join('');
+  }
+  var ult=Object.values(regCustom||{}).filter(function(r){return r.rolId===rolId;}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,(rol.unidades&&rol.unidades.length||1)*2);
+  ov.innerHTML='<div style="background:#16233d;border-radius:16px;padding:20px;max-width:460px;width:100%;margin-top:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">'+esc(rol.emoji)+' '+esc(rol.nombre)+'</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">'+hoyStr()+(rol.plantilla==='lab'?' · registra los números que ves en la página de cada laboratorio':'')+'</div>'+
+    (rol.url?'<a href="'+esc(rol.url)+'" target="_blank" rel="noopener" style="display:block;text-align:center;background:rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:9px;font-weight:700;text-decoration:none;margin-bottom:10px">Abrir página ↗</a>':'')+
+    cuerpo+
+    '<label style="font-size:12px;color:rgba(255,255,255,.7);display:block">Observaciones (opcional)</label><textarea id="customObs" rows="2" maxlength="400" style="width:100%;font-size:13px;padding:8px;margin-bottom:12px"></textarea>'+
+    '<button class="btn-add" onclick="guardarConteos(\''+rolId+'\')" style="background:linear-gradient(135deg,#059669,#34d399)">💾 Guardar registro</button>'+
+    '<button onclick="document.getElementById(\'regCustomOv\').remove()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px;font-family:inherit;cursor:pointer">Cerrar</button>'+
+    '<div class="saved" id="regCustomSaved">✓ Registrado</div>'+
+    (ult.length?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin:12px 0 4px">Últimos registros</div>'+ult.map(function(r){return '<div style="font-size:11px;color:rgba(255,255,255,.65);margin-bottom:3px">'+esc(r.fecha)+' · '+esc(r.quien||'')+' · '+esc(conteosResumen(r))+'</div>';}).join(''):'')+
+    '</div>';
+  document.body.appendChild(ov);
+}
+window.conteosCalc=function(){
+  var a=document.getElementById('cn_completos'),b=document.getElementById('cn_subidos'),p=document.getElementById('cn_pend');
+  if(p&&a&&b&&a.value!==''&&b.value!=='')p.textContent=Math.max(0,Number(a.value)-Number(b.value));
+};
+window.guardarConteos=function(rolId){
+  var rol=rolesTecnicos[rolId];if(!rol)return;
+  var ahora=new Date(),hora=pad(ahora.getHours())+':'+pad(ahora.getMinutes()),base=Date.now(),obs=(document.getElementById('customObs').value||'').trim();
+  function num(id,l){var e=document.getElementById(id);if(!e||e.value===''||!/^\d+$/.test(e.value)){alert('Completa «'+l+'» con un número entero (0 si no hay).');return null;}return Number(e.value);}
+  var regs=[],alerta=false;
+  if(rol.plantilla==='cons'){
+    var v={};for(var i=0;i<CONTEOS_CONS.length;i++){var n=num('cn_'+CONTEOS_CONS[i][0],CONTEOS_CONS[i][1]);if(n===null)return;v[CONTEOS_CONS[i][0]]=n;}
+    if(v.subidos>v.completos){alert('No cuadra: los subidos a SMILE no pueden ser más que los consentimientos completos.');return;}
+    if(v.completos+v.conObs>v.recepcion){alert('No cuadra: completos + con observación no pueden superar los pacientes que pasaron por recepción.');return;}
+    var fl=(document.getElementById('cn_flujo')||{}).value||'';
+    alerta=v.conObs>0||v.completos>v.subidos||!!fl;
+    regs.push({valores:v,flujo:fl,alerta:alerta});
+  } else {
+    (rol.unidades||['']).forEach(function(u,i){
+      if(regs===null)return;
+      var v={};for(var k=0;k<CONTEOS_LAB.length;k++){var n=num('cl_'+i+'_'+CONTEOS_LAB[k][0],(u||'Laboratorio')+': '+CONTEOS_LAB[k][1]);if(n===null){regs=null;return;}v[CONTEOS_LAB[k][0]]=n;}
+      if(v.atrasados>v.enLab){alert((u||'Laboratorio')+': los atrasados no pueden ser más que los que están en el laboratorio.');regs=null;return;}
+      var al=v.atrasados>0||v.firmaPend>0;if(al)alerta=true;
+      regs.push({unidad:u,valores:v,alerta:al});
+    });
+    if(regs===null)return;
+  }
+  var tareas2=regs.map(function(r,i){
+    var reg={rolId:rolId,rolNombre:rol.nombre,tipoRegistro:'conteos',rolPlantilla:rol.plantilla,valores:r.valores,obs:obs,quien:curNombre||'—',hora:hora,fecha:hoyStr(),ts:base+i};
+    if(r.unidad!==undefined)reg.unidad=r.unidad;if(r.flujo)reg.flujo=r.flujo;if(r.alerta)reg.alerta=true;
+    return sedeRef('regCustom/'+reg.ts).set(reg);
+  });
+  Promise.all(tareas2).then(function(){
+    showSaved('regCustomSaved');
+    if(alerta)alert(rol.plantilla==='cons'?'Registro guardado. Hay consentimientos con observación, pendientes de subir o un punto donde se detuvo el flujo: avisa a la jefatura si corresponde.':'Registro guardado. Hay trabajos atrasados o con firma pendiente: avisa a la jefatura si corresponde.');
+    setTimeout(function(){var o=document.getElementById('regCustomOv');if(o)o.remove();},1000);
+  });
+};
 // ══════════ BOTIQUÍN DE PABELLÓN (stock mín/óptimo, receta y entrega a Operaciones) + CONTROL BIOLÓGICO ══════════
 var botiquinPab={},regBotiquin={},regControlBio={},bolsoCfg={},regBolso={};
 function _fISO(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
@@ -13052,7 +13150,7 @@ function renderRolLista(){
   if(!keys.length){cont.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,.35)">Sin roles personalizados. Los predefinidos (autoclave, temperaturas, aseo) siguen disponibles.</p>';return;}
   cont.innerHTML=keys.map(function(k){
     var r=rolesTecnicos[k];
-    var det=(r.tipoRegistro==='valor'?('valor'+(r.unidad?' en '+esc(r.unidad):'')):('checklist: '+(r.puntos||[]).length+' puntos'))+(r.frecuencia==='semanal'?' · semanal':'');
+    var det=(r.tipoRegistro==='conteos'?('conteos'+(r.unidades?' · '+r.unidades.length+' laboratorio(s)':'')):r.tipoRegistro==='valor'?('valor'+(r.unidad?' en '+esc(r.unidad):'')):('checklist: '+(r.puntos||[]).length+' puntos'))+(r.frecuencia==='semanal'?' · semanal':'');
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px">'+
       '<span style="font-size:12px;color:#fff">'+esc(r.emoji)+' '+esc(r.nombre)+' <span style="font-size:10px;color:rgba(255,255,255,.35)">· '+det+'</span></span>'+
       '<button onclick="quitarRol(\''+k+'\')" style="background:rgba(239,68,68,.2);color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">Quitar</button>'+
@@ -18653,6 +18751,7 @@ document.getElementById('bodegaBtn').addEventListener('click',function(){abrirBo
 window.abrirRegCustom=function(rolId,sector){
   var rol=rolesTecnicos[rolId];
   if(!rol)return;
+  if(rol.tipoRegistro==='conteos'){conteosOverlay(rolId,rol);return;}
   if(rol.tipoRegistro==='ronda'){var ub=rondaUnidadDeSector(sector);if(ub)abrirRonda(ub);else if(adminUnlocked)rondaElegirUnidad();else alert('A esta ronda no se le asignó un puesto o unidad. Avísale a la jefatura para que se lo asigne.');return;}
   var ov=document.getElementById('regCustomOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='regCustomOv';
@@ -21350,6 +21449,14 @@ function verificarCumplimiento(tipo,fecha,tarea){
     var hayW=Object.values(fuente||{}).some(function(r){return r.fecha>=rg.ini&&r.fecha<=rg.fin;});
     return {cumplido:hayW,detalle:hayW?'Registrado esta semana':'Pendiente'};
   }
+  if(rolesTecnicos&&rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='conteos'){
+    // Cumple si ese día se registraron todos los laboratorios (o el único registro, en consentimientos)
+    var rc=rolesTecnicos[tipo],un2=(rc.unidades&&rc.unidades.length)?rc.unidades:[''];
+    var rg2=Object.values(regCustom||{}).filter(function(r){return r.rolId===tipo&&r.fecha===fecha;});
+    var est2=un2.map(function(u){return {u:u,ok:rg2.some(function(r){return (r.unidad||'')===u;})};});
+    var ok2=est2.every(function(x){return x.ok;});
+    return {cumplido:ok2,detalle:un2.length>1?est2.map(function(x){return x.u+(x.ok?' ✓':' pendiente');}).join(' · '):(ok2?'Registrado':'Sin registro')};
+  }
   if(rolesTecnicos&&rolesTecnicos[tipo]&&rolesTecnicos[tipo].tipoRegistro==='ronda'){
     // La ronda se cumple si la unidad asignada la registró DENTRO de la ventana del día. Sin unidad: cualquier ronda hecha por la persona ese día.
     var rd=(rondasApertura||{})[fecha]||{},ub=tarea?rondaUnidadDeSector(tarea.sector):'';
@@ -22530,7 +22637,7 @@ window.exportarDashboardExcel=function(){
   });
   // Registros personalizados
   Object.values(regCustom||{}).forEach(function(r){
-    var val=r.tipoRegistro==='valor'?(r.valor+' '+(r.unidad||'')):Object.keys(r.checks||{}).map(function(k){return k+':'+(r.checks[k]?'✓':'✗');}).join(', ');
+    var val=r.tipoRegistro==='conteos'?conteosResumen(r):r.tipoRegistro==='valor'?(r.valor+' '+(r.unidad||'')):Object.keys(r.checks||{}).map(function(k){return k+':'+(r.checks[k]?'✓':'✗');}).join(', ');
     filas.push([r.fecha,r.hora||'',r.rolNombre||'Rol personalizado','',val,r.obs||'',r.quien||'']);
   });
   // Supervisión
