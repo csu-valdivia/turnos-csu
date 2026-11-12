@@ -25536,7 +25536,7 @@ window.lmEliminarMed=function(id){
   // 2) al guardar la pauta completa, se borra el borrador
   window.lmGuardarObs=sw(window.lmGuardarObs,[[".then(function(){u.pasos=[];",".then(function(){lmBorBorrar(u.medId);u.pasos=[];"]]);
   // 3) vista informe
-  lmRender=sw(lmRender,[["else if(v==='pautas')h+=lmHtmlPautas(m);","else if(v==='pautas')h+=lmHtmlPautas(m);else if(v==='informe')h+=lmHtmlInforme(m);"]]);
+  lmRender=sw(lmRender,[["else if(v==='pautas')h+=lmHtmlPautas(m);","else if(v==='pautas')h+=lmHtmlPautas(m);else if(v==='informe')h+=lmHtmlInforme(m);else if(v==='pautaEdit')h+=lmHtmlPautaEdit(m);"]]);
 })();
 LM.bor=LM.bor||{};
 function lmBorKey(){return (lmAutor()||'anon').replace(/[.#$\[\]\/]/g,'_');}
@@ -25583,7 +25583,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v7.6 · 12-nov 17:30';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v7.7 · 12-nov 18:00';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -25730,6 +25730,65 @@ function lmHtmlInforme(m){
     '<div style="font-size:11px;color:rgba(255,255,255,.5)">El PDF resume el mes: cumplimiento por paso, por carrera y por cargo, con intervalo y veredicto frente al umbral. El Excel trae toda la medición, con una columna de mes.</div>';
   return h;
 }
+
+// ---- corregir datos de una pauta (admin siempre; el evaluador solo en las suyas, hasta 5 días hábiles) ----
+(function(){
+  function sw(fn,pairs){var t=fn.toString();pairs.forEach(function(q){if(t.indexOf(q[0])<0)throw new Error('patch v7b no aplica: '+q[0].slice(0,50));t=t.replace(q[0],q[1]);});return (0,eval)('('+t+')');}
+  window.lmExcel=sw(window.lmExcel,[["'Carga retroactiva','Observaciones'])]","'Carga retroactiva','Observaciones','Correcciones'])]"],["r.obs||'']))","r.obs||'',lmCorrTxt(r)]))"],["{wch:40}]);","{wch:40},{wch:60}]);"]]);
+})();
+function lmDiasHab(ts){var a=new Date(ts);a.setHours(0,0,0,0);var b=new Date();b.setHours(0,0,0,0);var n=0;for(var d=new Date(a);d<b;){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)n++;}return n;}
+function lmPuedeEditar(r,m){if(lmEsAdmin())return true;return !!r&&!r.anulada&&r.autor===lmAutor()&&(!m||m.estado==='sellada')&&lmDiasHab(r.ts||0)<=5;}
+function lmCorrLista(r){var c=r.correcciones||{};return Object.keys(c).map(function(k){return c[k];}).sort(function(a,b){return (a.ts||0)-(b.ts||0);});}
+function lmFts(ts){var d=new Date(ts);return ('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+var LM_CAMPOS={fecha:'Fecha',servicio:'Carrera',cargo:'Cargo',run:'RUN',evaluado:'Nombre',obs:'Observaciones'};
+function lmCorrVal(k,v){return k==='run'?lmRunMask(v):(k==='fecha'?lmFd(v):(v===''||v==null?'(vacío)':v));}
+function lmCorrTxt(r){return lmCorrLista(r).map(function(c){return lmFts(c.ts)+' '+(c.autor||'')+': '+Object.keys(c.despues||{}).map(function(k){return LM_CAMPOS[k]+' '+lmCorrVal(k,(c.antes||{})[k])+' → '+lmCorrVal(k,c.despues[k]);}).join('; ')+' ('+(c.motivo||'')+')';}).join(' | ');}
+var _lmPauta8=lmHtmlPauta;
+lmHtmlPauta=function(m){
+  var h=_lmPauta8(m),id=LM.ui.medId,r=lmObsAll(id).filter(function(x){return x.id===LM.ui.pautaId;})[0];if(!r)return h;
+  h=h.replace('🔒 Solo lectura · no se puede modificar','🔒 Los 8 pasos y el resultado no se pueden modificar');
+  var cl=lmCorrLista(r),hist='';
+  if(cl.length)hist='<div class="lmc"><b style="font-size:13px">Historial de correcciones</b>'+cl.map(function(c){return '<div style="padding:8px 0;border-top:1px solid #2a3a55;font-size:12px"><div style="color:#94a3b8">'+esc(lmFts(c.ts))+' · '+esc(c.autor||'')+'</div>'+Object.keys(c.despues||{}).map(function(k){return '<div>'+esc(LM_CAMPOS[k])+': '+esc(lmCorrVal(k,(c.antes||{})[k]))+' → <b>'+esc(lmCorrVal(k,c.despues[k]))+'</b></div>';}).join('')+'<div style="color:#fcd34d;margin-top:3px">Motivo: '+esc(c.motivo||'')+'</div></div>';}).join('')+'</div>';
+  var btn='';
+  if(lmPuedeEditar(r,m))btn='<button class="lmb" style="width:100%;padding:13px;margin-bottom:8px;background:#fbbf24;color:#0b1220" onclick="lmVista(\'pautaEdit\')">✏️ Corregir datos</button>'+(lmEsAdmin()?'':'<div style="font-size:11px;color:#94a3b8;margin-bottom:8px">Puedes corregir tus pautas hasta 5 días hábiles después de registrarlas.</div>');
+  else if(r.autor===lmAutor()&&!lmEsAdmin())btn='<div class="lmc" style="font-size:12px;color:#fcd34d">Pasaron más de 5 días hábiles desde que registraste esta pauta: ahora solo el administrador puede corregirla.</div>';
+  return h.replace('<button class="lmb" style="width:100%" onclick="lmVista(\'pautas\')">Volver</button>',hist+btn+'<button class="lmb" style="width:100%" onclick="lmVista(\'pautas\')">Volver</button>');
+};
+function lmHtmlPautaEdit(m){
+  var id=LM.ui.medId,r=lmObsAll(id).filter(function(x){return x.id===LM.ui.pautaId;})[0],c=(m&&m.calib)||{};
+  var back='<button class="lmb" style="margin-bottom:10px" onclick="lmVista(\'pauta\')">← Volver a la pauta</button>';
+  if(!r||!lmPuedeEditar(r,m))return back+'<div class="lmc">No puedes corregir esta pauta.</div>';
+  var op=function(a,sel){return a.map(function(x){return '<option'+(x===sel?' selected':'')+'>'+esc(x)+'</option>';}).join('');},adm=lmEsAdmin();
+  return back+'<div class="lmc"><b style="font-size:15px">✏️ Corregir datos de la pauta</b><div style="font-size:12px;color:#94a3b8;margin-top:2px">'+esc(lmFd(r.fecha))+' · '+esc(r.servicio)+' · '+esc(r.cargo||'')+'</div>'+
+  '<label class="lml">Fecha de la evaluación</label><input class="lmi" type="date" id="edFec" value="'+esc(r.fecha||'')+'" min="'+esc(c.inicio||'')+'" max="'+esc(c.fin&&c.fin<hoyStr()?c.fin:hoyStr())+'">'+
+  '<label class="lml">Carrera (servicio)</label><select class="lmi" id="edSv">'+op(c.servicios||[],r.servicio)+'</select>'+
+  '<label class="lml">Cargo observado</label><select class="lmi" id="edCg">'+op(c.cargos||[],r.cargo)+'</select>'+
+  '<label class="lml">RUN del paciente'+(adm?'':' (déjalo vacío para no cambiarlo)')+'</label><input class="lmi" id="edRun" autocomplete="off" oninput="lmFmtRun(this)" placeholder="'+(adm?'':'actual: '+esc(lmRunMask(r.run)))+'" value="'+(adm?esc(lmRunFmt(r.run||'')):'')+'">'+
+  '<label class="lml">Nombre del estudiante evaluado</label><input class="lmi" id="edNom" value="'+esc(r.evaluado||'')+'">'+
+  '<label class="lml">Observaciones</label><textarea class="lmi" id="edObs" rows="3" maxlength="500">'+esc(r.obs||'')+'</textarea>'+
+  '<div style="background:#1e2c47;border-radius:8px;padding:8px;font-size:11px;color:#cbd5e1;margin:10px 0">🔒 Los 8 pasos y el resultado no se pueden cambiar. Si el resultado está mal, anula la pauta y regístrala de nuevo.</div>'+
+  '<label class="lml" style="color:#fcd34d!important">Justificación de la corrección (obligatoria)</label><textarea class="lmi" id="edMot" rows="3" maxlength="300" style="border-color:#fbbf24!important" placeholder="Ej.: me equivoqué de día al digitarla"></textarea>'+
+  '<button class="lmb g" style="width:100%;padding:13px;margin-top:10px" onclick="lmGuardarEdicion()">💾 Guardar corrección</button></div>';
+}
+window.lmGuardarEdicion=function(){
+  var id=LM.ui.medId,m=LM.meds[id],c=(m&&m.calib)||{},r=lmObsAll(id).filter(function(x){return x.id===LM.ui.pautaId;})[0];
+  if(!r||!lmPuedeEditar(r,m)){alert('No puedes corregir esta pauta.');return;}
+  var g=function(i){return ((document.getElementById(i)||{}).value||'');};
+  var fec=g('edFec'),sv=g('edSv'),cg=g('edCg'),nom=g('edNom').trim(),obs=g('edObs').trim().slice(0,500),mot=g('edMot').trim(),run=lmRunNorm(g('edRun'));
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fec)||fec>hoyStr()){alert('Revisa la fecha (no puede ser futura).');return;}
+  if((c.inicio&&fec<c.inicio)||(c.fin&&fec>c.fin)){alert('La fecha debe estar dentro del período de la medición ('+lmFd(c.inicio)+' a '+lmFd(c.fin)+').');return;}
+  if(!nom){alert('Falta el nombre del estudiante evaluado.');return;}
+  if(run&&!lmRunOk(run)){alert('El RUN no es válido (revisa el dígito verificador).');return;}
+  if(!run)run=r.run||'';
+  if(mot.length<8){alert('Escribe la justificación de la corrección (mínimo 8 caracteres).');return;}
+  var nuevo={fecha:fec,servicio:sv,cargo:cg,run:run,evaluado:nom,obs:obs},antes={},despues={};
+  Object.keys(nuevo).forEach(function(k){var a=(r[k]==null?'':r[k]);if(String(a)!==String(nuevo[k])){antes[k]=a;despues[k]=nuevo[k];}});
+  if(!Object.keys(despues).length){alert('No cambiaste ningún dato.');return;}
+  var upd={};Object.keys(despues).forEach(function(k){upd[k]=despues[k];});
+  if(despues.fecha){var d0=new Date(r.ts||Date.now()),f0=d0.getFullYear()+'-'+('0'+(d0.getMonth()+1)).slice(-2)+'-'+('0'+d0.getDate()).slice(-2);upd.retro=fec<f0;}
+  var ref=lmRef().child('obs/'+id+'/'+r.id);
+  ref.update(upd).then(function(){return ref.child('correcciones').push({ts:Date.now(),autor:lmAutor(),motivo:mot,antes:antes,despues:despues});}).then(function(){LM.ui.vista='pauta';lmRender();alert('Corrección guardada. Quedó registrada en el historial de la pauta.');}).catch(function(e){alert('No se pudo guardar: '+e);});
+};
 
 </script>
 </body>
