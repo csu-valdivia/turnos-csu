@@ -25573,6 +25573,8 @@ window.lmVista=function(v,id){
   if(LM.ui.vista==='reg'&&v!=='reg')lmBorGuardar();
   if(v==='informe'&&!lmEsAdmin()){alert('El informe del mes es solo para el administrador.');return;}
   _lmVista7(v,id);
+  if(v==='reg'){var mm=LM.meds[LM.ui.medId],cc=(mm&&mm.calib)||{},hh=hoyStr(),mx=(cc.fin&&cc.fin<hh)?cc.fin:hh;
+    if(!LM.ui.fecha||(cc.inicio&&LM.ui.fecha<cc.inicio)||LM.ui.fecha>mx){LM.ui.fecha=(cc.inicio&&mx<cc.inicio)?cc.inicio:mx;lmRender();}}
   if(v==='reg'){var d=lmBorDe(LM.ui.medId);
     if(d){LM.ui.pasos=(d.pasos||'').split('').slice(0,8).map(function(x){return x==='-'?'':x;});LM.ui.servicio=d.servicio||LM.ui.servicio;LM.ui.cargo=d.cargo||LM.ui.cargo;LM.ui._fill=d;lmRender();}}
 };
@@ -25592,8 +25594,12 @@ lmHtmlReg=function(m){
   var h=_lmReg7(m);if(!m||m.estado!=='sellada')return h;
   var d=lmBorDe(LM.ui.medId),ts=d&&d.ts?new Date(d.ts):null;
   var nota='<div class="lmc" style="padding:10px;border:1px solid '+(d?'#fbbf24':'#334155')+'"><div style="font-size:12px;color:'+(d?'#fcd34d':'rgba(255,255,255,.6)')+'">'+(d?'▶ Retomaste una pauta sin terminar (empezada '+ts.toLocaleDateString('es-CL')+' '+('0'+ts.getHours()).slice(-2)+':'+('0'+ts.getMinutes()).slice(-2)+'). ':'')+'💾 Lo que vas llenando se guarda solo como borrador. <b id="lmBorSt" style="color:#6ee7b7"></b></div>'+(d?'<button class="lmb" style="margin-top:6px;padding:5px 10px;font-size:11px" onclick="lmBorDescartar()">Descartar y empezar otra</button>':'')+'</div>';
+  var sel=Object.keys(LM.meds).filter(function(i){return LM.meds[i].estado==='sellada'&&LM.meds[i].calib&&LM.meds[i].calib.unidades;}).sort(function(a,b){return ((LM.meds[b].calib||{}).inicio||'')<((LM.meds[a].calib||{}).inicio||'')?-1:1;});
+  if(sel.length>1){var cur=LM.ui.medId;
+    h=h.replace(/<div class="lmi" style="font-weight:700;color:#67e8f9!important">[^<]*<\/div>/,'<select class="lmi" style="font-weight:700;color:#67e8f9!important" onchange="lmCambiaMed(this.value)">'+sel.map(function(i){var c=LM.meds[i].calib;return '<option value="'+i+'"'+(i===cur?' selected':'')+'>'+esc(c.periodo||i)+(c.inicio&&c.fin?' ('+lmFd(c.inicio).slice(0,5)+' a '+lmFd(c.fin).slice(0,5)+')':'')+'</option>';}).join('')+'</select>');}
   return nota+h;
 };
+window.lmCambiaMed=function(id){lmBorGuardar();LM.ui.fecha='';lmVista('reg',id);};
 // ---- inicio ----
 function lmActiva(){
   var ids=Object.keys(LM.meds).filter(function(i){return LM.meds[i].estado==='sellada'&&LM.meds[i].calib&&LM.meds[i].calib.unidades;}),hoy=hoyStr();
@@ -25656,7 +25662,16 @@ lmHtmlLista=function(){
   }
   return h;
 };
-(function(){var st=document.createElement('style');st.textContent='#lmOv [style*="background:rgba(255,255,255,.1)"]{background:#334155!important}#lmOv [style*="background:rgba(255,255,255,.06)"],#lmOv [style*="background:rgba(255,255,255,.05)"],#lmOv [style*="background:rgba(255,255,255,.04)"],#lmOv [style*="background:rgba(255,255,255,.08)"]{background:#1e2c47!important}#lmOv [style*="border-top:1px solid rgba(255,255,255"],#lmOv [style*="border-bottom:1px solid rgba(255,255,255"]{border-color:#2a3a55!important}#lmOv details>summary{color:#e5e7eb!important}';document.head.appendChild(st);})();
+(function(){
+  var cols=['#fff','#ffffff','#fbbf24','#fcd34d','#fde68a','#6ee7b7','#34d399','#86efac','#4ade80','#22d3ee','#38bdf8','#7ec8f7','#93c5fd','#93d8fc','#60a5fa','#f87171','#fca5a5','#c4b5fd','#a78bfa','#cbd5e1','#e5e7eb','#94a3b8','#9ca3af','#67e8f9','#e2e8f0','#f1f5f9'];
+  var r='';
+  cols.forEach(function(c){r+='#lmOv [style*="color:'+c+'"]{color:'+c+'!important}';});
+  [.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9].forEach(function(a){var t=String(a).replace('0.','.');r+='#lmOv [style*="color:rgba(255,255,255,'+t+')"]{color:rgba(255,255,255,'+t+')!important}';});
+  [.03,.04,.05,.06,.07,.08,.1,.12,.15,.2].forEach(function(a){var t=String(a).replace('0.','.');r+='#lmOv [style*="background:rgba(255,255,255,'+t+')"]{background:rgba(255,255,255,'+t+')!important;box-shadow:none!important}';});
+  r+='#lmOv [style*="border-top:1px solid rgba(255,255,255"],#lmOv [style*="border-bottom:1px solid rgba(255,255,255"],#lmOv [style*="border:1px solid rgba(255,255,255"]{border-color:rgba(255,255,255,.12)!important}';
+  r+='#lmOv [style*="font-size:11px"],#lmOv [style*="font-size:10px"]{font-size:11px!important}#lmOv details>summary{color:#e5e7eb!important}#lmOv .lmb,#lmOv button{box-shadow:none!important}';
+  var st=document.createElement('style');st.textContent=r;document.head.appendChild(st);
+})();
 // ---- informe del mes ----
 window.lmIMes=function(ym){LM.ui.iMes=ym;lmRender();};
 function lmHtmlInforme(m){
