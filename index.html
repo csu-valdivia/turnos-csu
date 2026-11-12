@@ -25804,6 +25804,9 @@ var LM_TIMBRE='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAClCAYAAABx5Gc
     // 3) referencia al plan de mejora cuando el resultado no queda sobre el umbral
     ["seccion('Calibración sellada');",
      "if(s.ver.cod!=='sobre'){seccion('Acciones derivadas');var _ns=window._lmNotifSeq||{},_fl=[];Object.keys(_ns).forEach(function(k){var v=_ns[k];if(v&&v.seq){var sv=(c.servicios||[]).filter(function(x){return lmNorm(x).replace(/[^a-z]/g,'')===k;})[0]||k;_fl.push('NT-'+lmNorm(sv).slice(0,3).toUpperCase()+'-'+id.slice(-4).toUpperCase()+'-'+('00'+v.seq).slice(-2)+' ('+sv+')');}});parrafo('Las brechas por paso y por cargo se comunican a cada carrera mediante una notificacion con plan de mejora, que es un documento aparte de este informe. '+(_fl.length?'Notificaciones emitidas para esta medicion: '+_fl.join('; ')+'.':'Aun no se han emitido notificaciones para esta medicion.'));}seccion('Calibración sellada');"],
+    // 3b) tres gráficos técnicos antes del resultado por servicio y cargo
+    ["seccion('Resultado por servicio y por cargo');",
+     "lmGrafTec({doc:doc,M:M,CW:CW,NAVY:NAVY,TEAL:TEAL,GRIS:GRIS,TXT:TXT,OK:OK,RI:RI,BA:BA,u:u,c:c,s:s,ps:ps,chk:chk,seccion:seccion,parrafo:parrafo,peq:peq,gy:function(){return y;},sy:function(v){y=v;}});seccion('Resultado por servicio y por cargo');"],
     // 4) firma + timbre del Director Técnico
     ["chk(36);y+=3;var cx=W0/2;\n  if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-20,y,40,14);}catch(e){}}y+=14;",
      "chk(42);y+=3;var cx=W0/2;\n  if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-26,y,40,14);}catch(e){}}try{doc.addImage(LM_TIMBRE,'PNG',cx+2,y-2,32,14.6);}catch(e){}y+=14;"]
@@ -25813,6 +25816,78 @@ var LM_TIMBRE='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAClCAYAAABx5Gc
     try{lmRef().child('notif/'+id).once('value').then(go,function(){go(null);});}catch(e){go(null);}
   };
 })();
+
+// ---- v8b: tres gráficos técnicos del informe (vectoriales) ----
+window.lmGrafTec=function(X){
+  var doc=X.doc,M=X.M,CW=X.CW,NAVY=X.NAVY,TEAL=X.TEAL,GRIS=X.GRIS,TXT=X.TXT,OK=X.OK,RI=X.RI,BA=X.BA,u=X.u,c=X.c,s=X.s,ps=X.ps;
+  var k=s.k,n=s.n,pc=lmPct;
+  function ttl(t){doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor.apply(doc,NAVY);doc.text(t,M,X.gy());X.sy(X.gy()+5);}
+  function dash(on){doc.setLineDashPattern(on?[1.4,1.2]:[],0);}
+  // ===== A. Pareto de incumplimientos por paso =====
+  var fa=ps.filter(function(x){return x.ap>0&&x.ap>x.si;}).map(function(x){return {i:x.i,t:x.t,f:x.ap-x.si};}).sort(function(a,b){return b.f-a.f||a.i-b.i;});
+  var tot=fa.reduce(function(a,x){return a+x.f;},0);
+  X.seccion('Análisis técnico');
+  if(tot>0){
+    X.chk(78);
+    var cum=0,top=0;fa.forEach(function(x,j){cum+=x.f;x.c=cum/tot;});
+    for(var j=0;j<fa.length;j++){top=j+1;if(fa[j].c>=0.7)break;}
+    ttl('A. Pareto de incumplimientos: '+top+' de '+fa.length+' pasos con fallas concentran el '+Math.round(fa[top-1].c*100)+' % de los incumplimientos ('+tot+' en total)');
+    var gx=M+10,gw=Math.min(CW-22,26*fa.length),gy=X.gy()+2,gh=34,mx=fa[0].f,bw=gw/fa.length;
+    doc.setDrawColor(226,232,240);doc.setLineWidth(0.2);[0,.5,1].forEach(function(f){doc.line(gx,gy+gh-gh*f,gx+gw,gy+gh-gh*f);});
+    doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor.apply(doc,GRIS);
+    doc.text('0',gx-2,gy+gh+1,{align:'right'});doc.text(String(mx),gx-2,gy+1.5,{align:'right'});
+    doc.text('0 %',gx+gw+2,gy+gh+1);doc.text('100 %',gx+gw+2,gy+1.5);
+        var pts=[];
+    fa.forEach(function(x,j){var bh=mx?gh*x.f/mx:0,bx=gx+j*bw+bw*0.18;
+      doc.setFillColor.apply(doc,j<top?BA:[148,163,184]);if(bh>0)doc.rect(bx,gy+gh-bh,bw*0.64,bh,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor.apply(doc,TXT);doc.text(String(x.f),bx+bw*0.32,gy+gh-bh-1,{align:'center'});
+      doc.setFont('helvetica','normal');doc.setTextColor.apply(doc,GRIS);doc.text('P'+(x.i+1),bx+bw*0.32,gy+gh+4,{align:'center'});
+      pts.push([bx+bw*0.32,gy+gh-gh*x.c,x.c]);});
+    doc.setDrawColor.apply(doc,NAVY);doc.setLineWidth(0.5);for(var q=1;q<pts.length;q++)doc.line(pts[q-1][0],pts[q-1][1],pts[q][0],pts[q][1]);
+    doc.setFillColor.apply(doc,NAVY);doc.setFontSize(6.3);doc.setTextColor.apply(doc,NAVY);
+    pts.forEach(function(p,ii){doc.circle(p[0],p[1],0.9,'F');if(fa.length>1)doc.text(Math.round(p[2]*100)+'%',p[0],p[1]+(ii===0?-2:3.2),{align:'center'});});
+    X.sy(gy+gh+8);
+    X.peq('Barras: incumplimientos por paso (S en la pauta = cumple; N = no cumple). Línea: porcentaje acumulado (eje derecho, 0 a 100 %). Los pasos no listados no tuvieron fallas. En rojo, los que reúnen el 70 % de las fallas: '+fa.slice(0,top).map(function(x){return 'P'+(x.i+1)+' '+x.t.toLowerCase().substring(0,44);}).join('; ')+'.');
+  }else{X.parrafo('No se registraron incumplimientos en ningún paso evaluado.');}
+  // ===== B. Probabilidad posterior =====
+  X.chk(70);
+  var a=k+1,b=n-k+1,pr=1-lmBetai(a,b,u),med=lmBetaInv(.5,a,b),l95=lmBetaInv(.025,a,b),h95=lmBetaInv(.975,a,b);
+  ttl('B. Probabilidad de que el cumplimiento verdadero supere el umbral de '+c.umbral+' %: '+(pr*100).toFixed(1).replace('.',',')+' %');
+  var gx2=M+6,gw2=CW-12,gy2=X.gy()+2,gh2=32,N=140,ys=[],mxy=0,lg=lmLgam(a+b)-lmLgam(a)-lmLgam(b);
+  for(var i=0;i<=N;i++){var t=Math.min(0.9995,Math.max(0.0005,i/N));var v=Math.exp(lg+(a-1)*Math.log(t)+(b-1)*Math.log(1-t));ys.push(v);if(v>mxy)mxy=v;}
+  for(var i=0;i<N;i++){var xx=gx2+gw2*i/N,hh=gh2*ys[i]/mxy*0.95;doc.setFillColor.apply(doc,(i/N)>u?BA:[153,214,208]);doc.rect(xx,gy2+gh2-hh,gw2/N+0.15,hh,'F');}
+  doc.setDrawColor.apply(doc,TEAL);doc.setLineWidth(0.5);for(var i=1;i<=N;i++)doc.line(gx2+gw2*(i-1)/N,gy2+gh2-gh2*ys[i-1]/mxy*0.95,gx2+gw2*i/N,gy2+gh2-gh2*ys[i]/mxy*0.95);
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.4);dash(true);doc.line(gx2+gw2*u,gy2-1,gx2+gw2*u,gy2+gh2);dash(false);
+  doc.setDrawColor(148,163,184);doc.setLineWidth(0.3);doc.line(gx2,gy2+gh2,gx2+gw2,gy2+gh2);
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor.apply(doc,GRIS);
+  [0,.25,.5,.75,1].forEach(function(f){doc.text(Math.round(f*100)+' %',gx2+gw2*f,gy2+gh2+3.6,{align:'center'});});
+  doc.setFontSize(7);doc.setTextColor.apply(doc,BA);doc.setFont('helvetica','bold');
+  var lx=u>0.5?gx2+gw2*u-2:gx2+gw2*u+2;doc.text('umbral '+c.umbral+' %',lx,gy2+2,{align:u>0.5?'right':'left'});
+  doc.setTextColor.apply(doc,NAVY);doc.text('mediana '+pc(med)+' · intervalo bayesiano 95 %: '+pc(l95)+' a '+pc(h95),gx2+gw2/2,gy2+gh2+8,{align:'center'});
+  X.sy(gy2+gh2+11);
+  X.peq('Distribución beta(k+1, n-k+1) con a priori uniforme y los '+k+' lavados que cumplen de '+n+'. El área roja es la probabilidad de que el cumplimiento real esté sobre el umbral. Complementa al intervalo exacto (Clopper-Pearson) y no lo reemplaza: ambos suponen observaciones independientes, por lo que subestiman la variabilidad si una misma persona se observa varias veces.');
+  // ===== C. Proyección =====
+  X.chk(76);
+  var ph=n?k/n:0,MX=Math.max(200,n*4);MX=Math.min(MX,500);var ro=[],mm;
+  for(mm=10;mm<=MX;mm++){var kk=Math.round(ph*mm),ic=lmCP(kk,mm,c.conf);ro.push({m:mm,lo:ic.lo,hi:ic.hi,ok:(ic.hi<u||ic.lo>u)});}
+  var first=null;for(var i=ro.length-1;i>=0;i--){if(!ro[i].ok)break;first=ro[i].m;}
+  if(first!==null&&first<n)first=n;
+  var ya=function(v){return gy3+gh3-gh3*v;};
+  ttl('C. Proyección: '+(first!==null&&first<=MX?(first<=n?'con el mismo porcentaje la conclusión ya es firme':'con el mismo porcentaje ('+pc(ph)+') la conclusión sería firme desde ~'+first+' lavados'):'con el mismo porcentaje no se alcanza una conclusión firme hasta '+MX+' lavados'));
+  var gx3=M+8,gw3=CW-14,gy3=X.gy()+2,gh3=34,xm=function(m){return gx3+gw3*(m-10)/(MX-10);};
+  doc.setDrawColor(226,232,240);doc.setLineWidth(0.2);[0,.25,.5,.75,1].forEach(function(f){doc.line(gx3,ya(f),gx3+gw3,ya(f));});
+  ro.forEach(function(r){var x0=xm(r.m);doc.setFillColor(153,214,208);doc.rect(x0,ya(r.hi),gw3/(MX-10)+0.12,Math.max(0.1,gh3*(r.hi-r.lo)),'F');});
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.4);dash(true);doc.line(gx3,ya(u),gx3+gw3,ya(u));dash(false);
+  doc.setDrawColor.apply(doc,RI);doc.setLineWidth(0.5);doc.line(xm(Math.min(Math.max(n,10),MX)),gy3-1,xm(Math.min(Math.max(n,10),MX)),gy3+gh3);
+  if(first!==null&&first>n&&first<=MX){doc.setDrawColor.apply(doc,BA);dash(true);doc.line(xm(first),gy3-1,xm(first),gy3+gh3);dash(false);}
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor.apply(doc,GRIS);
+  [0,.25,.5,.75,1].forEach(function(f){doc.text(Math.round(f*100)+' %',gx3-1.5,ya(f)+1,{align:'right'});});
+  var st=Math.round(MX/5/50)*50||50;for(var m2=50;m2<=MX;m2+=st)doc.text(String(m2),xm(m2),gy3+gh3+3.6,{align:'center'});
+  doc.setTextColor.apply(doc,RI);doc.text('hoy n='+n,xm(Math.min(Math.max(n,10),MX))+1.2,gy3+2.5);
+  doc.setTextColor.apply(doc,GRIS);doc.text('lavados observados',gx3+gw3/2,gy3+gh3+7.4,{align:'center'});
+  X.sy(gy3+gh3+13);
+  X.peq('Banda: intervalo exacto de '+c.conf+' % si el porcentaje observado ('+pc(ph)+') se mantuviera al aumentar las observaciones; línea punteada negra: umbral. Es un escenario ilustrativo y no un pronóstico: con pocos lavados el resultado cambia con cada nueva observación.');
+};
 
 </script>
 </body>
