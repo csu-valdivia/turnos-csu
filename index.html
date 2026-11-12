@@ -25606,28 +25606,57 @@ window.lmNuevaPauta=function(id){
   lmVista('reg',id);
 };
 var _lmLista7=lmHtmlLista;
-lmHtmlLista=function(){
-  var base=_lmLista7(),id=lmActiva();if(!id)return base;
-  var m=LM.meds[id],c=m.calib,k=lmContador(id),yo=lmAutor(),adm=lmEsAdmin(),h='';
-  // pauta sin terminar (de esta persona, en cualquier medición sellada)
-  var bid=Object.keys(LM.meds).filter(function(i){return LM.meds[i].estado==='sellada'&&lmBorDe(i);})[0];
-  if(bid){var d=lmBorDe(bid),mc=LM.meds[bid].calib||{},hechos=(d.pasos||'').replace(/-/g,'').length,ts=new Date(d.ts||Date.now());
-    h+='<div class="lmc" style="border:1px solid #fbbf24"><div style="font-size:12px;font-weight:700;color:#fbbf24">▶ Continuar donde quedé</div><div style="font-size:13px;margin:6px 0">Tienes <b>1 pauta sin terminar</b><div style="font-size:11px;color:rgba(255,255,255,.55)">'+esc(d.servicio||'—')+' · '+esc(d.cargo||'—')+' · paso '+hechos+' de 8 · empezada '+ts.toLocaleDateString('es-CL')+' '+('0'+ts.getHours()).slice(-2)+':'+('0'+ts.getMinutes()).slice(-2)+'</div></div><button class="lmb" style="width:100%;padding:12px;background:#fbbf24;color:#0b1220" onclick="lmVista(\'reg\',\''+bid+'\')">Seguir con esa pauta</button></div>';}
-  // avance
-  if(k&&!(k.semRest>0)){var tot0=lmObsDe(id).length;
-    h+='<div class="lmc"><div style="font-size:12px;font-weight:700;margin-bottom:6px">Mi avance</div><div style="font-size:13px">Medición: <b>'+tot0+' de '+(c.nObj||0)+'</b></div><div style="font-size:12px;color:#fcd34d;margin-top:6px">⚠ El período de esta medición terminó el '+(c.fin||'').split('-').reverse().join('-')+'. Para seguir registrando necesitas una medición sellada que cubra la fecha de hoy.</div></div>';}
-  else if(k){var sm=function(f){return k.us.reduce(function(a,u){return a+(u[f]||0);},0);},tot=lmObsDe(id).length,n=c.nObj||0;
-    h+='<div class="lmc"><div style="font-size:12px;font-weight:700;margin-bottom:6px">Mi avance</div><div style="display:flex;justify-content:space-between;font-size:13px"><span>Esta semana</span><b>'+sm('hSem')+' de '+sm('meta')+'</b></div><div style="height:9px;background:#334155;border-radius:5px;margin:5px 0;overflow:hidden"><div style="height:100%;background:#34d399;width:'+Math.min(100,sm('meta')?sm('hSem')/sm('meta')*100:0)+'%"></div></div><div style="font-size:11px;color:rgba(255,255,255,.55)">'+(k.mes?'Mes: '+k.mes.hechas+' de '+k.mes.cuota+' · ':'')+'Medición: '+tot+' de '+n+'</div></div>';}
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="lmb g" style="flex:2;min-width:140px;padding:13px;font-size:14px" onclick="lmNuevaPauta(\''+id+'\')">➕ Nueva pauta</button><button class="lmb" style="flex:1;min-width:110px" onclick="lmVista(\'pautas\',\''+id+'\')">🔎 Mis pautas</button>'+(adm?'<button class="lmb" style="flex:1;min-width:110px" onclick="lmVista(\'informe\',\''+id+'\')">📄 Informe del mes</button>':'')+'</div>';
-  // últimas pautas
-  var ult=lmObsAll(id).filter(function(r){return r.autor===yo;}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,3);
-  if(ult.length||bid){h+='<div class="lmc"><div style="font-size:12px;font-weight:700;margin-bottom:4px">Últimas pautas</div>';
-    if(bid)h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span>Sin terminar · '+esc((lmBorDe(bid)||{}).servicio||'—')+'</span><span style="color:#fbbf24">● borrador</span></div>';
-    ult.forEach(function(r){h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:1px solid #2a3a55"><span>'+esc((r.fecha||'').split('-').reverse().join('-'))+' '+esc(r.hora||'')+' · '+esc(r.servicio||'')+' · '+esc(r.cargo||'')+'</span><span style="color:#6ee7b7">✔ completa</span></div>';});
-    h+='</div>';}
-  var i0=base.indexOf('<div class="lmc">'),ini=base.indexOf('<div style="display:flex;gap:8px;margin-bottom:12px');
-  return (ini===0?base.slice(0,base.indexOf('</div>')+6):'')+h+(ini===0?base.slice(base.indexOf('</div>')+6):base);
+window.lmDet=function(k,on){LM.ui['det_'+k]=on;};
+window.lmEliminarBorradores=function(){
+  var ids=Object.keys(LM.meds).filter(function(i){return LM.meds[i].estado==='borrador'&&!Object.keys(LM.obs[i]||{}).length;});
+  if(!ids.length)return;
+  if(!confirm('Se eliminarán '+ids.length+' medición(es) en borrador, todas sin pautas. Esto no se puede deshacer.\n\n¿Eliminar?'))return;
+  LM.ui.vista='lista';LM.ui.medId='';
+  ids.forEach(function(i){lmRef().child('mediciones/'+i).remove();});
 };
+function lmFila(id){
+  var m=LM.meds[id],c=m.calib||{},n=lmObsDe(id).length,adm=lmEsAdmin();
+  return '<div style="padding:9px 0;border-top:1px solid #2a3a55"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div><b style="font-size:13px">'+esc(c.periodo||'—')+'</b>'+(c.practica?' <span style="color:#fbbf24;font-size:11px">· práctica</span>':'')+'<div style="font-size:11px;color:#94a3b8">'+(c.inicio&&c.fin?lmFd(c.inicio)+' a '+lmFd(c.fin)+' · ':'')+n+' pauta'+(n===1?'':'s')+'</div></div>'+lmBadge(m)+'</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+
+    (m.estado==='borrador'&&adm?'<button class="lmb p" onclick="lmVista(\'calib\',\''+id+'\')">Calibrar y sellar</button>':'')+
+    (m.estado!=='borrador'?'<button class="lmb" onclick="lmVista(\'pautas\',\''+id+'\')">🔎 Pautas</button>':'')+
+    (m.estado!=='borrador'&&adm?'<button class="lmb" onclick="lmVista(\'avance\',\''+id+'\')">📈 Avance</button><button class="lmb" onclick="lmVista(\'calib\',\''+id+'\')">Ver calibración</button>':'')+'</div></div>';
+}
+lmHtmlLista=function(){
+  var chain=_lmLista7(),id=lmActiva(),adm=lmEsAdmin(),yo=lmAutor();
+  var ci=chain.indexOf('<div class="lmc"><b style="font-size:13px">Copiar pautas a otra medición'),copiar=ci>=0?chain.slice(ci):'';
+  var h='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+(adm?'<button class="lmb p" onclick="lmNueva()">➕ Nueva medición</button><button class="lmb" onclick="lmVista(\'config\')">⚙️ Listas y enfermeros asignados</button>':'')+'</div>';
+  var ids=Object.keys(LM.meds).sort(function(a,b){return (LM.meds[b].creado||0)-(LM.meds[a].creado||0);});
+  if(!ids.length)return h+'<div class="lmc" style="color:#94a3b8">Aún no hay mediciones. Crea la primera: calibras, la sellas y recién ahí se empieza a observar.</div>';
+  if(id){
+    var m=LM.meds[id],c=m.calib,k=lmContador(id);
+    var bid=Object.keys(LM.meds).filter(function(i){return LM.meds[i].estado==='sellada'&&lmBorDe(i);})[0];
+    if(bid){var d=lmBorDe(bid),hechos=(d.pasos||'').replace(/-/g,'').length,ts=new Date(d.ts||Date.now());
+      h+='<div class="lmc" style="border:1px solid #fbbf24"><div style="font-size:12px;font-weight:700;color:#fbbf24">▶ Continuar donde quedé</div><div style="font-size:13px;margin:6px 0">Tienes <b>1 pauta sin terminar</b><div style="font-size:11px;color:#94a3b8">'+esc(d.servicio||'—')+' · '+esc(d.cargo||'—')+' · paso '+hechos+' de 8 · empezada '+ts.toLocaleDateString('es-CL')+' '+('0'+ts.getHours()).slice(-2)+':'+('0'+ts.getMinutes()).slice(-2)+'</div></div><button class="lmb" style="width:100%;padding:12px;background:#fbbf24;color:#0b1220" onclick="lmVista(\'reg\',\''+bid+'\')">Seguir con esa pauta</button></div>';}
+    var tot=lmObsDe(id).length;
+    if(k&&k.semRest>0){var sm=function(f){return k.us.reduce(function(a,u){return a+(u[f]||0);},0);};
+      h+='<div class="lmc"><div style="font-size:12px;font-weight:700;margin-bottom:6px">Mi avance · '+esc(c.periodo||'')+'</div><div style="display:flex;justify-content:space-between;font-size:13px"><span>Esta semana</span><b>'+sm('hSem')+' de '+sm('meta')+'</b></div><div style="height:9px;background:#334155;border-radius:5px;margin:5px 0;overflow:hidden"><div style="height:100%;background:#34d399;width:'+Math.min(100,sm('meta')?sm('hSem')/sm('meta')*100:0)+'%"></div></div><div style="font-size:11px;color:#94a3b8">'+(k.mes?'Mes: '+k.mes.hechas+' de '+k.mes.cuota+' · ':'')+'Medición: '+tot+' de '+(c.nObj||0)+'</div></div>';
+    }else{
+      h+='<div class="lmc" style="border:1px solid #fbbf2466"><div style="font-size:12px;font-weight:700;margin-bottom:4px">Sin medición vigente</div><div style="font-size:12px;color:#fcd34d">Ninguna medición sellada cubre la fecha de hoy ('+(c.periodo?esc(c.periodo)+' terminó el '+lmFd(c.fin):'')+'). '+(adm?'Sella la medición de septiembre–diciembre para seguir registrando.':'Avisa al administrador.')+'</div></div>';
+    }
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="lmb g" style="flex:2;min-width:140px;padding:13px;font-size:14px" onclick="lmNuevaPauta(\''+id+'\')">➕ Nueva pauta</button><button class="lmb" style="flex:1;min-width:110px" onclick="lmVista(\'pautas\',\''+id+'\')">🔎 Mis pautas</button>'+(adm?'<button class="lmb" style="flex:1;min-width:110px" onclick="lmVista(\'informe\',\''+id+'\')">📄 Informe del mes</button>':'')+'</div>';
+    var ult=lmObsAll(id).filter(function(r){return r.autor===yo;}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,3);
+    if(ult.length||bid){h+='<div class="lmc"><div style="font-size:12px;font-weight:700;margin-bottom:4px">Últimas pautas</div>';
+      if(bid)h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span>Sin terminar · '+esc((lmBorDe(bid)||{}).servicio||'—')+'</span><span style="color:#fbbf24">● borrador</span></div>';
+      ult.forEach(function(r){h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:1px solid #2a3a55"><span>'+esc(lmFd(r.fecha||''))+' '+esc(r.hora||'')+' · '+esc(r.servicio||'')+' · '+esc(r.cargo||'')+'</span><span style="color:#6ee7b7">✔ completa</span></div>';});
+      h+='</div>';}
+    if(k&&k.semRest>0)h+=lmHtmlContador(id);
+  }
+  if(adm){
+    var ant=ids.filter(function(i){return i!==id&&LM.meds[i].estado!=='borrador';}),bor=ids.filter(function(i){return LM.meds[i].estado==='borrador';});
+    if(ant.length)h+='<details class="lmc" '+(LM.ui.det_ant?'open':'')+' ontoggle="lmDet(\'ant\',this.open)"><summary style="cursor:pointer;font-weight:700;font-size:13px">Mediciones anteriores ('+ant.length+')</summary>'+ant.map(lmFila).join('')+'</details>';
+    if(bor.length){var vacios=bor.filter(function(i){return !Object.keys(LM.obs[i]||{}).length;});
+      h+='<details class="lmc" '+(LM.ui.det_bor?'open':'')+' ontoggle="lmDet(\'bor\',this.open)"><summary style="cursor:pointer;font-weight:700;font-size:13px">Mediciones en preparación / borrador ('+bor.length+')</summary>'+bor.map(lmFila).join('')+(vacios.length?'<button class="lmb r" style="width:100%;margin-top:10px;padding:11px" onclick="lmEliminarBorradores()">🗑 Eliminar los '+vacios.length+' borradores sin pautas</button>':'')+'</details>';}
+    h+=copiar;
+  }
+  return h;
+};
+(function(){var st=document.createElement('style');st.textContent='#lmOv [style*="background:rgba(255,255,255,.1)"]{background:#334155!important}#lmOv [style*="background:rgba(255,255,255,.06)"],#lmOv [style*="background:rgba(255,255,255,.05)"],#lmOv [style*="background:rgba(255,255,255,.04)"],#lmOv [style*="background:rgba(255,255,255,.08)"]{background:#1e2c47!important}#lmOv [style*="border-top:1px solid rgba(255,255,255"],#lmOv [style*="border-bottom:1px solid rgba(255,255,255"]{border-color:#2a3a55!important}#lmOv details>summary{color:#e5e7eb!important}';document.head.appendChild(st);})();
 // ---- informe del mes ----
 window.lmIMes=function(ym){LM.ui.iMes=ym;lmRender();};
 function lmHtmlInforme(m){
