@@ -10128,7 +10128,7 @@ window.mtQuitarEx=function(k,c){sedeRef('metasPersona/'+k+'/'+c).remove();};
 window.mtFirmaAbrir=function(){
   var ov=document.getElementById('mfOv');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='mfOv';ov.className='ppov';ov.style.zIndex=9500;
-  ov.innerHTML='<div class="pp-box" style="max-width:420px"><div class="pp-h"><div><b>✍ Mi firma</b><small>Dibújala con el dedo o el mouse. Queda guardada y se imprime en tus informes, con tu nombre y cargo debajo. No lleva timbre.</small></div><button class="pp-x" onclick="document.getElementById(\'mfOv\').remove()">✕</button></div><canvas id="mfC" width="360" height="130" style="width:100%;max-width:360px;height:130px;border:2px dashed #94a3b8;border-radius:10px;background:#f8fafc;touch-action:none;display:block;margin:0 auto"></canvas><div class="mt-inf" style="margin-top:10px"><button onclick="mfBorrar()">Borrar</button><button class="tcb mt-go" onclick="mfGuardar()">Guardar mi firma</button></div></div>';
+  ov.innerHTML='<div class="pp-box" style="max-width:420px"><div class="pp-h"><div><b>✍ Mi firma</b><small>Dibújala con el dedo o el mouse. Queda guardada y se imprime en tus informes, con tu nombre y cargo debajo. El timbre de Director Técnico se agrega solo, junto a la firma.</small></div><button class="pp-x" onclick="document.getElementById(\'mfOv\').remove()">✕</button></div><canvas id="mfC" width="360" height="130" style="width:100%;max-width:360px;height:130px;border:2px dashed #94a3b8;border-radius:10px;background:#f8fafc;touch-action:none;display:block;margin:0 auto"></canvas><div class="mt-inf" style="margin-top:10px"><button onclick="mfBorrar()">Borrar</button><button class="tcb mt-go" onclick="mfGuardar()">Guardar mi firma</button></div></div>';
   document.body.appendChild(ov);
   var c=document.getElementById('mfC'),x=c.getContext('2d'),dib=false,hay=false;
   x.lineWidth=2.4;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#1e3a8a';
@@ -10291,7 +10291,7 @@ function mtPdfDoc(R){
   var ln=doc.splitTextToSize(nota,CW);doc.text(ln,M,y);y+=ln.length*3.6+8;
   chk(40);
   var cx=W0/2;
-  if(R.firmado){if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-26,y,52,18);}catch(e){}}y+=18;}else y+=14;
+  if(R.firmado){if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-34,y,52,18);}catch(e){}}if(typeof LM_TIMBRE!=='undefined'){try{doc.addImage(LM_TIMBRE,'PNG',cx+6,y-2,36,16.5);}catch(e){}}y+=18;}else y+=14;
   doc.setDrawColor(30,30,30);doc.setLineWidth(0.3);doc.line(cx-40,y,cx+40,y);y+=4.5;
   doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(20,20,20);doc.text('Patricio Baeza Aguilar',cx,y,{align:'center'});y+=4.5;
   doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.text('Enfermero Jefe',cx,y,{align:'center'});y+=4.2;
@@ -25329,7 +25329,7 @@ window.lmPdfNotif=function(id,srv,plan,plazo,seq){
     doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor.apply(doc,TXT);doc.text(a,M+2,y+4);doc.text(b,M+60,y+4);doc.text(doc.splitTextToSize('Próxima revisión: '+plazo,22),M+152,y+4);y+=h;});
   chk(46);y+=14;
   var lx1=M,lx2=M+CW/2+6,lw=CW/2-6;
-  if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',lx1+8,y-14,40,14);}catch(e){}}
+  if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',lx1+4,y-14,40,14);}catch(e){}}try{doc.addImage(LM_TIMBRE,'PNG',lx1+34,y-14,32,14.6);}catch(e){}
   doc.setDrawColor(30,30,30);doc.setLineWidth(0.3);doc.line(lx1,y,lx1+lw,y);doc.line(lx2,y,lx2+lw,y);
   doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(20,20,20);doc.text('Patricio Baeza Aguilar · Director Técnico',lx1,y+4.5);doc.text('Recibido por la Dirección de Carrera',lx2,y+4.5);
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.text('Centro de Salud USS - Valdivia',lx1,y+8.8);doc.text('Nombre · firma · fecha',lx2,y+8.8);
