@@ -25804,6 +25804,7 @@ var LM_TIMBRE='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAClCAYAAABx5Gc
     ["(mes?'para el mes':'para el período')","(mes?(String(mes).indexOf(',')>0?'para los meses seleccionados':'para el mes'):'para el período')"],
     ["(mes?'Observaciones del mes / cuota del mes':'Observaciones / meta de la muestra')","(mes?(String(mes).indexOf(',')>0?'Observaciones / cuota de los meses':'Observaciones del mes / cuota del mes'):'Observaciones / meta de la muestra')"],
     // 1) la línea "Para:" se parte en varias líneas dentro del margen
+    ["'RESULTADO PARCIAL ('+s.n+' de '+metaN+')'","'RESULTADO PARCIAL · faltan '+(metaN-s.n)+' pautas'"],
     ["doc.text('Para: Gerencia · Pauta de supervisión de lavado clínico de manos (GCL 3.2) · '+perTxt+(mes?' (período de medición: '+c.periodo+')':''),M,y);y+=4.2;",
      "var _pl=doc.splitTextToSize('Para: Gerencia · Pauta de supervisión de lavado clínico de manos (GCL 3.2) · '+perTxt+(mes?' (período de medición: '+c.periodo+')':''),CW);doc.text(_pl,M,y);y+=4.2*_pl.length;"],
     // 2) la carga retroactiva se cuenta solo para el mes del informe
