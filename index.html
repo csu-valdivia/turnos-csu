@@ -25583,7 +25583,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v7.5 · 12-nov 17:00';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v7.6 · 12-nov 17:30';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -25608,6 +25608,8 @@ function lmActiva(){
   return ok||ids.sort(function(a,b){return (LM.meds[b].creado||0)-(LM.meds[a].creado||0);})[0]||null;
 }
 window.lmNuevaPauta=function(id){
+  if(!lmVigente()){alert(lmEsAdmin()?'Hoy no hay una medición vigente: ninguna medición sellada cubre esta fecha.\n\nSigue los pasos de «Para empezar a aplicar pautas hoy» en esta pantalla.':'Hoy no hay una medición vigente. Avisa al administrador.');return;}
+  id=lmVigente();
   var d=lmBorDe(id);
   if(d&&confirm('Tienes una pauta sin terminar.\n\nAceptar = descartarla y empezar una nueva.\nCancelar = seguir con la pauta que dejaste.'))lmBorBorrar(id);
   lmVista('reg',id);
@@ -25617,12 +25619,43 @@ function lmCuando(ts){var d=new Date(ts),h=hoyStr(),f=d.getFullYear()+'-'+('0'+(
 function lmCuandoF(f,hora){var h=hoyStr(),a=new Date();a.setDate(a.getDate()-1);var ay=a.getFullYear()+'-'+('0'+(a.getMonth()+1)).slice(-2)+'-'+('0'+a.getDate()).slice(-2);return (f===h?'Hoy':f===ay?'Ayer':lmFd(f||''))+' '+(hora||'');}
 window.lmDet=function(k,on){LM.ui['det_'+k]=on;};
 window.lmEliminarBorradores=function(){
-  var ids=Object.keys(LM.meds).filter(function(i){return LM.meds[i].estado==='borrador'&&!Object.keys(LM.obs[i]||{}).length;});
+  var keep=lmVigente()?null:lmTarget();
+  var ids=Object.keys(LM.meds).filter(function(i){return i!==keep&&LM.meds[i].estado==='borrador'&&!Object.keys(LM.obs[i]||{}).length;});
   if(!ids.length)return;
-  if(!confirm('Se eliminarán '+ids.length+' medición(es) en borrador, todas sin pautas. Esto no se puede deshacer.\n\n¿Eliminar?'))return;
+  if(!confirm('Se eliminarán '+ids.length+' medición(es) en borrador, todas sin pautas'+(keep?' (se conserva el borrador de septiembre–diciembre que vas a sellar)':'')+'. Esto no se puede deshacer.\n\n¿Eliminar?'))return;
   LM.ui.vista='lista';LM.ui.medId='';
   ids.forEach(function(i){lmRef().child('mediciones/'+i).remove();});
 };
+
+function lmVigente(){var hh=hoyStr();return Object.keys(LM.meds).filter(function(i){var m=LM.meds[i],c=m.calib||{};return m.estado==='sellada'&&!c.practica&&c.unidades&&(!c.inicio||hh>=c.inicio)&&(!c.fin||hh<=c.fin);})[0]||null;}
+function lmTarget(){var hh=hoyStr();return Object.keys(LM.meds).filter(function(i){var m=LM.meds[i],c=m.calib||{};return m.estado==='borrador'&&c.inicio&&c.fin&&hh>=c.inicio&&hh<=c.fin;}).sort(function(a,b){return (LM.meds[b].creado||0)-(LM.meds[a].creado||0);})[0]||null;}
+function lmCruzan(t){var c=LM.meds[t].calib;return Object.keys(LM.meds).filter(function(i){var m=LM.meds[i],x=m.calib||{};return i!==t&&m.estado==='sellada'&&!x.practica&&x.inicio&&x.fin&&x.inicio<=c.fin&&c.inicio<=x.fin;});}
+function lmNPautas(i){return lmObsDe(i).length;}
+window.lmAnularVarias=function(){
+  var t=lmTarget();if(!t)return;var ids=lmCruzan(t);if(!ids.length)return;
+  var tx=ids.map(function(i){return '• '+((LM.meds[i].calib||{}).periodo||i)+' ('+lmNPautas(i)+' pautas)';}).join('\n');
+  if(!confirm('Se anularán estas mediciones, porque su período se cruza con septiembre–diciembre:\n\n'+tx+'\n\nLas pautas NO se borran: en el paso 3 las copias a la medición nueva.\n\n¿Continuar?'))return;
+  var np=(LM.meds[t].calib||{}).periodo||'la medición nueva',au=lmAutor();
+  Promise.all(ids.map(function(i){return lmRef().child('mediciones/'+i).update({estado:'anulada',anulacion:{ts:Date.now(),autor:au,motivo:'Reemplazada por '+np+' (poner al día)'}});})).then(function(){lmRender();});
+};
+window.lmSellarObjetivo=function(){var t=lmTarget();if(t)lmVista('calib',t);};
+function lmHtmlPonerAlDia(){
+  var t=lmTarget(),vig=lmVigente(),cr=t?lmCruzan(t):[],hechoCruce=!!t&&!cr.length;
+  var orig=Object.keys(LM.meds).filter(function(i){return i!==vig&&LM.meds[i].estado!=='borrador'&&lmNPautas(i)>0;});
+  var pend=vig?orig.map(function(i){return {id:i,n:lmCopiaPlan(i,vig).ok.length};}).filter(function(x){return x.n>0;}):[];
+  var bor=Object.keys(LM.meds).filter(function(i){return LM.meds[i].estado==='borrador'&&!Object.keys(LM.obs[i]||{}).length&&i!==t;});
+  var st=function(ok,act){return ok?'<span style="color:#34d399">✔</span>':act?'<span style="color:#fbbf24">▶</span>':'<span style="color:#64748b">○</span>';};
+  var fila=function(ok,act,tit,det,btn){return '<div style="padding:9px 0;border-top:1px solid #2a3a55;opacity:'+(ok||act?1:.55)+'"><div style="display:flex;gap:8px"><div style="width:18px">'+st(ok,act)+'</div><div style="flex:1"><div style="font-size:13px;font-weight:700">'+tit+'</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">'+det+'</div>'+(act&&btn?'<div style="margin-top:8px">'+btn+'</div>':'')+'</div></div></div>';};
+  var s1=!!vig||hechoCruce,s0=!!t||!!vig;
+  var act0=!s0,act1=s0&&!s1,act2=s1&&!vig,act3=!!vig&&pend.length>0;
+  var h='<div class="lmc" style="border:1px solid #fbbf2466"><div style="font-size:13px;font-weight:800;color:#fbbf24">Para empezar a aplicar pautas hoy</div><div style="font-size:12px;color:#cbd5e1;margin:3px 0 4px">Ninguna medición sellada cubre hoy. Sigue estos pasos en orden; cada uno tiene su botón.</div>';
+  h+=fila(s0,act0,'1. Tener la medición septiembre–diciembre 2026','Una sola, con tus parámetros (n = 193, esperado 85 %, umbral 60 %).','<button class="lmb p" onclick="lmNueva()">➕ Crear la medición</button>');
+  h+=fila(s1,act1,'2. Anular las mediciones que se cruzan','Solo puede haber una medición activa por período. '+(cr.length?'Se anularán: '+cr.map(function(i){return esc((LM.meds[i].calib||{}).periodo||i)+' ('+lmNPautas(i)+' pautas)';}).join(', ')+'. Sus pautas no se borran.':'No hay cruces.'),'<button class="lmb" style="background:#7c2d12" onclick="lmAnularVarias()">Anular '+cr.length+' '+(cr.length===1?'medición':'mediciones')+'</button>');
+  h+=fila(!!vig,act2,'3. Sellar septiembre–diciembre 2026','Revisa los parámetros y presiona «Sellar y comenzar a observar».','<button class="lmb g" onclick="lmSellarObjetivo()">🔒 Abrir y sellar</button>');
+  h+=fila(!!vig&&!pend.length,act3,'4. Copiar las pautas que ya tenías','Pasa a la medición nueva las pautas de las anteriores, con su fecha original. '+(pend.length?'Faltan: '+pend.map(function(x){return esc((LM.meds[x.id].calib||{}).periodo||x.id)+' ('+x.n+')';}).join(', ')+'.':''),pend.map(function(x){return '<button class="lmb" style="margin:0 6px 6px 0" onclick="lmCopiarAbrir(\''+x.id+'\')">📋 Copiar «'+esc((LM.meds[x.id].calib||{}).periodo||x.id)+'» ('+x.n+')</button>';}).join(''));
+  if(vig&&!pend.length&&bor.length)h+=fila(false,true,'5. Limpiar borradores sobrantes ('+bor.length+')','Quedaron sin pautas y ya no sirven.','<button class="lmb r" onclick="lmEliminarBorradores()">🗑 Eliminar '+bor.length+'</button>');
+  return h+'</div>';
+}
 function lmFila(id){
   var m=LM.meds[id],c=m.calib||{},n=lmObsDe(id).length,adm=lmEsAdmin();
   return '<div style="padding:9px 0;border-top:1px solid #2a3a55"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div><b style="font-size:13px">'+esc(c.periodo||'—')+'</b>'+(c.practica?' <span style="color:#fbbf24;font-size:11px">· práctica</span>':'')+'<div style="font-size:11px;color:#94a3b8">'+(c.inicio&&c.fin?lmFd(c.inicio)+' a '+lmFd(c.fin)+' · ':'')+n+' pauta'+(n===1?'':'s')+'</div></div>'+lmBadge(m)+'</div>'+
@@ -25646,7 +25679,7 @@ lmHtmlLista=function(){
     if(k&&k.semRest>0){var sm=function(f){return k.us.reduce(function(a,u){return a+(u[f]||0);},0);},meta=sm('meta'),hs=sm('hSem'),mesN=k.mes?lmMesTxt(k.mes.ym).split(' ')[0]:'';mesN=mesN.charAt(0).toUpperCase()+mesN.slice(1);
       h+='<div class="lmc"><div style="font-size:12px;font-weight:700;margin-bottom:6px">Esta semana'+(mesN?' · '+esc(mesN):'')+'</div><div style="display:flex;justify-content:space-between;font-size:13px"><span>Meta de la semana</span><b>'+hs+' de '+meta+'</b></div><div style="height:9px;background:#334155;border-radius:5px;margin:5px 0;overflow:hidden"><div style="height:100%;background:#34d399;width:'+Math.min(100,meta?hs/meta*100:0)+'%"></div></div><div style="font-size:11px;color:#94a3b8">Faltan '+Math.max(0,meta-hs)+' · '+(k.mes?'Mes: '+k.mes.hechas+' de '+k.mes.cuota+' · ':'')+'Medición: '+tot+' de '+(c.nObj||0)+'</div></div>';
     }else{
-      h+='<div class="lmc" style="border:1px solid #fbbf2466"><div style="font-size:12px;font-weight:700;margin-bottom:4px">Sin medición vigente</div><div style="font-size:12px;color:#fcd34d">Ninguna medición sellada cubre la fecha de hoy ('+(c.periodo?esc(c.periodo)+' terminó el '+lmFd(c.fin):'')+'). '+(adm?'Sella la medición de septiembre–diciembre para seguir registrando.':'Avisa al administrador.')+'</div></div>';
+      h+=adm?lmHtmlPonerAlDia():'<div class="lmc" style="border:1px solid #fbbf2466"><div style="font-size:12px;font-weight:700;margin-bottom:4px">Sin medición vigente</div><div style="font-size:12px;color:#fcd34d">Hoy no hay una medición sellada vigente. Avisa al administrador.</div></div>';
     }
     h+='<button class="lmb g" style="width:100%;padding:14px;font-size:15px;margin-bottom:8px;border-radius:10px" onclick="lmNuevaPauta(\''+id+'\')">➕ Nueva pauta</button><div style="display:flex;gap:8px;margin-bottom:12px"><button class="lmb" style="flex:1;padding:12px;border-radius:10px" onclick="lmVista(\'pautas\',\''+id+'\')">🔎 Mis pautas</button>'+(adm?'<button class="lmb" style="flex:1;padding:12px;border-radius:10px" onclick="lmVista(\'informe\',\''+id+'\')">📄 Informe del mes</button>':'')+'</div>';
     var ult=lmObsAll(id).filter(function(r){return r.autor===yo;}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,3);
@@ -25656,6 +25689,7 @@ lmHtmlLista=function(){
       h+='</div>';}
     if(k&&k.semRest>0)h+='<details class="lmc" '+(LM.ui.det_cnt?'open':'')+' ontoggle="lmDet(\'cnt\',this.open)"><summary style="cursor:pointer;font-weight:700;font-size:13px">Detalle por unidad y por semana</summary>'+lmHtmlContador(id)+'</details>';
   }
+  if(adm&&!id)h+=lmHtmlPonerAlDia();
   if(adm){
     var ant=ids.filter(function(i){return i!==id&&LM.meds[i].estado!=='borrador';}),bor=ids.filter(function(i){return LM.meds[i].estado==='borrador';});
     if(ant.length)h+='<details class="lmc" '+(LM.ui.det_ant?'open':'')+' ontoggle="lmDet(\'ant\',this.open)"><summary style="cursor:pointer;font-weight:700;font-size:13px">Mediciones anteriores ('+ant.length+')</summary>'+ant.map(lmFila).join('')+'</details>';
@@ -25672,7 +25706,7 @@ lmHtmlLista=function(){
   [.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9].forEach(function(a){var t=String(a).replace('0.','.');r+='#lmOv [style*="color:rgba(255,255,255,'+t+')"]{color:rgba(255,255,255,'+t+')!important}';});
   [.03,.04,.05,.06,.07,.08,.1,.12,.15,.2].forEach(function(a){var t=String(a).replace('0.','.');r+='#lmOv [style*="background:rgba(255,255,255,'+t+')"]{background:rgba(255,255,255,'+t+')!important;box-shadow:none!important}';});
   r+='#lmOv [style*="border-top:1px solid rgba(255,255,255"],#lmOv [style*="border-bottom:1px solid rgba(255,255,255"],#lmOv [style*="border:1px solid rgba(255,255,255"]{border-color:rgba(255,255,255,.12)!important}';
-  r+='#lmOv span.lmh{color:#fff!important}#lmOv [style*="font-size:11px"],#lmOv [style*="font-size:10px"]{font-size:11px!important}#lmOv details>summary{color:#e5e7eb!important}#lmOv .lmb,#lmOv button{box-shadow:none!important}';
+  ['#0a1628','#0b1220','#0f172a','#0f1a30','#111827','#16233d','#1e293b','#1f2937'].forEach(function(c){r+='#lmOv [style*="background:'+c+'"]{background:'+c+'!important;box-shadow:none!important}';});r+='#lmOv span.lmh{color:#fff!important}#lmOv [style*="font-size:11px"],#lmOv [style*="font-size:10px"]{font-size:11px!important}#lmOv details>summary{color:#e5e7eb!important}#lmOv .lmb,#lmOv button{box-shadow:none!important}';
   var st=document.createElement('style');st.textContent=r;document.head.appendChild(st);
 })();
 // ---- informe del mes ----
