@@ -25589,7 +25589,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v9.0 · 13-nov 13:40';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v9.1 · 13-nov 15:30';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -25687,7 +25687,7 @@ lmHtmlLista=function(){
     }else{
       h+=adm?lmHtmlPonerAlDia():'<div class="lmc" style="border:1px solid #fbbf2466"><div style="font-size:12px;font-weight:700;margin-bottom:4px">Sin medición vigente</div><div style="font-size:12px;color:#fcd34d">Hoy no hay una medición sellada vigente. Avisa al administrador.</div></div>';
     }
-    h+='<button class="lmb g" style="width:100%;padding:14px;font-size:15px;margin-bottom:8px;border-radius:10px" onclick="lmNuevaPauta(\''+id+'\')">➕ Nueva pauta</button><div style="display:flex;gap:8px;margin-bottom:12px"><button class="lmb" style="flex:1;padding:12px;border-radius:10px" onclick="lmVista(\'pautas\',\''+id+'\')">🔎 Mis pautas</button>'+(adm?'<button class="lmb" style="flex:1;padding:12px;border-radius:10px" onclick="lmVista(\'informe\',\''+id+'\')">📄 Informe del mes</button>':'')+'</div>';
+    h+='<button class="lmb g" style="width:100%;padding:14px;font-size:15px;margin-bottom:8px;border-radius:10px" onclick="lmNuevaPauta(\''+id+'\')">➕ Nueva pauta</button><div style="display:flex;gap:8px;margin-bottom:12px"><button class="lmb" style="flex:1;padding:12px;border-radius:10px" onclick="lmVista(\'pautas\',\''+id+'\')">🔎 Mis pautas</button>'+(adm?'<button class="lmb" style="flex:1;padding:12px;border-radius:10px" onclick="lmVista(\'informe\',\''+id+'\')">📄 Informe del mes</button>':'')+'</div>'+(adm&&LM.meds[id]&&LM.meds[id].estado!=='borrador'?'<button class="lmb" style="width:100%;padding:12px;border-radius:10px;margin-bottom:12px" onclick="lmVista(\'avance\',\''+id+'\')">📈 Avance y notificación a la carrera</button>':'');
     var ult=lmObsAll(id).filter(function(r){return r.autor===yo;}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,3);
     if(ult.length||bid){h+='<div class="lmc"><div style="font-size:12px;font-weight:700;margin-bottom:4px">Últimas pautas</div>';
       if(bid)h+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span>Sin terminar · '+esc((lmBorDe(bid)||{}).servicio||'—')+'</span><span style="color:#fbbf24">● borrador</span></div>';
