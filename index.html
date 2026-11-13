@@ -25229,8 +25229,8 @@ window.lmNotifAbrir=function(id,srv){
     var h='<div style="max-width:720px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px;color:#22d3ee">Notificación a la carrera · '+esc(srv)+'</b><button class="lmb" onclick="document.getElementById(\'lmNotOv\').remove()">Cerrar</button></div>'+
     '<div class="lmc" style="margin-top:10px;font-size:12px">'+d.s.n+' atenciones observadas de '+d.cuota+' · '+d.dist+' clínicos distintos · resultado '+lmPct(d.s.p)+' (IC '+lmPct(d.s.ic.lo)+' – '+lmPct(d.s.ic.hi)+')<br>'+(d.desglose?(d.merged?'Cargos con menos de 5 clínicos distintos quedan agrupados en «Otros cargos».':'Todos los cargos tienen 5 o más clínicos distintos.'):'<span style="color:#fbbf24">No se publica desglose por cargo: ningún grupo alcanza 5 clínicos distintos.</span>')+'</div>'+
     '<div class="lmc"><b>Plan de mejora</b><div style="font-size:11px;color:#9ca3af;margin:2px 0 8px">Una fila por cada paso bajo 100 % y por cada cargo bajo el umbral. Edita Brecha y Acción; el Responsable lo designa la carrera.</div><div id="lmNotRows"></div><label class="lml" style="margin-top:8px">Plazo: próxima revisión</label><input class="lmi" id="lmNotPl" value="'+esc(pl)+'"></div>'+
-    '<div style="display:flex;gap:8px;margin:10px 0"><button class="lmb" onclick="lmNotGuardar()">Guardar plan</button><button class="lmb lmp" onclick="lmNotGenerar()">Generar PDF</button></div></div>';
-    o.innerHTML=h;document.body.appendChild(o);lmNotFilas();
+    '<div id="lmTcPanel"></div><div style="display:flex;gap:8px;margin:10px 0"><button class="lmb" onclick="lmNotGuardar()">Guardar plan</button><button class="lmb lmp" onclick="lmNotGenerar()">Generar PDF</button></div></div>';
+    o.innerHTML=h;document.body.appendChild(o);lmNotFilas();if(window.lmTcPanel)lmTcPanel();
   });
 };
 function lmNotFilas(){
@@ -25337,8 +25337,10 @@ window.lmPdfNotif=function(id,srv,plan,plazo,seq){
   doc.setTextColor.apply(doc,GRIS);doc.setFontSize(8);doc.text('Centro de Salud USS - Valdivia',lx1,y+12.8);doc.text('Centro de Salud USS - Valdivia',lx2,y+12.8);
   y+=30;doc.setDrawColor(30,30,30);doc.line(lx1,y,lx1+lw,y);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(20,20,20);doc.text('Recibido por la Dirección de Carrera',lx1,y+4.5);
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.text('Nombre · firma · fecha',lx1,y+8.8);
+  window.LM_NOTIF_LAST={doc:doc,fol:fol,recibe:{page:doc.internal.getCurrentPageInfo().pageNumber,x:lx1,y:y,lw:lw,x2:lx2}};
   var NP=doc.getNumberOfPages();
   for(var i=1;i<=NP;i++){doc.setPage(i);doc.setDrawColor(210,220,230);doc.setLineWidth(0.3);doc.line(M,287,W0-M,287);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor.apply(doc,GRIS);doc.text('Centro de Salud USS - Valdivia · Documento de uso interno'+(c.practica?' · PRÁCTICA, SIN VALIDEZ':''),M,291);doc.text('Página '+i+' de '+NP,W0-M,291,{align:'right'});}
+  if(window.LM_NOTIF_NOSAVE)return;
   doc.save('Notificacion_'+lmNorm(srv).replace(/[^a-z]/g,'')+'_'+fol+'.pdf');
 };
 // botón en Avance (solo administrador)
@@ -25587,7 +25589,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v8.0 · 12-nov 19:20';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v9.0 · 13-nov 13:40';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -25950,6 +25952,220 @@ lmHtmlInforme=function(m){
     '<div style="font-size:11px;color:rgba(255,255,255,.5)">El PDF resume los meses marcados: cumplimiento por paso, por carrera y por cargo, con intervalo y veredicto frente al umbral. El Excel trae toda la medición, con una columna de mes.</div>';
   return h;
 };
+
+/* ===== v9: firma digital de toma de conocimiento por enlace (proyecto Firebase gesthor-firmas) ===== */
+(function(){
+var CFG={apiKey:"AIzaSyAMo0h0YQbtiWuFIb0CWRj0WfNBwRFSl5I",authDomain:"gesthor-firmas.firebaseapp.com",databaseURL:"https://gesthor-firmas-default-rtdb.firebaseio.com",projectId:"gesthor-firmas",storageBucket:"gesthor-firmas.firebasestorage.app",messagingSenderId:"1032830195329",appId:"1:1032830195329:web:d99fbf796b2d82cf8ddf80"};
+var LIBS={pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',qr:'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',auth:'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'};
+var DIAS30=30*86400000;
+function loadJs(u,chk){return new Promise(function(res,rej){if(chk&&chk())return res();var s=document.createElement('script');s.src=u;s.onload=function(){res();};s.onerror=function(){rej(new Error('No se pudo cargar una librería. Revisa tu conexión.'));};document.head.appendChild(s);});}
+var _fapp=null;
+function fapp(){if(!_fapp){try{_fapp=firebase.app('firmas');}catch(e){_fapp=firebase.initializeApp(CFG,'firmas');}}return _fapp;}
+function fdb(){return window.__TC_DB||fapp().database();}
+function tsv(){return firebase.database.ServerValue.TIMESTAMP;}
+function bytesHex(buf){return Array.prototype.map.call(new Uint8Array(buf),function(b){return ('0'+b.toString(16)).slice(-2);}).join('');}
+function sha(x){var b=(typeof x==='string')?new TextEncoder().encode(x):x;return crypto.subtle.digest('SHA-256',b).then(bytesHex);}
+function rnd(n){var a=new Uint8Array(n);crypto.getRandomValues(a);return a;}
+function b64u(a){var s='';a.forEach(function(c){s+=String.fromCharCode(c);});return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64bytes(b){var s=atob(b),a=new Uint8Array(s.length);for(var i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a;}
+function nrm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[^a-z]/g,'');}
+function fFecha(ts){try{return new Date(ts).toLocaleString('es-CL',{timeZone:'America/Santiago',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).replace(',','');}catch(e){return new Date(ts).toISOString();}}
+function fDia(ts){return fFecha(ts).split(',')[0];}
+function baseUrl(){return location.href.split('#')[0];}
+function descargar(bytes,name){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);}
+function runOk(s){s=(s||'').replace(/[^0-9kK]/g,'').toUpperCase();if(s.length<8||s.length>9)return null;var b=s.slice(0,-1),dv=s.slice(-1);if(!/^\d+$/.test(b))return null;var m=2,t=0;for(var i=b.length-1;i>=0;i--){t+=+b[i]*m;m=m===7?2:m+1;}var r=11-(t%11),e=r===11?'0':r===10?'K':String(r);if(e!==dv)return null;return b.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+'-'+dv;}
+
+/* ---------- huella y constancia ---------- */
+function huella(rec,f){return sha(f.png).then(function(hp){return sha([rec.docHash,f.nombre,f.cargo,f.run,f.ts,f.codigo,hp].join('|'));});}
+function pdfFirmado(rec,docB64,f){
+  return Promise.all([loadJs(LIBS.pdf,function(){return window.PDFLib;}),loadJs(LIBS.qr,function(){return window.qrcode;})]).then(function(){return huella(rec,f);}).then(function(hu){
+    var P=window.PDFLib,k=72/25.4;
+    return P.PDFDocument.load(b64bytes(docB64)).then(function(pdf){
+      return Promise.all([pdf.embedFont(P.StandardFonts.Helvetica),pdf.embedFont(P.StandardFonts.HelveticaBold),pdf.embedPng(f.png)]).then(function(r){
+        var fn=r[0],fb=r[1],img=r[2],R=rec.recibe,pg=pdf.getPage(R.page-1),H=pg.getHeight();
+        var iw=34*k,ih=iw*img.height/img.width;if(ih>13*k){ih=13*k;iw=ih*img.width/img.height;}
+        pg.drawImage(img,{x:(R.x+2)*k,y:H-(R.y-1)*k,width:iw,height:ih});
+        var tx=R.x2*k,col=P.rgb(.08,.1,.14),gr=P.rgb(.35,.4,.47);
+        function T(t,yy,sz,font,c){pg.drawText(t,{x:tx,y:H-yy*k,size:sz,font:font||fn,color:c||col});}
+        T(f.nombre.length>46?f.nombre.slice(0,46):f.nombre,R.y-10,9,fb);T(f.cargo.length>56?f.cargo.slice(0,56):f.cargo,R.y-5.8,8.5);
+        T('Firmado electronicamente '+fFecha(f.ts),R.y-1.6,7.5,fn,gr);T('Codigo de verificacion '+f.codigo,R.y+2.2,7.5,fn,gr);
+        // constancia
+        var cp=pdf.addPage([595.28,841.89]),W=595.28,Hh=841.89,navy=P.rgb(.06,.145,.25),teal=P.rgb(.05,.58,.54);
+        cp.drawRectangle({x:0,y:Hh-70,width:W,height:70,color:navy});
+        cp.drawText('CONSTANCIA DE TOMA DE CONOCIMIENTO',{x:40,y:Hh-34,size:15,font:fb,color:P.rgb(1,1,1)});
+        cp.drawText('Centro de Salud USS - Valdivia',{x:40,y:Hh-52,size:9.5,font:fn,color:P.rgb(.8,.9,.95)});
+        var yy=Hh-110;
+        function row(l,v){cp.drawText(l,{x:40,y:yy,size:8.5,font:fn,color:gr});cp.drawText(String(v),{x:170,y:yy,size:10,font:fb,color:col});yy-=24;}
+        row('Documento',rec.folio+' · Notificacion con plan de mejora');row('Unidad',rec.srv);row('Firmante',f.nombre);row('Cargo',f.cargo);row('RUN',f.run);row('Fecha y hora (servidor)',fFecha(f.ts)+' (hora de Chile)');row('Codigo de verificacion',f.codigo);
+        yy-=6;cp.drawText('Huella digital (SHA-256) de documento y firma',{x:40,y:yy,size:8.5,font:fn,color:gr});yy-=15;
+        cp.drawText(hu.slice(0,32),{x:40,y:yy,size:10,font:P.StandardFonts?fn:fn,color:col});yy-=14;cp.drawText(hu.slice(32),{x:40,y:yy,size:10,font:fn,color:col});yy-=26;
+        cp.drawText('Firma registrada',{x:40,y:yy,size:8.5,font:fn,color:gr});
+        var w2=170,h2=w2*img.height/img.width;if(h2>70){h2=70;w2=h2*img.width/img.height;}
+        cp.drawRectangle({x:40,y:yy-12-h2-8,width:200,height:h2+16,borderColor:P.rgb(.8,.84,.88),borderWidth:.7});cp.drawImage(img,{x:48,y:yy-12-h2,width:w2,height:h2});
+        var url=baseUrl()+'#vf='+f.codigo,q=window.qrcode(0,'M');q.addData(url);q.make();var n=q.getModuleCount(),qs=110/n,qx=W-40-110,qy=yy-12-110;
+        for(var a=0;a<n;a++)for(var b=0;b<n;b++)if(q.isDark(a,b))cp.drawRectangle({x:qx+b*qs,y:qy+(n-1-a)*qs,width:qs+.15,height:qs+.15,color:P.rgb(0,0,0)});
+        cp.drawText('Escanee para verificar',{x:qx,y:qy-12,size:8,font:fn,color:gr});
+        var ny=qy-60;cp.drawLine({start:{x:40,y:ny+18},end:{x:W-40,y:ny+18},thickness:.6,color:teal});
+        var txt=['Firma electronica simple conforme a la Ley N 19.799. La fecha y hora provienen del reloj del servidor y no del dispositivo del firmante.','Este documento no contiene datos de pacientes ni de los clinicos observados. La huella permite comprobar que el documento y la firma no fueron alterados.','Verificacion: '+url];
+        txt.forEach(function(t){var words=t.split(' '),ln='';words.forEach(function(w){if(fn.widthOfTextAtSize(ln+' '+w,8.5)>W-80){cp.drawText(ln.trim(),{x:40,y:ny,size:8.5,font:fn,color:gr});ny-=12;ln='';}ln+=' '+w;});cp.drawText(ln.trim(),{x:40,y:ny,size:8.5,font:fn,color:gr});ny-=16;});
+        return pdf.save().then(function(by){return {bytes:by,huella:hu};});
+      });
+    });
+  });
+}
+
+/* ---------- administrador ---------- */
+function tcAuth(){
+  return loadJs(LIBS.auth,function(){return firebase.auth&&typeof fapp().auth==='function';}).then(function(){
+    var a=fapp().auth();
+    return new Promise(function(res){var un=a.onAuthStateChanged(function(u){un();res(u);});}).then(function(u){
+      if(u)return u;
+      return new Promise(function(res,rej){
+        var o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px';
+        o.innerHTML='<div style="background:#16233d;color:#fff;border-radius:14px;padding:18px;max-width:340px;width:100%;font-family:system-ui,sans-serif"><b style="font-size:15px">Acceso a firmas</b><div style="font-size:12px;color:rgba(255,255,255,.6);margin:4px 0 10px">Ingresa con la cuenta del Director Técnico del proyecto de firmas.</div><input id="tcE" type="email" placeholder="Correo" autocomplete="username" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff;margin-bottom:8px"><input id="tcP" type="password" placeholder="Contraseña" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff"><div id="tcErr" style="color:#fca5a5;font-size:12px;min-height:16px;margin:6px 0"></div><div style="display:flex;gap:8px"><button id="tcC" style="flex:1;padding:10px;border-radius:8px;border:0;background:rgba(255,255,255,.14);color:#fff">Cancelar</button><button id="tcOk" style="flex:1;padding:10px;border-radius:8px;border:0;background:linear-gradient(135deg,#0891b2,#22d3ee);color:#fff;font-weight:700">Entrar</button></div></div>';
+        document.body.appendChild(o);
+        o.querySelector('#tcC').onclick=function(){o.remove();rej(new Error('cancelado'));};
+        o.querySelector('#tcOk').onclick=function(){var e=o.querySelector('#tcE').value.trim(),p=o.querySelector('#tcP').value;o.querySelector('#tcErr').textContent='';a.signInWithEmailAndPassword(e,p).then(function(c){o.remove();res(c.user);}).catch(function(er){o.querySelector('#tcErr').textContent='Correo o contraseña incorrectos.';});};
+      });
+    });
+  });
+}
+function tcKey(){var n=LM.notif;return n.id+'_'+nrm(n.srv);}
+function tcCaja(h){var el=document.getElementById('lmTcPanel');if(el)el.innerHTML='<div class="lmc">'+h+'</div>';}
+window.lmTcPanel=function(){tcCaja('<b>Firma digital de la carrera</b><div style="font-size:11px;color:#9ca3af;margin:2px 0 8px">Genera un enlace para que el director o la directora de carrera firme la toma de conocimiento. Vigencia 30 días.</div><button class="lmb lmp" onclick="lmTcCargar()">🔏 Abrir firma digital</button>');};
+window.lmTcCargar=function(){
+  tcCaja('<span style="font-size:12px;color:#9ca3af">Cargando…</span>');
+  tcAuth().then(function(){return fdb().ref('firmas_idx/'+tcKey()).once('value');}).then(function(s){
+    var ix=s.val();if(!ix){tcRender(null,null);return;}
+    return fdb().ref('firmas/'+ix.h).once('value').then(function(r){tcRender(ix,r.val());});
+  }).catch(function(e){if(e&&e.message==='cancelado'){lmTcPanel();return;}tcCaja('<span style="color:#fca5a5;font-size:12px">No se pudo cargar: '+esc((e&&e.message)||e)+'</span><br><button class="lmb" style="margin-top:6px" onclick="lmTcCargar()">Reintentar</button>');});
+};
+function tcRender(ix,rec){
+  var h='<b>Firma digital de la carrera</b>';
+  if(!ix||!rec){h+='<div style="font-size:12px;color:#9ca3af;margin:4px 0 8px">Aún no hay un enlace para esta notificación. Se guardará el plan actual y se generará el documento que verá el firmante.</div><button class="lmb lmp" onclick="lmTcGenerar()">Generar enlace de firma</button>';tcCaja(h);return;}
+  var est,col;
+  if(rec.firma){est='FIRMADA';col='#4ade80';}else if(rec.estado==='ANULADO'){est='ANULADA';col='#9ca3af';}else if(rec.expira<Date.now()){est='VENCIDA';col='#fbbf24';}else{est='PENDIENTE';col='#fbbf24';}
+  h+=' <span style="font-size:11px;font-weight:700;color:'+col+'">'+est+'</span><div style="font-size:12px;color:#cbd5e1;margin:4px 0 8px">'+esc(rec.folio)+' · creado '+fDia(rec.creado)+(est==='PENDIENTE'?' · vence '+fDia(rec.expira):'');
+  if(rec.firma)h+='<br>Firmó: <b>'+esc(rec.firma.nombre)+'</b>, '+esc(rec.firma.cargo)+'<br>'+fFecha(rec.firma.ts)+' · código '+esc(rec.firma.codigo);
+  h+='</div>';
+  if(rec.firma)h+='<button class="lmb lmp" onclick="lmTcDescargar(\''+ix.h+'\')">⬇ Descargar PDF firmado</button> ';
+  if(est==='PENDIENTE')h+='<button class="lmb" onclick="lmTcAnular(\''+ix.h+'\')">Anular enlace</button> ';
+  h+='<button class="lmb" onclick="lmTcGenerar()">Generar enlace nuevo</button>';
+  if(est==='PENDIENTE')h+='<div style="font-size:10.5px;color:#9ca3af;margin-top:6px">El enlace solo se muestra al generarlo. Si lo perdiste, genera uno nuevo (el anterior queda anulado).</div>';
+  tcCaja(h);
+}
+window.lmTcAnular=function(h){if(!confirm('¿Anular este enlace? El firmante ya no podrá usarlo.'))return;fdb().ref('firmas/'+h+'/estado').set('ANULADO').then(lmTcCargar);};
+window.lmTcDescargar=function(h){
+  Promise.all([fdb().ref('firmas/'+h).once('value'),fdb().ref('firmas_doc/'+h).once('value')]).then(function(r){
+    var rec=r[0].val(),dc=r[1].val();return pdfFirmado(rec,dc.b64,rec.firma);
+  }).then(function(o){descargar(o.bytes,'Notificacion_firmada.pdf');}).catch(function(e){alert('No se pudo generar el PDF firmado: '+((e&&e.message)||e));});
+};
+window.lmTcGenerar=function(){
+  var n=LM.notif;lmNotLeer();
+  if(!n.plazo){alert('Indica el plazo de la próxima revisión.');return;}
+  if(!n.seq)n.seq=1;
+  var key=tcKey(),d=lmNotifDatos(n.id,n.srv);
+  tcCaja('<span style="font-size:12px;color:#9ca3af">Generando…</span>');
+  tcAuth().then(function(){return lmNotGuardar(true);}).then(function(){
+    window.LM_NOTIF_NOSAVE=true;window.LM_NOTIF_LAST=null;
+    try{lmPdfNotif(n.id,n.srv,n.rows,n.plazo,n.seq);}finally{window.LM_NOTIF_NOSAVE=false;}
+    var L=window.LM_NOTIF_LAST;if(!L)throw new Error('No se pudo generar el PDF.');
+    var du=L.doc.output('datauristring'),b64=du.slice(du.indexOf(',')+1),ab=L.doc.output('arraybuffer');
+    var tok=b64u(rnd(24));
+    return Promise.all([sha(tok),sha(ab),fdb().ref('firmas_idx/'+key).once('value')]).then(function(r){
+      var h=r[0],dh=r[1],old=r[2].val(),now=Date.now(),up={};
+      if(old&&old.h)up['firmas/'+old.h+'/estado']='ANULADO';
+      up['firmas/'+h]={estado:'PENDIENTE',notifId:n.id,srv:n.srv,folio:L.fol,creado:now,expira:now+DIAS30,recibe:L.recibe,docHash:dh,resumen:{n:d.s.n,cuota:d.cuota,pct:d.s.p,umbral:d.c.umbral,plan:n.rows,plazo:n.plazo}};
+      up['firmas_doc/'+h]={b64:b64};
+      up['firmas_idx/'+key]={h:h,folio:L.fol,creado:now,expira:now+DIAS30};
+      return fdb().ref().update(up).then(function(){tcMostrarLink(baseUrl()+'#tc='+tok,L.fol);lmTcCargarSilencioso();});
+    });
+  }).catch(function(e){if(e&&e.message==='cancelado'){lmTcPanel();return;}tcCaja('<span style="color:#fca5a5;font-size:12px">No se pudo generar: '+esc((e&&e.message)||e)+'</span><br><button class="lmb" style="margin-top:6px" onclick="lmTcCargar()">Volver</button>');});
+};
+function lmTcCargarSilencioso(){setTimeout(lmTcCargar,0);}
+function tcMostrarLink(url,fol){
+  var n=LM.notif,msg='Estimado/a Director/a de Carrera:\n\nJunto con saludar, le enviamos el enlace para la toma de conocimiento de la notificación '+fol+' con el plan de mejora de higiene de manos ('+n.srv+'). El enlace es personal, no contiene datos de pacientes y tiene vigencia de 30 días.\n\n'+url+'\n\nSaludos cordiales,\nPatricio Baeza Aguilar\nDirector Técnico · Centro de Salud USS - Valdivia';
+  var o=document.createElement('div');o.id='tcLinkOv';o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px';
+  o.innerHTML='<div style="background:#16233d;color:#fff;border-radius:14px;padding:18px;max-width:440px;width:100%;font-family:system-ui,sans-serif"><b style="font-size:15px">Enlace de firma generado</b><div style="font-size:12px;color:#fbbf24;margin:6px 0">Cópialo ahora: por seguridad no se vuelve a mostrar.</div><textarea id="tcL" readonly rows="3" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff;font-size:12px">'+url+'</textarea><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"><button id="tcCp" style="flex:1;padding:10px;border-radius:8px;border:0;background:linear-gradient(135deg,#0891b2,#22d3ee);color:#fff;font-weight:700">Copiar enlace</button><a id="tcWa" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:10px;border-radius:8px;background:rgba(255,255,255,.14);color:#fff;text-decoration:none">WhatsApp</a><a id="tcMl" style="flex:1;text-align:center;padding:10px;border-radius:8px;background:rgba(255,255,255,.14);color:#fff;text-decoration:none">Correo</a></div><button id="tcX" style="width:100%;margin-top:10px;padding:10px;border-radius:8px;border:0;background:rgba(255,255,255,.1);color:#fff">Cerrar</button></div>';
+  document.body.appendChild(o);
+  o.querySelector('#tcWa').href='https://wa.me/?text='+encodeURIComponent(msg);
+  o.querySelector('#tcMl').href='mailto:?subject='+encodeURIComponent('Toma de conocimiento · '+fol)+'&body='+encodeURIComponent(msg);
+  o.querySelector('#tcCp').onclick=function(){var t=o.querySelector('#tcL');t.select();try{navigator.clipboard.writeText(url);}catch(e){document.execCommand('copy');}this.textContent='Copiado ✓';};
+  o.querySelector('#tcX').onclick=function(){o.remove();};
+}
+
+/* ---------- página pública del firmante ---------- */
+var CSS='#tcPg{position:fixed;inset:0;z-index:2147483600;background:#f1f5f9;color:#0f172a;overflow:auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}#tcPg *{box-sizing:border-box}.tcw{max-width:640px;margin:0 auto;padding:16px}.tcc{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,23,42,.1)}.tch{background:#0f2540;color:#fff;border-radius:14px;padding:16px;margin-bottom:12px}.tci{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;margin:3px 0 10px;background:#fff;color:#0f172a}.tcl{font-size:12px;color:#475569;font-weight:600}.tcb{padding:12px 16px;border-radius:10px;border:0;background:#0d9488;color:#fff;font-weight:700;font-size:15px;width:100%}.tcb[disabled]{opacity:.45}.tcs{padding:9px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;font-size:13px}.tcg{font-size:12px;color:#64748b}';
+function pagina(html){var o=document.getElementById('tcPg');if(!o){var st=document.createElement('style');st.textContent=CSS;document.head.appendChild(st);o=document.createElement('div');o.id='tcPg';document.body.appendChild(o);}o.innerHTML='<div class="tcw"><div class="tch"><div style="font-size:11px;letter-spacing:.12em;opacity:.7">CENTRO DE SALUD USS - VALDIVIA</div><div style="font-size:18px;font-weight:700;margin-top:2px">Toma de conocimiento</div></div>'+html+'</div>';return o;}
+function tcSigner(tok){
+  pagina('<div class="tcc tcg">Cargando documento…</div>');
+  sha(tok).then(function(h){
+    return Promise.all([fdb().ref('firmas/'+h).once('value'),fdb().ref('firmas_doc/'+h).once('value')]).then(function(r){
+      var rec=r[0].val(),dc=r[1].val();
+      if(!rec||!dc){pagina('<div class="tcc"><b>Enlace no válido</b><div class="tcg" style="margin-top:6px">Este enlace no existe o fue anulado. Solicita uno nuevo al Director Técnico.</div></div>');return;}
+      if(rec.firma){tcFinal(rec,dc,h,true);return;}
+      if(rec.estado==='ANULADO'){pagina('<div class="tcc"><b>Enlace anulado</b><div class="tcg" style="margin-top:6px">Este enlace fue reemplazado. Solicita el enlace vigente al Director Técnico.</div></div>');return;}
+      if(rec.expira<Date.now()){pagina('<div class="tcc"><b>Enlace vencido</b><div class="tcg" style="margin-top:6px">Venció el '+fDia(rec.expira)+'. Solicita uno nuevo al Director Técnico.</div></div>');return;}
+      tcForm(rec,dc,h);
+    });
+  }).catch(function(e){pagina('<div class="tcc"><b>No se pudo cargar</b><div class="tcg" style="margin-top:6px">Revisa tu conexión e intenta de nuevo.</div></div>');});
+}
+function tcForm(rec,dc,h){
+  var R=rec.resumen||{},plan=(R.plan||[]).map(function(p){return '<div style="border-top:1px solid #e2e8f0;padding:8px 0;font-size:13px"><b>'+esc(p.brecha)+'</b><div style="color:#334155;margin-top:2px">'+esc(p.accion)+'</div></div>';}).join('')||'<div class="tcg">Sin brechas bajo el umbral.</div>';
+  var pg=pagina('<div class="tcc"><div class="tcg">Folio '+esc(rec.folio)+'</div><div style="font-size:16px;font-weight:700;margin:2px 0 8px">Higiene de manos · '+esc(rec.srv)+'</div><div style="font-size:14px">Resultado <b>'+(R.pct!=null?Math.round(R.pct*1000)/10+' %':'—')+'</b> (umbral '+R.umbral+' %) · '+R.n+' atenciones observadas de '+R.cuota+'.</div><div class="tcg" style="margin-top:6px">El documento no contiene datos de pacientes ni de los clínicos observados.</div><button class="tcs" id="tcVer" style="margin-top:10px">📄 Ver documento PDF completo</button></div>'+
+  '<div class="tcc"><b style="font-size:14px">Plan de mejora propuesto</b>'+plan+'<div class="tcg" style="margin-top:6px">Próxima revisión: '+esc(R.plazo||'')+'</div></div>'+
+  '<div class="tcc"><b style="font-size:14px">Datos del firmante</b><div style="height:8px"></div><label class="tcl">Nombre completo</label><input class="tci" id="tcN" autocomplete="name"><label class="tcl">Cargo</label><input class="tci" id="tcCg" placeholder="Ej.: Director(a) de Carrera de Enfermería"><label class="tcl">RUN</label><input class="tci" id="tcR" placeholder="12.345.678-5" inputmode="text"><label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:4px 0 10px"><input type="checkbox" id="tcK" style="margin-top:3px;width:18px;height:18px"><span>Declaro haber leído el resultado y el plan de mejora, y tomo conocimiento de ellos en representación de mi carrera.</span></label>'+
+  '<div class="tcl">Firma (dibuja con el dedo o el mouse)</div><canvas id="tcCv" style="width:100%;height:170px;border:1px dashed #94a3b8;border-radius:8px;background:#fff;touch-action:none;margin:4px 0"></canvas><div style="display:flex;gap:8px;margin-bottom:12px"><button class="tcs" id="tcU">Deshacer</button><button class="tcs" id="tcB">Borrar</button></div><div id="tcEr" style="color:#b91c1c;font-size:13px;min-height:18px;margin-bottom:6px"></div><button class="tcb" id="tcF">Firmar y enviar</button><div class="tcg" style="margin-top:8px">Firma electrónica simple (Ley N° 19.799). Se registrará la fecha y hora del servidor.</div></div>');
+  pg.querySelector('#tcVer').onclick=function(){var u=URL.createObjectURL(new Blob([b64bytes(dc.b64)],{type:'application/pdf'}));window.open(u,'_blank')||(location.href=u);};
+  var cv=pg.querySelector('#tcCv'),cx=cv.getContext('2d'),dpr=window.devicePixelRatio||1,strokes=[],cur=null;
+  function size(){var r=cv.getBoundingClientRect();cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);redraw();}
+  function draw(c,sc,lw){c.lineCap='round';c.lineJoin='round';c.strokeStyle='#0b1f4a';c.lineWidth=lw;strokes.forEach(function(s){c.beginPath();s.forEach(function(p,i){if(i)c.lineTo(p[0]*sc,p[1]*sc);else c.moveTo(p[0]*sc,p[1]*sc);});if(s.length===1)c.lineTo(s[0][0]*sc+.1,s[0][1]*sc);c.stroke();});}
+  function redraw(){cx.clearRect(0,0,cv.width,cv.height);draw(cx,dpr,2.6*dpr);}
+  function pt(e){var r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];}
+  cv.addEventListener('pointerdown',function(e){e.preventDefault();cv.setPointerCapture(e.pointerId);cur=[pt(e)];strokes.push(cur);redraw();});
+  cv.addEventListener('pointermove',function(e){if(!cur)return;e.preventDefault();cur.push(pt(e));redraw();});
+  function fin(){cur=null;}cv.addEventListener('pointerup',fin);cv.addEventListener('pointercancel',fin);
+  pg.querySelector('#tcU').onclick=function(){strokes.pop();redraw();};pg.querySelector('#tcB').onclick=function(){strokes=[];redraw();};
+  size();window.addEventListener('resize',size);
+  function exportar(){var r=cv.getBoundingClientRect(),sc=600/r.width,o=document.createElement('canvas');o.width=600;o.height=Math.round(r.height*sc);var c=o.getContext('2d');draw(c,sc,2.6*sc);return o.toDataURL('image/png');}
+  function tinta(){var L=0,x0=1e9,x1=-1e9;strokes.forEach(function(s){s.forEach(function(p,i){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);if(i)L+=Math.hypot(p[0]-s[i-1][0],p[1]-s[i-1][1]);});});return {L:L,w:x1-x0};}
+  var btn=pg.querySelector('#tcF'),er=pg.querySelector('#tcEr');
+  btn.onclick=function(){
+    er.textContent='';
+    var nom=pg.querySelector('#tcN').value.trim().replace(/\s+/g,' '),cg=pg.querySelector('#tcCg').value.trim(),run=runOk(pg.querySelector('#tcR').value);
+    if(nom.split(' ').length<2||nom.length>110){er.textContent='Escribe tu nombre completo.';return;}
+    if(cg.length<3||cg.length>110){er.textContent='Indica tu cargo.';return;}
+    if(!run){er.textContent='El RUN no es válido. Revisa el número y el dígito verificador.';return;}
+    if(!pg.querySelector('#tcK').checked){er.textContent='Marca la declaración para continuar.';return;}
+    var t=tinta();if(t.L<120||t.w<60){er.textContent='Dibuja tu firma en el recuadro.';return;}
+    var png=exportar();if(png.length<800||png.length>400000){er.textContent='La firma es demasiado simple o pesada. Bórrala y vuelve a dibujarla.';return;}
+    if(!confirm('¿Confirmas firmar y enviar? No podrás modificarlo después.'))return;
+    btn.disabled=true;btn.textContent='Enviando…';
+    var codigo='',AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',rb=rnd(8);for(var i=0;i<8;i++){codigo+=AB[rb[i]%AB.length];if(i===3)codigo+='-';}
+    var f={nombre:nom,cargo:cg,run:run,png:png,ts:tsv(),codigo:codigo};
+    fdb().ref('firmas/'+h+'/firma').set(f).then(function(){return fdb().ref('firmas/'+h+'/firma').once('value');}).then(function(s){
+      var g=s.val();return huella(rec,g).then(function(hu){return fdb().ref('verif/'+g.codigo).set({h:h,fecha:g.ts,folio:rec.folio,firmante:g.nombre,cargo:g.cargo,huella:hu});});
+    }).then(function(){window.removeEventListener('resize',size);window.__tcFresh=true;tcSigner(location.hash.slice(4));}).catch(function(e){btn.disabled=false;btn.textContent='Firmar y enviar';er.textContent='No se pudo enviar la firma. El enlace pudo vencer o ya fue usado. Intenta de nuevo o solicita otro enlace.';});
+  };
+}
+function tcFinal(rec,dc,h,ya){
+  var f=rec.firma;
+  var pg=pagina('<div class="tcc" style="text-align:center"><div style="font-size:34px">✅</div><div style="font-size:17px;font-weight:700;margin:4px 0">'+(ya&&!window.__tcFresh?'Esta notificación ya fue firmada':'Firma registrada')+'</div><div class="tcg">'+esc(rec.folio)+' · '+esc(rec.srv)+'</div></div><div class="tcc" style="font-size:14px"><b>'+esc(f.nombre)+'</b><br>'+esc(f.cargo)+'<br><span class="tcg">'+fFecha(f.ts)+' (hora de Chile)<br>Código de verificación <b>'+esc(f.codigo)+'</b></span></div><div class="tcc"><button class="tcb" id="tcD">⬇ Descargar documento firmado (PDF)</button><div class="tcg" id="tcDm" style="margin-top:8px">Incluye la constancia con huella digital y código QR.</div></div>');
+  pg.querySelector('#tcD').onclick=function(){var b=this;b.disabled=true;b.textContent='Generando…';pdfFirmado(rec,dc.b64,f).then(function(o){descargar(o.bytes,'Notificacion_firmada_'+rec.folio+'.pdf');b.disabled=false;b.textContent='⬇ Descargar documento firmado (PDF)';}).catch(function(e){b.disabled=false;b.textContent='Reintentar descarga';pg.querySelector('#tcDm').textContent='No se pudo generar el PDF: '+((e&&e.message)||e);});};
+}
+function tcVerif(cod){
+  pagina('<div class="tcc tcg">Verificando…</div>');
+  var ks=['fecha','folio','firmante','cargo','huella'];
+  Promise.all(ks.map(function(k){return fdb().ref('verif/'+cod+'/'+k).once('value').then(function(s){return s.val();});})).then(function(v){
+    if(v[0]==null){pagina('<div class="tcc"><div style="font-size:30px">⚠️</div><b>Constancia no encontrada</b><div class="tcg" style="margin-top:6px">El código <b>'+esc(cod)+'</b> no corresponde a una firma registrada.</div></div>');return;}
+    pagina('<div class="tcc"><div style="font-size:30px">✅</div><div style="font-size:17px;font-weight:700;margin:4px 0">Constancia válida</div><div style="font-size:14px;margin-top:8px"><b>'+esc(v[2])+'</b><br>'+esc(v[3])+'<br><span class="tcg">Documento '+esc(v[1])+'<br>Firmado el '+fFecha(v[0])+' (hora de Chile)<br>Código '+esc(cod)+'</span></div><div class="tcg" style="margin-top:10px;word-break:break-all">Huella SHA-256: '+esc(v[4])+'</div></div><div class="tcc tcg">Compara esta huella con la impresa en la constancia del PDF. Si coinciden, el documento y la firma no fueron alterados.</div>');
+  }).catch(function(){pagina('<div class="tcc"><b>No se pudo verificar</b><div class="tcg" style="margin-top:6px">Revisa tu conexión e intenta de nuevo.</div></div>');});
+}
+window.tcBoot=function(){var h=location.hash;if(/^#tc=/.test(h))tcSigner(h.slice(4));else if(/^#vf=/.test(h))tcVerif(decodeURIComponent(h.slice(4)));};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tcBoot);else setTimeout(tcBoot,0);
+window.addEventListener('hashchange',function(){if(/^#(tc|vf)=/.test(location.hash))tcBoot();});
+window.__tc={pdfFirmado:pdfFirmado,runOk:runOk,sha:sha};
+})();
 
 </script>
 </body>
