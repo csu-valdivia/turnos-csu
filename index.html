@@ -25591,7 +25591,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.2 · 15-nov 18:20';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.3 · 15-nov 19:05';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -26184,7 +26184,9 @@ var EQUIPO=[
  {n:'Javiera Castro',s:'d2'},{n:'Nathaly Villanueva',s:'d2'},
  {n:'Marcia Matus',s:'ray'},{n:'Jacqueline Santana',s:'ray'}
 ];
-var CFG0={reemplazo:'Diego Sepúlveda',inicio:'',semanas:4,empieza:'A',deaDesde:'',reasDia:'Martes',
+var CFG0={reemplazo:'Diego Sepúlveda',inicio:'',semanas:4,empieza:'A',deaDesde:'',reasDia:'Martes',dispT2Est:'10:00',
+ D1:{Lunes:'07:45–17:00',Martes:'07:45–17:00','Miércoles':'07:45–16:00',Jueves:'07:45–16:00',Viernes:'08:00–15:00','Sábado':'09:00–14:00'},
+ apoyo:{A:{},B:{}},
  h:{T1:{Lunes:'07:45–17:00',Martes:'07:45–17:00','Miércoles':'07:45–17:00',Jueves:'07:45–17:00',Viernes:'07:45–17:00','Sábado':'09:00–14:00'},T2:{Lunes:'10:00–20:00',Martes:'10:00–20:00','Miércoles':'10:00–20:00',Jueves:'10:00–20:00',Viernes:'10:00–20:00'}},
  rot:{A:{},B:{}}};
 var TG={cfg:null,draft:null};
@@ -26199,7 +26201,9 @@ function eeq(a){return String(a).replace(/[&<>"]/g,function(c){return {'&':'&amp
 function cargarCfg(){
   return sedeRef('rotacionCfg').once('value').then(function(s){
     var v=s.val()||{},c=clone(CFG0);
-    ['reemplazo','inicio','semanas','empieza','deaDesde','reasDia'].forEach(function(k){if(v[k]!=null)c[k]=v[k];});
+    ['reemplazo','inicio','semanas','empieza','deaDesde','reasDia','dispT2Est'].forEach(function(k){if(v[k]!=null)c[k]=v[k];});
+    if(v.D1)Object.keys(v.D1).forEach(function(d){c.D1[d]=v.D1[d];});
+    if(v.apoyo){['A','B'].forEach(function(x){if(v.apoyo[x])c.apoyo[x]=v.apoyo[x];});}
     if(v.h)['T1','T2'].forEach(function(t){if(v.h[t])Object.keys(v.h[t]).forEach(function(d){c.h[t][d]=v.h[t][d];});});
     if(v.rot){['A','B'].forEach(function(x){if(v.rot[x])c.rot[x]=v.rot[x];});}
     TG.cfg=c;return c;
@@ -26256,8 +26260,7 @@ function genSemana(ini,tipo,idx,NM){
   function cubrir(dia,j,omitir){
     var ch=[];
     EQUIPO.filter(function(p){return p.s==='est'&&rolDe(p.n)==='AP';}).forEach(function(p){ch.push(persEq(p));});
-    if(LJ.indexOf(dia)>-1)pers('d1','T1').forEach(function(n){ch.push(n);});
-    if(dia==='Jueves')pers('d2','T1').forEach(function(n){ch.push(n);});
+    EQUIPO.forEach(function(p){if(p.s!=='est'&&apoyoDia(p.n,dia))ch.push(persEq(p));});
     ch.push(NM[cfg.reemplazo]||cfg.reemplazo);
     for(var i=0;i<ch.length;i++){if(ch[i]&&omitir.indexOf(ch[i])<0&&libre(ch[i],dia,j))return ch[i];}
     return null;
@@ -26280,15 +26283,32 @@ function genSemana(ini,tipo,idx,NM){
   }
   var PED='Pedido antes de las 10:00';
   // ----- bloques (turnos) -----
+  function finDe(hor){return (hor||'').split('–')[1]||'20:00';}
+  var apoyoSem=cfg.apoyo[tipo]||{};
+  function apoyoDia(n,d){var a=apoyoSem[n];return a&&a.dias&&a.dias.indexOf(d)>-1?(a.j||'am'):'';}
   EQUIPO.forEach(function(p){
     var r=rolDe(p.n);if(!r)return;
-    var sv=SERV.filter(function(s){return s.id===p.s;})[0],nm=NM[p.n];
-    var h=r==='T2'?cfg.h.T2:cfg.h.T1,dias=r==='T2'?LV:DL;
+    var sv=SERV.filter(function(s){return s.id===p.s;})[0],nm=NM[p.n],disp=(p.s==='d1'||p.s==='d2');
+    var dias=r==='T2'?LV:DL;
     dias.forEach(function(d){
       if(ausente(nm,fechaDe[d],'dia')){AV.push(d+': '+nm+' ausente todo el día, sin turno.');return;}
-      var b={dia:d,nombre:nm,area:sv.area,horario:h[d]};
-      if(p.s==='est'&&(r==='T1'||r==='T2'))b.turno=r;
-      B.push(b);
+      if(disp&&r==='T1'){B.push({dia:d,nombre:nm,area:sv.area,horario:cfg.D1[d]});}
+      else if(disp&&r==='T2'){
+        var fin=finDe(cfg.D1[d]);
+        B.push({dia:d,nombre:nm,area:'Esterilización',horario:cfg.dispT2Est+'–'+fin});
+        B.push({dia:d,nombre:nm,area:sv.area,horario:fin+'–20:00'});
+      }else{
+        var h=r==='T2'?cfg.h.T2:cfg.h.T1,b={dia:d,nombre:nm,area:sv.area,horario:h[d]};
+        if(p.s==='est'&&(r==='T1'||r==='T2'))b.turno=r;
+        B.push(b);
+      }
+      // apoyo en Esterilización (servicios distintos de Esterilización)
+      var aj=(p.s!=='est')?apoyoDia(p.n,d):'';
+      if(aj){
+        var fin2=(r==='T2'&&disp)?finDe(cfg.D1[d]):finDe(disp?cfg.D1[d]:(r==='T2'?cfg.h.T2[d]:cfg.h.T1[d]));
+        var hh=aj==='am'?'10:00–14:00':aj==='pm'?'14:00–'+fin2:'10:00–'+fin2;
+        B.push({dia:d,nombre:nm,area:'Esterilización',horario:hh});
+      }
     });
   });
   // ----- Esterilización -----
@@ -26302,8 +26322,10 @@ function genSemana(ini,tipo,idx,NM){
     if(LV.indexOf(d)>-1)ronda('est_lavado',d,'pm',eT2,'Ronda PM de Esterilización');
     // tareas flexibles: se reparten por carga entre T1, apoyo y quienes no tienen estudiantes (Disp.1 L–J, Disp.2 jueves)
     var poolAM=eT1.concat(eAP);
-    if(LJ.indexOf(d)>-1)poolAM=poolAM.concat(pers('d1','T1'));
-    if(d==='Jueves')poolAM=poolAM.concat(pers('d2','T1'));
+    // quienes marcaste con Apoyo ese día (AM o todo el día)
+    EQUIPO.forEach(function(p){if(p.s!=='est'&&['am','dia'].indexOf(apoyoDia(p.n,d))>-1&&poolAM.indexOf(persEq(p))<0)poolAM.push(persEq(p));});
+    // T2 de dispensarios: de 10:00 a que termine el T1 están en Esterilización
+    if(LV.indexOf(d)>-1)['d1','d2'].forEach(function(s2){pers(s2,'T2').forEach(function(n){if(poolAM.indexOf(n)<0)poolAM.push(n);});});
     designar(poolAM,d,'am','temp_ester',null,'Temperatura de Esterilización');
     designar(poolAM,d,'am','conductividad',null,'Conductividad');
     designar(poolAM,d,'am','temp_pabellon',null,'Temperatura de Pabellón');
@@ -26311,13 +26333,15 @@ function genSemana(ini,tipo,idx,NM){
     if(d==='Lunes')designar(poolAM,d,'am','pedido',{sector:'Esterilización',texto:PED},'Pedido de Esterilización');
     if(LV.indexOf(d)>-1)designar(eT2.concat(eAP),d,'pm','clinica_privada',null,'Clínica privada PM');
   });
-  // aseo del jueves: apoyo de Esterilización, o Disp.1 / Disp.2 T1 (no hay estudiantes), rotando
+  // aseo del jueves: todo el día, una persona (apoyo de Esterilización, apoyo marcado "todo el día", o T1 de Esterilización)
   (function(){
-    var c=[];EQUIPO.filter(function(p){return p.s==='est'&&rolDe(p.n)==='AP';}).forEach(function(p){c.push(persEq(p));});
-    pers('d1','T1').forEach(function(n){c.push(n);});pers('d2','T1').forEach(function(n){c.push(n);});
+    var c=eAP.slice();
+    EQUIPO.forEach(function(p){if(p.s!=='est'&&apoyoDia(p.n,'Jueves')==='dia')c.push(persEq(p));});
     c=c.filter(function(n){return libre(n,'Jueves','dia');});
+    if(!c.length){c=eT1.filter(function(n){return libre(n,'Jueves','dia');});if(c.length)AV.push('Jueves: aseo de Esterilización asignado a T1 (no hay Apoyo marcado para todo el día).');}
     if(!c.length){AV.push('Jueves: aseo semanal de Esterilización sin responsable disponible.');return;}
-    add(c[idx%c.length],'Jueves','aseo','dia',{texto:'Aseo semanal de Esterilización, todo el día'});
+    var best=null,bs=1e9;c.forEach(function(n,i){var sc=(cuenta[n]||0)*100+(((i-idx)%c.length)+c.length)%c.length;if(sc<bs){bs=sc;best=n;}});
+    add(best,'Jueves','aseo','dia',{texto:'Aseo semanal de Esterilización, todo el día'});
   })();
   // ----- Dispensario 1 (2° piso) -----
   var d1a=pers('d1','T1'),d1b=pers('d1','T2');
@@ -26383,6 +26407,12 @@ function genSemana(ini,tipo,idx,NM){
 
 /* ---------- publicar ---------- */
 function semanaDe(ini){var k=Object.keys(semanas||{}).filter(function(x){return semanas[x]&&semanas[x].ini===ini;})[0];return k||null;}
+function asegurarHorarios(lista){
+  var nuevos=[];lista.forEach(function(sm){sm.bloques.forEach(function(b){if(b.horario&&HORARIOS_BASE.indexOf(b.horario)<0&&horariosExtra.indexOf(b.horario)<0&&nuevos.indexOf(b.horario)<0)nuevos.push(b.horario);});});
+  if(!nuevos.length)return Promise.resolve();
+  nuevos.forEach(function(h){horariosExtra.push(h);});aplicarHorariosExtra();
+  return sedeRef('horariosExtra').set(horariosExtra);
+}
 function publicarSemana(s){
   var id=semanaDe(s.ini),p=Promise.resolve();
   if(!id){
@@ -26403,7 +26433,7 @@ function publicarSemana(s){
 
 /* ---------- interfaz ---------- */
 function ov(){var o=document.getElementById('tgOv');if(o)o.remove();o=document.createElement('div');o.id='tgOv';o.style.cssText='position:fixed;inset:0;z-index:9600;background:#0b1220;color:#e5e7eb;overflow:auto;padding:14px;font-family:inherit';document.body.appendChild(o);return o;}
-var CSS='#tgOv .c{background:#16233d;border-radius:12px;padding:12px;margin:10px 0}#tgOv .g{color:#9ca3af;font-size:11px}#tgOv .b{display:inline-block;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;border:0;font-family:inherit;font-size:12px;margin:0 6px 6px 0;cursor:pointer}#tgOv .p{background:linear-gradient(135deg,#0891b2,#22d3ee);font-weight:700}#tgOv .r{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;gap:6px}#tgOv .ch{display:inline-block;font-size:11px;padding:5px 9px;border-radius:12px;margin-left:3px;background:rgba(255,255,255,.08);color:#9ca3af;border:0;font-family:inherit;cursor:pointer}#tgOv .o1{background:rgba(34,211,238,.25);color:#22d3ee;font-weight:700}#tgOv .o2{background:rgba(167,139,250,.25);color:#a78bfa;font-weight:700}#tgOv .oa{background:rgba(251,191,36,.2);color:#fbbf24;font-weight:700}#tgOv .h{font-size:11px;letter-spacing:.08em;color:#22d3ee;margin:12px 0 2px}#tgOv input,#tgOv select{background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px;font-family:inherit;font-size:12px}#tgOv .tab{display:inline-block;padding:7px 16px;border-radius:8px;font-size:12px;margin-right:6px;background:rgba(255,255,255,.08);cursor:pointer;color:#fff;border:0;font-family:inherit}#tgOv .ta{background:rgba(34,211,238,.25);color:#22d3ee;font-weight:700}#tgOv table{border-collapse:collapse;width:100%;font-size:11px}#tgOv td,#tgOv th{padding:4px 3px;border-top:1px solid rgba(255,255,255,.08);text-align:left}';
+var CSS='#tgOv{background:#0b1220!important;color:#e5e7eb!important}#tgOv .c{background:#16233d;border-radius:12px;padding:12px;margin:10px 0}#tgOv .g{color:#9ca3af;font-size:11px}#tgOv .b{display:inline-block;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;border:0;font-family:inherit;font-size:12px;margin:0 6px 6px 0;cursor:pointer}#tgOv .p{background:linear-gradient(135deg,#0891b2,#22d3ee);font-weight:700}#tgOv .r{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;gap:6px}#tgOv .ch{display:inline-block;font-size:11px;padding:5px 9px;border-radius:12px;margin-left:3px;background:rgba(255,255,255,.08);color:#9ca3af;border:0;font-family:inherit;cursor:pointer}#tgOv .o1{background:rgba(34,211,238,.25);color:#22d3ee;font-weight:700}#tgOv .o2{background:rgba(167,139,250,.25);color:#a78bfa;font-weight:700}#tgOv .oa{background:rgba(251,191,36,.2);color:#fbbf24;font-weight:700}#tgOv .h{font-size:11px;letter-spacing:.08em;color:#22d3ee;margin:12px 0 2px}#tgOv input,#tgOv select{background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px;font-family:inherit;font-size:12px}#tgOv .tab{display:inline-block;padding:7px 16px;border-radius:8px;font-size:12px;margin-right:6px;background:rgba(255,255,255,.08);cursor:pointer;color:#fff;border:0;font-family:inherit}#tgOv .ta{background:rgba(34,211,238,.25);color:#22d3ee;font-weight:700}#tgOv table{border-collapse:collapse;width:100%;font-size:11px}#tgOv td,#tgOv th{padding:4px 3px;border-top:1px solid rgba(255,255,255,.08);text-align:left}';
 window.tgAbrir=function(){
   if(!adminUnlocked){alert('Solo la jefatura puede generar turnos.');return;}
   if(!document.getElementById('tgCss')){var st=document.createElement('style');st.id='tgCss';st.textContent=CSS;document.head.appendChild(st);}
@@ -26420,18 +26450,37 @@ function pintar(){
     EQUIPO.filter(function(p){return p.s===sv.id;}).forEach(function(p,i){
       var r=(c.rot[tab][p.n]||{}).rol||'',k=p.n.replace(/'/g,'');
       var btn=function(v,cl,t){return '<button class="ch'+(r===v?' '+cl:'')+'" onclick="tgSet(\''+k+'\',\''+v+'\')">'+t+'</button>';};
-      h+='<div class="r"><span><b>'+eeq(p.n)+'</b> <span class="g">'+(p.enf?'enfermero/a':'TENS')+(c.reemplazo===p.n?' · ★ reemplazo':'')+'</span></span><span>'+btn('T1','o1','T1')+btn('T2','o2','T2')+(sv.id==='est'?btn('AP','oa','Apoyo'):'')+btn('','', '—')+'</span></div>';
+      var ap=(c.apoyo[tab]||{})[p.n],apOn=ap&&ap.dias&&ap.dias.length,abierto=TG.open&&TG.open[tab+p.n];
+      var apBtn=sv.id==='est'?btn('AP','oa','Apoyo'):'<button class="ch'+(apOn?' oa':'')+'" onclick="tgApAbrir(\''+k+'\')">Apoyo'+(apOn?' ('+ap.dias.length+')':'')+' ▾</button>';
+      h+='<div class="r"><span><b>'+eeq(p.n)+'</b> <span class="g">'+(p.enf?'enfermero/a':'TENS')+(c.reemplazo===p.n?' · ★ reemplazo':'')+'</span></span><span>'+btn('T1','o1','T1')+btn('T2','o2','T2')+apBtn+btn('','', '—')+'</span></div>';
+      if(sv.id!=='est'&&abierto){
+        h+='<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:9px;margin:2px 0 8px"><div style="font-size:11.5px;font-weight:700;color:#fbbf24">Apoya en Esterilización</div><div class="g" style="margin:2px 0 6px">Los días y la jornada en que su servicio no tiene actividad. Antes hace sus tareas del servicio (rondas y pedidos de la mañana).</div>'+
+        DL.map(function(d){var on=ap&&ap.dias&&ap.dias.indexOf(d)>-1;return '<button class="ch'+(on?' oa':'')+'" style="width:42px;text-align:center" onclick="tgApDia(\''+k+'\',\''+d+'\')">'+d.slice(0,3)+'</button>';}).join('')+
+        '<div style="margin-top:7px;font-size:11.5px">Jornada: '+[['am','AM'],['pm','PM'],['dia','Todo el día']].map(function(x){return '<button class="ch'+(((ap&&ap.j)||'am')===x[0]?' oa':'')+'" onclick="tgApJ(\''+k+'\',\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</div></div>';
+      }
     });
   });
-  h+='<div class="g" style="margin-top:8px">T1: lunes a sábado · T2: lunes a viernes · Apoyo (solo Esterilización): cubre donde falte.</div></div>';
+  h+='<div class="g" style="margin-top:8px">T1: lunes a sábado · T2: lunes a viernes. En Esterilización, Apoyo cubre donde falte. En dispensarios y Rayos, Apoyo ▾ marca los días y la jornada en que la persona va a trabajar a Esterilización.</div></div>';
   var hz=function(t,d){return '<input data-t="'+t+'" data-d="'+d+'" value="'+eeq(c.h[t][d]||'')+'" style="width:96px" onchange="tgHor(this)">';};
-  h+='<div class="c"><b style="font-size:13px">Horarios y ajustes</b><div class="g" style="margin:2px 0 6px">Horarios por confirmar: se usan al crear los turnos de cada persona.</div><table><tr><th></th>'+DL.map(function(d){return '<th>'+d.slice(0,3)+'</th>';}).join('')+'</tr><tr><td>T1</td>'+DL.map(function(d){return '<td>'+hz('T1',d)+'</td>';}).join('')+'</tr><tr><td>T2</td>'+DL.map(function(d){return '<td>'+(d==='Sábado'?'':hz('T2',d))+'</td>';}).join('')+'</tr></table>';
+  h+='<div class="c"><b style="font-size:13px">Horarios y ajustes</b><div class="g" style="margin:2px 0 6px">Horarios por confirmar: se usan al crear los turnos de cada persona.</div><table><tr><th></th>'+DL.map(function(d){return '<th>'+d.slice(0,3)+'</th>';}).join('')+'</tr><tr><td>T1</td>'+DL.map(function(d){return '<td>'+hz('T1',d)+'</td>';}).join('')+'</tr><tr><td>T2</td>'+DL.map(function(d){return '<td>'+(d==='Sábado'?'':hz('T2',d))+'</td>';}).join('')+'</tr><tr><td>Disp. T1</td>'+DL.map(function(d){return '<td><input data-d="'+d+'" value="'+eeq(c.D1[d]||'')+'" style="width:96px" onchange="tgHorD(this)"></td>';}).join('')+'</tr></table><div class="g" style="margin-top:6px">T1 y T2 valen para Esterilización y Rayos. En dispensarios, el T2 entra cuando termina el T1, y antes trabaja en Esterilización desde las <input value="'+eeq(c.dispT2Est)+'" style="width:60px" onchange="TGcfg(\'dispT2Est\',this.value.trim())"> hrs.</div>';
   h+='<div style="margin-top:8px;font-size:12px">Reemplazo: <select onchange="TGcfg(\'reemplazo\',this.value)">'+EQUIPO.map(function(p){return '<option'+(c.reemplazo===p.n?' selected':'')+'>'+eeq(p.n)+'</option>';}).join('')+'</select> · REAS semanal: <select onchange="TGcfg(\'reasDia\',this.value)">'+DL.map(function(d){return '<option'+(c.reasDia===d?' selected':'')+'>'+d+'</option>';}).join('')+'</select></div></div>';
   h+='<div class="c"><b style="font-size:13px">Generar mes</b><div class="g" style="margin:2px 0 8px">Alterna A y B. Respeta permisos y ausencias aprobadas. Nada llega al equipo hasta que publiques.</div><div style="font-size:12px;line-height:2.1">Desde (lunes): <input type="date" value="'+(c.inicio||'')+'" onchange="TGcfg(\'inicio\',this.value)"> · Semanas: <input type="number" min="1" max="6" value="'+c.semanas+'" style="width:56px" onchange="TGcfg(\'semanas\',+this.value)"> · Empieza con: <select onchange="TGcfg(\'empieza\',this.value)"><option'+(c.empieza==='A'?' selected':'')+'>A</option><option'+(c.empieza==='B'?' selected':'')+'>B</option></select><br>DEA (3° piso) desde la semana de: <input type="date" value="'+(c.deaDesde||'')+'" onchange="TGcfg(\'deaDesde\',this.value)"> <span class="g">luego cada 4 semanas</span></div><div style="margin-top:8px"><button class="b p" onclick="tgGenerar()" style="padding:12px 16px;font-size:14px">Generar borrador del mes</button></div></div>';
   if(TG.draft)h+=htmlDraft();
   h+='</div>';o.innerHTML=h;
 }
 window.tgTab=function(t){TG.tab=t;pintar();};
+function realDe(k){return EQUIPO.filter(function(p){return p.n.replace(/'/g,'')===k;})[0].n;}
+window.tgApAbrir=function(k){TG.open=TG.open||{};TG.open[TG.tab+realDe(k)]=!TG.open[TG.tab+realDe(k)];pintar();};
+window.tgApDia=function(k,d){
+  var n=realDe(k),m=TG.cfg.apoyo[TG.tab]=TG.cfg.apoyo[TG.tab]||{},a=m[n]=m[n]||{dias:[],j:'am'};
+  var i=a.dias.indexOf(d);if(i>-1)a.dias.splice(i,1);else a.dias.push(d);
+  if(!a.dias.length)delete m[n];guardarCfg();pintar();
+};
+window.tgApJ=function(k,j){
+  var n=realDe(k),m=TG.cfg.apoyo[TG.tab]=TG.cfg.apoyo[TG.tab]||{},a=m[n]=m[n]||{dias:[],j:'am'};
+  a.j=j;guardarCfg();pintar();
+};
+window.tgHorD=function(i){TG.cfg.D1[i.dataset.d]=i.value.trim();guardarCfg();};
 window.tgSet=function(n,r){var real=EQUIPO.filter(function(p){return p.n.replace(/'/g,'')===n;})[0].n;if(!r)delete TG.cfg.rot[TG.tab][real];else TG.cfg.rot[TG.tab][real]={rol:r};guardarCfg();pintar();};
 window.tgInvertir=function(){
   if(!confirm('Esto reemplaza la semana B: T1 pasa a T2 y T2 a T1 respecto de la A. ¿Continuar?'))return;
@@ -26461,7 +26510,7 @@ function htmlDraft(){
 window.TG_descartar=function(){TG.draft=null;pintar();};
 window.tgPublicar=function(){
   if(!confirm('¿Publicar '+TG.draft.length+' semanas? El equipo las verá de inmediato.'))return;
-  var p=Promise.resolve();TG.draft.forEach(function(s){p=p.then(function(){return publicarSemana(s);});});
+  var p=asegurarHorarios(TG.draft);TG.draft.forEach(function(s){p=p.then(function(){return publicarSemana(s);});});
   p.then(function(){alert('Listo: '+TG.draft.length+' semanas publicadas. Revísalas y edítalas desde Turnos.');TG.draft=null;pintar();}).catch(function(e){alert('No se pudo publicar: '+((e&&e.message)||e));});
 };
 window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG0};
