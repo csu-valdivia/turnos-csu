@@ -25591,7 +25591,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.4 · 15-nov 19:40';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.5 · 15-nov 20:10';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -26189,7 +26189,8 @@ var CFG0={reemplazo:'Diego Sepúlveda',inicio:'',semanas:4,empieza:'A',deaDesde:
  apoyo:{A:{},B:{}},
  h:{T1:{Lunes:'07:45–17:00',Martes:'07:45–17:00','Miércoles':'07:45–17:00',Jueves:'07:45–17:00',Viernes:'07:45–17:00','Sábado':'09:00–14:00'},T2:{Lunes:'10:00–20:00',Martes:'10:00–20:00','Miércoles':'10:00–20:00',Jueves:'10:00–20:00',Viernes:'10:00–20:00'}},
  rot:{A:{},B:{}}};
-var RAYOS_ENT={Lunes:'07:45–09:00',Martes:'07:45–09:00','Miércoles':'07:45–09:00',Viernes:'08:00–09:00'};
+var RAYOS_RONDA={Lunes:['07:45','08:00'],Martes:['07:45','08:00'],'Miércoles':['07:45','08:00'],Viernes:['08:00','08:15']};
+var RAYOS_ENT={Lunes:'08:00–09:00',Martes:'08:00–09:00','Miércoles':'08:00–09:00',Viernes:'08:15–09:00'};
 var TG={cfg:null,draft:null};
 function nz(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();}
 function clone(o){return JSON.parse(JSON.stringify(o));}
@@ -26300,6 +26301,7 @@ function genSemana(ini,tipo,idx,NM){
         B.push({dia:d,nombre:nm,area:sv.area,horario:fin+'–20:00'});
       }else if(p.s==='ray'&&r==='T1'&&RAYOS_ENT[d]){
         var hr=cfg.h.T1[d],fin3=finDe(hr);
+        B.push({dia:d,nombre:nm,area:sv.area,horario:RAYOS_RONDA[d][0]+'–'+RAYOS_RONDA[d][1]});
         B.push({dia:d,nombre:nm,area:'Esterilización',horario:RAYOS_ENT[d]});
         B.push({dia:d,nombre:nm,area:sv.area,horario:finDe(RAYOS_ENT[d])+'–'+fin3});
       }else{
@@ -26404,7 +26406,6 @@ function genSemana(ini,tipo,idx,NM){
     var m=v.reduce(function(a,b){return a+b;},0)/v.length;
     Object.keys(cuenta).forEach(function(k){if(cuenta[k]>m*1.6&&cuenta[k]-m>5)AV.push('Carga alta: '+k+' tiene '+cuenta[k]+' designaciones (promedio '+Math.round(m)+'). Revisa marcas T1/T2/Apoyo.');});
   })();
-  if(pers('ray','T1').length)AV.push('Rayos T1: lunes a miércoles (07:45) y viernes (08:00) está en Esterilización hasta las 09:00; la ronda de apertura de Rayos queda para después de esa hora.');
   // límites
   var sinRol=EQUIPO.filter(function(p){return !rolDe(p.n);}).map(function(p){return p.n;});
   if(sinRol.length)AV.push('Sin turno marcado (A/B): '+sinRol.join(', ')+'.');
