@@ -14349,7 +14349,7 @@ function gxGridRender(){
   var host=document.getElementById('gxCmGri');if(!host||host.style.display==='none')return;
   var data=gxGridData();var pers=gxNombresTodos();Object.keys(data).forEach(function(n){if(pers.indexOf(n)<0)pers.push(n);});
   var sem=(W&&semanas&&semanas[W])?(semanas[W].nombre||(semanas[W].ini+' al '+semanas[W].fin)):'';
-  var head='<div class="gxg-top"><div><b class="gxg-t">'+(sem?gxEsc(sem):'Sin semana confirmada')+'</b><div class="gxg-s">Toca una celda para poner área y horario. Para sin atención, libre o equipo clave usa Tarjetas o Tabla.</div></div><button type="button" class="gxchip" data-g="copiar">'+gxIc('copy',14)+' Copiar de otra semana</button></div>';
+  var head='<div class="gxg-top"><div><b class="gxg-t">'+(sem?gxEsc(sem):'Sin semana confirmada')+'</b><div class="gxg-s">Toca una celda para poner área y horario. Para sin atención, libre o equipo clave usa Tarjetas o Tabla.</div></div><button type="button" class="gxchip" data-g="copiar">'+gxIc('copy',14)+' Copiar de otra semana</button><button type="button" class="gxchip" data-g="gen">🔁 Generar mes</button></div>';
   var rows=pers.map(function(n){
     var tds=GX_DIAS.map(function(d){
       var L=(data[n]&&data[n][d])||[];
@@ -14417,6 +14417,7 @@ function gxGridInit(){
     var b=e.target.closest('[data-g]');if(!b)return;var g=b.dataset.g;
     if(g==='cel'){gxGridCelda(decodeURIComponent(b.dataset.n),b.dataset.d);return;}
     if(g==='copiar'){if(typeof abrirCopiarTurnos==='function')abrirCopiarTurnos();return;}
+    if(g==='gen'){if(typeof tgAbrir==='function')tgAbrir();return;}
     if(g==='descartar'){if(confirm('¿Descartar los turnos por guardar?')){GXG.pend=[];gxGridRender();}return;}
     if(g==='guardar'){
       if(!W){alert('⚠ Confirma una semana primero antes de cargar turnos.');return;}
@@ -25589,7 +25590,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v9.1 · 13-nov 15:30';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.0 · 15-nov 17:10';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -26165,6 +26166,289 @@ window.tcBoot=function(){var h=location.hash;if(/^#tc=/.test(h))tcSigner(h.slice
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tcBoot);else setTimeout(tcBoot,0);
 window.addEventListener('hashchange',function(){if(/^#(tc|vf)=/.test(location.hash))tcBoot();});
 window.__tc={pdfFirmado:pdfFirmado,runOk:runOk,sha:sha};
+})();
+
+/* ===== Generador de turnos y designaciones (semana A/B, T1/T2) ===== */
+(function(){
+var DL=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],LV=DL.slice(0,5),LJ=DL.slice(0,4);
+var SERV=[
+ {id:'est',nom:'Esterilización',area:'Esterilización'},
+ {id:'d1',nom:'Dispensario 1 · 2° piso',area:'Dispensario 1'},
+ {id:'d2',nom:'Dispensario 2 · 3° piso',area:'Dispensario 2'},
+ {id:'ray',nom:'Rayos',area:'Rayos'}
+];
+var EQUIPO=[
+ {n:'Camila Parra',s:'est',enf:1},{n:'Diego Sepúlveda',s:'est',enf:1},{n:'Constanza Casner',s:'est',enf:1},{n:'Priscila Velásquez',s:'est'},
+ {n:'Gisa Mayorga',s:'d1'},{n:'Barbara De Vicenzi',s:'d1'},
+ {n:'Javiera Castro',s:'d2'},{n:'Nathaly Villanueva',s:'d2'},
+ {n:'Marcia Matus',s:'ray'},{n:'Jacqueline Santana',s:'ray'}
+];
+var CFG0={reemplazo:'Diego Sepúlveda',inicio:'',semanas:4,empieza:'A',deaDesde:'',reasDia:'Martes',
+ h:{T1:{Lunes:'07:45–17:00',Martes:'07:45–17:00','Miércoles':'07:45–17:00',Jueves:'07:45–17:00',Viernes:'07:45–17:00','Sábado':'09:00–14:00'},T2:{Lunes:'10:00–20:00',Martes:'10:00–20:00','Miércoles':'10:00–20:00',Jueves:'10:00–20:00',Viernes:'10:00–20:00'}},
+ rot:{A:{},B:{}}};
+var TG={cfg:null,draft:null};
+function nz(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function ymd(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function addDias(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return ymd(d);}
+function lunesDe(s){var d=new Date(s+'T12:00:00'),g=d.getDay();d.setDate(d.getDate()+(g===0?-6:1-g));return ymd(d);}
+function eeq(a){return String(a).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- configuración ---------- */
+function cargarCfg(){
+  return sedeRef('rotacionCfg').once('value').then(function(s){
+    var v=s.val()||{},c=clone(CFG0);
+    ['reemplazo','inicio','semanas','empieza','deaDesde','reasDia'].forEach(function(k){if(v[k]!=null)c[k]=v[k];});
+    if(v.h)['T1','T2'].forEach(function(t){if(v.h[t])Object.keys(v.h[t]).forEach(function(d){c.h[t][d]=v.h[t][d];});});
+    if(v.rot){['A','B'].forEach(function(x){if(v.rot[x])c.rot[x]=v.rot[x];});}
+    TG.cfg=c;return c;
+  });
+}
+function guardarCfg(){return sedeRef('rotacionCfg').set(TG.cfg);}
+
+/* ---------- nombres reales del sistema ---------- */
+function resolverNombres(){
+  var lista=(typeof nombres!=='undefined'&&nombres)||[],mapa={},faltan=[];
+  EQUIPO.forEach(function(p){
+    var k=nz(p.n),hit=lista.filter(function(x){return nz(x)===k;})[0];
+    if(!hit){var ps=k.split(' '),a=ps[0],b=ps[ps.length-1];hit=lista.filter(function(x){var y=nz(x);return y.indexOf(a)===0&&y.indexOf(b)>-1;})[0];}
+    if(hit)mapa[p.n]=hit;else{mapa[p.n]=p.n;faltan.push(p.n);}
+  });
+  return {mapa:mapa,faltan:faltan};
+}
+
+/* ---------- resolución de tipos de tarea ---------- */
+function tipoRol(re,fallback){
+  var rt=(typeof rolesTecnicos!=='undefined'&&rolesTecnicos)||{},ks=Object.keys(rt);
+  for(var i=0;i<ks.length;i++){var r=rt[ks[i]];if(r&&r.nombre&&re.test(r.nombre))return ks[i];}
+  return fallback;
+}
+function tipoRonda(){
+  var rt=(typeof rolesTecnicos!=='undefined'&&rolesTecnicos)||{},ks=Object.keys(rt);
+  for(var i=0;i<ks.length;i++){if(rt[ks[i]]&&rt[ks[i]].tipoRegistro==='ronda')return ks[i];}
+  return null;
+}
+
+/* ---------- ausencias ---------- */
+function ausente(nombre,fecha,j){
+  try{return !!tareaExcluidaPorAusencia({jornada:j||'dia'},nombre,fecha);}catch(e){return false;}
+}
+
+/* ---------- generación pura de una semana ---------- */
+// ini = lunes (YYYY-MM-DD), tipo = 'A'|'B', idx = número de semana dentro del mes generado
+function genSemana(ini,tipo,idx,NM){
+  var cfg=TG.cfg,rot=cfg.rot[tipo]||{},B=[],T=[],AV=[];
+  var rondaTipo=tipoRonda();
+  var tDEA=tipoRol(/\bDEA\b/i,null),tCons=tipoRol(/consentim/i,'consentimiento'),tLab=tipoRol(/laborat/i,null),tBolso=tipoRol(/bolso/i,'bolso_azul');
+  var fechaDe={};DL.forEach(function(d,i){fechaDe[d]=addDias(ini,i);});
+  function rolDe(n){return (rot[n]&&rot[n].rol)||'';}
+  function pers(s,r){return EQUIPO.filter(function(p){return p.s===s&&rolDe(p.n)===r;}).map(function(p){return NM[p.n];});}
+  function persEq(p){return NM[p.n];}
+  function libre(n,d,j){return !ausente(n,fechaDe[d],j);}
+  var cuenta={};
+  function add(nombre,dia,tipo,j,extra){
+    var t={dia:dia,nombre:nombre,tipo:tipo,texto:'',jornada:j};
+    if(extra)Object.keys(extra).forEach(function(k){t[k]=extra[k];});
+    T.push(t);cuenta[nombre]=(cuenta[nombre]||0)+1;
+  }
+  // cadena de cobertura cuando falta alguien: apoyo de Esterilización → Disp.1 T1 (L–J) → Disp.2 T1 (Jueves) → reemplazo
+  function cubrir(dia,j,omitir){
+    var ch=[];
+    EQUIPO.filter(function(p){return p.s==='est'&&rolDe(p.n)==='AP';}).forEach(function(p){ch.push(persEq(p));});
+    if(LJ.indexOf(dia)>-1)pers('d1','T1').forEach(function(n){ch.push(n);});
+    if(dia==='Jueves')pers('d2','T1').forEach(function(n){ch.push(n);});
+    ch.push(NM[cfg.reemplazo]||cfg.reemplazo);
+    for(var i=0;i<ch.length;i++){if(ch[i]&&omitir.indexOf(ch[i])<0&&libre(ch[i],dia,j))return ch[i];}
+    return null;
+  }
+  // asigna una designación a un responsable (rotando entre varios del mismo rol); si falta, cubre
+  function designar(lista,dia,j,tipo,extra,etiqueta){
+    if(!lista.length){AV.push(dia+': '+etiqueta+' sin responsable (nadie marcado en ese turno).');return;}
+    var elegido=null;
+    for(var k=0;k<lista.length;k++){var c=lista[(idx+k)%lista.length];if(libre(c,dia,j)){elegido=c;break;}}
+    if(!elegido){var cv=cubrir(dia,j,lista);if(cv){elegido=cv;AV.push(dia+': '+etiqueta+' la cubre '+cv+' (ausente el titular).');}else{AV.push(dia+': '+etiqueta+' SIN COBERTURA (titular ausente y sin reemplazo disponible).');return;}}
+    add(elegido,dia,tipo,j,extra);
+  }
+  function ronda(unidad,dia,j,lista,etq){
+    if(!rondaTipo){if(dia==='Lunes')AV.push('No existe el rol técnico de ronda: no se asignaron rondas.');return;}
+    designar(lista,dia,j,rondaTipo,{sector:rondaNombre(unidad)},etq);
+  }
+  var PED='Pedido antes de las 10:00';
+  // ----- bloques (turnos) -----
+  EQUIPO.forEach(function(p){
+    var r=rolDe(p.n);if(!r)return;
+    var sv=SERV.filter(function(s){return s.id===p.s;})[0],nm=NM[p.n];
+    var h=r==='T2'?cfg.h.T2:cfg.h.T1,dias=r==='T2'?LV:DL;
+    dias.forEach(function(d){
+      if(ausente(nm,fechaDe[d],'dia')){AV.push(d+': '+nm+' ausente todo el día, sin turno.');return;}
+      var b={dia:d,nombre:nm,area:sv.area,horario:h[d]};
+      if(p.s==='est'&&(r==='T1'||r==='T2'))b.turno=r;
+      B.push(b);
+    });
+  });
+  // ----- Esterilización -----
+  var eT1=pers('est','T1'),eT2=pers('est','T2');
+  DL.forEach(function(d){
+    designar(eT1,d,'am','temp_ester',null,'Temperatura de Esterilización');
+    designar(eT1,d,'am','conductividad',null,'Conductividad');
+    designar(eT1,d,'am','temp_pabellon',null,'Temperatura de Pabellón');
+    designar(eT1,d,'am','clinica_privada',null,'Clínica privada AM');
+    if(d==='Lunes')designar(eT1,d,'am','pedido',{sector:'Esterilización',texto:PED},'Pedido de Esterilización');
+    // ronda AM: una unidad por persona T1 (empaque, autoclave)
+    var unid=['est_empaque','est_autoclave'];
+    eT1.slice(0,2).forEach(function(n,i){if(libre(n,d,'am')&&rondaTipo)add(n,d,rondaTipo,'am',{sector:rondaNombre(unid[i])});});
+    if(!eT1.length)AV.push(d+': ronda AM de Esterilización sin responsable.');
+    if(LV.indexOf(d)>-1){
+      designar(eT2,d,'pm','clinica_privada',null,'Clínica privada PM');
+      ronda('est_lavado',d,'pm',eT2,'Ronda PM de Esterilización');
+    }
+  });
+  // aseo del jueves: apoyo de Esterilización, o Disp.1 / Disp.2 T1 (no hay estudiantes), rotando
+  (function(){
+    var c=[];EQUIPO.filter(function(p){return p.s==='est'&&rolDe(p.n)==='AP';}).forEach(function(p){c.push(persEq(p));});
+    pers('d1','T1').forEach(function(n){c.push(n);});pers('d2','T1').forEach(function(n){c.push(n);});
+    c=c.filter(function(n){return libre(n,'Jueves','dia');});
+    if(!c.length){AV.push('Jueves: aseo semanal de Esterilización sin responsable disponible.');return;}
+    add(c[idx%c.length],'Jueves','aseo','dia',{texto:'Aseo semanal de Esterilización, todo el día'});
+  })();
+  // ----- Dispensario 1 (2° piso) -----
+  var d1a=pers('d1','T1'),d1b=pers('d1','T2');
+  DL.forEach(function(d){
+    ronda('sub_dispensario1',d,'am',d1a,'Ronda AM Dispensario 1');
+    if(d==='Lunes')designar(d1a,d,'am','pedido',{sector:'Dispensario 1',texto:PED},'Pedido Dispensario 1');
+    if(LV.indexOf(d)>-1)ronda('disp1_t2',d,'pm',d1b,'Ronda PM Dispensario 1');
+  });
+  // ----- Dispensario 2 (3° piso) -----
+  var d2a=pers('d2','T1'),d2b=pers('d2','T2');
+  DL.forEach(function(d){
+    ronda('sub_dispensario2',d,'am',d2a,'Ronda AM Dispensario 2');
+    designar(d2a,d,'am','temp_refri',null,'Temperatura de refrigeradores');
+    if(d==='Miércoles')designar(d2a,d,'am','pedido',{sector:'Dispensario 2',texto:PED},'Pedido Dispensario 2');
+    if(LV.indexOf(d)>-1)ronda('disp2_t2',d,'pm',d2b,'Ronda PM Dispensario 2');
+  });
+  designar(d2a,'Lunes','am',tBolso,null,'Bolso clave azul');
+  // DEA mensual: desde la semana elegida, cada 4 semanas
+  (function(){
+    if(!tDEA){AV.push('No existe el rol técnico del DEA: no se asignó.');return;}
+    if(!cfg.deaDesde)return;
+    var dif=Math.round((new Date(ini+'T12:00:00')-new Date(lunesDe(cfg.deaDesde)+'T12:00:00'))/604800000);
+    if(dif>=0&&dif%4===0)designar(d2a,'Lunes','am',tDEA,null,'Revisión mensual del DEA');
+  })();
+  // ----- Rayos -----
+  var rA=pers('ray','T1'),rB=pers('ray','T2');
+  DL.forEach(function(d){
+    ronda('sub_rayos',d,'am',rA,'Ronda AM Rayos');
+    rA.forEach(function(n){if(libre(n,d,'am'))add(n,d,'tarea','am',{texto:'Apoyo en entrega de material de Esterilización hasta las 09:00'});});
+    if(d==='Miércoles')designar(rA,d,'am','pedido',{sector:'Rayos',texto:PED},'Pedido Rayos');
+    if(d===cfg.reasDia)designar(rA,d,'am','reas',null,'REAS semanal');
+    if(LV.indexOf(d)>-1)ronda('rayos_t2',d,'pm',rB,'Ronda PM Rayos');
+  });
+  // ----- Solo enfermeros: consentimientos AM/PM y revisión de laboratorios, rotando -----
+  var enf=EQUIPO.filter(function(p){return p.enf;}).map(persEq);
+  DL.forEach(function(d,di){
+    var usado=[];
+    ['am','pm'].forEach(function(j){
+      if(j==='pm'&&LV.indexOf(d)<0)return;
+      var c=null;
+      for(var k=0;k<enf.length;k++){var x=enf[(idx*6+di*2+(j==='pm'?1:0)+k)%enf.length];if(usado.indexOf(x)<0&&libre(x,d,j)){c=x;break;}}
+      if(!c){AV.push(d+': revisión de consentimientos '+j.toUpperCase()+' sin enfermero disponible.');return;}
+      usado.push(c);add(c,d,tCons,j,{texto:'Revisión de consentimientos'});
+    });
+    var l=null;
+    for(var k2=0;k2<enf.length;k2++){var y=enf[(idx*6+di+k2)%enf.length];if(libre(y,d,'am')){l=y;break;}}
+    if(l){if(tLab)add(l,d,tLab,'am',null);else add(l,d,'tarea','am',{texto:'Revisión de trabajos de laboratorio (mensajes a estudiantes, laboratorios o docentes)'});}
+    else AV.push(d+': revisión de laboratorios sin enfermero disponible.');
+  });
+  // límites
+  var sinRol=EQUIPO.filter(function(p){return !rolDe(p.n);}).map(function(p){return p.n;});
+  if(sinRol.length)AV.push('Sin turno marcado (A/B): '+sinRol.join(', ')+'.');
+  return {ini:ini,fin:addDias(ini,5),tipo:tipo,bloques:B,tareas:T,avisos:AV,cuenta:cuenta};
+}
+
+/* ---------- publicar ---------- */
+function semanaDe(ini){var k=Object.keys(semanas||{}).filter(function(x){return semanas[x]&&semanas[x].ini===ini;})[0];return k||null;}
+function publicarSemana(s){
+  var id=semanaDe(s.ini),p=Promise.resolve();
+  if(!id){
+    var nom=s.ini.slice(8)+'-'+s.ini.slice(5,7)+' al '+s.fin.slice(8)+'-'+s.fin.slice(5,7)+' (semana '+s.tipo+')';
+    var r=sedeRef('semanas').push({ini:s.ini,fin:s.fin,nombre:nom});id=r.key;p=Promise.resolve(r);
+  }
+  return p.then(function(){
+    var base='sedes/'+S+'/semanas/'+id,up={};
+    up[base+'/bloques']=null;up[base+'/tareas']=null;
+    return db.ref().update(up).then(function(){
+      var u2={};
+      s.bloques.forEach(function(b,i){u2[base+'/bloques/'+db.ref().push().key]=b;});
+      s.tareas.forEach(function(t,i){u2[base+'/tareas/'+db.ref().push().key]=t;});
+      return db.ref().update(u2);
+    });
+  }).then(function(){return id;});
+}
+
+/* ---------- interfaz ---------- */
+function ov(){var o=document.getElementById('tgOv');if(o)o.remove();o=document.createElement('div');o.id='tgOv';o.style.cssText='position:fixed;inset:0;z-index:9600;background:#0b1220;color:#e5e7eb;overflow:auto;padding:14px;font-family:inherit';document.body.appendChild(o);return o;}
+var CSS='#tgOv .c{background:#16233d;border-radius:12px;padding:12px;margin:10px 0}#tgOv .g{color:#9ca3af;font-size:11px}#tgOv .b{display:inline-block;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;border:0;font-family:inherit;font-size:12px;margin:0 6px 6px 0;cursor:pointer}#tgOv .p{background:linear-gradient(135deg,#0891b2,#22d3ee);font-weight:700}#tgOv .r{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;gap:6px}#tgOv .ch{display:inline-block;font-size:11px;padding:5px 9px;border-radius:12px;margin-left:3px;background:rgba(255,255,255,.08);color:#9ca3af;border:0;font-family:inherit;cursor:pointer}#tgOv .o1{background:rgba(34,211,238,.25);color:#22d3ee;font-weight:700}#tgOv .o2{background:rgba(167,139,250,.25);color:#a78bfa;font-weight:700}#tgOv .oa{background:rgba(251,191,36,.2);color:#fbbf24;font-weight:700}#tgOv .h{font-size:11px;letter-spacing:.08em;color:#22d3ee;margin:12px 0 2px}#tgOv input,#tgOv select{background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px;font-family:inherit;font-size:12px}#tgOv .tab{display:inline-block;padding:7px 16px;border-radius:8px;font-size:12px;margin-right:6px;background:rgba(255,255,255,.08);cursor:pointer;color:#fff;border:0;font-family:inherit}#tgOv .ta{background:rgba(34,211,238,.25);color:#22d3ee;font-weight:700}#tgOv table{border-collapse:collapse;width:100%;font-size:11px}#tgOv td,#tgOv th{padding:4px 3px;border-top:1px solid rgba(255,255,255,.08);text-align:left}';
+window.tgAbrir=function(){
+  if(!adminUnlocked){alert('Solo la jefatura puede generar turnos.');return;}
+  if(!document.getElementById('tgCss')){var st=document.createElement('style');st.id='tgCss';st.textContent=CSS;document.head.appendChild(st);}
+  cargarCfg().then(function(){TG.tab='A';TG.draft=null;pintar();});
+};
+function pintar(){
+  var o=ov(),c=TG.cfg,tab=TG.tab,rn=resolverNombres(),h='';
+  h+='<div style="max-width:560px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:11px;letter-spacing:.1em;color:#22d3ee">TURNOS · EQUIPO Y ROTACIÓN</div><div style="font-size:18px;font-weight:800">Quién va en T1 y T2</div></div><button class="b" onclick="document.getElementById(\'tgOv\').remove()">Cerrar</button></div>';
+  h+='<div class="g" style="margin-top:4px">Se registra una vez por semana tipo; el sistema alterna A y B y reparte las designaciones según el servicio y el turno.</div>';
+  if(rn.faltan.length)h+='<div class="c" style="border:1px solid rgba(251,191,36,.4);font-size:12px;color:#fbbf24">No encontré en la lista de personas de GESTHOR: '+eeq(rn.faltan.join(', '))+'. Revisa que estén cargados con ese nombre.</div>';
+  h+='<div class="c"><button class="tab'+(tab==='A'?' ta':'')+'" onclick="tgTab(\'A\')">Semana A</button><button class="tab'+(tab==='B'?' ta':'')+'" onclick="tgTab(\'B\')">Semana B</button> <button class="b" style="margin-left:6px" onclick="tgInvertir()">Copiar A invirtiendo T1/T2 en B</button>';
+  SERV.forEach(function(sv){
+    h+='<div class="h">'+eeq(sv.nom.toUpperCase())+'</div>';
+    EQUIPO.filter(function(p){return p.s===sv.id;}).forEach(function(p,i){
+      var r=(c.rot[tab][p.n]||{}).rol||'',k=p.n.replace(/'/g,'');
+      var btn=function(v,cl,t){return '<button class="ch'+(r===v?' '+cl:'')+'" onclick="tgSet(\''+k+'\',\''+v+'\')">'+t+'</button>';};
+      h+='<div class="r"><span><b>'+eeq(p.n)+'</b> <span class="g">'+(p.enf?'enfermero/a':'TENS')+(c.reemplazo===p.n?' · ★ reemplazo':'')+'</span></span><span>'+btn('T1','o1','T1')+btn('T2','o2','T2')+(sv.id==='est'?btn('AP','oa','Apoyo'):'')+btn('','', '—')+'</span></div>';
+    });
+  });
+  h+='<div class="g" style="margin-top:8px">T1: lunes a sábado · T2: lunes a viernes · Apoyo (solo Esterilización): cubre donde falte.</div></div>';
+  var hz=function(t,d){return '<input data-t="'+t+'" data-d="'+d+'" value="'+eeq(c.h[t][d]||'')+'" style="width:96px" onchange="tgHor(this)">';};
+  h+='<div class="c"><b style="font-size:13px">Horarios y ajustes</b><div class="g" style="margin:2px 0 6px">Horarios por confirmar: se usan al crear los turnos de cada persona.</div><table><tr><th></th>'+DL.map(function(d){return '<th>'+d.slice(0,3)+'</th>';}).join('')+'</tr><tr><td>T1</td>'+DL.map(function(d){return '<td>'+hz('T1',d)+'</td>';}).join('')+'</tr><tr><td>T2</td>'+DL.map(function(d){return '<td>'+(d==='Sábado'?'':hz('T2',d))+'</td>';}).join('')+'</tr></table>';
+  h+='<div style="margin-top:8px;font-size:12px">Reemplazo: <select onchange="TGcfg(\'reemplazo\',this.value)">'+EQUIPO.map(function(p){return '<option'+(c.reemplazo===p.n?' selected':'')+'>'+eeq(p.n)+'</option>';}).join('')+'</select> · REAS semanal: <select onchange="TGcfg(\'reasDia\',this.value)">'+DL.map(function(d){return '<option'+(c.reasDia===d?' selected':'')+'>'+d+'</option>';}).join('')+'</select></div></div>';
+  h+='<div class="c"><b style="font-size:13px">Generar mes</b><div class="g" style="margin:2px 0 8px">Alterna A y B. Respeta permisos y ausencias aprobadas. Nada llega al equipo hasta que publiques.</div><div style="font-size:12px;line-height:2.1">Desde (lunes): <input type="date" value="'+(c.inicio||'')+'" onchange="TGcfg(\'inicio\',this.value)"> · Semanas: <input type="number" min="1" max="6" value="'+c.semanas+'" style="width:56px" onchange="TGcfg(\'semanas\',+this.value)"> · Empieza con: <select onchange="TGcfg(\'empieza\',this.value)"><option'+(c.empieza==='A'?' selected':'')+'>A</option><option'+(c.empieza==='B'?' selected':'')+'>B</option></select><br>DEA (3° piso) desde la semana de: <input type="date" value="'+(c.deaDesde||'')+'" onchange="TGcfg(\'deaDesde\',this.value)"> <span class="g">luego cada 4 semanas</span></div><div style="margin-top:8px"><button class="b p" onclick="tgGenerar()" style="padding:12px 16px;font-size:14px">Generar borrador del mes</button></div></div>';
+  if(TG.draft)h+=htmlDraft();
+  h+='</div>';o.innerHTML=h;
+}
+window.tgTab=function(t){TG.tab=t;pintar();};
+window.tgSet=function(n,r){var real=EQUIPO.filter(function(p){return p.n.replace(/'/g,'')===n;})[0].n;if(!r)delete TG.cfg.rot[TG.tab][real];else TG.cfg.rot[TG.tab][real]={rol:r};guardarCfg();pintar();};
+window.tgInvertir=function(){
+  if(!confirm('Esto reemplaza la semana B: T1 pasa a T2 y T2 a T1 respecto de la A. ¿Continuar?'))return;
+  var A=TG.cfg.rot.A,B={};Object.keys(A).forEach(function(n){var r=A[n].rol;B[n]={rol:r==='T1'?'T2':r==='T2'?'T1':r};});TG.cfg.rot.B=B;guardarCfg();TG.tab='B';pintar();
+};
+window.tgHor=function(i){TG.cfg.h[i.dataset.t][i.dataset.d]=i.value.trim();guardarCfg();};
+window.TGcfg=function(k,v){TG.cfg[k]=v;guardarCfg();};
+window.tgGenerar=function(){
+  var c=TG.cfg;if(!c.inicio){alert('Elige la fecha de inicio (un lunes).');return;}
+  var ini0=lunesDe(c.inicio);if(ini0!==c.inicio){alert('La fecha de inicio debe ser un lunes. Usaré el lunes '+ini0+'.');c.inicio=ini0;guardarCfg();}
+  var NM=resolverNombres().mapa,out=[];
+  for(var i=0;i<c.semanas;i++){var t=((c.empieza==='A'?0:1)+i)%2?'B':'A';out.push(genSemana(addDias(c.inicio,i*7),t,i,NM));}
+  TG.draft=out;pintar();setTimeout(function(){var e=document.getElementById('tgDraft');if(e)e.scrollIntoView();},50);
+};
+function htmlDraft(){
+  var h='<div class="c" id="tgDraft" style="border:1px solid rgba(34,211,238,.4)"><b style="font-size:13px">Borrador del mes</b> <span class="g">aún no visible para el equipo</span>';
+  TG.draft.forEach(function(s,i){
+    var ex=semanaDe(s.ini);
+    h+='<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px"><b>'+s.ini.slice(8)+'-'+s.ini.slice(5,7)+' al '+s.fin.slice(8)+'-'+s.fin.slice(5,7)+'</b> · semana '+s.tipo+' <span class="g">'+s.bloques.length+' turnos · '+s.tareas.length+' designaciones'+(ex?' · <span style="color:#fbbf24">la semana ya existe: se reemplazan sus turnos y designaciones</span>':'')+'</span>';
+    h+='<table><tr><th>Persona</th><th>Turnos</th><th>Designaciones</th></tr>'+Object.keys(s.cuenta).concat(s.bloques.map(function(b){return b.nombre;})).filter(function(x,k,a){return a.indexOf(x)===k;}).sort().map(function(n){return '<tr><td>'+eeq(n)+'</td><td>'+s.bloques.filter(function(b){return b.nombre===n;}).length+'</td><td>'+(s.cuenta[n]||0)+'</td></tr>';}).join('')+'</table>';
+    if(s.avisos.length)h+='<div style="margin-top:6px;font-size:11px;color:#fbbf24;line-height:1.5">⚠ '+s.avisos.slice(0,14).map(eeq).join('<br>⚠ ')+(s.avisos.length>14?'<br>… y '+(s.avisos.length-14)+' más':'')+'</div>';
+    h+='</div>';
+  });
+  h+='<div style="margin-top:12px"><button class="b p" onclick="tgPublicar()" style="padding:12px 16px;font-size:14px">Publicar al equipo</button><button class="b" onclick="TG_descartar()">Descartar</button></div><div class="g">Después de publicar, cada semana se edita como siempre (turnos y designaciones por persona).</div></div>';
+  return h;
+}
+window.TG_descartar=function(){TG.draft=null;pintar();};
+window.tgPublicar=function(){
+  if(!confirm('¿Publicar '+TG.draft.length+' semanas? El equipo las verá de inmediato.'))return;
+  var p=Promise.resolve();TG.draft.forEach(function(s){p=p.then(function(){return publicarSemana(s);});});
+  p.then(function(){alert('Listo: '+TG.draft.length+' semanas publicadas. Revísalas y edítalas desde Turnos.');TG.draft=null;pintar();}).catch(function(e){alert('No se pudo publicar: '+((e&&e.message)||e));});
+};
+window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG0};
 })();
 
 </script>
