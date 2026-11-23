@@ -25675,7 +25675,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.11 · 22-nov 22:10';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.12 · 22-nov 22:40';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -26639,6 +26639,172 @@ window.tgPublicar=function(){
   p.then(function(){alert('Listo: '+TG.draft.length+' semanas publicadas. Revísalas y edítalas desde Turnos.');TG.draft=null;pintar();}).catch(function(e){alert('No se pudo publicar: '+((e&&e.message)||e));});
 };
 window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG0};
+})();
+/* ===== UX v1: ingreso en teléfono, botón ♿ de accesibilidad y novedades (una sola vez) ===== */
+(function(){
+  var NOV_ID='gesthor_nov_2026_11_22';
+  var ST={tam:0,hc:0,big:0,esp:0,mov:0};
+  function lsGet(k){try{return window.localStorage.getItem(k);}catch(e){return null;}}
+  function lsSet(k,v){try{window.localStorage.setItem(k,v);return true;}catch(e){return false;}}
+  try{var g=JSON.parse(lsGet('gesthor_ux')||'null');if(g&&typeof g==='object'){Object.keys(ST).forEach(function(k){if(typeof g[k]==='number')ST[k]=g[k];});}}catch(e){}
+
+  // ---------- estilos ----------
+  var css=''+
+  '.ux-hero{display:block;margin:0 0 14px;border-radius:16px;background:linear-gradient(135deg,#0b2236,#102A43 55%,#0F6F78);color:#fff;padding:13px 15px;text-align:left;position:relative;overflow:hidden}'+
+  '.ux-hero .ux-t{font-size:30px;font-weight:800;line-height:1}.ux-hero .ux-d{font-size:12px;color:#a7c4d4;margin-top:3px}'+
+  '.ux-hero .ux-tag{font-size:12.5px;margin-top:9px;font-weight:600;line-height:1.35}.ux-hero .ux-tag span{color:#5eead4}'+
+  '.ux-hero svg{position:absolute;right:0;top:10px;opacity:.85}'+
+  '@media(min-width:1000px){.ux-hero{display:none}}'+
+  '.ux-last{display:flex;align-items:center;gap:11px;width:100%;margin:0 0 12px;border:none;border-radius:14px;background:#0d9488;color:#fff;padding:12px 14px;font-family:inherit;text-align:left;cursor:pointer}'+
+  '.ux-last b{display:block;font-size:14.5px}.ux-last small{font-size:11px;opacity:.92}.ux-last .ux-ch{margin-left:auto;font-size:20px}'+
+  '.ux-sec{grid-column:1/-1;font-size:10.5px;font-weight:800;color:#64748b;letter-spacing:.7px;margin:8px 2px 0;text-align:left}'+
+  '.ux-pin{display:inline-block;margin-left:6px;font-size:10px;background:#fef3c7;color:#92400e;border-radius:8px;padding:2px 6px;font-weight:700;vertical-align:1px}'+
+  '#uxAcc{position:fixed;top:10px;right:10px;z-index:850;width:44px;height:44px;border-radius:12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;font-size:21px;line-height:1;display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 8px rgba(15,23,42,.15);padding:0}'+
+  '@media(min-width:1000px){body.gx-ing #uxAcc{top:auto;bottom:16px;left:24px;right:auto}}'+
+  '#uxOv{position:fixed;inset:0;z-index:100000;background:rgba(8,15,30,.72);display:flex;align-items:flex-end;justify-content:center}'+
+  '@media(min-width:700px){#uxOv{align-items:center}}'+
+  '#uxOv .ux-box{background:#fff;color:#0f172a;width:100%;max-width:460px;max-height:92vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:18px 18px 22px;font-family:inherit}'+
+  '@media(min-width:700px){#uxOv .ux-box{border-radius:18px}}'+
+  '#uxOv h3{margin:0 0 2px;font-size:18px}#uxOv .ux-s{font-size:12.5px;color:#475569;margin-bottom:12px}'+
+  '#uxOv .ux-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid #e2e8f0;font-size:14.5px}'+
+  '#uxOv .ux-row small{display:block;color:#64748b;font-size:11.5px;margin-top:1px}'+
+  '#uxOv .ux-seg{display:flex;gap:6px}#uxOv .ux-seg button,#uxOv .ux-btn{border:1.5px solid #94a3b8;background:#fff;color:#0f172a;border-radius:10px;padding:10px 12px;min-height:44px;font-family:inherit;font-size:14px;cursor:pointer}'+
+  '#uxOv .ux-seg button.on,#uxOv .ux-btn.on{background:#0d9488;border-color:#0d9488;color:#fff;font-weight:700}'+
+  '#uxOv .ux-main{width:100%;margin-top:12px;background:#0d9488;color:#fff;border:none;border-radius:12px;min-height:48px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer}'+
+  '#uxOv .ux-sec2{width:100%;margin-top:8px;background:#fff;color:#0f172a;border:1.5px solid #94a3b8;border-radius:12px;min-height:46px;font-family:inherit;font-size:14px;cursor:pointer}'+
+  '#uxOv ul{margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.5}#uxOv li{margin-bottom:6px}'+
+  /* efectos de accesibilidad */
+  'html.ux-t1 body{zoom:1.12}html.ux-t2 body{zoom:1.25}'+
+  'html.ux-hc{filter:contrast(1.18)}html.ux-hc body.gx-light{--gx-slate:#0f172a;--gx-line:#64748b}'+
+  'html.ux-hc .rol-btn,html.ux-hc button{border-width:2px}'+
+  'html.ux-big button,html.ux-big select,html.ux-big input:not([type=checkbox]):not([type=radio]):not([type=range]){min-height:48px}'+
+  'html.ux-big .rol-btn{padding-top:16px;padding-bottom:16px}'+
+  'html.ux-esp body{letter-spacing:.02em;word-spacing:.1em;line-height:1.6}'+
+  'html.ux-mov *,html.ux-mov *::before,html.ux-mov *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}';
+  var st=document.createElement('style');st.id='uxCss';st.textContent=css;document.head.appendChild(st);
+
+  function aplicar(){
+    var h=document.documentElement;
+    h.classList.toggle('ux-t1',ST.tam===1);h.classList.toggle('ux-t2',ST.tam===2);
+    h.classList.toggle('ux-hc',!!ST.hc);h.classList.toggle('ux-big',!!ST.big);
+    h.classList.toggle('ux-esp',!!ST.esp);h.classList.toggle('ux-mov',!!ST.mov);
+  }
+  function guardar(){lsSet('gesthor_ux',JSON.stringify(ST));}
+  aplicar();
+
+  // ---------- lectura en voz alta ----------
+  function textoHoy(){
+    try{
+      if(typeof curNombre==='undefined'||!curNombre)return 'Primero elige tu nombre en la sección de turnos para que pueda leerte tus tareas de hoy.';
+      var dia=diaDeDate(hoyStr());
+      var bl=Object.values(bloques||{}).filter(function(b){return b&&b.nombre===curNombre&&b.dia===dia&&!b.libre&&!b.sinAtencion;});
+      bl.sort(function(a,b){return t2m((a.horario||'0:0').split('–')[0])-t2m((b.horario||'0:0').split('–')[0]);});
+      var ts=Object.values(tareas||{}).filter(function(t){return t&&t.nombre===curNombre&&t.dia===dia;});
+      var p=['Hola '+String(curNombre).split(' ')[0]+'. Hoy es '+dia+'.'];
+      if(bl.length)p.push('Tu turno: '+bl.map(function(b){return b.area+', de '+String(b.horario||'').replace('–',' a ');}).join('; ')+'.');
+      else p.push('No tienes turno asignado hoy.');
+      if(ts.length){p.push('Tienes '+ts.length+' tarea'+(ts.length>1?'s':'')+':');ts.forEach(function(t,i){var c=(typeof cfgTipo==='function'?cfgTipo(t.tipo).l:t.tipo);p.push((i+1)+'. '+c+(t.sector?', '+t.sector:'')+(t.jornada==='am'?', en la mañana':t.jornada==='pm'?', en la tarde':'')+'.');});}
+      else p.push('No tienes tareas asignadas hoy.');
+      return p.join(' ');
+    }catch(e){return 'No pude leer tus tareas en este momento.';}
+  }
+  function leer(){
+    if(!('speechSynthesis' in window)){alert('Este teléfono no permite lectura en voz alta desde el navegador.');return;}
+    try{window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(textoHoy());u.lang='es-CL';u.rate=.95;window.speechSynthesis.speak(u);}catch(e){}
+  }
+  function detener(){try{window.speechSynthesis.cancel();}catch(e){}}
+
+  // ---------- panel ♿ ----------
+  function cerrar(){var o=document.getElementById('uxOv');if(o)o.remove();detener();}
+  function panel(){
+    cerrar();
+    var o=document.createElement('div');o.id='uxOv';o.setAttribute('role','dialog');o.setAttribute('aria-label','Accesibilidad');
+    function sw(k,t,s){return '<div class="ux-row"><div>'+t+'<small>'+s+'</small></div><button class="ux-btn'+(ST[k]?' on':'')+'" aria-pressed="'+(ST[k]?'true':'false')+'" onclick="uxTog(\''+k+'\')">'+(ST[k]?'Activado':'Activar')+'</button></div>';}
+    o.innerHTML='<div class="ux-box"><div style="display:flex;justify-content:space-between;align-items:center"><h3>♿ Accesibilidad</h3><button class="ux-btn" onclick="uxCerrar()" aria-label="Cerrar">✕</button></div>'+
+      '<div class="ux-s">Ajusta GESTHOR a lo que necesitas. Se guarda en este teléfono.</div>'+
+      '<div class="ux-row"><div>Tamaño de letra<small>Agranda todo el texto</small></div><div class="ux-seg">'+
+        [['Normal',0],['Grande',1],['Muy grande',2]].map(function(x){return '<button class="'+(ST.tam===x[1]?'on':'')+'" aria-pressed="'+(ST.tam===x[1])+'" onclick="uxTam('+x[1]+')">'+x[0]+'</button>';}).join('')+'</div></div>'+
+      sw('hc','Alto contraste','Textos y bordes más marcados')+
+      sw('big','Botones grandes','Más fáciles de tocar, también con guantes')+
+      sw('esp','Letra más espaciada','Más aire entre letras y líneas para leer mejor')+
+      sw('mov','Reducir animaciones','Sin movimientos ni transiciones')+
+      '<button class="ux-main" onclick="uxLeer()">🔊 Leer mis tareas de hoy</button>'+
+      '<button class="ux-sec2" onclick="uxDetener()">⏹ Detener lectura</button>'+
+      '<button class="ux-sec2" onclick="uxReset()">Restablecer todo</button></div>';
+    o.addEventListener('click',function(e){if(e.target===o)cerrar();});
+    document.body.appendChild(o);
+  }
+  window.uxTam=function(n){ST.tam=n;aplicar();guardar();panel();};
+  window.uxTog=function(k){ST[k]=ST[k]?0:1;aplicar();guardar();panel();};
+  window.uxReset=function(){ST={tam:0,hc:0,big:0,esp:0,mov:0};aplicar();guardar();panel();};
+  window.uxLeer=leer;window.uxDetener=detener;window.uxCerrar=cerrar;window.uxAbrir=panel;
+
+  function botonAcc(){
+    if(document.getElementById('uxAcc'))return;
+    var b=document.createElement('button');b.id='uxAcc';b.type='button';b.setAttribute('aria-label','Accesibilidad');b.title='Accesibilidad';b.textContent='♿';
+    b.onclick=panel;document.body.appendChild(b);
+  }
+
+  // ---------- novedades: solo la primera vez ----------
+  function novedades(){
+    if(lsGet(NOV_ID))return;                 // ya la vio
+    if(!lsSet(NOV_ID+'_t','1'))return;       // sin almacenamiento: no insistimos
+    var o=document.createElement('div');o.id='uxOv';o.setAttribute('role','dialog');o.setAttribute('aria-label','Novedades');
+    o.innerHTML='<div class="ux-box"><h3>🆕 Novedades de GESTHOR</h3><div class="ux-s">Esto aparece solo esta vez.</div>'+
+      '<ul><li><b>♿ Accesibilidad:</b> ahora puedes agrandar la letra, subir el contraste, usar botones grandes o escuchar tus tareas del día. Úsalo si lo necesitas, con el botón ♿ de la pantalla.</li>'+
+      '<li><b>Ingreso más simple:</b> al abrir la app te ofrece continuar con el último perfil que usaste.</li>'+
+      '<li><b>REAS:</b> nuevo registro por unidad, con nivel de llenado, segregación, peso y rótulo.</li></ul>'+
+      '<button class="ux-main" onclick="uxNovOk(true)">Probar accesibilidad</button>'+
+      '<button class="ux-sec2" onclick="uxNovOk(false)">Entendido</button></div>';
+    document.body.appendChild(o);
+  }
+  window.uxNovOk=function(abrir){lsSet(NOV_ID,'1');cerrar();if(abrir)panel();};
+
+  // ---------- ingreso ----------
+  var ROLES={colaborador:'Colaborador',jefe:'Enfermero Jefe',operaciones:'Bodega / Mantención',administrativo:'Administrativo',jefaOperaciones:'Jefa de Operaciones',docente:'Docente',gerencia:'Gerencia'};
+  function reloj(){
+    var t=document.getElementById('uxT'),d=document.getElementById('uxD');if(!t)return;
+    var n=new Date();t.textContent=('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2);
+    var dd=n.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});d.textContent=dd.charAt(0).toUpperCase()+dd.slice(1);
+  }
+  function ingreso(){
+    var grid=document.querySelector('#sedeView .rol-grid');if(!grid||grid.dataset.ux)return false;
+    if(!grid.querySelector('.gx-ch'))return false;       // esperar a que gxInit termine
+    grid.dataset.ux='1';
+    var card=grid.parentNode;
+    // tarjeta con hora y mensaje (solo se ve en teléfono y tablet)
+    var hero=document.createElement('div');hero.className='ux-hero';
+    hero.innerHTML='<svg width="150" height="40" viewBox="0 0 150 40" fill="none" stroke="#38BDF8" stroke-width="2"><path d="M0 22h50l8-14 11 28 9-14h72"/></svg><div class="ux-t" id="uxT">--:--</div><div class="ux-d" id="uxD"></div><div class="ux-tag">Gestión, calidad y eficiencia para una salud <span>más humana.</span></div>';
+    card.insertBefore(hero,card.firstChild);reloj();setInterval(reloj,20000);
+    // continuar como...
+    var ult=lsGet('gesthor_ult_rol');
+    if(ult&&ROLES[ult]){
+      var b=document.createElement('button');b.type='button';b.className='ux-last';
+      b.innerHTML='<div><b>Continuar como '+ROLES[ult]+'</b><small>Último perfil usado en este teléfono</small></div><span class="ux-ch">›</span>';
+      b.onclick=function(){ingresarRol(ult);};
+      card.insertBefore(b,grid);
+    }
+    // agrupar: acceso libre primero, luego los de PIN
+    var por={};Array.prototype.forEach.call(grid.querySelectorAll('.rol-btn'),function(x){var l=x.querySelector('.rol-label');if(l)por[l.textContent.trim()]=x;});
+    var libres=['Colaborador','Administrativo','Docente'],pins=['Enfermero Jefe','Bodega / Mantención','Jefa de Operaciones','Gerencia'];
+    function sec(t){var d=document.createElement('div');d.className='ux-sec';d.textContent=t;grid.appendChild(d);}
+    sec('ACCESO LIBRE');libres.forEach(function(n){if(por[n])grid.appendChild(por[n]);});
+    sec('CON PIN');pins.forEach(function(n){var x=por[n];if(!x)return;grid.appendChild(x);var l=x.querySelector('.rol-label');if(l&&!l.querySelector('.ux-pin')){var s=document.createElement('span');s.className='ux-pin';s.textContent='PIN';l.appendChild(s);}});
+    return true;
+  }
+  function recordarRol(){
+    if(typeof window.ingresarRol!=='function'||window.ingresarRol.__ux)return;
+    var o=window.ingresarRol;
+    var w=function(r){try{if(ROLES[r])lsSet('gesthor_ult_rol',r);}catch(e){}return o.apply(this,arguments);};
+    w.__ux=1;window.ingresarRol=w;
+  }
+
+  function boot(){
+    botonAcc();recordarRol();
+    var n=0;(function esperar(){if(ingreso()||n++>40)return;setTimeout(esperar,150);})();
+    setTimeout(novedades,3800);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
 </script>
 </body>
