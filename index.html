@@ -13908,6 +13908,7 @@ function miDiaFechaTxt(){var d=new Date();return ['domingo','lunes','martes','mi
 function miDiaAbrirJs(t){
   try{
     if(!t||!t.tipo)return '';
+    if(t.tipo==='reas')return "abrirPanelReas('"+String(t.sector||'').replace(/['"\\<>]/g,'')+"')";
     if(ROLES_TECNICOS_BASE[t.tipo])return ROLES_TECNICOS_BASE[t.tipo].fn+"('"+t.tipo+"')";
     if(rolesTecnicos[t.tipo])return "abrirRegCustom('"+t.tipo+"','"+String(t.sector||'').replace(/['"\\<>]/g,'')+"')";
   }catch(e){}
@@ -22611,6 +22612,7 @@ window.verDetalleTecnico=function(tipo){
     titulo='♻️ Retiros REAS';
     var regsR=Object.values(invReas||{}).sort(function(a,b){return b.ts-a.ts;});
     filas=regsR.length?regsR.map(function(r){
+      if(r.v===2){var _d=reasDetalleV2(r);return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)"><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#fff;font-weight:600">'+esc(r.unidad||'')+(r.sinResiduos?' · nada que registrar':'')+'</span><span style="font-size:11px;color:#6ee7b7">'+(Number(r.pesoTotal)>0?r.pesoTotal+' kg':'')+'</span></div>'+_d.map(function(x){return '<div style="font-size:11px;color:rgba(255,255,255,.55)">• '+esc(x.nom)+': '+esc(x.txt)+'</div>';}).join('')+'<div style="font-size:10px;color:rgba(255,255,255,.4)">'+esc(r.fecha||'')+'</div></div>';}
       if(r.sinResiduos)return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:#93c5fd">✓ Sin residuos · '+esc(r.unidad||'General')+'</span> <span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span></div>';
       var med=[];if(r.peso>0)med.push(r.peso+' kg');if(r.volumen>0)med.push(r.volumen+' L');
       return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">'+
@@ -22671,6 +22673,7 @@ window.exportarDashboardExcel=function(){
   });
   // REAS
   Object.values(invReas||{}).forEach(function(r){
+    if(r.v===2){var _dd=reasDetalleV2(r);if(!_dd.length)filas.push([r.fecha,r.hora||'','REAS',(r.unidad||'')+' · nada que registrar','',r.obs||'',r.quien||'']);_dd.forEach(function(x){filas.push([r.fecha,r.hora||'','REAS',(r.unidad||'')+' · '+x.nom,x.txt+(x.peso>0?' · '+x.peso+' kg':''),r.obs||'',r.quien||'']);});return;}
     filas.push([r.fecha,'','REAS',r.categoria+' - '+r.tipo,r.peso+' kg / '+r.cantidad+' '+r.presentacion,r.unidad||'',r.quien||'']);
   });
   // Registros personalizados
@@ -23654,7 +23657,8 @@ var REAS_UNIDADES=['Esterilización','Pabellón','Clínica Privada','Rayos','Dis
 
 document.getElementById('reasBtn').addEventListener('click',function(){abrirPanelReas();});
 
-function abrirPanelReas(){
+function abrirPanelReas(u){
+  reasNuevo((typeof u==='string'&&u&&u!=='reas')?u:undefined);
   var ov=document.getElementById('panelReasOv');
   if(ov)ov.remove();
   ov=document.createElement('div');
@@ -23666,7 +23670,7 @@ function abrirPanelReas(){
       '<button onclick="document.getElementById(\'panelReasOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Salir</button>'+
     '</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:14px">'+
-      '<button class="reas-tab active" data-v="registrar" onclick="reasTab(\'registrar\')" style="flex:1">➕ Registrar retiro</button>'+
+      '<button class="reas-tab active" data-v="registrar" onclick="reasTab(\'registrar\')" style="flex:1">➕ Registro del día</button>'+
       '<button class="reas-tab" data-v="historial" onclick="reasTab(\'historial\')" style="flex:1">📋 Historial</button>'+
     '</div>'+
     '<div id="reasContenido"></div></div>'+
@@ -23682,125 +23686,176 @@ window.reasTab=function(v){
   else c.innerHTML=reasHistorial();
 };
 
-function reasFormRegistro(){
-  // Responsables asignados (tareas tipo reas)
-  var responsables=Object.values(tareas||{}).filter(function(t){return t.tipo==='reas';}).map(function(t){return t.nombre;});
-  responsables=responsables.filter(function(v,i){return responsables.indexOf(v)===i;});
-  var infoResp=responsables.length?'<div style="font-size:11px;color:#6ee7b7;margin-bottom:10px">Responsable(s) REAS asignado(s): '+responsables.join(', ')+'</div>':'<div style="font-size:11px;color:#fbbf24;margin-bottom:10px">Aún no asignas responsable de REAS (se hace en Admin → Asignaciones, tipo ♻️ REAS).</div>';
-  return '<div style="background:#16233d;border-radius:12px;padding:14px">'+
-    infoResp+
-    // Bloque "sin residuos hoy" con selección de espacio
-    '<div style="background:rgba(147,197,253,.08);border:1px solid rgba(147,197,253,.25);border-radius:8px;padding:10px;margin-bottom:12px">'+
-      '<label style="font-size:11px;color:#93c5fd;font-weight:600">Informar espacio SIN residuos hoy</label>'+
-      '<div style="display:flex;gap:6px;margin-top:6px">'+
-        '<select id="reasSinResUnidad" style="flex:1;font-size:13px;padding:7px">'+
-          REAS_UNIDADES.filter(function(u){return u!=='General';}).map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('')+'</select>'+
-        '<button onclick="reasSinResiduos()" style="background:rgba(147,197,253,.2);color:#93c5fd;border:1px solid rgba(147,197,253,.35);border-radius:6px;padding:0 14px;font-family:inherit;font-size:12px;cursor:pointer;white-space:nowrap">✓ Sin residuos</button>'+
-      '</div>'+
-    '</div>'+
-    '<div style="font-size:10px;color:rgba(255,255,255,.35);text-align:center;margin-bottom:12px">— o registra un retiro —</div>'+
-    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Unidad que registra</label>'+
-    '<select id="reasUnidad" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
-      REAS_UNIDADES.map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('')+'</select>'+
-    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Categoría REAS</label>'+
-    '<select id="reasCategoria" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
-      REAS_CATEGORIAS.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('')+'</select>'+
-    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Tipo de residuo</label>'+
-    '<select id="reasTipo" onchange="document.getElementById(\'reasTipoOtro\').style.display=(this.value===\'Otro\'?\'block\':\'none\')" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
-      REAS_TIPOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join('')+
-      '<option value="Otro">Otro (especificar)</option></select>'+
-    '<input type="text" id="reasTipoOtro" placeholder="Especifica el residuo" style="width:100%;font-size:13px;padding:7px;margin-bottom:8px;display:none">'+
-    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Presentación</label>'+
-    '<select id="reasPresentacion" style="width:100%;font-size:13px;padding:8px;margin-bottom:8px">'+
-      REAS_PRESENTACIONES.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select>'+
-    '<div style="display:flex;gap:8px;margin-bottom:8px">'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Cantidad (envases)</label>'+
-        '<input type="number" id="reasCantidad" min="1" step="1" value="1" style="width:100%;font-size:13px;padding:7px"></div>'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Peso (kg)</label>'+
-        '<input type="number" id="reasPeso" min="0" step="any" placeholder="0.0" style="width:100%;font-size:13px;padding:7px"></div>'+
-      '<div style="flex:1"><label style="font-size:11px;color:rgba(255,255,255,.6)">Volumen (L)</label>'+
-        '<input type="number" id="reasVolumen" min="0" step="any" placeholder="0.0" style="width:100%;font-size:13px;padding:7px"></div>'+
-    '</div>'+
-    '<label style="font-size:11px;color:rgba(255,255,255,.6)">Quién registra</label>'+
-    '<select id="reasQuien" style="width:100%;font-size:13px;padding:8px;margin-bottom:10px">'+
-      '<option value="">Selecciona</option>'+
-      nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';}).map(function(n){return '<option>'+esc(n)+'</option>';}).join('')+'</select>'+
-    '<button class="btn-add" onclick="registrarReas()" style="background:linear-gradient(135deg,#059669,#6ee7b7)">Registrar retiro REAS</button>'+
-    '<div class="saved" id="reasSaved">✓ Registrado</div></div>';
+var REAS_ITEM_ROJO={id:'rojo',k:'cont',nom:'Contenedor rojo · anestesias y medicamentos',col:'#ef4444',mal:['Hay cortopunzantes (agujas) en el contenedor rojo','Otro']};
+var REAS_ITEM_AMARILLO={id:'amarillo',k:'cont',nom:'Contenedor amarillo · cortopunzantes',col:'#facc15',mal:['Hay medicamentos en el contenedor amarillo','Otro']};
+function reasItems(u){
+  if(u==='Rayos')return [{id:'rojo_plomo',k:'cont',nom:'Contenedor rojo · placas de plomo',col:'#ef4444',mal:['Hay otros residuos en el contenedor de plomo','Otro']},REAS_ITEM_AMARILLO,
+    {id:'fijador',k:'bidon',nom:'Bidón de líquido fijador',col:'#38bdf8'},{id:'revelador',k:'bidon',nom:'Bidón de líquido revelador',col:'#38bdf8'}];
+  var a=[REAS_ITEM_ROJO,REAS_ITEM_AMARILLO];
+  if(u==='Dispensario 1'||u==='Dispensario 2')a.push({id:'hipoclorito',k:'bidon',nom:'Hipoclorito',col:'#a3e635'});
+  return a;
 }
-
-// Informar que hoy no hay residuos en un espacio específico
-window.reasSinResiduos=function(){
-  var quien=curNombre||'—';
-  var unidad=document.getElementById('reasSinResUnidad')?document.getElementById('reasSinResUnidad').value:'General';
-  // Evitar duplicar el mismo espacio el mismo día
-  var yaHoy=Object.values(invReas||{}).some(function(r){return r.sinResiduos&&r.unidad===unidad&&r.fecha===hoyStr();});
-  if(yaHoy){alert('Ya se informó "sin residuos" para '+unidad+' hoy.');return;}
-  var reg={sinResiduos:true,unidad:unidad,fecha:hoyStr(),quien:quien,ts:Date.now()};
-  sedeRef('invReas/'+reg.ts).set(reg).then(function(){
-    showSaved('reasSaved');
-    if(typeof reasTab==='function')reasTab('registrar');
-  });
+var REASF=null;
+function reasUnidadHoy(){
+  try{var dia=diaDeDate(hoyStr());var t=Object.values(tareas||{}).filter(function(x){return x&&x.tipo==='reas'&&x.dia===dia&&x.nombre===curNombre&&x.sector;})[0];return t?t.sector:'';}catch(e){return '';}
+}
+function reasNuevo(u){REASF={unidad:u||reasUnidadHoy()||'',quien:curNombre||'',sinRes:false,it:{},obs:''};}
+function reasItemEstado(it,d){ // 'na' | 'ok' | '' (pendiente)
+  if(!d)return '';
+  if(d.na)return 'na';
+  if(it.k==='cont')return d.nivel&&d.seg&&(d.seg!=='mal'||d.motivo)?'ok':'';
+  return (d.elim===false||(d.elim===true&&d.cant>0))?'ok':'';
+}
+function reasForzado(d){return !!(d&&(d.nivel==='m34'||d.seg==='mal'));}
+function reasChip(txt,on,js,cls){return '<span onclick="'+js+'" style="display:inline-block;margin:0 5px 5px 0;padding:8px 11px;border-radius:9px;border:1px solid '+(on?(cls==='bad'?'#ef4444':cls==='ok'?'#10b981':'#60a5fa'):'#334766')+';background:'+(on?(cls==='bad'?'#7f1d1d':cls==='ok'?'#064e3b':'#2563eb'):'#16233d')+';color:'+(on?'#fff!important':'#cbd5e1')+';font-size:12.5px;font-weight:'+(on?'700':'500')+';cursor:pointer">'+txt+'</span>';}
+window.reasSet=function(id,k,v){
+  if(!REASF)return;var d=REASF.it[id]=REASF.it[id]||{};
+  if(k==='na'){if(d.na){delete d.na;}else{REASF.it[id]={na:true};}}
+  else{delete d.na;d[k]=v;}
+  var c=document.getElementById('reasContenido');if(c)c.innerHTML=reasFormRegistro();
 };
-
+window.reasNum=function(id,k,v){if(!REASF)return;var d=REASF.it[id]=REASF.it[id]||{};delete d.na;d[k]=v===''?'':Number(v);};
+window.reasRot=function(id,k){if(!REASF)return;var d=REASF.it[id]=REASF.it[id]||{};delete d.na;d.rot=d.rot||{};if(k==='todo'){d.rot={cs:true,fecha:true,peso:true};}else d.rot[k]=!d.rot[k];var c=document.getElementById('reasContenido');if(c)c.innerHTML=reasFormRegistro();};
+window.reasGen=function(k,v){if(!REASF)return;REASF[k]=v;if(k==='unidad'){REASF.it={};}if(k==='sinRes'||k==='unidad'){var c=document.getElementById('reasContenido');if(c)c.innerHTML=reasFormRegistro();}};
+function reasFormRegistro(){
+  if(!REASF)reasNuevo();
+  var F=REASF,items=F.unidad?reasItems(F.unidad):[];
+  var bl='display:block;font-size:11px;color:#93c5fd;font-weight:700;margin:10px 0 5px;letter-spacing:.3px';
+  var h='<div style="background:#16233d;border-radius:12px;padding:14px">'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:8px">Una revisión por unidad y por día. Si algo no aplica en tu unidad, márcalo con <b>N/A</b>.</div>'+
+    '<label style="'+bl+';margin-top:0">UNIDAD</label>'+
+    '<select onchange="reasGen(\'unidad\',this.value)" style="width:100%;font-size:13px;padding:8px;margin-bottom:4px"><option value="">Selecciona la unidad</option>'+
+      REAS_UNIDADES.filter(function(u){return u!=='General';}).map(function(u){return '<option'+(F.unidad===u?' selected':'')+'>'+esc(u)+'</option>';}).join('')+'</select>';
+  if(!F.unidad)return h+'</div>';
+  h+='<div style="margin-top:8px">'+reasChip('✓ Hoy no hay nada que registrar en esta unidad',F.sinRes,'reasGen(\'sinRes\','+(!F.sinRes)+')','ok')+'</div>';
+  if(!F.sinRes){
+    items.forEach(function(it){
+      var d=F.it[it.id]||{},est=reasItemEstado(it,d),na=!!d.na;
+      h+='<div style="border:1px solid '+(est==='ok'?'rgba(16,185,129,.5)':'#334766')+';border-radius:12px;padding:11px;margin-top:10px;background:#0f1a30">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;font-weight:700;color:#fff"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+it.col+';margin-right:6px"></span>'+esc(it.nom)+'</span>'+
+        reasChip('N/A',na,'reasSet(\''+it.id+'\',\'na\')','')+'</div>';
+      if(na){h+='<div style="font-size:11px;color:#94a3b8">No aplica: esta unidad no elimina este residuo.</div></div>';return;}
+      if(it.k==='cont'){
+        h+='<label style="'+bl+'">NIVEL DE LLENADO</label>'+
+          reasChip('Menos de ½',d.nivel==='lt12','reasSet(\''+it.id+'\',\'nivel\',\'lt12\')','')+reasChip('½',d.nivel==='m12','reasSet(\''+it.id+'\',\'nivel\',\'m12\')','')+reasChip('¾ · máximo para eliminar',d.nivel==='m34','reasSet(\''+it.id+'\',\'nivel\',\'m34\')','')+
+          '<label style="'+bl+'">SEGREGACIÓN</label>'+
+          reasChip('✓ Bien segregado',d.seg==='ok','reasSet(\''+it.id+'\',\'seg\',\'ok\')','ok')+reasChip('✗ Mal segregado',d.seg==='mal','reasSet(\''+it.id+'\',\'seg\',\'mal\')','bad');
+        if(d.seg==='mal'){
+          h+='<label style="'+bl+'">¿QUÉ ESTÁ MAL PUESTO?</label>'+(it.mal||['Otro']).map(function(m,i){return reasChip(esc(m),d.motivo===m,'reasSet(\''+it.id+'\',\'motivo\',\''+m.replace(/'/g,"\\'")+'\')','bad');}).join('');
+          if(d.motivo==='Otro')h+='<input type="text" value="'+esc(d.motivoOtro||'')+'" oninput="REASF.it[\''+it.id+'\'].motivoOtro=this.value" placeholder="Especifica" style="width:100%;font-size:13px;padding:7px;margin-top:4px">';
+        }
+        var forz=reasForzado(d);
+        if(d.nivel&&d.seg){
+          h+='<label style="'+bl+'">¿SE ELIMINA HOY?</label>';
+          if(forz)h+='<div style="font-size:11.5px;padding:7px 9px;border-radius:8px;background:rgba(251,191,36,.12);color:#fcd34d;border:1px solid rgba(251,191,36,.3)">Se elimina hoy · motivo: '+(d.seg==='mal'?'segregación incorrecta (eliminación inmediata)':'¾ de capacidad')+'</div>';
+          else h+=reasChip('Sí, se elimina',d.elim===true,'reasSet(\''+it.id+'\',\'elim\',true)','')+reasChip('No, solo revisión',d.elim!==true,'reasSet(\''+it.id+'\',\'elim\',false)','');
+          if(forz||d.elim===true){
+            h+='<label style="'+bl+'">PESO (kg)</label><input type="number" min="0" step="any" value="'+(d.peso===undefined?'':d.peso)+'" oninput="reasNum(\''+it.id+'\',\'peso\',this.value)" placeholder="0.0" style="width:110px;font-size:13px;padding:7px"> kg'+reasRotHtml(it.id,d,bl);
+          }
+        }
+      }else{
+        h+='<label style="'+bl+'">HOY</label>'+
+          reasChip('No se eliminó',d.elim===false,'reasSet(\''+it.id+'\',\'elim\',false)','')+reasChip('Se eliminó',d.elim===true,'reasSet(\''+it.id+'\',\'elim\',true)','');
+        if(d.elim===true){
+          h+='<div style="display:flex;gap:10px;margin-top:6px"><div><label style="'+bl+';margin-top:0">CANTIDAD (bidones)</label><input type="number" min="1" step="1" value="'+(d.cant||'')+'" oninput="reasNum(\''+it.id+'\',\'cant\',this.value)" placeholder="1" style="width:100px;font-size:13px;padding:7px"></div>'+
+            '<div><label style="'+bl+';margin-top:0">PESO TOTAL (kg)</label><input type="number" min="0" step="any" value="'+(d.peso===undefined?'':d.peso)+'" oninput="reasNum(\''+it.id+'\',\'peso\',this.value)" placeholder="0.0" style="width:110px;font-size:13px;padding:7px"></div></div>'+reasRotHtml(it.id,d,bl);
+        }
+      }
+      h+='</div>';
+    });
+  }
+  h+='<label style="'+bl+'">OBSERVACIONES (opcional)</label><textarea oninput="REASF.obs=this.value" rows="2" style="width:100%;font-size:13px;padding:7px">'+esc(F.obs||'')+'</textarea>'+
+    '<label style="'+bl+'">QUIÉN REGISTRA</label><select onchange="REASF.quien=this.value" style="width:100%;font-size:13px;padding:8px;margin-bottom:10px"><option value="">Selecciona</option>'+
+      nombres.filter(function(n){return n.trim().toLowerCase()!=='patricio baeza';}).map(function(n){return '<option'+(F.quien===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select>'+
+    '<button class="btn-add" onclick="registrarReas()" style="background:linear-gradient(135deg,#059669,#6ee7b7)">Registrar REAS del día</button><div class="saved" id="reasSaved">✓ Registrado</div></div>';
+  return h;
+}
+function reasRotHtml(id,d,bl){
+  var r=d.rot||{};
+  return '<label style="'+bl+'">ROTULADO DEL CONTENEDOR</label>'+
+    reasChip((r.cs?'✓ ':'')+'Centro de salud',!!r.cs,'reasRot(\''+id+'\',\'cs\')','ok')+reasChip((r.fecha?'✓ ':'')+'Fecha de desecho',!!r.fecha,'reasRot(\''+id+'\',\'fecha\')','ok')+reasChip((r.peso?'✓ ':'')+'Peso',!!r.peso,'reasRot(\''+id+'\',\'peso\')','ok')+
+    reasChip('Marcar los 3',false,'reasRot(\''+id+'\',\'todo\')','');
+}
 window.registrarReas=function(){
-  var tipo=document.getElementById('reasTipo').value;
-  if(tipo==='Otro')tipo=document.getElementById('reasTipoOtro').value.trim();
-  var reg={
-    unidad:document.getElementById('reasUnidad').value,
-    categoria:document.getElementById('reasCategoria').value,
-    tipo:tipo,
-    presentacion:document.getElementById('reasPresentacion').value,
-    cantidad:Number(document.getElementById('reasCantidad').value)||1,
-    peso:Number(document.getElementById('reasPeso').value)||0,
-    volumen:Number(document.getElementById('reasVolumen').value)||0,
-    quien:document.getElementById('reasQuien').value,
-    fecha:hoyStr(),ts:Date.now()
-  };
-  if(!tipo){alert('Indica el tipo de residuo.');return;}
-  if(!reg.quien){alert('Indica quién registra.');return;}
-  if(reg.peso<=0&&reg.volumen<=0){alert('Ingresa el peso o el volumen.');return;}
+  var F=REASF;if(!F)return;
+  if(!F.unidad){alert('Selecciona la unidad.');return;}
+  if(!F.quien){alert('Indica quién registra.');return;}
+  var items=reasItems(F.unidad),out={},pesoTotal=0,alertas=[],elimN=0;
+  if(!F.sinRes){
+    for(var i=0;i<items.length;i++){
+      var it=items[i],d=F.it[it.id]||{},est=reasItemEstado(it,d);
+      if(!est){alert('Falta completar: '+it.nom+' (o márcalo N/A).');return;}
+      if(est==='na'){out[it.id]={na:true};continue;}
+      var o={};
+      if(it.k==='cont'){
+        o.nivel=d.nivel;o.seg=d.seg;
+        if(d.seg==='mal'){o.motivo=d.motivo==='Otro'?('Otro: '+(d.motivoOtro||'').trim()):d.motivo;alertas.push('Mal segregado · '+it.nom+' · '+o.motivo);}
+        o.elim=reasForzado(d)||d.elim===true;
+      }else{o.elim=d.elim===true;if(o.elim)o.cant=Number(d.cant)||0;}
+      if(o.elim){
+        var p=Number(d.peso)||0;
+        if(p<=0){alert('Indica el peso (kg) de: '+it.nom+'.');return;}
+        if(it.k==='bidon'&&!(o.cant>0)){alert('Indica cuántos bidones se eliminaron: '+it.nom+'.');return;}
+        o.peso=p;pesoTotal+=p;elimN++;
+        var r=d.rot||{};o.rot={cs:!!r.cs,fecha:!!r.fecha,peso:!!r.peso};
+        if(!(r.cs&&r.fecha&&r.peso))alertas.push('Rótulo incompleto · '+it.nom);
+      }
+      out[it.id]=o;
+    }
+  }
+  var ahora=new Date();
+  var reg={v:2,unidad:F.unidad,quien:F.quien,fecha:hoyStr(),hora:('0'+ahora.getHours()).slice(-2)+':'+('0'+ahora.getMinutes()).slice(-2),ts:Date.now(),
+    sinResiduos:!!F.sinRes,items:out,pesoTotal:Math.round(pesoTotal*100)/100,eliminados:elimN,alertas:alertas,obs:(F.obs||'').trim()};
   sedeRef('invReas/'+reg.ts).set(reg).then(function(){
-    showSaved('reasSaved');
-    document.getElementById('reasPeso').value='';document.getElementById('reasVolumen').value='';document.getElementById('reasCantidad').value='1';
+    showSaved('reasSaved');REASF=null;
+    if(typeof reasTab==='function')setTimeout(function(){reasTab('historial');},700);
   });
 };
+function reasNivelTxt(n){return n==='lt12'?'menos de ½':n==='m12'?'½':n==='m34'?'¾':'';}
+function reasDetalleV2(r){ // lista [{nom,txt,peso,alerta}]
+  var out=[];if(!r||!r.items)return out;
+  var cat=reasItems(r.unidad||'');var nom={};cat.forEach(function(x){nom[x.id]=x.nom;});
+  Object.keys(r.items).forEach(function(k){
+    var o=r.items[k],n=nom[k]||k;
+    if(o.na){out.push({nom:n,txt:'N/A',peso:0});return;}
+    var t=[];
+    if(o.nivel)t.push('nivel '+reasNivelTxt(o.nivel));
+    if(o.seg==='mal')t.push('⚠ mal segregado'+(o.motivo?' ('+o.motivo+')':''));
+    if(o.elim)t.push('eliminado'+(o.cant?' · '+o.cant+' bidón(es)':''));else t.push('sin eliminar');
+    if(o.elim&&o.rot&&!(o.rot.cs&&o.rot.fecha&&o.rot.peso))t.push('⚠ rótulo incompleto');
+    out.push({nom:n,txt:t.join(' · '),peso:o.elim?(Number(o.peso)||0):0});
+  });
+  return out;
+}
 
 function reasHistorial(){
   var regs=Object.values(invReas||{}).sort(function(a,b){return b.ts-a.ts;});
   if(!regs.length)return '<div style="background:#16233d;border-radius:12px;padding:30px;text-align:center;color:rgba(255,255,255,.5)">Sin registros REAS aún.</div>';
-  var conResiduos=regs.filter(function(r){return !r.sinResiduos;});
-  var pesoTotal=conResiduos.reduce(function(s,r){return s+(Number(r.peso)||0);},0);
-  var volumenTotal=conResiduos.reduce(function(s,r){return s+(Number(r.volumen)||0);},0);
+  var pesoTotal=0,nElim=0;
+  regs.forEach(function(r){if(r.v===2){pesoTotal+=Number(r.pesoTotal)||0;nElim+=Number(r.eliminados)||0;}else if(!r.sinResiduos){pesoTotal+=Number(r.peso)||0;nElim++;}});
   var html='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:10px">'+
-    '<div style="font-size:12px;color:rgba(255,255,255,.6)">Total: <b style="color:#6ee7b7">'+pesoTotal.toFixed(1)+' kg</b> · <b style="color:#93c5fd">'+volumenTotal.toFixed(1)+' L</b> en '+conResiduos.length+' retiro(s)</div></div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.6)">Total eliminado: <b style="color:#6ee7b7">'+pesoTotal.toFixed(1)+' kg</b> en '+nElim+' eliminación(es) · '+regs.length+' registro(s)</div></div>'+
     '<div style="background:#16233d;border-radius:12px;padding:14px"><div style="max-height:440px;overflow-y:auto">';
   regs.forEach(function(r){
-    if(r.sinResiduos){
-      html+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
-        '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
-          '<span style="font-size:13px;color:#93c5fd">✓ Sin residuos · '+esc(r.unidad||'General')+'</span>'+
-          '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span>'+
-        '</div>'+
-        (r.quien?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:1px">Informó: '+esc(r.quien)+'</div>':'')+
-      '</div>';
+    if(r.v===2){
+      var det=reasDetalleV2(r);
+      html+='<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;color:#fff;font-weight:700">♻️ '+esc(r.unidad||'')+(r.sinResiduos?' · <span style="color:#93c5fd;font-weight:600">nada que registrar</span>':'')+'</span><span style="font-size:11px;color:rgba(255,255,255,.4)">'+esc(r.fecha||'')+(r.hora?' '+esc(r.hora):'')+'</span></div>'+
+        det.map(function(x){return '<div style="font-size:11.5px;color:rgba(255,255,255,.7);margin-top:2px">• '+esc(x.nom)+': '+esc(x.txt)+(x.peso>0?' · <b style="color:#6ee7b7">'+x.peso+' kg</b>':'')+'</div>';}).join('')+
+        (r.obs?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:3px">Obs.: '+esc(r.obs)+'</div>':'')+
+        (r.quien?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Registró: '+esc(r.quien)+'</div>':'')+'</div>';
       return;
     }
-    var catColor=r.categoria==='Cortopunzantes'?'#dc2626':r.categoria==='Radiactivos'?'#d97706':r.categoria==='Especiales'?'#a78bfa':'#6b7280';
+    if(r.sinResiduos){
+      html+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;color:#93c5fd">✓ Sin residuos · '+esc(r.unidad||'General')+'</span><span style="font-size:11px;color:rgba(255,255,255,.4)">'+esc(r.fecha||'')+'</span></div>'+(r.quien?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:1px">Informó: '+esc(r.quien)+'</div>':'')+'</div>';
+      return;
+    }
     var medida=[];
     if(Number(r.peso)>0)medida.push('<span style="color:#6ee7b7;font-weight:700">'+r.peso+' kg</span>');
     if(Number(r.volumen)>0)medida.push('<span style="color:#93c5fd;font-weight:700">'+r.volumen+' L</span>');
-    html+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
-      '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
-        '<span style="font-size:13px;color:#fff;font-weight:600">'+esc(r.tipo)+'</span>'+
-        '<span style="font-size:13px">'+(medida.join(' · ')||'—')+'</span>'+
-      '</div>'+
-      '<div style="display:flex;justify-content:space-between;margin-top:2px">'+
-        '<span style="font-size:11px;color:rgba(255,255,255,.5)"><span style="color:'+catColor+'">●</span> '+esc(r.categoria)+' · '+esc(r.unidad)+' · '+r.cantidad+' '+esc(r.presentacion)+'(s)</span>'+
-        '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+r.fecha+'</span>'+
-      '</div>'+
-      (r.quien?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:1px">Registró: '+esc(r.quien)+'</div>':'')+
-    '</div>';
+    html+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;color:#fff;font-weight:600">'+esc(r.tipo||'')+'</span><span style="font-size:13px">'+(medida.join(' · ')||'—')+'</span></div>'+
+      '<div style="display:flex;justify-content:space-between;margin-top:2px"><span style="font-size:11px;color:rgba(255,255,255,.5)">'+esc(r.categoria||'')+' · '+esc(r.unidad||'')+' · '+esc(r.cantidad)+' '+esc(r.presentacion||'')+'(s)</span><span style="font-size:11px;color:rgba(255,255,255,.4)">'+esc(r.fecha||'')+'</span></div>'+
+      (r.quien?'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:1px">Registró: '+esc(r.quien)+' · formato anterior</div>':'')+'</div>';
   });
   html+='</div></div>';
   return html;
@@ -25620,7 +25675,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.10 · 22-nov 21:35';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.11 · 22-nov 22:10';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
