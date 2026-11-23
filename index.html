@@ -23688,12 +23688,21 @@ window.reasTab=function(v){
 
 var REAS_ITEM_ROJO={id:'rojo',k:'cont',nom:'Contenedor rojo · anestesias y medicamentos',col:'#ef4444',mal:['Hay cortopunzantes (agujas) en el contenedor rojo','Otro']};
 var REAS_ITEM_AMARILLO={id:'amarillo',k:'cont',nom:'Contenedor amarillo · cortopunzantes',col:'#facc15',mal:['Hay medicamentos en el contenedor amarillo','Otro']};
+function reasBoxes(u){var a=u==='Dispensario 1'?201:u==='Dispensario 2'?301:0;if(!a)return [];var r=[];for(var i=0;i<32;i++)r.push(String(a+i));return r;}
 function reasItems(u){
   if(u==='Rayos')return [{id:'rojo_plomo',k:'cont',nom:'Contenedor rojo · placas de plomo',col:'#ef4444',mal:['Hay otros residuos en el contenedor de plomo','Otro']},REAS_ITEM_AMARILLO,
     {id:'fijador',k:'bidon',nom:'Bidón de líquido fijador',col:'#38bdf8'},{id:'revelador',k:'bidon',nom:'Bidón de líquido revelador',col:'#38bdf8'}];
-  var a=[REAS_ITEM_ROJO,REAS_ITEM_AMARILLO];
-  if(u==='Dispensario 1'||u==='Dispensario 2')a.push({id:'hipoclorito',k:'bidon',nom:'Hipoclorito',col:'#a3e635'});
-  return a;
+  var bx=reasBoxes(u);
+  if(bx.length){
+    var a=[];
+    bx.forEach(function(n){
+      a.push({id:'rojo_'+n,k:'cont',box:n,nom:'Box '+n+' · rojo (medicamentos)',col:'#ef4444',mal:REAS_ITEM_ROJO.mal});
+      a.push({id:'amarillo_'+n,k:'cont',box:n,nom:'Box '+n+' · amarillo (cortopunzantes)',col:'#facc15',mal:REAS_ITEM_AMARILLO.mal});
+    });
+    a.push({id:'hipoclorito',k:'bidon',nom:'Hipoclorito',col:'#a3e635'});
+    return a;
+  }
+  return [REAS_ITEM_ROJO,REAS_ITEM_AMARILLO];
 }
 var REASF=null;
 function reasUnidadHoy(){
@@ -23717,6 +23726,88 @@ window.reasSet=function(id,k,v){
 window.reasNum=function(id,k,v){if(!REASF)return;var d=REASF.it[id]=REASF.it[id]||{};delete d.na;d[k]=v===''?'':Number(v);};
 window.reasRot=function(id,k){if(!REASF)return;var d=REASF.it[id]=REASF.it[id]||{};delete d.na;d.rot=d.rot||{};if(k==='todo'){d.rot={cs:true,fecha:true,peso:true};}else d.rot[k]=!d.rot[k];var c=document.getElementById('reasContenido');if(c)c.innerHTML=reasFormRegistro();};
 window.reasGen=function(k,v){if(!REASF)return;REASF[k]=v;if(k==='unidad'){REASF.it={};}if(k==='sinRes'||k==='unidad'){var c=document.getElementById('reasContenido');if(c)c.innerHTML=reasFormRegistro();}};
+function reasBoxEst(n,F){
+  var d1=F.it['rojo_'+n],d2=F.it['amarillo_'+n];
+  var e1=reasItemEstado({k:'cont'},d1),e2=reasItemEstado({k:'cont'},d2);
+  if(!e1||!e2)return 'pend';
+  if(e1==='na'&&e2==='na')return 'na';
+  var ds=[d1,d2].filter(function(d){return d&&!d.na;});
+  if(ds.some(function(d){return reasForzado(d)||d.elim===true;}))return 'el';
+  if(ds.some(function(d){return d.nivel==='m12';}))return 'mid';
+  return 'ok';
+}
+window.reasBox=function(n){if(!REASF)return;REASF.boxSel=(REASF.boxSel===n)?'':n;var c=document.getElementById('reasContenido');if(c)c.innerHTML=reasFormRegistro();};
+window.reasBulk=function(modo){
+  if(!REASF)return;
+  reasItems(REASF.unidad).forEach(function(it){
+    if(!it.box)return;
+    var d=REASF.it[it.id];if(d&&reasItemEstado(it,d))return;   // respeta lo que ya está completo
+    REASF.it[it.id]=(modo==='na')?{na:true}:{nivel:'lt12',seg:'ok'};
+  });
+  var c=document.getElementById('reasContenido');if(c)c.innerHTML=reasFormRegistro();
+};
+function reasItemHtml(it,d){
+  var bl='display:block;font-size:11px;color:#93c5fd;font-weight:700;margin:10px 0 5px;letter-spacing:.3px';
+  d=d||{};var est=reasItemEstado(it,d),na=!!d.na,h='';
+  h+='<div style="border:1px solid '+(est==='ok'?'rgba(16,185,129,.5)':'#334766')+';border-radius:12px;padding:11px;margin-top:10px;background:#0f1a30">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;font-weight:700;color:#fff"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+it.col+';margin-right:6px"></span>'+esc(it.nom)+'</span>'+
+    reasChip('N/A',na,'reasSet(\''+it.id+'\',\'na\')','')+'</div>';
+  if(na){return h+'<div style="font-size:11px;color:#94a3b8">No aplica.</div></div>';}
+  if(it.k==='cont'){
+    h+='<label style="'+bl+'">NIVEL DE LLENADO</label>'+
+      reasChip('Menos de ½',d.nivel==='lt12','reasSet(\''+it.id+'\',\'nivel\',\'lt12\')','')+reasChip('½',d.nivel==='m12','reasSet(\''+it.id+'\',\'nivel\',\'m12\')','')+reasChip('¾ · máximo para eliminar',d.nivel==='m34','reasSet(\''+it.id+'\',\'nivel\',\'m34\')','')+
+      '<label style="'+bl+'">SEGREGACIÓN</label>'+
+      reasChip('✓ Bien segregado',d.seg==='ok','reasSet(\''+it.id+'\',\'seg\',\'ok\')','ok')+reasChip('✗ Mal segregado',d.seg==='mal','reasSet(\''+it.id+'\',\'seg\',\'mal\')','bad');
+    if(d.seg==='mal'){
+      h+='<label style="'+bl+'">¿QUÉ ESTÁ MAL PUESTO?</label>'+(it.mal||['Otro']).map(function(m){return reasChip(esc(m),d.motivo===m,'reasSet(\''+it.id+'\',\'motivo\',\''+m.replace(/'/g,"\\'")+'\')','bad');}).join('');
+      if(d.motivo==='Otro')h+='<input type="text" value="'+esc(d.motivoOtro||'')+'" oninput="REASF.it[\''+it.id+'\'].motivoOtro=this.value" placeholder="Especifica" style="width:100%;font-size:13px;padding:7px;margin-top:4px">';
+    }
+    var forz=reasForzado(d);
+    if(d.nivel&&d.seg){
+      h+='<label style="'+bl+'">¿SE ELIMINA HOY?</label>';
+      if(forz)h+='<div style="font-size:11.5px;padding:7px 9px;border-radius:8px;background:rgba(251,191,36,.12);color:#fcd34d;border:1px solid rgba(251,191,36,.3)">Se elimina hoy · motivo: '+(d.seg==='mal'?'segregación incorrecta (eliminación inmediata)':'¾ de capacidad')+'</div>';
+      else h+=reasChip('Sí, se elimina',d.elim===true,'reasSet(\''+it.id+'\',\'elim\',true)','')+reasChip('No, solo revisión',d.elim!==true,'reasSet(\''+it.id+'\',\'elim\',false)','');
+      if(forz||d.elim===true){
+        h+='<label style="'+bl+'">PESO (kg)</label><input type="number" min="0" step="any" value="'+(d.peso===undefined?'':d.peso)+'" oninput="reasNum(\''+it.id+'\',\'peso\',this.value)" placeholder="0.0" style="width:110px;font-size:13px;padding:7px"> kg'+reasRotHtml(it.id,d,bl);
+      }
+    }
+  }else{
+    h+='<label style="'+bl+'">HOY</label>'+
+      reasChip('No se eliminó',d.elim===false,'reasSet(\''+it.id+'\',\'elim\',false)','')+reasChip('Se eliminó',d.elim===true,'reasSet(\''+it.id+'\',\'elim\',true)','');
+    if(d.elim===true){
+      h+='<div style="display:flex;gap:10px;margin-top:6px"><div><label style="'+bl+';margin-top:0">CANTIDAD (bidones)</label><input type="number" min="1" step="1" value="'+(d.cant||'')+'" oninput="reasNum(\''+it.id+'\',\'cant\',this.value)" placeholder="1" style="width:100px;font-size:13px;padding:7px"></div>'+
+        '<div><label style="'+bl+';margin-top:0">PESO TOTAL (kg)</label><input type="number" min="0" step="any" value="'+(d.peso===undefined?'':d.peso)+'" oninput="reasNum(\''+it.id+'\',\'peso\',this.value)" placeholder="0.0" style="width:110px;font-size:13px;padding:7px"></div></div>'+reasRotHtml(it.id,d,bl);
+    }
+  }
+  return h+'</div>';
+}
+function reasBoxesHtml(F,items){
+  var bx=reasBoxes(F.unidad),cnt={ok:0,mid:0,el:0,na:0,pend:0},pend=[];
+  var col={ok:['#d1fae5','#10b981','#065f46'],mid:['#fef3c7','#f59e0b','#92400e'],el:['#fee2e2','#ef4444','#991b1b'],na:['#e2e8f0','#94a3b8','#64748b'],pend:['#ffffff','#cbd5e1','#475569']};
+  var cells=bx.map(function(n){
+    var e=reasBoxEst(n,F);cnt[e]++;if(e==='pend')pend.push(n);var c=col[e],sel=F.boxSel===n;
+    return '<div onclick="reasBox(\''+n+'\')" role="button" aria-label="Box '+n+'" style="height:38px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:700;cursor:pointer;background:'+c[0]+'!important;border:1.5px solid '+c[1]+';color:'+c[2]+'!important;'+(e==='na'?'text-decoration:line-through;':'')+(sel?'outline:3px solid #2563eb;outline-offset:1px;':'')+'">'+n+'</div>';
+  }).join('');
+  var rev=cnt.ok+cnt.mid;
+  function pill(t,bg,fg,b){return '<span style="display:inline-block;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700;margin:0 6px 6px 0;background:'+bg+'!important;color:'+fg+'!important;'+(b?'border:1.5px solid '+b+';':'')+'">'+t+'</span>';}
+  var h='<div style="border:1px solid #334766;border-radius:12px;padding:11px;margin-top:10px;background:#0f1a30">'+
+    '<label style="display:block;font-size:11px;color:#93c5fd;font-weight:700;letter-spacing:.3px;margin:0 0 6px">RÁPIDO</label>'+
+    reasChip('✓ Todos: menos de ½ y bien segregado',false,'reasBulk(\'ok\')','')+reasChip('Todos N/A',false,'reasBulk(\'na\')','')+
+    '<div style="font-size:11px;color:#94a3b8;margin:2px 0 4px">Primero marca todos y luego toca solo los boxes que tengan algo distinto. Un box que no existe, márcalo N/A.</div></div>'+
+    '<div style="border:1px solid #334766;border-radius:12px;padding:11px;margin-top:10px;background:#0f1a30">'+
+    '<label style="display:block;font-size:11px;color:#93c5fd;font-weight:700;letter-spacing:.3px;margin:0 0 6px">BOXES '+bx[0]+' A '+bx[bx.length-1]+'</label>'+
+    '<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:5px">'+cells+'</div>'+
+    '<div style="margin-top:9px">'+pill(rev+' revisados','#d1fae5','#065f46')+pill(cnt.el+' se eliminan','#fee2e2','#991b1b')+pill(cnt.na+' N/A','#e2e8f0','#475569')+
+      (cnt.pend?pill(cnt.pend+' pendientes: '+pend.slice(0,10).join(', ')+(pend.length>10?'…':''),'#ffffff','#475569','#cbd5e1'):pill('Sin pendientes','#d1fae5','#065f46'))+'</div></div>';
+  if(F.boxSel){
+    var n=F.boxSel;
+    h+='<div style="margin-top:10px"><div style="font-size:15px;font-weight:800;color:#15803d">Box '+n+'</div>'+
+      reasItemHtml(items.filter(function(x){return x.id==='rojo_'+n;})[0],F.it['rojo_'+n])+
+      reasItemHtml(items.filter(function(x){return x.id==='amarillo_'+n;})[0],F.it['amarillo_'+n])+
+      '<div style="margin-top:10px;background:#0d9488;color:#fff!important;text-align:center;padding:12px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer" onclick="reasBox(\''+n+'\')">Listo · volver a los boxes</div></div>';
+  }
+  return h;
+}
 function reasFormRegistro(){
   if(!REASF)reasNuevo();
   var F=REASF,items=F.unidad?reasItems(F.unidad):[];
@@ -23729,40 +23820,10 @@ function reasFormRegistro(){
   if(!F.unidad)return h+'</div>';
   h+='<div style="margin-top:8px">'+reasChip('✓ Hoy no hay nada que registrar en esta unidad',F.sinRes,'reasGen(\'sinRes\','+(!F.sinRes)+')','ok')+'</div>';
   if(!F.sinRes){
-    items.forEach(function(it){
-      var d=F.it[it.id]||{},est=reasItemEstado(it,d),na=!!d.na;
-      h+='<div style="border:1px solid '+(est==='ok'?'rgba(16,185,129,.5)':'#334766')+';border-radius:12px;padding:11px;margin-top:10px;background:#0f1a30">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;font-weight:700;color:#fff"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+it.col+';margin-right:6px"></span>'+esc(it.nom)+'</span>'+
-        reasChip('N/A',na,'reasSet(\''+it.id+'\',\'na\')','')+'</div>';
-      if(na){h+='<div style="font-size:11px;color:#94a3b8">No aplica: esta unidad no elimina este residuo.</div></div>';return;}
-      if(it.k==='cont'){
-        h+='<label style="'+bl+'">NIVEL DE LLENADO</label>'+
-          reasChip('Menos de ½',d.nivel==='lt12','reasSet(\''+it.id+'\',\'nivel\',\'lt12\')','')+reasChip('½',d.nivel==='m12','reasSet(\''+it.id+'\',\'nivel\',\'m12\')','')+reasChip('¾ · máximo para eliminar',d.nivel==='m34','reasSet(\''+it.id+'\',\'nivel\',\'m34\')','')+
-          '<label style="'+bl+'">SEGREGACIÓN</label>'+
-          reasChip('✓ Bien segregado',d.seg==='ok','reasSet(\''+it.id+'\',\'seg\',\'ok\')','ok')+reasChip('✗ Mal segregado',d.seg==='mal','reasSet(\''+it.id+'\',\'seg\',\'mal\')','bad');
-        if(d.seg==='mal'){
-          h+='<label style="'+bl+'">¿QUÉ ESTÁ MAL PUESTO?</label>'+(it.mal||['Otro']).map(function(m,i){return reasChip(esc(m),d.motivo===m,'reasSet(\''+it.id+'\',\'motivo\',\''+m.replace(/'/g,"\\'")+'\')','bad');}).join('');
-          if(d.motivo==='Otro')h+='<input type="text" value="'+esc(d.motivoOtro||'')+'" oninput="REASF.it[\''+it.id+'\'].motivoOtro=this.value" placeholder="Especifica" style="width:100%;font-size:13px;padding:7px;margin-top:4px">';
-        }
-        var forz=reasForzado(d);
-        if(d.nivel&&d.seg){
-          h+='<label style="'+bl+'">¿SE ELIMINA HOY?</label>';
-          if(forz)h+='<div style="font-size:11.5px;padding:7px 9px;border-radius:8px;background:rgba(251,191,36,.12);color:#fcd34d;border:1px solid rgba(251,191,36,.3)">Se elimina hoy · motivo: '+(d.seg==='mal'?'segregación incorrecta (eliminación inmediata)':'¾ de capacidad')+'</div>';
-          else h+=reasChip('Sí, se elimina',d.elim===true,'reasSet(\''+it.id+'\',\'elim\',true)','')+reasChip('No, solo revisión',d.elim!==true,'reasSet(\''+it.id+'\',\'elim\',false)','');
-          if(forz||d.elim===true){
-            h+='<label style="'+bl+'">PESO (kg)</label><input type="number" min="0" step="any" value="'+(d.peso===undefined?'':d.peso)+'" oninput="reasNum(\''+it.id+'\',\'peso\',this.value)" placeholder="0.0" style="width:110px;font-size:13px;padding:7px"> kg'+reasRotHtml(it.id,d,bl);
-          }
-        }
-      }else{
-        h+='<label style="'+bl+'">HOY</label>'+
-          reasChip('No se eliminó',d.elim===false,'reasSet(\''+it.id+'\',\'elim\',false)','')+reasChip('Se eliminó',d.elim===true,'reasSet(\''+it.id+'\',\'elim\',true)','');
-        if(d.elim===true){
-          h+='<div style="display:flex;gap:10px;margin-top:6px"><div><label style="'+bl+';margin-top:0">CANTIDAD (bidones)</label><input type="number" min="1" step="1" value="'+(d.cant||'')+'" oninput="reasNum(\''+it.id+'\',\'cant\',this.value)" placeholder="1" style="width:100px;font-size:13px;padding:7px"></div>'+
-            '<div><label style="'+bl+';margin-top:0">PESO TOTAL (kg)</label><input type="number" min="0" step="any" value="'+(d.peso===undefined?'':d.peso)+'" oninput="reasNum(\''+it.id+'\',\'peso\',this.value)" placeholder="0.0" style="width:110px;font-size:13px;padding:7px"></div></div>'+reasRotHtml(it.id,d,bl);
-        }
-      }
-      h+='</div>';
-    });
+    if(reasBoxes(F.unidad).length){
+      h+=reasBoxesHtml(F,items);
+      items.filter(function(x){return !x.box;}).forEach(function(it){h+=reasItemHtml(it,F.it[it.id]);});
+    }else items.forEach(function(it){h+=reasItemHtml(it,F.it[it.id]);});
   }
   h+='<label style="'+bl+'">OBSERVACIONES (opcional)</label><textarea oninput="REASF.obs=this.value" rows="2" style="width:100%;font-size:13px;padding:7px">'+esc(F.obs||'')+'</textarea>'+
     '<label style="'+bl+'">QUIÉN REGISTRA</label><select onchange="REASF.quien=this.value" style="width:100%;font-size:13px;padding:8px;margin-bottom:10px"><option value="">Selecciona</option>'+
@@ -23782,6 +23843,8 @@ window.registrarReas=function(){
   if(!F.quien){alert('Indica quién registra.');return;}
   var items=reasItems(F.unidad),out={},pesoTotal=0,alertas=[],elimN=0;
   if(!F.sinRes){
+    var _bx=reasBoxes(F.unidad);
+    if(_bx.length){var _pe=_bx.filter(function(n){return reasBoxEst(n,F)==='pend';});if(_pe.length){alert('Faltan '+_pe.length+' box(es) por revisar: '+_pe.slice(0,12).join(', ')+(_pe.length>12?'…':'')+'. Revísalos o márcalos N/A.');return;}}
     for(var i=0;i<items.length;i++){
       var it=items[i],d=F.it[it.id]||{},est=reasItemEstado(it,d);
       if(!est){alert('Falta completar: '+it.nom+' (o márcalo N/A).');return;}
@@ -23812,11 +23875,16 @@ window.registrarReas=function(){
   });
 };
 function reasNivelTxt(n){return n==='lt12'?'menos de ½':n==='m12'?'½':n==='m34'?'¾':'';}
-function reasDetalleV2(r){ // lista [{nom,txt,peso,alerta}]
+function reasDetalleV2(r){ // lista [{nom,txt,peso}] · los boxes sin novedad se resumen en una sola línea
   var out=[];if(!r||!r.items)return out;
-  var cat=reasItems(r.unidad||'');var nom={};cat.forEach(function(x){nom[x.id]=x.nom;});
+  var cat=reasItems(r.unidad||'');var nom={},esBox={};cat.forEach(function(x){nom[x.id]=x.nom;if(x.box)esBox[x.id]=1;});
+  var sinNov=0,nas=0;
   Object.keys(r.items).forEach(function(k){
     var o=r.items[k],n=nom[k]||k;
+    if(esBox[k]){
+      if(o.na){nas++;return;}
+      if(!o.elim&&o.seg!=='mal'&&o.nivel!=='m12'){sinNov++;return;}
+    }
     if(o.na){out.push({nom:n,txt:'N/A',peso:0});return;}
     var t=[];
     if(o.nivel)t.push('nivel '+reasNivelTxt(o.nivel));
@@ -23825,6 +23893,7 @@ function reasDetalleV2(r){ // lista [{nom,txt,peso,alerta}]
     if(o.elim&&o.rot&&!(o.rot.cs&&o.rot.fecha&&o.rot.peso))t.push('⚠ rótulo incompleto');
     out.push({nom:n,txt:t.join(' · '),peso:o.elim?(Number(o.peso)||0):0});
   });
+  if(sinNov||nas)out.push({nom:'Contenedores de los boxes',txt:sinNov+' sin novedad (menos de ½, bien segregados)'+(nas?' · '+nas+' N/A':''),peso:0});
   return out;
 }
 
@@ -25675,7 +25744,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.12 · 22-nov 22:40';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.13 · 22-nov 23:10';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -26643,10 +26712,11 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
 /* ===== UX v1: ingreso en teléfono, botón ♿ de accesibilidad y novedades (una sola vez) ===== */
 (function(){
   var NOV_ID='gesthor_nov_2026_11_22';
-  var ST={tam:0,hc:0,big:0,esp:0,mov:0};
+  var ST={tam:0,hc:0,big:0,esp:0,mov:0,tema:'claro'};
+  var TEMAS={claro:'',oscuro:'invert(.93) hue-rotate(180deg)',crema:'sepia(.32) saturate(.85) brightness(.99)',ambar:'invert(1) grayscale(1) sepia(1) saturate(6) hue-rotate(-8deg) contrast(1.1) brightness(1.05)'};
   function lsGet(k){try{return window.localStorage.getItem(k);}catch(e){return null;}}
   function lsSet(k,v){try{window.localStorage.setItem(k,v);return true;}catch(e){return false;}}
-  try{var g=JSON.parse(lsGet('gesthor_ux')||'null');if(g&&typeof g==='object'){Object.keys(ST).forEach(function(k){if(typeof g[k]==='number')ST[k]=g[k];});}}catch(e){}
+  try{var g=JSON.parse(lsGet('gesthor_ux')||'null');if(g&&typeof g==='object'){Object.keys(ST).forEach(function(k){if(k==='tema'){if(typeof g.tema==='string'&&TEMAS.hasOwnProperty(g.tema))ST.tema=g.tema;}else if(typeof g[k]==='number')ST[k]=g[k];});}}catch(e){}
 
   // ---------- estilos ----------
   var css=''+
@@ -26675,7 +26745,9 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
   '#uxOv ul{margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.5}#uxOv li{margin-bottom:6px}'+
   /* efectos de accesibilidad */
   'html.ux-t1 body{zoom:1.12}html.ux-t2 body{zoom:1.25}'+
-  'html.ux-hc{filter:contrast(1.18)}html.ux-hc body.gx-light{--gx-slate:#0f172a;--gx-line:#64748b}'+
+  'html.ux-hc body.gx-light{--gx-slate:#0f172a;--gx-line:#64748b}'+
+  'html.ux-th-oscuro img,html.ux-th-oscuro video,html.ux-th-oscuro canvas,html.ux-th-oscuro svg image,html.ux-th-oscuro .gesthor-logo,html.ux-th-oscuro .ux-hero{filter:invert(1) hue-rotate(180deg)}'+
+  'html.ux-th-ambar img,html.ux-th-ambar video,html.ux-th-ambar canvas,html.ux-th-ambar svg image,html.ux-th-ambar .gesthor-logo,html.ux-th-ambar .ux-hero{filter:invert(1)}'+
   'html.ux-hc .rol-btn,html.ux-hc button{border-width:2px}'+
   'html.ux-big button,html.ux-big select,html.ux-big input:not([type=checkbox]):not([type=radio]):not([type=range]){min-height:48px}'+
   'html.ux-big .rol-btn{padding-top:16px;padding-bottom:16px}'+
@@ -26688,6 +26760,8 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     h.classList.toggle('ux-t1',ST.tam===1);h.classList.toggle('ux-t2',ST.tam===2);
     h.classList.toggle('ux-hc',!!ST.hc);h.classList.toggle('ux-big',!!ST.big);
     h.classList.toggle('ux-esp',!!ST.esp);h.classList.toggle('ux-mov',!!ST.mov);
+    Object.keys(TEMAS).forEach(function(k){h.classList.toggle('ux-th-'+k,ST.tema===k&&k!=='claro');});
+    var f=(TEMAS[ST.tema]||'')+(ST.hc?' contrast(1.18)':'');h.style.filter=f.trim();
   }
   function guardar(){lsSet('gesthor_ux',JSON.stringify(ST));}
   aplicar();
@@ -26724,6 +26798,8 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
       '<div class="ux-s">Ajusta GESTHOR a lo que necesitas. Se guarda en este teléfono.</div>'+
       '<div class="ux-row"><div>Tamaño de letra<small>Agranda todo el texto</small></div><div class="ux-seg">'+
         [['Normal',0],['Grande',1],['Muy grande',2]].map(function(x){return '<button class="'+(ST.tam===x[1]?'on':'')+'" aria-pressed="'+(ST.tam===x[1])+'" onclick="uxTam('+x[1]+')">'+x[0]+'</button>';}).join('')+'</div></div>'+
+      '<div class="ux-row" style="display:block"><div>Color de pantalla<small>Cambia el fondo y los colores de toda la app</small></div><div class="ux-seg" style="margin-top:8px;flex-wrap:wrap">'+
+        [['Claro','claro'],['Oscuro','oscuro'],['Crema','crema'],['Ámbar sobre negro','ambar']].map(function(x){return '<button class="'+(ST.tema===x[1]?'on':'')+'" aria-pressed="'+(ST.tema===x[1])+'" onclick="uxTema(\''+x[1]+'\')">'+x[0]+'</button>';}).join('')+'</div></div>'+
       sw('hc','Alto contraste','Textos y bordes más marcados')+
       sw('big','Botones grandes','Más fáciles de tocar, también con guantes')+
       sw('esp','Letra más espaciada','Más aire entre letras y líneas para leer mejor')+
@@ -26736,7 +26812,8 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
   }
   window.uxTam=function(n){ST.tam=n;aplicar();guardar();panel();};
   window.uxTog=function(k){ST[k]=ST[k]?0:1;aplicar();guardar();panel();};
-  window.uxReset=function(){ST={tam:0,hc:0,big:0,esp:0,mov:0};aplicar();guardar();panel();};
+  window.uxTema=function(t){if(TEMAS.hasOwnProperty(t)){ST.tema=t;aplicar();guardar();panel();}};
+  window.uxReset=function(){ST={tam:0,hc:0,big:0,esp:0,mov:0,tema:'claro'};aplicar();guardar();panel();};
   window.uxLeer=leer;window.uxDetener=detener;window.uxCerrar=cerrar;window.uxAbrir=panel;
 
   function botonAcc(){
@@ -26751,9 +26828,9 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     if(!lsSet(NOV_ID+'_t','1'))return;       // sin almacenamiento: no insistimos
     var o=document.createElement('div');o.id='uxOv';o.setAttribute('role','dialog');o.setAttribute('aria-label','Novedades');
     o.innerHTML='<div class="ux-box"><h3>🆕 Novedades de GESTHOR</h3><div class="ux-s">Esto aparece solo esta vez.</div>'+
-      '<ul><li><b>♿ Accesibilidad:</b> ahora puedes agrandar la letra, subir el contraste, usar botones grandes o escuchar tus tareas del día. Úsalo si lo necesitas, con el botón ♿ de la pantalla.</li>'+
+      '<ul><li><b>♿ Accesibilidad:</b> ahora puedes agrandar la letra, cambiar el color de la pantalla (oscuro, crema o ámbar sobre negro), subir el contraste, usar botones grandes o escuchar tus tareas del día. Úsalo si lo necesitas, con el botón ♿ de la pantalla.</li>'+
       '<li><b>Ingreso más simple:</b> al abrir la app te ofrece continuar con el último perfil que usaste.</li>'+
-      '<li><b>REAS:</b> nuevo registro por unidad, con nivel de llenado, segregación, peso y rótulo.</li></ul>'+
+      '<li><b>REAS:</b> nuevo registro por unidad, con nivel de llenado, segregación, peso y rótulo. En los dispensarios se revisa box por box.</li></ul>'+
       '<button class="ux-main" onclick="uxNovOk(true)">Probar accesibilidad</button>'+
       '<button class="ux-sec2" onclick="uxNovOk(false)">Entendido</button></div>';
     document.body.appendChild(o);
