@@ -18878,11 +18878,11 @@ function rondaVentana(fecha,unidad,persona){
     if(g>=3&&g<=5)return {ini:'11:00',fin:'12:00'};
     return null;
   }
-  // Dispensarios T2 (tarde): lun–mar 17:00–18:00 · mié–jue 16:00–17:00 · vie 14:00–15:00 · sáb 09:00–10:00
+  // Dispensarios T2 (tarde): lun–mar 17:00–18:00 · mié–jue 16:00–17:00 · vie 15:00–16:00 · sáb 09:00–10:00
   if(unidad==='disp1_t2'||unidad==='disp2_t2'){
     if(g===1||g===2)return {ini:'17:00',fin:'18:00'};
     if(g===3||g===4)return {ini:'16:00',fin:'17:00'};
-    if(g===5)return {ini:'14:00',fin:'15:00'};
+    if(g===5)return {ini:'15:00',fin:'16:00'};
     if(g===6)return {ini:'09:00',fin:'10:00'};
     return null;
   }
@@ -25775,7 +25775,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.17 · 26-nov 16:10';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.18 · 26-nov 16:20';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
