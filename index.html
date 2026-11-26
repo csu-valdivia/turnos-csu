@@ -21462,6 +21462,13 @@ function verificarCumplimientoBase(tipo,fecha,tarea){
     var amReg=regsR.filter(function(r){return r.toma==='am';});
     var pmReg=regsR.filter(function(r){return r.toma==='pm';});
     var am=amReg.length>0,pm=pmReg.length>0;
+    // Cada persona responde solo por SU jornada: AM no debe la toma PM, ni PM la toma AM. Solo 'todo el día' exige ambas.
+    var _jr=(tarea&&tarea.jornada)||'dia';
+    if(_jr==='am'||_jr==='pm'){
+      var _rg=_jr==='am'?amReg:pmReg,_tg=_jr.toUpperCase();
+      if(!_rg.length)return {cumplido:false,detalle:'Sin registro '+_tg};
+      return _rg.every(function(r){return r.ne;})?{cumplido:true,detalle:_tg+': No evaluado (justificado)'}:{cumplido:true,detalle:_tg+' ✓'};
+    }
     if(am&&pm){
       var amNE=amReg.every(function(r){return r.ne;});
       var pmNE=pmReg.every(function(r){return r.ne;});
@@ -25763,7 +25770,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.15 · 26-nov 11:00';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.16 · 26-nov 15:30';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
