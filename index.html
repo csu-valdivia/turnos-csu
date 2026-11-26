@@ -1409,6 +1409,12 @@ body.gx-light .tccf button.si{color:#fff!important}
             <button class="btn-add" onclick="infAbrir()" style="background:linear-gradient(135deg,#0891b2,#22d3ee)">📈 Abrir informe</button>
           </div>
 
+          <div class="asec" style="border-color:rgba(124,58,237,.45)">
+            <p class="asec-title" style="color:#c4b5fd">🤝 Compromisos de mejora</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Compromisos con plazo y meta para el equipo clínico. Si no se logran: sin premio por 4 semanas, sin prioridad, sin rotaciones y con supervisión directa.</p>
+            <button class="btn-add" onclick="compPanel('clinico')" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">🤝 Abrir compromisos</button>
+          </div>
+
           <div class="asec" style="border-color:rgba(16,185,129,.2)">
             <p class="asec-title" style="color:#6ee7b7">📲 Registro de accesos</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Quién abrió la app y a qué hora.</p>
@@ -3036,6 +3042,7 @@ function renderPanelJefaOperaciones(){
     '<button onclick="abrirModuloGerencia()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">👤 Mi perfil personal (Gerencia) — Material, Preguntas y mi Logro</button>'+
     '<button onclick="abrirFaltantesBotiquin()" style="width:100%;margin-bottom:10px;background:linear-gradient(135deg,#059669,#34d399);color:#06281d;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💊 Botiquín de pabellón: faltantes por comprar</button>'+
     '<button onclick="abrirPremiosOperaciones()" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#d97706,#fbbf24);color:#0b1220;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🎁 Premios del equipo administrativo<span id="premioPendBadge"></span></button>'+
+    '<button onclick="compPanel(\'admin\')" style="width:100%;margin-bottom:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🤝 Compromisos de mejora del equipo administrativo</button>'+
     '<div id="jefaOpContenido"></div></div>';
   tabJefaOp('produccion');
   if(window._premiosOpListo)actualizarBadgePremios();
@@ -3882,7 +3889,7 @@ window.renderMisTurnosAdmin=function(cont){
     h+='<div style="background:#16233d;border-radius:12px;padding:14px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:4px">🔧 Calendario de mantenciones</div><div style="font-size:12px;color:#fff">'+(med&&med.fecha?'Este mes te lo mide la jefa el <b>'+esc(fmtF(med.fecha))+'</b>.':'La jefa aún no fija la fecha de medición de este mes.')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">Márcalo "al día" en Mis registros.</div></div>';}
   var tds=Object.values((tareasAdmin&&tareasAdmin[key]&&tareasAdmin[key][hoyStr()])||{}).filter(Boolean);
   if(tds.length)h+='<div style="background:#16233d;border-radius:12px;padding:14px"><div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px">📋 Tareas de la jefa para hoy</div>'+tds.map(function(t){return '<div style="font-size:12px;color:#fff;padding:3px 0">'+(t.hecha?'✅':'⬜')+' '+esc(t.texto)+'</div>';}).join('')+'</div>';
-  cont.innerHTML=h+'<div id="mjCard"></div><div id="miFonoCard"></div>';
+  cont.innerHTML=(window.compCardHtml?compCardHtml(nombre):'')+h+'<div id="mjCard"></div><div id="miFonoCard"></div>';
   pintarMediaJornadaAdmin(key);
   pintarMiWhatsApp(nombre);
 };
@@ -3998,6 +4005,7 @@ window.solicitarMediaJornada=function(key){
   if(fecha<fechaManana()){alert('Elige una fecha desde mañana.');return;}
   var dup=Object.values(solicitudesMediaJ||{}).some(function(x){return x&&x.key===key&&x.semIni===lun&&x.estado!=='rechazada';});
   if(dup){alert('Ya tienes una solicitud para esa semana.');return;}
+  try{var _bq=window.compBloqPremio&&window.compBloqPremio(nombre,{ini:lun,fin:_sumaDias(lun,5)});if(_bq){alert('No puedes solicitar la jornada libre de premio: tienes un compromiso de mejora no logrado, con consecuencias hasta el '+fmtF(_bq.bloqHasta)+'.');return;}}catch(e){}
   var c=cumplSemanaAdminPersona(key,lun);
   sedeRef('solicitudesMediaJornada').push({key:key,nombre:nombre,semIni:lun,semFin:_sumaDias(lun,5),cumplPct:c.pct,diasCump:c.dias,jornada:jor,fecha:fecha,nota:nota,estado:'pendiente',ts:Date.now()}).then(function(){
     alert('✓ Solicitud enviada a la Jefa de Operaciones.');pintarMediaJornadaAdmin(key);
@@ -5436,6 +5444,7 @@ window.setSede=function(sede){
   sedeRef('telefonosEquipo').on('value',function(s){telefonosEquipo=s.val()||{};});
   sedeRef('solicitudesMediaJornada').on('value',function(s){solicitudesMediaJ=s.val()||{};if(typeof actualizarBadgePremios==='function')actualizarBadgePremios();});
   sedeRef('premioConfig').on('value',function(s){var v=s.val();premioConfig=Object.assign({},PREMIO_CFG_DEF,(v&&typeof v==='object')?v:{});});
+  sedeRef('compromisos').on('value',function(s){window.compromisos=s.val()||{};try{if(window.compRefrescar)compRefrescar();}catch(e){}});
   sedeRef('salidas').on('value',function(s){salidas=s.val()||{};renderSalidas();if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none')renderMisTurnos(curNombre);});
   sedeRef('recuperaciones').on('value',function(s){recuperaciones=s.val()||{};renderSalidas();if(curNombre&&document.getElementById('appView')&&document.getElementById('appView').style.display!=='none')renderMisTurnos(curNombre);});
   sedeRef('historialGanadores').on('value',function(s){historialGanadores=s.val()||{};if(document.getElementById('ausenciasList'))renderAusencias();});
@@ -7187,12 +7196,14 @@ function renderCambios(){
 function renderCambiosAdmin(){
   var d=document.getElementById('cambiosAdminList');if(!d)return;
   var en=Object.entries(cambios).filter(function(e){return e[1].estado==='aceptado';});
+  try{en.sort(function(a,b){return (window.compSancion&&compSancion(a[1].solicitante)?1:0)-(window.compSancion&&compSancion(b[1].solicitante)?1:0);});}catch(e){}
   if(!en.length){d.innerHTML='<p class="empty">Sin cambios para aprobar.</p>';return;}
-  d.innerHTML=en.map(function(e){var k=e[0],c=e[1];return '<div class="cambio-card"><div class="cambio-hdr">'+c.solicitante+' ↔ '+c.con+'<span class="ebdg aceptado">aceptado por ambos</span></div><div class="cambio-sub">'+c.dia+' · '+c.horario+'</div><div class="cambio-acts"><button class="btn-ap" onclick="aprCambio(\''+k+'\')">✓ Aprobar y ejecutar</button><button class="btn-re" onclick="resCambio(\''+k+'\',\'rechazado\')">✗ Rechazar</button></div></div>';}).join('');
+  d.innerHTML=en.map(function(e){var k=e[0],c=e[1];return '<div class="cambio-card"><div class="cambio-hdr">'+c.solicitante+' ↔ '+c.con+'<span class="ebdg aceptado">aceptado por ambos</span>'+(window.compPrioHtml?compPrioHtml(c):'')+'</div><div class="cambio-sub">'+c.dia+' · '+c.horario+'</div><div class="cambio-acts"><button class="btn-ap" onclick="aprCambio(\''+k+'\')">✓ Aprobar y ejecutar</button><button class="btn-re" onclick="resCambio(\''+k+'\',\'rechazado\')">✗ Rechazar</button></div></div>';}).join('');
 }
 window.resCambio=function(k,e){sRef('cambios/'+k+'/estado').set(e);};
 window.aprCambio=function(k){
   var cam=cambios[k];if(!cam)return;
+  try{if(window.compSancion&&compSancion(cam.solicitante)&&!confirm(cam.solicitante+' tiene un compromiso de mejora no logrado: pierde prioridad en cambios de turno. ¿Aprobar de todos modos?'))return;}catch(e){}
   var bS=Object.entries(bloques).filter(function(e){return e[1].nombre===cam.solicitante&&e[1].dia===cam.dia;});
   var bC=Object.entries(bloques).filter(function(e){return e[1].nombre===cam.con&&e[1].dia===cam.dia;});
   var upd={};
@@ -10355,13 +10366,14 @@ function premioEvaluar(ordenado){
     var d=cumplSemanaDetalle(r.nombre)||{asig:0,cumpl:0,aus:0,pct:null};
     var pct=d.pct===null?null:Math.round(d.pct*1000)/10;
     var est=d.asig<cfg.minTareas?'sin':(pct>=cfg.minPct?'ok':'no');
+    try{if(window.compBloqPremio&&window.compBloqPremio(r.nombre,semanas[W]))est='bloq';}catch(e){} // compromiso de mejora no logrado: sin premio aunque cumpla
     return {r:r,pos:i+1,d:d,pct:pct,est:est};
   });
-  var hayDatos=filas.some(function(f){return f.est!=='sin';});
+  var hayDatos=filas.some(function(f){return f.est!=='sin'&&f.est!=='bloq';});
   var ganador=null,pasados=[];
-  if(!hayDatos){ganador=filas[0]||null;}
+  if(!hayDatos){ganador=filas.filter(function(f){return f.est!=='bloq';})[0]||null;}
   else{for(var i=0;i<filas.length;i++){if(filas[i].est==='ok'){ganador=filas[i];break;}pasados.push(filas[i]);}}
-  return {filas:filas,ganador:ganador,pasados:pasados,desierto:hayDatos&&!ganador,sinDatos:!hayDatos};
+  return {filas:filas,ganador:ganador,pasados:pasados,desierto:(hayDatos||filas.some(function(f){return f.est==='bloq';}))&&!ganador,sinDatos:!hayDatos};
 }
 window.abrirElegibilidadPremio=function(){
   var ev=premioEvaluar(ordenarRanking(false));
@@ -10374,7 +10386,7 @@ window.abrirElegibilidadPremio=function(){
     h+='<div class="gxe-wrap"><table class="gxe-t"><tr><th>#</th><th>Persona</th><th>Cumplimiento</th><th class="gxe-hm">Tareas</th><th class="gxe-hm">Ausencia</th><th>Premio</th></tr>';
     ev.filas.forEach(function(f){
       var gana=ev.ganador&&ev.ganador===f&&!ev.sinDatos;
-      var pill=f.est==='sin'?'<span class="gxe-p n">Sin evaluar</span>':f.est==='no'?'<span class="gxe-p r">No elegible</span>':gana?'<span class="gxe-p g">🏆 Gana</span>':'<span class="gxe-p g2">Elegible</span>';
+      var pill=f.est==='bloq'?'<span class="gxe-p r">🔒 Compromiso no logrado</span>':f.est==='sin'?'<span class="gxe-p n">Sin evaluar</span>':f.est==='no'?'<span class="gxe-p r">No elegible</span>':gana?'<span class="gxe-p g">🏆 Gana</span>':'<span class="gxe-p g2">Elegible</span>';
       var bar=f.pct===null?'—':'<span class="gxe-bar"><i style="width:'+Math.min(100,f.pct)+'%" class="'+premioBanda(f.pct)[1]+'"></i></span> <b>'+f.pct+'%</b> <small>'+premioBanda(f.pct)[0]+'</small>';
       var aus=ausSemanaTxt(f.r.nombre);
       h+='<tr'+(gana?' class="gxe-win"':'')+'><td>'+f.pos+'°</td><td><b>'+esc(f.r.nombre)+'</b><small class="gxe-sm">'+f.d.cumpl+'/'+f.d.asig+' tareas'+(aus?' · ausente '+esc(aus):'')+'</small></td><td>'+bar+'</td><td class="gxe-hm">'+f.d.cumpl+'/'+f.d.asig+'</td><td class="gxe-hm">'+(aus?esc(aus)+(f.d.aus?' <small>('+f.d.aus+' excl.)</small>':''):'—')+'</td><td>'+pill+'</td></tr>';
@@ -14019,7 +14031,7 @@ function renderCumpEquipo(){
 var ADM_GRUPOS=[
  {id:'turnos',ic:'📅',n:'Turnos y semana',d:'Semanas, bloques, cobertura, ausencias, premio, rondas',m:['Gestión de semanas','Carga masiva','Bloques horarios','Bloques cargados','Equipo clave azul','Enfermero/a a cargo','Cobertura cruzada','De llamado','Sin servicio','Turno pendiente manual','Ausencias (licencia','Salidas durante el turno','Solicitudes de cambio','Premio de la semana','Ronda de apertura','Ausencias activas','Solicitudes ausencia','Asignar tarea']},
  {id:'personas',ic:'👥',n:'Personas',d:'Dotación, internos, inducción, directorio',m:['Personal de este establecimiento','Clasificación del personal','Internos de enfermería','Inducción de colaboradores','Supervisores autorizados']},
- {id:'calidad',ic:'📊',n:'Cumplimiento y calidad',d:'Informes, tablero, accesos, supervisión, indicadores',m:['Informe de gestión','Tablero de cumplimiento','Informe de cumplimiento','Registro de accesos','Cumplimiento de lectura','Ronda de supervisión','Indicadores operacionales']},
+ {id:'calidad',ic:'📊',n:'Cumplimiento y calidad',d:'Informes, tablero, accesos, supervisión, indicadores',m:['Informe de gestión','Tablero de cumplimiento','Informe de cumplimiento','Compromisos de mejora','Registro de accesos','Cumplimiento de lectura','Ronda de supervisión','Indicadores operacionales']},
  {id:'comunica',ic:'📣',n:'Comunicación',d:'Avisos, anuncios, sugerencias, cumpleaños',m:['Aviso general','Anuncio de capacitación','Sugerencias del equipo','Cumpleaños del equipo']},
  {id:'clinica',ic:'🏥',n:'Operación clínica',d:'Pabellón, roles técnicos, temperaturas',m:['Plan de Pabellón','Roles técnicos','Espacios de temperatura']},
  {id:'programas',ic:'🌱',n:'Programas',d:'Liderazgo, plan de estudio, biblioteca',m:['Preguntas por semana y grupo','Metas e informes','Asignaciones en uso','Protocolos y preguntas','Programa de liderazgo','Plan de estudio','Biblioteca de conocimiento']},
@@ -14086,6 +14098,7 @@ function admAtencion(){
     if(cam)rows.push(['🔁','Cambios de turno por aprobar',cam,"admIr('Solicitudes de cambio')"]);
     if(aus)rows.push(['🗓','Ausencias por aprobar',aus,"admIr('Solicitudes ausencia')"]);
     if(sug)rows.push(['💡','Sugerencias del equipo',sug,"admIr('Sugerencias del equipo')"]);
+    try{if(window.compFilasAtencion)compFilasAtencion('clinico').forEach(function(r){rows.push(r);});}catch(e){}
     rows.push(['📝','Quién no ha respondido hoy','',"var b=document.getElementById('abrirPendientesHoyBtn');if(b)b.click()"]);
     d.innerHTML='<div class="admAten"><h4>Requiere tu atención</h4>'+rows.map(function(r){return '<div class="ar" onclick="'+r[3]+'"><span>'+r[0]+' '+r[1]+'</span>'+(r[2]!==''?'<span class="n">'+r[2]+'</span>':'<span style="color:rgba(255,255,255,.4)">›</span>')+'</div>';}).join('')+'</div>';
   }
@@ -25750,7 +25763,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.14 · 26-nov 10:05';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.15 · 26-nov 11:00';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -26477,7 +26490,8 @@ function genSemana(ini,tipo,idx,NM){
     if(!cubierto)B.push({dia:d,nombre:nm,area:'Esterilización',horario:hh});
   }
   var apoyoSem=cfg.apoyo[tipo]||{};
-  function apoyoDia(n,d){var a=apoyoSem[n];return a&&a.dias&&a.dias.indexOf(d)>-1?(a.j||'am'):'';}
+  var _sanAv={};
+  function apoyoDia(n,d){var a=apoyoSem[n];if(!(a&&a.dias&&a.dias.indexOf(d)>-1))return '';var sn=window.compSancion&&window.compSancion(n);if(sn&&sn.rotaciones){_sanAv[n]=sn;return '';}return a.j||'am';}
   EQUIPO.forEach(function(p){
     var r=rolDe(p.n);if(!r)return;
     var sv=SERV.filter(function(s){return s.id===p.s;})[0],nm=NM[p.n],disp=(p.s==='d1'||p.s==='d2');
@@ -26594,6 +26608,7 @@ function genSemana(ini,tipo,idx,NM){
     if(l){if(tLab)add(l,d,tLab,'am',null);else add(l,d,'tarea','am',{texto:'Revisión de trabajos de laboratorio (mensajes a estudiantes, laboratorios o docentes)'});}
     else AV.push(d+': revisión de laboratorios sin enfermero disponible.');
   });
+  Object.keys(_sanAv).forEach(function(n){AV.push(n+': con compromiso de mejora no logrado, queda fuera de Apoyo y de la cobertura cruzada hasta el '+_sanAv[n].hasta.slice(8,10)+'-'+_sanAv[n].hasta.slice(5,7)+'.');});
   (function(){
     var v=Object.keys(cuenta).map(function(k){return cuenta[k];});if(v.length<3)return;
     var m=v.reduce(function(a,b){return a+b;},0)/v.length;
@@ -26950,18 +26965,19 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     return String(lb).replace(/^[^\wÁÉÍÓÚáéíóúñÑ(]+/,'').trim()+(t.sector?' · '+t.sector:'');
   }
 
-  function nombresDe(){
+  function nombresDe(o){o=o||ST;
     var a=[],i=[];
     try{a=nombresConTurnoSemanaFiltrado(false);}catch(e){}
     try{i=nombresConTurnoSemanaFiltrado(true);}catch(e){}
-    if(ST.quien==='internos')return i.map(function(n){return {n:n,int:true};});
+    if(o.quien==='internos')return i.map(function(n){return {n:n,int:true};});
     var out=a.map(function(n){return {n:n,int:false};}).concat(i.filter(function(n){return a.indexOf(n)<0;}).map(function(n){return {n:n,int:true};}));
-    if(ST.quien==='una')out=out.filter(function(x){return x.n===ST.persona;});
+    if(o.quien==='una')out=out.filter(function(x){return x.n===o.persona;});
     return out;
   }
 
   // ── Cálculo: por semana, intercambiando temporalmente tareas/bloques/ranking como hace el tablero ──
-  function calcular(fechas){
+  function calcular(fechas,o){
+    o=o||{quien:ST.quien,persona:ST.persona,ev:ST.ev,ta:ST.ta};
     var porSem={};fechas.forEach(function(f){var id=semDeFecha(f);if(!id)return;(porSem[id]=porSem[id]||[]).push(f);});
     var ids=Object.keys(porSem);
     return Promise.all(ids.map(cargarSemana)).then(function(datos){
@@ -26971,7 +26987,7 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
         datos.forEach(function(D){
           tareas=D.tareas;bloques=D.bloques;ranking=D.ranking;
           var sem=semanas[D.id]||{},resp=tcRespuestasPorPersona();
-          nombresDe().forEach(function(x){
+          nombresDe(o).forEach(function(x){
             var n=x.n,k=n.trim().toLowerCase(),rs=resp[k]||{};
             var p=P[n]||(P[n]={nombre:n,interno:x.int,ev:{esp:0,resp:0,dias:[]},ta:{asig:0,cumpl:0,aus:0,items:[]}});
             var diasTurno={};
@@ -26981,12 +26997,12 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
               var dia=diaDeDate(f),g=new Date(f+'T12:00:00').getDay();
               if(esFeriado(dia))return;
               // Evaluación diaria: lun–vie, con turno, sin ausencia de día completo
-              if(ST.ev&&g>=1&&g<=5&&diasTurno[dia]&&conPreg){
+              if(o.ev&&g>=1&&g<=5&&diasTurno[dia]&&conPreg){
                 var ab={am:false,pm:false};try{ab=ausJorn(n,f);}catch(e){}
                 if(!(ab.am&&ab.pm)){var ok=!!rs[f];p.ev.esp++;if(ok)p.ev.resp++;p.ev.dias.push({f:f,ok:ok});}
               }
               // Tareas asignadas medibles
-              if(ST.ta){
+              if(o.ta){
                 Object.values(tareas||{}).forEach(function(t){
                   if(!t||t.nombre!==n||t.dia!==dia)return;
                   try{if(!medibleTarea(t.tipo)||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;}catch(e){return;}
@@ -27008,7 +27024,7 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
         .sort(function(a,b){return (b.pct==null?-1:b.pct)-(a.pct==null?-1:a.pct)||a.nombre.localeCompare(b.nombre);});
       var T=filas.reduce(function(a,p){a.er+=p.ev.resp;a.ee+=p.ev.esp;a.tc+=p.ta.cumpl;a.ta+=p.ta.asig;return a;},{er:0,ee:0,tc:0,ta:0});
       T.pe=pct(T.er,T.ee);T.pt=pct(T.tc,T.ta);T.pg=pct(T.er+T.tc,T.ee+T.ta);
-      return {fechas:fechas,filas:filas,T:T,ini:fechas[0],fin:fechas[fechas.length-1],nSem:ids.length,quien:ST.quien,ev:ST.ev,ta:ST.ta};
+      return {fechas:fechas,filas:filas,T:T,ini:fechas[0],fin:fechas[fechas.length-1],nSem:ids.length,quien:o.quien,ev:o.ev,ta:o.ta};
     });
   }
 
@@ -27026,10 +27042,12 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     if(!ST.mes)ST.mes=hoyStr().slice(0,7);
     R=null;pintar();
   };
+  window._infCalc=function(f,o){return calcular(f,o);};
+  window._infRango=rango;
   function pintar(){
     var ov=document.getElementById('infOv');if(!ov)return;
     var l=semLista().slice(0,12),h='<div style="max-width:760px;margin:0 auto">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><div style="font-size:18px;font-weight:800">📈 Informe de cumplimiento</div><div style="font-size:11.5px;color:rgba(255,255,255,.5)">General y por persona · tú eliges el período</div></div><button onclick="document.getElementById(\'infOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><div style="font-size:18px;font-weight:800">📈 Informe de cumplimiento</div><div style="font-size:11.5px;color:rgba(255,255,255,.5)">General y por persona · tú eliges el período</div></div><div style="display:flex;gap:6px"><button onclick="compPanel(\'clinico\')" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-family:inherit;cursor:pointer">🤝 Compromisos</button><button onclick="document.getElementById(\'infOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div></div>';
     h+=lbl('1 · ¿Qué período?');
     h+=chip(ST.modo==='sem','Semanas',"infSet('modo','sem')")+chip(ST.modo==='dias','Días sueltos',"infSet('modo','dias')")+chip(ST.modo==='mes','Mes',"infSet('modo','mes')");
     if(ST.modo==='sem'){
@@ -27055,7 +27073,7 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     }
     h+=lbl('3 · ¿Qué incluir?');
     h+=chip(ST.ev,(ST.ev?'✓ ':'')+'Evaluación diaria',"infSet('ev',!ST.ev)")+chip(ST.ta,(ST.ta?'✓ ':'')+'Tareas asignadas',"infSet('ta',!ST.ta)");
-    h+='<div style="margin-top:2px">'+chip(ST.det==='todo','Detalle: todas las tareas',"infSet('det','todo')")+chip(ST.det==='pend','Detalle: solo pendientes',"infSet('det','pend')")+'</div>';
+    h+='<div style="margin-top:2px">'+chip(ST.det==='todo','Detalle: pendientes y cumplidas',"infSet('det','todo')")+chip(ST.det==='pend','Detalle: solo pendientes',"infSet('det','pend')")+'</div>';
     h+='<div style="margin-top:16px"><button class="btn-add" onclick="infGenerar()" style="background:#0891b2">Ver informe</button></div>';
     h+='<div id="infRes" style="margin-top:14px"></div></div>';
     ov.innerHTML=h;
@@ -27071,26 +27089,38 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     if(ST.quien==='una'&&!ST.persona){box.innerHTML='<div style="color:#fca5a5">Elige la persona.</div>';return;}
     if(!ST.ev&&!ST.ta){box.innerHTML='<div style="color:#fca5a5">Marca al menos evaluación o tareas.</div>';return;}
     box.innerHTML='<div style="color:rgba(255,255,255,.6)">Calculando…</div>';
-    calcular(fs).then(function(r){R=r;pintarRes();var b=document.getElementById('infRes');if(b)try{b.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}})
+    calcular(fs).then(function(r){R=r;window._infR=r;pintarRes();var b=document.getElementById('infRes');if(b)try{b.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}})
       .catch(function(e){box.innerHTML='<div style="color:#fca5a5">No se pudo calcular: '+E(e&&e.message||e)+'</div>';});
   };
 
   function kpi(v,l,sub,c){return '<div style="flex:1;min-width:120px;background:rgba(255,255,255,.06);border-radius:12px;padding:10px 12px"><div style="font-size:26px;font-weight:900;color:'+c+'">'+(v==null?'—':v+'%')+'</div><div style="font-size:11.5px;color:rgba(255,255,255,.6)">'+l+'<br>'+sub+'</div></div>';}
-  function detalleHtml(p){
-    var h='';
-    if(ST.ev&&p.ev.dias.length){
-      h+='<div style="font-size:11px;color:#93c5fd;font-weight:700;margin:8px 0 4px">EVALUACIÓN DIARIA</div><div>'+p.ev.dias.map(function(d){return '<span style="display:inline-block;margin:0 4px 4px 0;padding:3px 8px;border-radius:6px;font-size:11.5px;background:'+(d.ok?'rgba(34,197,94,.18);color:#86efac':'rgba(239,68,68,.2);color:#fca5a5')+'">'+(d.ok?'✓ ':'✗ ')+E(fCorta(d.f))+'</span>';}).join('')+'</div>';
+  function itemHtml(x){
+    var c=x.aus?'#94a3b8':x.ok?'#86efac':'#fca5a5',ic=x.aus?'–':x.ok?'✓':'✗';
+    return '<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12.5px"><div style="display:flex;gap:8px"><span style="color:'+c+';font-weight:800;width:14px">'+ic+'</span><span style="flex:1"><b>'+E(fCorta(x.f))+'</b> · '+E(x.tarea)+'<br><span style="font-size:11px;color:rgba(255,255,255,.55)">🕐 '+E(x.hora)+(x.det?' · '+E(x.det):'')+'</span></span></div></div>';
+  }
+  function chipsEv(arr,ok){return arr.map(function(d){return '<span style="display:inline-block;margin:0 4px 4px 0;padding:3px 8px;border-radius:6px;font-size:11.5px;background:'+(ok?'rgba(34,197,94,.18);color:#86efac':'rgba(239,68,68,.2);color:#fca5a5')+'">'+(ok?'✓ ':'✗ ')+E(fCorta(d.f))+'</span>';}).join('');}
+  function partes(p){
+    var evP=ST.ev?p.ev.dias.filter(function(d){return !d.ok;}):[],evC=ST.ev?p.ev.dias.filter(function(d){return d.ok;}):[];
+    var taP=ST.ta?p.ta.items.filter(function(x){return !x.ok&&!x.aus;}):[],taC=ST.ta?p.ta.items.filter(function(x){return x.ok;}):[],taA=ST.ta?p.ta.items.filter(function(x){return x.aus;}):[];
+    return {evP:evP,evC:evC,taP:taP,taC:taC,taA:taA};
+  }
+  window._infPartes=partes;
+  function detalleHtml(p,idx){
+    var q=partes(p),h='',nP=q.evP.length+q.taP.length,nC=q.evC.length+q.taC.length;
+    h+='<div style="border-left:4px solid #ef4444;background:rgba(239,68,68,.07);border-radius:10px;padding:8px 10px;margin:10px 0 8px"><div style="font-size:12px;font-weight:800;color:#fca5a5">✗ PENDIENTES ('+nP+')</div>';
+    if(!nP)h+='<div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:3px">Sin pendientes en el período.</div>';
+    if(q.taP.length)h+='<div style="font-size:10.5px;color:#93c5fd;font-weight:700;margin:6px 0 2px;text-transform:uppercase">Tareas · '+q.taP.length+'</div>'+q.taP.map(itemHtml).join('');
+    if(q.evP.length)h+='<div style="font-size:10.5px;color:#93c5fd;font-weight:700;margin:6px 0 3px;text-transform:uppercase">Evaluación diaria · '+q.evP.length+'</div>'+chipsEv(q.evP,false);
+    h+='</div>';
+    if(ST.det!=='pend'){
+      h+='<details style="border-left:4px solid #22c55e;background:rgba(34,197,94,.06);border-radius:10px;padding:8px 10px;margin-bottom:8px"><summary style="cursor:pointer;font-size:12px;font-weight:800;color:#86efac">✓ CUMPLIDAS ('+nC+') <span style="font-weight:400;color:rgba(255,255,255,.5)">· toca para ver</span></summary>';
+      if(q.taC.length)h+='<div style="font-size:10.5px;color:#93c5fd;font-weight:700;margin:6px 0 2px;text-transform:uppercase">Tareas · '+q.taC.length+'</div>'+q.taC.map(itemHtml).join('');
+      if(q.evC.length)h+='<div style="font-size:10.5px;color:#93c5fd;font-weight:700;margin:6px 0 3px;text-transform:uppercase">Evaluación diaria · '+q.evC.length+'</div>'+chipsEv(q.evC,true);
+      if(!nC)h+='<div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:3px">Nada cumplido en el período.</div>';
+      h+='</details>';
     }
-    if(ST.ta){
-      var it=p.ta.items.filter(function(x){return ST.det==='todo'||(!x.ok&&!x.aus);});
-      h+='<div style="font-size:11px;color:#93c5fd;font-weight:700;margin:8px 0 4px">TAREAS ASIGNADAS'+(ST.det==='pend'?' · SOLO PENDIENTES':'')+'</div>';
-      if(!it.length)h+='<div style="font-size:12px;color:rgba(255,255,255,.5)">'+(ST.det==='pend'?'Sin pendientes.':'Sin tareas medibles en el período.')+'</div>';
-      it.forEach(function(x){
-        var c=x.aus?'#94a3b8':x.ok?'#86efac':'#fca5a5',ic=x.aus?'–':x.ok?'✓':'✗';
-        h+='<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12.5px"><div style="display:flex;gap:8px"><span style="color:'+c+';font-weight:800;width:14px">'+ic+'</span><span style="flex:1"><b>'+E(fCorta(x.f))+'</b> · '+E(x.tarea)+'<br><span style="font-size:11px;color:rgba(255,255,255,.55)">🕐 '+E(x.hora)+(x.det?' · '+E(x.det):'')+'</span></span></div></div>';
-      });
-      if(p.ta.aus)h+='<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:4px">'+p.ta.aus+' tarea'+(p.ta.aus===1?'':'s')+' en jornada de ausencia aprobada: no cuenta en contra.</div>';
-    }
+    if(q.taA.length)h+='<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px">'+q.taA.length+' tarea'+(q.taA.length===1?'':'s')+' en jornada de ausencia aprobada: no cuenta'+(q.taA.length===1?'':'n')+' en contra.</div>';
+    if(window.compNuevo&&nP)h+='<button class="btn-add" onclick="infCompromiso('+idx+')" style="background:#7c3aed;margin-top:2px">🤝 Crear compromiso de mejora</button>';
     return h;
   }
   function pintarRes(){
@@ -27103,7 +27133,7 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     R.filas.forEach(function(p,i){
       h+='<details style="background:rgba(255,255,255,.05);border-radius:12px;padding:9px 12px;margin-bottom:6px"><summary style="cursor:pointer;display:flex;align-items:center;gap:8px;list-style:none"><span style="flex:1;font-weight:700">'+(p.interno?'🎓 ':'')+E(p.nombre)+'</span>'
         +(R.ev?'<span style="font-size:11.5px;color:rgba(255,255,255,.6)">Eval '+p.ev.resp+'/'+p.ev.esp+'</span>':'')+(R.ta?'<span style="font-size:11.5px;color:rgba(255,255,255,.6)">Tareas '+p.ta.cumpl+'/'+p.ta.asig+'</span>':'')
-        +'<span style="min-width:44px;text-align:right;font-weight:900;color:'+col(p.pct)+'">'+(p.pct==null?'—':p.pct+'%')+'</span></summary>'+detalleHtml(p)+'</details>';
+        +'<span style="min-width:44px;text-align:right;font-weight:900;color:'+col(p.pct)+'">'+(p.pct==null?'—':p.pct+'%')+'</span></summary>'+detalleHtml(p,i)+'</details>';
     });
     h+='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn-add" onclick="infPdf()" style="background:#0891b2">📄 Descargar PDF</button><button class="btn-add" onclick="infExcel()" style="background:#16a34a">📊 Descargar Excel</button></div>';
     h+='<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:8px">Las ausencias aprobadas y los feriados no cuentan en contra. Una semana sin preguntas para el grupo no suma días de evaluación esperados.</div>';
@@ -27142,35 +27172,36 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     fila(['Persona','Evaluación','Tareas','General'],true);
     R.filas.forEach(function(p,i){chk(16);if(i%2===0){doc.setFillColor(243,246,250);doc.rect(M,y-10,CW,15,'F');}
       fila([p.nombre.slice(0,42),R.ev?p.ev.resp+'/'+p.ev.esp:'-',R.ta?p.ta.cumpl+'/'+p.ta.asig:'-',p.pct==null?'-':p.pct+'%'],false);});
-    // Detalle por persona
+    // Detalle por persona: pendientes primero, cumplidas después
+    function titulo(t,r,g,bb){chk(26);doc.setFillColor(r,g,bb);doc.rect(M,y-10,CW,15,'F');doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(255,255,255);tx(t,M+4,y);y+=18;}
+    function subt(t){chk(20);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(15,60,90);tx(t,M,y);y+=12;}
+    function itemPdf(x,est,c1,c2,c3){
+      var l1=doc.splitTextToSize(x.tarea,CW-120);chk(14+l1.length*11);
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(c1,c2,c3);tx(est,M,y);
+      doc.setTextColor(30,30,30);tx(fCorta(x.f),M+66,y);
+      doc.setFont('helvetica','normal');l1.forEach(function(l,k){tx(l,M+110,y+k*11);});y+=l1.length*11;
+      doc.setFontSize(8.5);doc.setTextColor(90,90,90);tx('Horario: '+x.hora+(x.det?'  |  '+x.det:''),M+110,y);y+=12;
+      doc.setDrawColor(225,230,236);doc.setLineWidth(0.4);doc.line(M,y-6,PW-M,y-6);
+    }
+    function diasPdf(arr,ok){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(30,30,30);var l='';arr.forEach(function(d){l+=(ok?'[OK] ':'[FALTA] ')+fCorta(d.f)+'   ';});doc.splitTextToSize(l,CW).forEach(function(t){chk(12);tx(t,M,y);y+=11;});y+=4;}
     R.filas.forEach(function(p){
+      var q=window._infPartes(p),nP=q.evP.length+q.taP.length,nC=q.evC.length+q.taC.length;
       doc.addPage();y=M;
       doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(15,60,90);tx(p.nombre,M,y);y+=15;
       doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60,60,60);
-      tx('Cumplimiento: '+(p.pct==null?'-':p.pct+'%')+(R.ev?'   Evaluación '+p.ev.resp+'/'+p.ev.esp:'')+(R.ta?'   Tareas '+p.ta.cumpl+'/'+p.ta.asig:''),M,y);y+=14;
-      if(R.ev&&p.ev.dias.length){
-        doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(15,60,90);tx('Evaluación diaria',M,y);y+=12;
-        doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(30,30,30);
-        var linea='';p.ev.dias.forEach(function(d){linea+=(d.ok?'[OK] ':'[FALTA] ')+fCorta(d.f)+'   ';});
-        doc.splitTextToSize(linea,CW).forEach(function(l){chk(12);tx(l,M,y);y+=11;});y+=6;
+      tx('Cumplimiento: '+(p.pct==null?'-':p.pct+'%')+(R.ev?'   Evaluación '+p.ev.resp+'/'+p.ev.esp:'')+(R.ta?'   Tareas '+p.ta.cumpl+'/'+p.ta.asig:''),M,y);y+=16;
+      titulo('PENDIENTES ('+nP+')',185,28,28);
+      if(!nP){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(90,90,90);tx('Sin pendientes en el período.',M,y);y+=14;}
+      if(q.taP.length){subt('Tareas ('+q.taP.length+')');q.taP.forEach(function(x){itemPdf(x,'PENDIENTE',200,30,30);});}
+      if(q.evP.length){y+=2;subt('Evaluación diaria ('+q.evP.length+')');diasPdf(q.evP,false);}
+      if(ST.det!=='pend'){
+        y+=6;titulo('CUMPLIDAS ('+nC+')',22,128,60);
+        if(!nC){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(90,90,90);tx('Nada cumplido en el período.',M,y);y+=14;}
+        if(q.taC.length){subt('Tareas ('+q.taC.length+')');q.taC.forEach(function(x){itemPdf(x,'CUMPLIDA',22,128,60);});}
+        if(q.evC.length){y+=2;subt('Evaluación diaria ('+q.evC.length+')');diasPdf(q.evC,true);}
       }
-      if(R.ta){
-        var it=p.ta.items.filter(function(x){return ST.det==='todo'||(!x.ok&&!x.aus);});
-        chk(30);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(15,60,90);tx('Tareas asignadas'+(ST.det==='pend'?' (solo pendientes)':''),M,y);y+=13;
-        if(!it.length){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(90,90,90);tx(ST.det==='pend'?'Sin pendientes.':'Sin tareas medibles en el período.',M,y);y+=12;}
-        it.forEach(function(x){
-          var l1=doc.splitTextToSize(x.tarea,CW-120);
-          chk(14+l1.length*11);
-          doc.setFont('helvetica','bold');doc.setFontSize(9);
-          if(x.aus)doc.setTextColor(120,120,120);else if(x.ok)doc.setTextColor(22,128,60);else doc.setTextColor(200,30,30);
-          tx(x.aus?'AUSENTE':x.ok?'CUMPLIDA':'PENDIENTE',M,y);
-          doc.setTextColor(30,30,30);tx(fCorta(x.f),M+66,y);
-          doc.setFont('helvetica','normal');l1.forEach(function(l,k){tx(l,M+110,y+k*11);});y+=l1.length*11;
-          doc.setFontSize(8.5);doc.setTextColor(90,90,90);tx('Horario: '+x.hora+(x.det?'  |  '+x.det:''),M+110,y);y+=12;
-          doc.setDrawColor(225,230,236);doc.setLineWidth(0.4);doc.line(M,y-6,PW-M,y-6);
-        });
-        if(p.ta.aus){chk(14);doc.setFontSize(8.5);doc.setTextColor(90,90,90);tx(p.ta.aus+' tarea(s) en jornada de ausencia aprobada: no cuentan en contra.',M,y);y+=12;}
-      }
+      if(q.taA.length){chk(14);y+=4;doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(90,90,90);tx(q.taA.length+' tarea(s) en jornada de ausencia aprobada: no cuentan en contra.',M,y);y+=12;}
+      try{if(window.compPdfBloque)y=window.compPdfBloque(doc,p.nombre,y,M,CW,PW,PH,function(n,yy){y=yy;chk(n);return y;});}catch(e){}
     });
     // Firma + timbre del Director Técnico en la última página
     chk(100);y+=24;
@@ -27195,14 +27226,360 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
     var T=R.T;res.push(['TOTAL EQUIPO',T.ee,T.er,T.pe,T.ta,T.tc,T.pt,T.ee+T.ta,T.er+T.tc,T.pg]);
     var det=[['Persona','Fecha','Día','Tipo','Actividad','Horario','Estado','Detalle']];
     R.filas.forEach(function(p){
-      p.ev.dias.forEach(function(d){det.push([p.nombre,d.f,diaDeDate(d.f),'Evaluación diaria','Responder evaluación del día','',d.ok?'Cumplida':'Pendiente','']);});
-      p.ta.items.forEach(function(x){det.push([p.nombre,x.f,diaDeDate(x.f),'Tarea',x.tarea,x.hora,x.aus?'Ausente (no cuenta)':x.ok?'Cumplida':'Pendiente',x.det]);});
+      var q=window._infPartes(p);
+      q.evP.forEach(function(d){det.push([p.nombre,d.f,diaDeDate(d.f),'Evaluación diaria','Responder evaluación del día','','Pendiente','']);});
+      q.taP.forEach(function(x){det.push([p.nombre,x.f,diaDeDate(x.f),'Tarea',x.tarea,x.hora,'Pendiente',x.det]);});
+      if(ST.det!=='pend'){
+        q.evC.forEach(function(d){det.push([p.nombre,d.f,diaDeDate(d.f),'Evaluación diaria','Responder evaluación del día','','Cumplida','']);});
+        q.taC.forEach(function(x){det.push([p.nombre,x.f,diaDeDate(x.f),'Tarea',x.tarea,x.hora,'Cumplida',x.det]);});
+      }
+      q.taA.forEach(function(x){det.push([p.nombre,x.f,diaDeDate(x.f),'Tarea',x.tarea,x.hora,'Ausente (no cuenta)',x.det]);});
     });
     var wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(res),'Resumen');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(det),'Detalle');
     XLSX.writeFile(wb,'Informe_cumplimiento_'+R.ini+'_a_'+R.fin+'.xlsx');
   };
+})();
+
+/* ===== COMP v1: compromisos de mejora (clínico: Director Técnico · administrativo: Jefa de Operaciones) ===== */
+(function(){
+  var CACHE={};            // id -> {m,v} medida calculada
+  var PS={equipo:'clinico',tab:'vig',anio:''};
+  var ESC=function(s){return (typeof esc==='function')?esc(s):String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+  function C(){return window.compromisos||{};}
+  function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function suma(f,n){var d=new Date(f+'T12:00:00');d.setDate(d.getDate()+n);return ymd(d);}
+  function fl(f){return f?f.slice(8,10)+'-'+f.slice(5,7)+'-'+f.slice(0,4):'';}
+  function pc(a,b){return b?Math.round(a/b*100):null;}
+  function eqNom(e){return e==='admin'?'Equipo administrativo':'Equipo clínico';}
+  function creador(e){return e==='admin'?'Jefa de Operaciones':'Patricio Baeza';}
+  var RES={logrado:['LOGRADO','#22c55e','#04210f'],parcial:['PARCIAL','#f59e0b','#2b1a00'],no_logrado:['NO LOGRADO','#ef4444','#fff'],sin_datos:['SIN DATOS','#94a3b8','#0b1220']};
+  function pill(t,bg,fg){return '<span style="display:inline-block;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px;background:'+bg+';color:'+fg+'">'+t+'</span>';}
+
+  // ══════ Consecuencias (las leen premio, cambios de turno, generador y supervisión) ══════
+  window.compSancion=function(n){
+    var h=hoyStr(),r=null;
+    Object.keys(C()).forEach(function(id){var c=C()[id];
+      if(c&&c.nombre===n&&c.resultado==='no_logrado'&&c.bloqDesde&&h>=c.bloqDesde&&h<=c.bloqHasta&&(!r||c.bloqHasta>r.hasta))
+        r={id:id,desde:c.bloqDesde,hasta:c.bloqHasta,premio:true,rotaciones:true,supervision:true,prioridad:true};});
+    return r;
+  };
+  // ¿El premio de esa semana está bloqueado? (aunque gane, se mide semana a semana)
+  window.compBloqPremio=function(n,sem){
+    if(!sem||!sem.ini||!sem.fin)return null;var r=null;
+    Object.keys(C()).forEach(function(id){var c=C()[id];
+      if(c&&c.nombre===n&&c.resultado==='no_logrado'&&c.bloqDesde&&sem.fin>=c.bloqDesde&&sem.ini<=c.bloqHasta)r=c;});
+    return r;
+  };
+  window.compPrioHtml=function(cam){
+    var a=window.compSancion(cam.solicitante),b=window.compSancion(cam.con),x=a||b;if(!x)return '';
+    return '<span class="ebdg" style="background:rgba(239,68,68,.2);color:#fca5a5;margin-left:4px">🔒 '+ESC(a?cam.solicitante:cam.con)+': sin prioridad (compromiso no logrado, hasta '+fl(x.hasta)+')</span>';
+  };
+
+  // ══════ Medición automática ══════
+  function medirAdmin(c,fs){
+    var vals=[],cur=rangoSemanaDe(hoyStr()).ini;
+    try{
+      fs.forEach(function(f){var g=new Date(f+'T12:00:00').getDay();if(g<1||g>6)return;
+        window._sinFeriadoAdm=(rangoSemanaDe(f).ini!==cur);
+        var v=cumplDiaAdminPersona(c.key,f);if(v!==null&&v!==undefined)vals.push(v);});
+    }finally{window._sinFeriadoAdm=false;}
+    return {pct:vals.length?Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length):null,dias:vals.length};
+  }
+  function medir(c){
+    var h=hoyStr(),ayer=suma(h,-1),hasta=c.fin<ayer?c.fin:ayer;
+    if(c.ini>hasta)return Promise.resolve({vacio:true,dias:0});
+    var fs=window._infRango(c.ini,hasta);
+    if(c.equipo==='admin')return Promise.resolve(medirAdmin(c,fs));
+    return window._infCalc(fs,{quien:'una',persona:c.nombre,ev:true,ta:true}).then(function(R){
+      var p=R.filas[0];
+      if(!p)return {ta:0,tc:0,ee:0,er:0,pt:null,pe:null,dias:fs.length};
+      return {ta:p.ta.asig,tc:p.ta.cumpl,ee:p.ev.esp,er:p.ev.resp,pt:pc(p.ta.cumpl,p.ta.asig),pe:pc(p.ev.resp,p.ev.esp),dias:fs.length};
+    });
+  }
+  function veredicto(c,m){
+    if(!m||m.vacio)return 'sin_datos';
+    if(c.equipo==='admin'){if(m.pct==null)return 'sin_datos';return m.pct>=(c.metaPct||90)?'logrado':(m.pct>=80?'parcial':'no_logrado');}
+    var hayT=m.ta>0,hayE=m.ee>0;if(!hayT&&!hayE)return 'sin_datos';
+    var okT=!hayT||m.pt>=(c.metaTareas||90),okE=!hayE||m.pe>=(c.metaEval||100);
+    if(okT&&okE)return 'logrado';
+    return ((!hayT||m.pt>=80)&&(!hayE||m.pe>=80))?'parcial':'no_logrado';
+  }
+  function textoMedida(c,m){
+    if(!m||m.vacio)return 'Aún sin días para medir.';
+    if(c.equipo==='admin')return m.pct==null?'Sin datos todavía':'Cumplimiento '+m.pct+'% (meta '+(c.metaPct||90)+'%) · '+m.dias+' día(s)';
+    return (m.ta?'Tareas '+m.pt+'% ('+m.tc+'/'+m.ta+', meta '+(c.metaTareas||90)+'%)':'Sin tareas medibles')+' · '+(m.ee?'Evaluación '+m.pe+'% ('+m.er+'/'+m.ee+', meta '+(c.metaEval||100)+'%)':'Sin evaluaciones esperadas');
+  }
+  function vencido(c){return c.fin<hoyStr();}
+
+  // ══════ Cierre ══════
+  function cerrar(id,res,m){
+    var c=C()[id];if(!c||c.estado==='cerrado')return Promise.resolve();
+    var u={estado:'cerrado',resultado:res,cierreTs:Date.now(),cierreFecha:hoyStr(),medida:m||null};
+    if(res==='no_logrado'){u.bloqDesde=suma(c.fin,1);u.bloqHasta=suma(c.fin,28);}
+    return sedeRef('compromisos/'+id).update(u).then(function(){window.compromisos[id]=Object.assign({},c,u);});
+  }
+  function autoCerrar(equipo){
+    var ids=Object.keys(C()).filter(function(id){var c=C()[id];return c&&c.equipo===equipo&&c.estado!=='cerrado'&&vencido(c);});
+    return Promise.all(ids.map(function(id){var c=C()[id];
+      return medir(c).then(function(m){var v=veredicto(c,m);CACHE[id]={m:m,v:v};if(v!=='sin_datos')return cerrar(id,v,m);});
+    })).then(function(){if(document.getElementById('cmpOv'))pintarPanel();});
+  }
+
+  // ══════ Acciones de la persona ══════
+  window.compAceptar=function(id){
+    var c=C()[id];if(!c)return;
+    if(!confirm('Al aceptar confirmas que leíste el compromiso, su plazo y su meta. ¿Aceptar?'))return;
+    var a={ts:Date.now(),nombre:c.nombre};
+    sedeRef('compromisos/'+id).update({estado:'aceptado',acept:a}).then(function(){window.compromisos[id]=Object.assign({},c,{estado:'aceptado',acept:a});refrescarVistas();});
+  };
+  window.compComentar=function(id){
+    var c=C()[id];if(!c)return;var t=prompt('Tu comentario (lo verá quien creó el compromiso; no cambia la meta ni el plazo):');
+    if(t===null||!String(t).trim())return;
+    sedeRef('compromisos/'+id+'/comentarios').push({ts:Date.now(),quien:c.nombre,texto:String(t).trim().slice(0,500)}).then(function(){alert('✓ Comentario enviado.');});
+  };
+
+  // Tarjeta que ve la persona (Mis turnos / Mi día administrativo)
+  window.compCardHtml=function(nombre){
+    var arr=Object.keys(C()).map(function(id){var c=C()[id];return c&&c.nombre===nombre?Object.assign({id:id},c):null;}).filter(Boolean);
+    var act=arr.filter(function(c){return c.estado!=='cerrado';});
+    var san=window.compSancion(nombre);
+    if(!act.length&&!san)return '';
+    var h='';
+    act.forEach(function(c){
+      var antes=c.ini>hoyStr();
+      h+='<div style="background:rgba(124,58,237,.16);border:1px solid rgba(167,139,250,.55);border-radius:12px;padding:12px;margin-bottom:12px;color:#fff"><div style="font-size:13px;font-weight:800;color:#c4b5fd;margin-bottom:4px">🤝 Tu compromiso de mejora</div>'
+        +'<div style="font-size:13px;color:#fff">'+ESC(c.texto)+'</div>'
+        +(c.apoyo?'<div style="font-size:11.5px;color:rgba(255,255,255,.75);margin-top:4px">Apoyo de la jefatura: '+ESC(c.apoyo)+'</div>':'')
+        +'<div style="font-size:11.5px;color:rgba(255,255,255,.75);margin-top:4px">'+(antes?'Comienza el '+fl(c.ini)+' · ':'')+'Plazo: '+fl(c.fin)+' · Meta: '+(c.equipo==='admin'?'cumplimiento ≥ '+(c.metaPct||90)+'%':'tareas ≥ '+(c.metaTareas||90)+'% y evaluación ≥ '+(c.metaEval||100)+'%')+'</div>'
+        +'<div id="cmpMed_'+c.id+'" style="font-size:12px;font-weight:700;margin-top:6px">'+(antes?'':'Calculando tu avance…')+'</div>'
+        +'<div style="margin-top:8px">'+(c.estado==='enviado'?'<button onclick="compAceptar(\''+c.id+'\')" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-family:inherit;font-weight:700;cursor:pointer;margin-right:6px">✍ Acepto</button>':'<span style="font-size:11px;color:#86efac">✓ Aceptado el '+fl(ymd(new Date(c.acept&&c.acept.ts||Date.now())))+'</span> ')
+        +'<button onclick="compComentar(\''+c.id+'\')" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-family:inherit;cursor:pointer">💬 Comentar</button></div></div>';
+      if(!antes)setTimeout(function(){medir(c).then(function(m){CACHE[c.id]={m:m,v:veredicto(c,m)};var el=document.getElementById('cmpMed_'+c.id);if(el)el.textContent='Tu avance: '+textoMedida(c,m);});},50);
+    });
+    if(san)h+='<div style="background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.55);border-radius:12px;padding:12px;margin-bottom:12px;font-size:12.5px;color:#fff"><div style="font-weight:800;color:#fca5a5;margin-bottom:3px">🔒 Compromiso no logrado · consecuencias hasta el '+fl(san.hasta)+'</div>Sin premio de media jornada · sin prioridad en turnos y cambios · sin rotaciones ni apoyo · con supervisión directa.</div>';
+    return h;
+  };
+  function refrescarVistas(){
+    try{if(typeof curNombre!=='undefined'&&curNombre&&typeof renderMisTurnos==='function')renderMisTurnos(curNombre);}catch(e){}
+    if(document.getElementById('cmpOv'))pintarPanel();
+  }
+  window.compRefrescar=function(){refrescarVistas();};
+
+  // ══════ Formulario de creación ══════
+  window.compNuevo=function(o){
+    o=o||{};var eq=o.equipo||PS.equipo;
+    var f=document.getElementById('cmpForm');if(f)f.remove();
+    f=document.createElement('div');f.id='cmpForm';f.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9600;overflow-y:auto;padding:14px';
+    var nombres=[];
+    if(eq==='admin'){Object.keys(secretarias||{}).forEach(function(k){var n=(typeof _nomAdmin==='function')?_nomAdmin(k):null;if(n)nombres.push({n:n,k:k});});}
+    else{var a=[],b=[];try{a=nombresConTurnoSemanaFiltrado(false);b=nombresConTurnoSemanaFiltrado(true);}catch(e){}a.concat(b).filter(function(n,i,z){return z.indexOf(n)===i;}).forEach(function(n){nombres.push({n:n,k:''});});}
+    nombres.sort(function(x,y){return x.n.localeCompare(y.n);});
+    var ini=suma(hoyStr(),1);
+    var inp='width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#16233d;color:#fff;font-family:inherit;font-size:13px;box-sizing:border-box';
+    var lb='font-size:10.5px;color:#93c5fd;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:11px 0 4px;display:block';
+    f.innerHTML='<div style="max-width:520px;margin:20px auto;background:#111c33;border-radius:16px;padding:16px;color:#fff;font-size:13px">'
+      +'<div style="font-size:16px;font-weight:800">🤝 Compromiso de mejora</div><div style="font-size:11.5px;color:rgba(255,255,255,.5)">'+eqNom(eq)+' · lo crea '+creador(eq)+'</div>'
+      +'<label style="'+lb+'">Persona</label><select id="cfN" style="'+inp+'"><option value="">Elige…</option>'+nombres.map(function(x){return '<option value="'+ESC(x.n)+'" data-k="'+ESC(x.k)+'"'+(x.n===o.nombre?' selected':'')+'>'+ESC(x.n)+'</option>';}).join('')+'</select>'
+      +'<label style="'+lb+'">Qué se compromete</label><textarea id="cfT" rows="3" style="'+inp+'">'+ESC(o.texto||'')+'</textarea>'
+      +'<label style="'+lb+'">Apoyo que da la jefatura (opcional)</label><textarea id="cfA" rows="2" style="'+inp+'" placeholder="Ej: recordatorio a las 13:00, repaso del registro en el box"></textarea>'
+      +'<label style="'+lb+'">Plazo</label><div id="cfP"></div>'
+      +'<div style="display:flex;gap:8px;margin-top:6px"><div style="flex:1"><label style="'+lb+'">Medición desde</label><input id="cfI" type="date" value="'+ini+'" style="'+inp+'"></div><div style="flex:1"><label style="'+lb+'">Plazo hasta</label><input id="cfF" type="date" value="'+suma(ini,13)+'" style="'+inp+'"></div></div>'
+      +'<label style="'+lb+'">Meta (la app la mide sola)</label>'
+      +(eq==='admin'?'<div style="display:flex;gap:8px;align-items:center"><span>Cumplimiento ≥</span><input id="cfMP" type="number" min="50" max="100" value="90" style="'+inp+';width:80px"><span>%</span></div>'
+        :'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>Tareas ≥</span><input id="cfMT" type="number" min="50" max="100" value="90" style="'+inp+';width:70px"><span>%</span><span>Evaluación ≥</span><input id="cfME" type="number" min="50" max="100" value="100" style="'+inp+';width:70px"><span>%</span></div>')
+      +'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:10px">Al vencer: <b>logrado</b> cierra con felicitación · <b>parcial</b> (≥ 80%) se renueva · <b>no logrado</b> bloquea el premio 4 semanas, quita prioridad y rotaciones, y deja con supervisión directa.</div>'
+      +'<div style="display:flex;gap:8px;margin-top:14px"><button id="cfOk" style="flex:1;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:11px;font-weight:800;font-family:inherit;cursor:pointer">Enviar a la persona</button><button id="cfNo" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;padding:11px 16px;font-family:inherit;cursor:pointer">Cancelar</button></div></div>';
+    document.body.appendChild(f);
+    var P=f.querySelector('#cfP');
+    P.innerHTML=[7,14,30].map(function(d){return '<span data-d="'+d+'" style="display:inline-block;padding:6px 12px;border-radius:99px;margin:0 5px 5px 0;background:rgba(255,255,255,.09);cursor:pointer;font-size:12.5px">'+d+' días</span>';}).join('');
+    P.onclick=function(ev){var d=ev.target.getAttribute&&ev.target.getAttribute('data-d');if(!d)return;var i=f.querySelector('#cfI').value||ini;f.querySelector('#cfF').value=suma(i,Number(d)-1);};
+    f.querySelector('#cfNo').onclick=function(){f.remove();};
+    f.querySelector('#cfOk').onclick=function(){
+      var sel=f.querySelector('#cfN'),n=sel.value,k=sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].getAttribute('data-k')||'';
+      var t=f.querySelector('#cfT').value.trim(),i=f.querySelector('#cfI').value,fn=f.querySelector('#cfF').value;
+      if(!n){alert('Elige la persona.');return;}if(!t){alert('Escribe qué se compromete.');return;}
+      if(!i||!fn||fn<i){alert('Revisa las fechas: el plazo debe ser posterior al inicio.');return;}
+      var dup=Object.keys(C()).some(function(id){var c=C()[id];return c&&c.nombre===n&&c.equipo===eq&&c.estado!=='cerrado';});
+      if(dup){alert(n+' ya tiene un compromiso vigente. Espera su cierre o renuévalo desde la lista.');return;}
+      var ob={nombre:n,key:k,equipo:eq,texto:t,apoyo:f.querySelector('#cfA').value.trim(),ini:i,fin:fn,estado:'enviado',creadoPor:creador(eq),creado:Date.now()};
+      if(eq==='admin')ob.metaPct=Math.max(50,Math.min(100,Number(f.querySelector('#cfMP').value)||90));
+      else{ob.metaTareas=Math.max(50,Math.min(100,Number(f.querySelector('#cfMT').value)||90));ob.metaEval=Math.max(50,Math.min(100,Number(f.querySelector('#cfME').value)||100));}
+      if(o.renovadoDe)ob.renovadoDe=o.renovadoDe;
+      var r=sedeRef('compromisos').push();
+      r.set(ob).then(function(){window.compromisos=window.compromisos||{};window.compromisos[r.key]=ob;f.remove();alert('✓ Compromiso enviado a '+n+'. Lo verá en su pantalla de inicio.');PS.equipo=eq;PS.tab='vig';compPanel(eq);}).catch(function(){alert('No se pudo guardar. Revisa tu conexión.');});
+    };
+  };
+  // Desde el informe: propone el texto según los pendientes
+  window.infCompromiso=function(i){
+    var R=window._infR;if(!R||!R.filas[i])return;var p=R.filas[i],q=window._infPartes(p);
+    var nombres={};q.taP.forEach(function(x){nombres[x.tarea]=(nombres[x.tarea]||0)+1;});
+    var top=Object.keys(nombres).sort(function(a,b){return nombres[b]-nombres[a];}).slice(0,3);
+    var t='';
+    if(top.length)t+='Registrar el mismo día y dentro del horario: '+top.join('; ')+'.';
+    if(q.evP.length)t+=(t?' ':'')+'Responder la evaluación diaria todos los días hábiles.';
+    window.compNuevo({equipo:'clinico',nombre:p.nombre,texto:t});
+  };
+
+  // ══════ Panel de gestión ══════
+  window.compPanel=function(eq){
+    PS.equipo=eq||PS.equipo;var o=document.getElementById('cmpOv');if(o)o.remove();
+    o=document.createElement('div');o.id='cmpOv';o.style.cssText='position:fixed;inset:0;background:#0b1426;z-index:9500;overflow-y:auto;padding:14px;color:#fff;font-size:13px';
+    document.body.appendChild(o);pintarPanel();
+    autoCerrar(PS.equipo);
+  };
+  function chipT(on,t,js){return '<span onclick="'+js+'" style="display:inline-block;padding:7px 12px;border-radius:99px;margin:0 5px 6px 0;font-size:12.5px;cursor:pointer;'+(on?'background:#7c3aed;font-weight:700':'background:rgba(255,255,255,.09)')+'">'+t+'</span>';}
+  window.compTab=function(t){PS.tab=t;pintarPanel();};
+  window.compAnio=function(a){PS.anio=a;pintarPanel();};
+  function lista(){return Object.keys(C()).map(function(id){return Object.assign({id:id},C()[id]);}).filter(function(c){return c&&c.equipo===PS.equipo;}).sort(function(a,b){return (b.creado||0)-(a.creado||0);});}
+  function tarjeta(c){
+    var ch=CACHE[c.id],cerr=c.estado==='cerrado',v=cerr?c.resultado:(ch&&ch.v);
+    var h='<div style="background:rgba(255,255,255,.05);border-radius:12px;padding:11px 12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+ESC(c.nombre)+'</b><span>'
+      +(cerr?pill(RES[c.resultado][0],RES[c.resultado][1],RES[c.resultado][2]):c.estado==='enviado'?pill('ESPERANDO ACEPTACIÓN','#f59e0b','#2b1a00'):pill('EN CURSO','#0891b2','#fff'))+'</span></div>'
+      +'<div style="margin-top:5px">'+ESC(c.texto)+'</div>'+(c.apoyo?'<div style="font-size:11.5px;color:rgba(255,255,255,.6);margin-top:3px">Apoyo: '+ESC(c.apoyo)+'</div>':'')
+      +'<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:4px">Medición '+fl(c.ini)+' al '+fl(c.fin)+' · '+(c.equipo==='admin'?'meta ≥ '+(c.metaPct||90)+'%':'meta tareas ≥ '+(c.metaTareas||90)+'% · evaluación ≥ '+(c.metaEval||100)+'%')+(c.acept?' · aceptado '+fl(ymd(new Date(c.acept.ts))):'')+'</div>';
+    var m=cerr?c.medida:(ch&&ch.m);
+    h+='<div id="cmpM_'+c.id+'" style="font-size:12px;margin-top:4px;color:#93c5fd">'+(m?textoMedida(c,m):(c.ini>hoyStr()?'Comienza el '+fl(c.ini):'Calculando avance…'))+'</div>';
+    if(cerr&&c.resultado==='no_logrado')h+='<div style="font-size:11.5px;color:#fca5a5;margin-top:4px">🔒 Consecuencias del '+fl(c.bloqDesde)+' al '+fl(c.bloqHasta)+': sin premio, sin prioridad, sin rotaciones, supervisión directa. Pendiente: reunión con jefatura.</div>';
+    if(cerr&&c.resultado==='logrado')h+='<div style="font-size:11.5px;color:#86efac;margin-top:4px">Cumplió su compromiso: corresponde felicitarle.</div>';
+    var com=c.comentarios?Object.values(c.comentarios):[];
+    com.sort(function(a,b){return a.ts-b.ts;}).forEach(function(x){h+='<div style="margin-top:5px;padding:5px 8px;border-left:2px solid #60a5fa;background:rgba(96,165,250,.08);font-size:11.5px"><b>'+ESC(x.quien)+'</b> · '+fl(ymd(new Date(x.ts)))+': '+ESC(x.texto)+'</div>';});
+    var bt='border:none;border-radius:7px;padding:6px 10px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer;margin:7px 6px 0 0;';
+    if(!cerr&&vencido(c)&&v==='sin_datos')h+='<div style="font-size:11.5px;color:#fcd34d;margin-top:5px">Venció sin datos para medir. Ciérralo tú:</div><div>'+['logrado','parcial','no_logrado'].map(function(r){return '<button onclick="compCierreManual(\''+c.id+'\',\''+r+'\')" style="'+bt+'background:'+RES[r][1]+';color:'+RES[r][2]+'">'+RES[r][0]+'</button>';}).join('')+'</div>';
+    if(cerr&&c.resultado==='parcial')h+='<button onclick="compRenovar(\''+c.id+'\')" style="'+bt+'background:#f59e0b;color:#2b1a00">🔁 Renovar con nuevo plazo</button>';
+    if(cerr&&c.resultado==='logrado')h+='<button onclick="compFelicitar(\''+c.id+'\')" style="'+bt+'background:#22c55e;color:#04210f">✉️ Felicitar por correo</button>';
+    if(!cerr)h+='<button onclick="compAvisar(\''+c.id+'\')" style="'+bt+'background:rgba(255,255,255,.12);color:#fff">✉️ Avisar por correo</button>';
+    if(!cerr&&c.estado==='enviado')h+='<button onclick="compBorrar(\''+c.id+'\')" style="'+bt+'background:rgba(239,68,68,.25);color:#fca5a5">Eliminar</button>';
+    h+='</div>';
+    if(!cerr&&!m&&c.ini<=suma(hoyStr(),-1))setTimeout(function(){medir(c).then(function(mm){CACHE[c.id]={m:mm,v:veredicto(c,mm)};var el=document.getElementById('cmpM_'+c.id);if(el)el.textContent=textoMedida(c,mm);});},30);
+    return h;
+  }
+  function pintarPanel(){
+    var o=document.getElementById('cmpOv');if(!o)return;
+    var L=lista(),h='<div style="max-width:760px;margin:0 auto">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><div style="font-size:18px;font-weight:800">🤝 Compromisos de mejora</div><div style="font-size:11.5px;color:rgba(255,255,255,.5)">'+eqNom(PS.equipo)+' · los gestiona '+creador(PS.equipo)+'</div></div><button onclick="document.getElementById(\'cmpOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div>';
+    h+='<div style="margin:10px 0"><button onclick="compNuevo({equipo:PS_EQ()})" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:10px 14px;font-weight:800;font-family:inherit;cursor:pointer">➕ Nuevo compromiso</button></div>';
+    // consecuencias vigentes
+    var nombres={};L.forEach(function(c){nombres[c.nombre]=1;});
+    var san=Object.keys(nombres).map(function(n){return {n:n,s:window.compSancion(n)};}).filter(function(x){return x.s;});
+    if(san.length)h+='<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:10px 12px;margin-bottom:10px"><div style="font-size:12px;font-weight:800;color:#fca5a5;margin-bottom:4px">🔒 Consecuencias vigentes</div>'+san.map(function(x){return '<div style="font-size:12px;padding:3px 0"><b>'+ESC(x.n)+'</b> · hasta el '+fl(x.s.hasta)+' · sin premio · sin prioridad · sin rotaciones · supervisión directa</div>';}).join('')+'</div>';
+    h+=chipT(PS.tab==='vig','Vigentes',"compTab('vig')")+chipT(PS.tab==='cer','Cerrados',"compTab('cer')")+chipT(PS.tab==='hist','Historial anual',"compTab('hist')");
+    if(PS.tab==='vig'){var a=L.filter(function(c){return c.estado!=='cerrado';});h+=a.length?a.map(tarjeta).join(''):'<div style="color:rgba(255,255,255,.5);padding:10px 0">No hay compromisos vigentes.</div>';}
+    else if(PS.tab==='cer'){var b=L.filter(function(c){return c.estado==='cerrado';});h+=b.length?b.map(tarjeta).join(''):'<div style="color:rgba(255,255,255,.5);padding:10px 0">Aún no hay compromisos cerrados.</div>';}
+    else{
+      var anios={};L.forEach(function(c){anios[(c.ini||'').slice(0,4)]=1;});var ys=Object.keys(anios).filter(Boolean).sort().reverse();if(!PS.anio||!anios[PS.anio])PS.anio=ys[0]||String(new Date().getFullYear());
+      var fil=L.filter(function(c){return (c.ini||'').slice(0,4)===PS.anio;}).sort(function(a,b){return a.nombre.localeCompare(b.nombre)||(a.ini<b.ini?-1:1);});
+      h+='<div style="margin:6px 0">'+(ys.length?ys:[PS.anio]).map(function(y){return chipT(y===PS.anio,y,"compAnio('"+y+"')");}).join('')+'</div>';
+      h+='<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-bottom:6px">Registro para la evaluación anual de desempeño. Incluye todos los compromisos del año y su resultado.</div>';
+      h+=fil.length?fil.map(function(c){return '<div style="padding:6px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12.5px"><b>'+ESC(c.nombre)+'</b> · '+fl(c.ini)+' al '+fl(c.fin)+' · '+(c.estado==='cerrado'?pill(RES[c.resultado][0],RES[c.resultado][1],RES[c.resultado][2]):pill('VIGENTE','#0891b2','#fff'))+'<br><span style="color:rgba(255,255,255,.6)">'+ESC(c.texto)+'</span></div>';}).join(''):'<div style="color:rgba(255,255,255,.5)">Sin compromisos ese año.</div>';
+      h+='<div style="margin-top:10px"><button onclick="compHistPdf()" style="background:#0891b2;color:#fff;border:none;border-radius:9px;padding:9px 13px;font-weight:700;font-family:inherit;cursor:pointer;margin-right:6px">📄 PDF del año</button><button onclick="compHistExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:9px;padding:9px 13px;font-weight:700;font-family:inherit;cursor:pointer">📊 Excel del año</button></div>';
+    }
+    o.innerHTML=h+'</div>';
+  }
+  window.PS_EQ=function(){return PS.equipo;};
+  window.compCierreManual=function(id,r){
+    var c=C()[id];if(!c)return;
+    if(!confirm('¿Cerrar el compromiso de '+c.nombre+' como '+RES[r][0]+'?'+(r==='no_logrado'?'\nSe aplicarán las consecuencias (4 semanas).':'')))return;
+    cerrar(id,r,{manual:true}).then(pintarPanel);
+  };
+  window.compBorrar=function(id){var c=C()[id];if(!c||!confirm('¿Eliminar el compromiso de '+c.nombre+'? Aún no lo acepta.'))return;sedeRef('compromisos/'+id).remove().then(function(){delete window.compromisos[id];pintarPanel();});};
+  window.compRenovar=function(id){
+    var c=C()[id];if(!c)return;
+    window.compNuevo({equipo:c.equipo,nombre:c.nombre,texto:c.texto,renovadoDe:id});
+    setTimeout(function(){var a=document.getElementById('cfA');if(a)a.value=c.apoyo||'';if(c.equipo==='admin'){var x=document.getElementById('cfMP');if(x)x.value=c.metaPct||90;}else{var t=document.getElementById('cfMT'),e=document.getElementById('cfME');if(t)t.value=c.metaTareas||90;if(e)e.value=c.metaEval||100;}},30);
+  };
+  function correoDe(n){return (typeof correos!=='undefined'&&correos[String(n).replace(/\s/g,'_')])||'';}
+  window.compAvisar=function(id){
+    var c=C()[id];if(!c)return;var d=correoDe(c.nombre);
+    if(!d){alert(c.nombre+' no tiene correo guardado.');return;}
+    abrirCorreo(d,'GESTHOR — Compromiso de mejora','Hola '+String(c.nombre).split(' ')[0]+',\n\nSe registró un compromiso de mejora para ti:\n\n'+c.texto+'\n\nMedición del '+fl(c.ini)+' al '+fl(c.fin)+'.\nRevísalo y acéptalo en la app, en tu pantalla de inicio.\n\n'+creador(c.equipo));
+  };
+  window.compFelicitar=function(id){
+    var c=C()[id];if(!c)return;var d=correoDe(c.nombre);
+    if(!d){alert(c.nombre+' no tiene correo guardado.');return;}
+    abrirCorreo(d,'GESTHOR — Cumpliste tu compromiso de mejora','Hola '+String(c.nombre).split(' ')[0]+',\n\nCumpliste tu compromiso de mejora ('+fl(c.ini)+' al '+fl(c.fin)+'). Gracias por el esfuerzo y la constancia.\n\n'+creador(c.equipo));
+  };
+
+  // ══════ Historial anual: PDF y Excel ══════
+  function histFilas(){return lista().filter(function(c){return (c.ini||'').slice(0,4)===PS.anio;}).sort(function(a,b){return a.nombre.localeCompare(b.nombre)||(a.ini<b.ini?-1:1);});}
+  window.compHistExcel=function(){
+    if(typeof XLSX==='undefined'){alert('No se pudo cargar el generador de Excel.');return;}
+    var rows=[['Persona','Equipo','Inicio','Plazo','Compromiso','Apoyo','Estado','Resultado','Medición','Consecuencias hasta']];
+    histFilas().forEach(function(c){rows.push([c.nombre,eqNom(c.equipo),c.ini,c.fin,c.texto,c.apoyo||'',c.estado==='cerrado'?'Cerrado':'Vigente',c.resultado?RES[c.resultado][0]:'',c.medida?textoMedida(c,c.medida):'',c.resultado==='no_logrado'?c.bloqHasta:'']);});
+    var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Compromisos '+PS.anio);XLSX.writeFile(wb,'Compromisos_de_mejora_'+PS.equipo+'_'+PS.anio+'.xlsx');
+  };
+  function firmaPie(doc,y,PW,eq){
+    var cx=PW/2;
+    if(eq==='clinico'){
+      if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-86,y,100,34);}catch(e){}}
+      if(typeof LM_TIMBRE!=='undefined'){try{doc.addImage(LM_TIMBRE,'PNG',cx+20,y-6,76,35);}catch(e){}}
+    }
+    y+=40;doc.setDrawColor(30,30,30);doc.setLineWidth(0.6);doc.line(cx-100,y,cx+100,y);y+=12;
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(20,20,20);
+    doc.text(eq==='clinico'?'Patricio Baeza Aguilar':'Jefa de Operaciones',cx,y,{align:'center'});y+=12;
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text(eq==='clinico'?'Director Técnico · Centro de Salud USS - Valdivia':'Centro de Salud USS - Valdivia',cx,y,{align:'center'});
+  }
+  window.compHistPdf=function(){
+    var J=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);if(!J){alert('No se pudo cargar el generador de PDF.');return;}
+    var doc=new J({unit:'pt',format:'a4'}),M=40,PW=595,PH=842,CW=PW-2*M,y=M;
+    function chk(n){if(y+n>PH-70){doc.addPage();y=M;}}
+    doc.setFont('helvetica','bold');doc.setFontSize(15);doc.setTextColor(15,60,90);doc.text('Centro de Salud USS - Valdivia',M,y);y+=18;
+    doc.setFontSize(13);doc.text('Compromisos de mejora '+PS.anio+' · '+eqNom(PS.equipo),M,y);y+=14;
+    doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60,60,60);doc.text('Registro para la evaluación anual de desempeño · Emitido: '+fl(hoyStr()),M,y);y+=8;
+    doc.setDrawColor(15,60,90);doc.setLineWidth(1);doc.line(M,y,PW-M,y);y+=16;
+    var F=histFilas();if(!F.length){doc.text('Sin compromisos registrados ese año.',M,y);y+=14;}
+    var ult='';
+    F.forEach(function(c){
+      if(c.nombre!==ult){chk(40);y+=4;doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(15,60,90);doc.text(c.nombre,M,y);y+=14;ult=c.nombre;}
+      var l=doc.splitTextToSize(c.texto,CW-10);chk(44+l.length*11);
+      doc.setFont('helvetica','bold');doc.setFontSize(9);var r=c.estado==='cerrado'?c.resultado:'vigente';
+      if(r==='logrado')doc.setTextColor(22,128,60);else if(r==='no_logrado')doc.setTextColor(200,30,30);else if(r==='parcial')doc.setTextColor(180,110,0);else doc.setTextColor(60,60,60);
+      doc.text((r==='vigente'?'VIGENTE':RES[r][0])+'  ·  '+fl(c.ini)+' al '+fl(c.fin),M,y);y+=11;
+      doc.setFont('helvetica','normal');doc.setTextColor(30,30,30);l.forEach(function(t){doc.text(t,M+6,y);y+=11;});
+      if(c.medida&&!c.medida.manual){doc.setFontSize(8.5);doc.setTextColor(90,90,90);doc.text('Medición: '+textoMedida(c,c.medida),M+6,y);y+=11;}
+      if(c.resultado==='no_logrado'){doc.setFontSize(8.5);doc.setTextColor(150,40,40);doc.text('Consecuencias hasta el '+fl(c.bloqHasta)+'.',M+6,y);y+=11;}
+      doc.setDrawColor(225,230,236);doc.setLineWidth(0.4);doc.line(M,y,PW-M,y);y+=10;
+    });
+    chk(110);y+=24;firmaPie(doc,y,PW,PS.equipo);
+    var n=doc.getNumberOfPages();for(var i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(130,130,130);doc.text('Página '+i+' de '+n,PW-M,PH-24,{align:'right'});doc.text('GESTHOR · Compromisos de mejora',M,PH-24);}
+    doc.save('Compromisos_de_mejora_'+PS.equipo+'_'+PS.anio+'.pdf');
+  };
+  // Bloque dentro del PDF del informe: compromiso vigente o reciente de esa persona
+  window.compPdfBloque=function(doc,nombre,y,M,CW,PW,PH,chkFn){
+    var R=window._infR;if(!R)return y;
+    var L=Object.keys(C()).map(function(id){return C()[id];}).filter(function(c){return c&&c.nombre===nombre&&c.equipo==='clinico'&&c.ini<=R.fin&&(c.estado!=='cerrado'||c.fin>=R.ini);});
+    if(!L.length)return y;
+    y=chkFn(60,y);y+=8;doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(88,40,160);doc.text('Compromiso de mejora',M,y);y+=12;
+    L.forEach(function(c){
+      var l=doc.splitTextToSize(c.texto,CW-10);y=chkFn(40+l.length*11,y);
+      doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(30,30,30);l.forEach(function(t){doc.text(t,M+6,y);y+=11;});
+      doc.setFontSize(8.5);doc.setTextColor(90,90,90);
+      doc.text('Plazo '+fl(c.ini)+' al '+fl(c.fin)+' · '+(c.estado==='cerrado'?RES[c.resultado][0]:c.estado==='enviado'?'esperando aceptación':'en curso, aceptado'+(c.acept?' el '+fl(ymd(new Date(c.acept.ts))):''))+(c.apoyo?' · Apoyo: '+c.apoyo:''),M+6,y);y+=13;
+    });
+    return y;
+  };
+
+  // ══════ Avisos en el panel de administración ══════
+  window.compFilasAtencion=function(eq){
+    var rows=[],L=Object.keys(C()).map(function(id){return C()[id];}).filter(function(c){return c&&c.equipo===eq;});
+    var porCerrar=L.filter(function(c){return c.estado!=='cerrado'&&vencido(c);}).length;
+    var sup=Object.keys(L.reduce(function(a,c){if(window.compSancion(c.nombre))a[c.nombre]=1;return a;},{})).length;
+    var env=L.filter(function(c){return c.estado==='enviado';}).length;
+    if(porCerrar)rows.push(['🤝','Compromisos vencidos por cerrar',porCerrar,"compPanel('"+eq+"')"]);
+    if(env)rows.push(['✍','Compromisos sin aceptar',env,"compPanel('"+eq+"')"]);
+    if(sup)rows.push(['🔎','Personas con supervisión directa',sup,"compPanel('"+eq+"')"]);
+    return rows;
+  };
+
+  // Tarjeta de la persona en "Mis turnos": se antepone sin tocar la función original
+  function envolver(){
+    if(typeof window.renderMisTurnos!=='function'||window.renderMisTurnos.__cmp)return;
+    var o=window.renderMisTurnos;
+    var w=function(nombre){var r=o.apply(this,arguments);try{var d=document.getElementById('results');var h=window.compCardHtml(nombre);if(d&&h&&nombre)d.insertAdjacentHTML('afterbegin',h);}catch(e){}return r;};
+    w.__cmp=1;window.renderMisTurnos=w;
+  }
+  envolver();setTimeout(envolver,1500);setTimeout(envolver,5000);
 })();
 
 </script>
