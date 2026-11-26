@@ -1403,6 +1403,12 @@ body.gx-light .tccf button.si{color:#fff!important}
             <button class="btn-add" onclick="abrirTableroCumpl(false)" style="background:linear-gradient(135deg,#2563eb,#7c3aed)">📊 Abrir tablero</button>
           </div>
 
+          <div class="asec" style="border-color:rgba(8,145,178,.4)">
+            <p class="asec-title" style="color:#67e8f9">📈 Informe de cumplimiento</p>
+            <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Cumplimiento general y por persona de las semanas o días que elijas, con el detalle de cada tarea y su horario. PDF con tu firma y timbre, y Excel.</p>
+            <button class="btn-add" onclick="infAbrir()" style="background:linear-gradient(135deg,#0891b2,#22d3ee)">📈 Abrir informe</button>
+          </div>
+
           <div class="asec" style="border-color:rgba(16,185,129,.2)">
             <p class="asec-title" style="color:#6ee7b7">📲 Registro de accesos</p>
             <p style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px">Quién abrió la app y a qué hora.</p>
@@ -14013,13 +14019,13 @@ function renderCumpEquipo(){
 var ADM_GRUPOS=[
  {id:'turnos',ic:'📅',n:'Turnos y semana',d:'Semanas, bloques, cobertura, ausencias, premio, rondas',m:['Gestión de semanas','Carga masiva','Bloques horarios','Bloques cargados','Equipo clave azul','Enfermero/a a cargo','Cobertura cruzada','De llamado','Sin servicio','Turno pendiente manual','Ausencias (licencia','Salidas durante el turno','Solicitudes de cambio','Premio de la semana','Ronda de apertura','Ausencias activas','Solicitudes ausencia','Asignar tarea']},
  {id:'personas',ic:'👥',n:'Personas',d:'Dotación, internos, inducción, directorio',m:['Personal de este establecimiento','Clasificación del personal','Internos de enfermería','Inducción de colaboradores','Supervisores autorizados']},
- {id:'calidad',ic:'📊',n:'Cumplimiento y calidad',d:'Informes, tablero, accesos, supervisión, indicadores',m:['Informe de gestión','Tablero de cumplimiento','Registro de accesos','Cumplimiento de lectura','Ronda de supervisión','Indicadores operacionales']},
+ {id:'calidad',ic:'📊',n:'Cumplimiento y calidad',d:'Informes, tablero, accesos, supervisión, indicadores',m:['Informe de gestión','Tablero de cumplimiento','Informe de cumplimiento','Registro de accesos','Cumplimiento de lectura','Ronda de supervisión','Indicadores operacionales']},
  {id:'comunica',ic:'📣',n:'Comunicación',d:'Avisos, anuncios, sugerencias, cumpleaños',m:['Aviso general','Anuncio de capacitación','Sugerencias del equipo','Cumpleaños del equipo']},
  {id:'clinica',ic:'🏥',n:'Operación clínica',d:'Pabellón, roles técnicos, temperaturas',m:['Plan de Pabellón','Roles técnicos','Espacios de temperatura']},
  {id:'programas',ic:'🌱',n:'Programas',d:'Liderazgo, plan de estudio, biblioteca',m:['Preguntas por semana y grupo','Metas e informes','Asignaciones en uso','Protocolos y preguntas','Programa de liderazgo','Plan de estudio','Biblioteca de conocimiento']},
  {id:'mant',ic:'⚙',n:'Mantenimiento',d:'Limpiar y migrar datos (avanzado, con cuidado)',m:['Migrar datos antiguos','Limpiar semanas duplicadas','Limpiar semana']}
 ];
-var ADM_KW={'Personal de este establecimiento':'directorio correo telefono fono contacto importar planilla','Cumplimiento de lectura':'ficha preguntas banco evaluacion obligatoria','Tablero de cumplimiento':'correo whatsapp aviso incumplimiento semaforo','Registro de accesos':'conexiones ingresos','Programa de liderazgo':'lecturas modo prueba enfermeros diagnostico','Informe de gestión':'dashboard gerencia pdf','Aviso general':'anuncio comunicado novedades','Gestión de semanas':'crear semana publicar','Ausencias (licencia':'vacaciones permiso licencia','Premio de la semana':'ganador jornada libre'};
+var ADM_KW={'Personal de este establecimiento':'directorio correo telefono fono contacto importar planilla','Cumplimiento de lectura':'ficha preguntas banco evaluacion obligatoria','Tablero de cumplimiento':'correo whatsapp aviso incumplimiento semaforo','Informe de cumplimiento':'rendimiento semanal pdf excel persona periodo detalle horario','Registro de accesos':'conexiones ingresos','Programa de liderazgo':'lecturas modo prueba enfermeros diagnostico','Informe de gestión':'dashboard gerencia pdf','Aviso general':'anuncio comunicado novedades','Gestión de semanas':'crear semana publicar','Ausencias (licencia':'vacaciones permiso licencia','Premio de la semana':'ganador jornada libre'};
 function admNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 function admTitulo(sec){var t=sec.querySelector('.asec-title');return t?t.textContent.replace(/☆|★/g,'').trim():'';}
 function admFavs(){try{return JSON.parse(localStorage.getItem('admFav')||'[]');}catch(e){return [];}}
@@ -17587,7 +17593,7 @@ function construirPDF(desde,hasta,etiqueta,secs,est){
     doc.text('Hallazgos del periodo',margin,y+4);y+=10;doc.setDrawColor(200,200,200);doc.line(margin,y,W-margin,y);y+=16;
     doc.setFont(undefined,'normal');
     var hallazgos=[];
-    hallazgos.push('El centro realizo '+totalRegistros+' procesos registrados, equivalentes a '+Math.round(totalHoras)+' horas de trabajo productivo directo en el periodo.');
+    hallazgos.push('El centro realizo '+totalRegistros+' procesos registrados, equivalentes a '+Math.round(totalHoras)+' horas de trabajo productivo directo en el período.');
     if(areaTop&&totalHoras>0)hallazgos.push('El area de mayor carga fue '+areaTop.n+', concentrando '+Math.round(areaTop.h)+' horas ('+Math.round(areaTop.h/totalHoras*100)+'% del total).');
     if(m.cargasAuto>0)hallazgos.push('Se procesaron '+m.cargasAuto+' cargas de esterilizacion, con un '+Math.round(m.cargasOK/m.cargasAuto*100)+'% de cumplimiento de parametros.');
     hallazgos.push('El cumplimiento de tareas asignadas del equipo alcanzo el '+m.cumplimiento+'%.');
@@ -17621,7 +17627,7 @@ function construirPDF(desde,hasta,etiqueta,secs,est){
       parrafo('Actividad registrada en cada area durante el periodo, ordenada por carga de trabajo.');
       var ordenAreas=Object.keys(areasM).sort(function(a,b){return areasM[b].horas-areasM[a].horas;});
       if(!ordenAreas.length){
-        parrafo('Sin registros de produccion en el periodo.');
+        parrafo('Sin registros de produccion en el período.');
       } else {
         ordenAreas.forEach(function(an){
           var A=areasM[an];
@@ -25744,7 +25750,7 @@ var _lmCerrar7=window.lmCerrar;window.lmCerrar=function(){lmBorGuardar();_lmCerr
 var _lmRender7=lmRender;
 lmRender=function(){
   _lmRender7();
-  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.13 · 22-nov 23:10';_t.parentNode.firstChild.appendChild(_v);}
+  var _t=document.querySelector('#lmOv .lmh');if(_t)_t.textContent='🧼 Higiene de manos · GCL 3.2';if(_t&&!document.getElementById('lmVer')){var _v=document.createElement('div');_v.id='lmVer';_v.style.cssText='font-size:10px;color:#64748b;margin-top:2px';_v.textContent='versión del módulo: v10.14 · 26-nov 10:05';_t.parentNode.firstChild.appendChild(_v);}
   var d=LM.ui._fill;if(d&&LM.ui.vista==='reg'){LM.ui._fill=null;
     var set=function(i,v){var e=document.getElementById(i);if(e&&v!==undefined&&v!=='')e.value=v;};
     set('lmSv',d.servicio);set('lmCgo',d.cargo);set('lmRun',d.run);set('lmNom',d.evaluado);set('lmFec',d.fecha);set('lmNaJ',d.naJust);set('lmObs',d.obs);}
@@ -26883,6 +26889,322 @@ window.__tg={gen:genSemana,TG:TG,EQUIPO:EQUIPO,resolver:resolverNombres,cfg0:CFG
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
+/* ===== INF v1: Informe de cumplimiento por período (general + por persona, con detalle de tareas y horario) ===== */
+(function(){
+  var ST={modo:'sem',sel:{},excl:{},desde:'',hasta:'',mes:'',quien:'todos',persona:'',ev:true,ta:true,det:'todo'};
+  var R=null; // último resultado calculado
+  var DIAS_C=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  function E(s){return (typeof esc==='function')?esc(s):String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function fCorta(f){var d=new Date(f+'T12:00:00');return DIAS_C[d.getDay()]+' '+d.getDate();}
+  function fLarga(f){return f.slice(8,10)+'-'+f.slice(5,7)+'-'+f.slice(0,4);}
+  function pct(a,b){return b?Math.round(a/b*100):null;}
+  function col(p){return p==null?'#94a3b8':p>=90?'#22c55e':p>=80?'#f59e0b':'#ef4444';}
+
+  // ── Semanas ya iniciadas, sin duplicados, de la más reciente a la más antigua ──
+  function semLista(){
+    var hoy=hoyStr();
+    var ids=Object.keys(semanas||{}).filter(function(id){var x=semanas[id];return x&&x.ini&&x.fin&&x.ini<=hoy;})
+      .sort(function(a,b){return semanas[b].ini<semanas[a].ini?-1:1;});
+    return ids.filter(function(id,i,a){return a.findIndex(function(j){return semanas[j].ini===semanas[id].ini;})===i;});
+  }
+  function semDeFecha(f){var l=semLista();for(var i=0;i<l.length;i++){var s=semanas[l[i]];if(f>=s.ini&&f<=s.fin)return l[i];}return null;}
+  function rango(a,b){var out=[];if(!a||!b||a>b)return out;var d0=new Date(a+'T12:00:00'),d1=new Date(b+'T12:00:00');for(var d=new Date(d0);d<=d1&&out.length<400;d.setDate(d.getDate()+1))out.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));return out;}
+
+  // Fechas candidatas según el modo (lun–sáb, anteriores a hoy)
+  function fechasBase(){
+    var hoy=hoyStr(),fs=[];
+    if(ST.modo==='sem'){Object.keys(ST.sel).forEach(function(id){if(ST.sel[id]&&semanas[id])fs=fs.concat(rango(semanas[id].ini,semanas[id].fin));});}
+    else if(ST.modo==='dias'){fs=rango(ST.desde,ST.hasta);}
+    else if(ST.modo==='mes'&&ST.mes){var y=+ST.mes.slice(0,4),m=+ST.mes.slice(5,7);var ult=new Date(y,m,0).getDate();fs=rango(ST.mes+'-01',ST.mes+'-'+pad(ult));}
+    var seen={};
+    return fs.filter(function(f){if(seen[f])return false;seen[f]=1;var g=new Date(f+'T12:00:00').getDay();return g>=1&&g<=6&&f<hoy;}).sort();
+  }
+  function fechasFinal(){return fechasBase().filter(function(f){return !ST.excl[f];});}
+
+  // ── Lectura de datos de cada semana ──
+  function cargarSemana(id){
+    if(id===W)return Promise.resolve({id:id,tareas:tareas,bloques:bloques,ranking:ranking});
+    var b='sedes/'+S+'/semanas/'+id+'/';
+    return Promise.all(['tareas','bloques','ranking'].map(function(k){return db.ref(b+k).once('value').then(function(s){return s.val()||{};}).catch(function(){return {};});}))
+      .then(function(r){return {id:id,tareas:(typeof filtrarTareasActivas==='function'?filtrarTareasActivas(r[0]):r[0]),bloques:r[1],ranking:r[2]};});
+  }
+
+  // Horario que le correspondía a la tarea ese día
+  function horaTarea(t,f,n,bl){
+    try{
+      var j=t.jornada||'dia',u=t.sector?rondaUnidadDeSector(t.sector):'';
+      var rt=rolesTecnicos&&rolesTecnicos[t.tipo];
+      if(rt&&rt.tipoRegistro==='ronda'&&u){var vn=rondaVentana(f,u,n);if(vn&&vn.ini)return 'Ronda '+vn.ini+'–'+vn.fin;}
+      var tx=t.texto||'',m=tx.match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/),m2=tx.match(/antes de las (\d{1,2}:\d{2})/);
+      if(j==='am'){var v=u?rondaVentana(f,u,n):null;if(v&&v.ini)return 'AM · '+v.ini+'–'+v.fin;if(m)return 'AM · '+m[1]+'–'+m[2];return 'AM · antes de las '+(m2?m2[1]:'14:00');}
+      if(j==='pm'){var ini='14:00';if(u){var v2=rondaVentana(f,u,null);if(v2&&v2.ini)ini=v2.ini;}return 'PM · desde las '+ini;}
+      if(m)return m[1]+'–'+m[2];
+      var dia=diaDeDate(f);
+      var hs=Object.values(bl||{}).filter(function(b){return b&&b.nombre===n&&b.dia===dia&&!b.libre&&b.horario;}).map(function(b){return b.horario;});
+      return 'Durante el turno'+(hs.length?' · '+hs.join(' y '):'');
+    }catch(e){return '';}
+  }
+  function nombreTarea(t){
+    var r=rolesTecnicos&&rolesTecnicos[t.tipo];
+    var lb=(r&&r.nombre)||(cfgTipo(t.tipo)&&cfgTipo(t.tipo).l)||t.tipo;
+    return String(lb).replace(/^[^\wÁÉÍÓÚáéíóúñÑ(]+/,'').trim()+(t.sector?' · '+t.sector:'');
+  }
+
+  function nombresDe(){
+    var a=[],i=[];
+    try{a=nombresConTurnoSemanaFiltrado(false);}catch(e){}
+    try{i=nombresConTurnoSemanaFiltrado(true);}catch(e){}
+    if(ST.quien==='internos')return i.map(function(n){return {n:n,int:true};});
+    var out=a.map(function(n){return {n:n,int:false};}).concat(i.filter(function(n){return a.indexOf(n)<0;}).map(function(n){return {n:n,int:true};}));
+    if(ST.quien==='una')out=out.filter(function(x){return x.n===ST.persona;});
+    return out;
+  }
+
+  // ── Cálculo: por semana, intercambiando temporalmente tareas/bloques/ranking como hace el tablero ──
+  function calcular(fechas){
+    var porSem={};fechas.forEach(function(f){var id=semDeFecha(f);if(!id)return;(porSem[id]=porSem[id]||[]).push(f);});
+    var ids=Object.keys(porSem);
+    return Promise.all(ids.map(cargarSemana)).then(function(datos){
+      var P={};
+      var t0=tareas,b0=bloques,r0=ranking;
+      try{
+        datos.forEach(function(D){
+          tareas=D.tareas;bloques=D.bloques;ranking=D.ranking;
+          var sem=semanas[D.id]||{},resp=tcRespuestasPorPersona();
+          nombresDe().forEach(function(x){
+            var n=x.n,k=n.trim().toLowerCase(),rs=resp[k]||{};
+            var p=P[n]||(P[n]={nombre:n,interno:x.int,ev:{esp:0,resp:0,dias:[]},ta:{asig:0,cumpl:0,aus:0,items:[]}});
+            var diasTurno={};
+            Object.values(bloques||{}).forEach(function(b){if(b&&b.nombre===n&&!b.libre)diasTurno[b.dia]=true;});
+            var conPreg=true;try{conPreg=preguntasOnSem(grupoPregDe(n),sem);}catch(e){}
+            porSem[D.id].forEach(function(f){
+              var dia=diaDeDate(f),g=new Date(f+'T12:00:00').getDay();
+              if(esFeriado(dia))return;
+              // Evaluación diaria: lun–vie, con turno, sin ausencia de día completo
+              if(ST.ev&&g>=1&&g<=5&&diasTurno[dia]&&conPreg){
+                var ab={am:false,pm:false};try{ab=ausJorn(n,f);}catch(e){}
+                if(!(ab.am&&ab.pm)){var ok=!!rs[f];p.ev.esp++;if(ok)p.ev.resp++;p.ev.dias.push({f:f,ok:ok});}
+              }
+              // Tareas asignadas medibles
+              if(ST.ta){
+                Object.values(tareas||{}).forEach(function(t){
+                  if(!t||t.nombre!==n||t.dia!==dia)return;
+                  try{if(!medibleTarea(t.tipo)||TIPOS_SEMANALES[t.tipo]||TIPOS_SIN_MEDICION[t.tipo])return;}catch(e){return;}
+                  var hora=horaTarea(t,f,n,bloques);
+                  var it={f:f,tarea:nombreTarea(t),hora:hora,ok:false,det:''};
+                  try{if(tareaExcluidaPorAusencia(t,n,f)){p.ta.aus++;it.aus=true;it.det='Ausente (no cuenta)';p.ta.items.push(it);return;}}catch(e){}
+                  var v={cumplido:false,detalle:''};try{v=verificarCumplimiento(t.tipo,f,t);}catch(e){}
+                  it.ok=!!v.cumplido;it.det=v.detalle||'';p.ta.asig++;if(it.ok)p.ta.cumpl++;p.ta.items.push(it);
+                });
+              }
+            });
+          });
+        });
+      }finally{tareas=t0;bloques=b0;ranking=r0;}
+      var filas=Object.keys(P).map(function(n){var p=P[n];
+        p.ta.items.sort(function(a,b){return a.f<b.f?-1:a.f>b.f?1:(a.hora<b.hora?-1:1);});
+        p.esp=p.ev.esp+p.ta.asig;p.ok=p.ev.resp+p.ta.cumpl;p.pct=pct(p.ok,p.esp);return p;})
+        .filter(function(p){return p.esp>0||p.ta.aus>0;})
+        .sort(function(a,b){return (b.pct==null?-1:b.pct)-(a.pct==null?-1:a.pct)||a.nombre.localeCompare(b.nombre);});
+      var T=filas.reduce(function(a,p){a.er+=p.ev.resp;a.ee+=p.ev.esp;a.tc+=p.ta.cumpl;a.ta+=p.ta.asig;return a;},{er:0,ee:0,tc:0,ta:0});
+      T.pe=pct(T.er,T.ee);T.pt=pct(T.tc,T.ta);T.pg=pct(T.er+T.tc,T.ee+T.ta);
+      return {fechas:fechas,filas:filas,T:T,ini:fechas[0],fin:fechas[fechas.length-1],nSem:ids.length,quien:ST.quien,ev:ST.ev,ta:ST.ta};
+    });
+  }
+
+  // ═════════ Pantalla ═════════
+  function chip(on,txt,js){return '<span onclick="'+js+'" style="display:inline-block;padding:7px 12px;border-radius:99px;margin:0 5px 6px 0;font-size:12.5px;cursor:pointer;'+(on?'background:#0891b2;font-weight:700;color:#fff':'background:rgba(255,255,255,.09);color:#e2e8f0')+'">'+txt+'</span>';}
+  function lbl(t){return '<div style="font-size:11px;color:#93c5fd;text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin:16px 0 7px">'+t+'</div>';}
+
+  window.infAbrir=function(){
+    var ov=document.getElementById('infOv');if(ov)ov.remove();
+    ov=document.createElement('div');ov.id='infOv';
+    ov.style.cssText='position:fixed;inset:0;background:#0b1426;z-index:9400;overflow-y:auto;padding:14px;color:#fff;font-size:13px';
+    document.body.appendChild(ov);
+    if(!Object.keys(ST.sel).length){var l=semLista();if(l[0])ST.sel[l[0]]=true;}
+    if(!ST.desde){var h=hoyStr();ST.hasta=h;var d=new Date(h+'T12:00:00');d.setDate(d.getDate()-7);ST.desde=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+    if(!ST.mes)ST.mes=hoyStr().slice(0,7);
+    R=null;pintar();
+  };
+  function pintar(){
+    var ov=document.getElementById('infOv');if(!ov)return;
+    var l=semLista().slice(0,12),h='<div style="max-width:760px;margin:0 auto">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><div style="font-size:18px;font-weight:800">📈 Informe de cumplimiento</div><div style="font-size:11.5px;color:rgba(255,255,255,.5)">General y por persona · tú eliges el período</div></div><button onclick="document.getElementById(\'infOv\').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;cursor:pointer">✕ Cerrar</button></div>';
+    h+=lbl('1 · ¿Qué período?');
+    h+=chip(ST.modo==='sem','Semanas',"infSet('modo','sem')")+chip(ST.modo==='dias','Días sueltos',"infSet('modo','dias')")+chip(ST.modo==='mes','Mes',"infSet('modo','mes')");
+    if(ST.modo==='sem'){
+      h+='<div style="margin-top:6px">'+l.map(function(id){var s=semanas[id];return chip(!!ST.sel[id],(ST.sel[id]?'✓ ':'')+E(fCorta(s.ini)+' – '+fCorta(s.fin)),"infSem('"+id+"')");}).join('')+'</div>';
+    }else if(ST.modo==='dias'){
+      h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><label style="font-size:12px">Desde<br><input type="date" value="'+ST.desde+'" onchange="infSet(\'desde\',this.value)" style="padding:7px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#16233d;color:#fff"></label><label style="font-size:12px">Hasta<br><input type="date" value="'+ST.hasta+'" onchange="infSet(\'hasta\',this.value)" style="padding:7px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#16233d;color:#fff"></label></div>';
+    }else{
+      h+='<div style="margin-top:6px"><input type="month" value="'+ST.mes+'" onchange="infSet(\'mes\',this.value)" style="padding:7px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#16233d;color:#fff"></div>';
+    }
+    var base=fechasBase();
+    if(base.length){
+      h+=lbl('Ajustar días (toca para quitar o volver a poner)');
+      var pS={};base.forEach(function(f){var id=semDeFecha(f)||'x';(pS[id]=pS[id]||[]).push(f);});
+      h+=Object.keys(pS).map(function(id){return pS[id].map(function(f){var off=!!ST.excl[f];return '<span onclick="infDia(\''+f+'\')" style="display:inline-block;padding:5px 9px;border-radius:7px;margin:0 4px 5px 0;font-size:11.5px;cursor:pointer;'+(off?'background:rgba(255,255,255,.05);color:rgba(255,255,255,.35);text-decoration:line-through':'background:#22d3ee;color:#04202a;font-weight:700')+'">'+E(fCorta(f))+'</span>';}).join('')+'<br>';}).join('');
+      h+='<div style="font-size:11px;color:rgba(255,255,255,.45)">'+fechasFinal().length+' día'+(fechasFinal().length===1?'':'s')+' en el informe. El día de hoy y los feriados no se cuentan.</div>';
+    }else h+='<div style="font-size:12px;color:#fca5a5;margin-top:8px">No hay días para contar con esa selección (hoy y el futuro no se cuentan).</div>';
+    h+=lbl('2 · ¿De quién?');
+    h+=chip(ST.quien==='todos','Todo el equipo',"infSet('quien','todos')")+chip(ST.quien==='una','Una persona',"infSet('quien','una')")+chip(ST.quien==='internos','Solo internos',"infSet('quien','internos')");
+    if(ST.quien==='una'){
+      var nm=[];try{nm=nombresConTurnoSemanaFiltrado(false).concat(nombresConTurnoSemanaFiltrado(true));}catch(e){}
+      nm=nm.filter(function(n,i,a){return a.indexOf(n)===i;}).sort();
+      h+='<div style="margin-top:6px"><select onchange="infSet(\'persona\',this.value)" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#16233d;color:#fff;font-family:inherit"><option value="">Elige…</option>'+nm.map(function(n){return '<option value="'+E(n)+'"'+(n===ST.persona?' selected':'')+'>'+E(n)+'</option>';}).join('')+'</select><div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:4px">Se listan las personas con turno en la semana abierta.</div></div>';
+    }
+    h+=lbl('3 · ¿Qué incluir?');
+    h+=chip(ST.ev,(ST.ev?'✓ ':'')+'Evaluación diaria',"infSet('ev',!ST.ev)")+chip(ST.ta,(ST.ta?'✓ ':'')+'Tareas asignadas',"infSet('ta',!ST.ta)");
+    h+='<div style="margin-top:2px">'+chip(ST.det==='todo','Detalle: todas las tareas',"infSet('det','todo')")+chip(ST.det==='pend','Detalle: solo pendientes',"infSet('det','pend')")+'</div>';
+    h+='<div style="margin-top:16px"><button class="btn-add" onclick="infGenerar()" style="background:#0891b2">Ver informe</button></div>';
+    h+='<div id="infRes" style="margin-top:14px"></div></div>';
+    ov.innerHTML=h;
+    if(R)pintarRes();
+  }
+  window.infSet=function(k,v){ST[k]=v;if(k==='modo'||k==='desde'||k==='hasta'||k==='mes')ST.excl={};R=null;pintar();};
+  window.infSem=function(id){if(ST.sel[id])delete ST.sel[id];else ST.sel[id]=true;ST.excl={};R=null;pintar();};
+  window.infDia=function(f){if(ST.excl[f])delete ST.excl[f];else ST.excl[f]=true;R=null;pintar();};
+
+  window.infGenerar=function(){
+    var fs=fechasFinal(),box=document.getElementById('infRes');
+    if(!fs.length){box.innerHTML='<div style="color:#fca5a5">Elige al menos un día con fecha pasada.</div>';return;}
+    if(ST.quien==='una'&&!ST.persona){box.innerHTML='<div style="color:#fca5a5">Elige la persona.</div>';return;}
+    if(!ST.ev&&!ST.ta){box.innerHTML='<div style="color:#fca5a5">Marca al menos evaluación o tareas.</div>';return;}
+    box.innerHTML='<div style="color:rgba(255,255,255,.6)">Calculando…</div>';
+    calcular(fs).then(function(r){R=r;pintarRes();var b=document.getElementById('infRes');if(b)try{b.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}})
+      .catch(function(e){box.innerHTML='<div style="color:#fca5a5">No se pudo calcular: '+E(e&&e.message||e)+'</div>';});
+  };
+
+  function kpi(v,l,sub,c){return '<div style="flex:1;min-width:120px;background:rgba(255,255,255,.06);border-radius:12px;padding:10px 12px"><div style="font-size:26px;font-weight:900;color:'+c+'">'+(v==null?'—':v+'%')+'</div><div style="font-size:11.5px;color:rgba(255,255,255,.6)">'+l+'<br>'+sub+'</div></div>';}
+  function detalleHtml(p){
+    var h='';
+    if(ST.ev&&p.ev.dias.length){
+      h+='<div style="font-size:11px;color:#93c5fd;font-weight:700;margin:8px 0 4px">EVALUACIÓN DIARIA</div><div>'+p.ev.dias.map(function(d){return '<span style="display:inline-block;margin:0 4px 4px 0;padding:3px 8px;border-radius:6px;font-size:11.5px;background:'+(d.ok?'rgba(34,197,94,.18);color:#86efac':'rgba(239,68,68,.2);color:#fca5a5')+'">'+(d.ok?'✓ ':'✗ ')+E(fCorta(d.f))+'</span>';}).join('')+'</div>';
+    }
+    if(ST.ta){
+      var it=p.ta.items.filter(function(x){return ST.det==='todo'||(!x.ok&&!x.aus);});
+      h+='<div style="font-size:11px;color:#93c5fd;font-weight:700;margin:8px 0 4px">TAREAS ASIGNADAS'+(ST.det==='pend'?' · SOLO PENDIENTES':'')+'</div>';
+      if(!it.length)h+='<div style="font-size:12px;color:rgba(255,255,255,.5)">'+(ST.det==='pend'?'Sin pendientes.':'Sin tareas medibles en el período.')+'</div>';
+      it.forEach(function(x){
+        var c=x.aus?'#94a3b8':x.ok?'#86efac':'#fca5a5',ic=x.aus?'–':x.ok?'✓':'✗';
+        h+='<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12.5px"><div style="display:flex;gap:8px"><span style="color:'+c+';font-weight:800;width:14px">'+ic+'</span><span style="flex:1"><b>'+E(fCorta(x.f))+'</b> · '+E(x.tarea)+'<br><span style="font-size:11px;color:rgba(255,255,255,.55)">🕐 '+E(x.hora)+(x.det?' · '+E(x.det):'')+'</span></span></div></div>';
+      });
+      if(p.ta.aus)h+='<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:4px">'+p.ta.aus+' tarea'+(p.ta.aus===1?'':'s')+' en jornada de ausencia aprobada: no cuenta en contra.</div>';
+    }
+    return h;
+  }
+  function pintarRes(){
+    var box=document.getElementById('infRes');if(!box||!R)return;
+    var T=R.T,h='';
+    h+='<div style="font-size:15px;font-weight:800">Informe · '+E(fLarga(R.ini))+' al '+E(fLarga(R.fin))+'</div><div style="font-size:11.5px;color:rgba(255,255,255,.5);margin-bottom:8px">'+R.fechas.length+' día'+(R.fechas.length===1?'':'s')+' contado'+(R.fechas.length===1?'':'s')+' · '+R.nSem+' semana'+(R.nSem===1?'':'s')+' · '+R.filas.length+' persona'+(R.filas.length===1?'':'s')+'</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap">'+kpi(T.pg,'General',(T.er+T.tc)+' de '+(T.ee+T.ta),col(T.pg))+(R.ev?kpi(T.pe,'Evaluación',T.er+' de '+T.ee,col(T.pe)):'')+(R.ta?kpi(T.pt,'Tareas',T.tc+' de '+T.ta,col(T.pt)):'')+'</div>';
+    h+='<div style="font-size:11px;color:#93c5fd;text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin:16px 0 4px">Por persona · toca para ver el detalle</div>';
+    if(!R.filas.length)h+='<div style="color:rgba(255,255,255,.5)">Nadie tenía actividades medibles en ese período.</div>';
+    R.filas.forEach(function(p,i){
+      h+='<details style="background:rgba(255,255,255,.05);border-radius:12px;padding:9px 12px;margin-bottom:6px"><summary style="cursor:pointer;display:flex;align-items:center;gap:8px;list-style:none"><span style="flex:1;font-weight:700">'+(p.interno?'🎓 ':'')+E(p.nombre)+'</span>'
+        +(R.ev?'<span style="font-size:11.5px;color:rgba(255,255,255,.6)">Eval '+p.ev.resp+'/'+p.ev.esp+'</span>':'')+(R.ta?'<span style="font-size:11.5px;color:rgba(255,255,255,.6)">Tareas '+p.ta.cumpl+'/'+p.ta.asig+'</span>':'')
+        +'<span style="min-width:44px;text-align:right;font-weight:900;color:'+col(p.pct)+'">'+(p.pct==null?'—':p.pct+'%')+'</span></summary>'+detalleHtml(p)+'</details>';
+    });
+    h+='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn-add" onclick="infPdf()" style="background:#0891b2">📄 Descargar PDF</button><button class="btn-add" onclick="infExcel()" style="background:#16a34a">📊 Descargar Excel</button></div>';
+    h+='<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:8px">Las ausencias aprobadas y los feriados no cuentan en contra. Una semana sin preguntas para el grupo no suma días de evaluación esperados.</div>';
+    box.innerHTML=h;
+  }
+
+  // ═════════ PDF ═════════
+  function sinTilde(s){return String(s==null?'':s);}
+  window.infPdf=function(){
+    if(!R)return;
+    var J=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
+    if(!J){alert('No se pudo cargar el generador de PDF.');return;}
+    var doc=new J({unit:'pt',format:'a4'}),M=40,PW=595,PH=842,CW=PW-2*M,y=M;
+    function chk(n){if(y+n>PH-60){doc.addPage();y=M;}}
+    function tx(t,x,yy,o){doc.text(sinTilde(t),x,yy,o);}
+    // Encabezado
+    doc.setFont('helvetica','bold');doc.setFontSize(15);doc.setTextColor(15,60,90);tx('Centro de Salud USS - Valdivia',M,y,{});y+=18;
+    doc.setFontSize(13);tx('Informe de cumplimiento',M,y);y+=16;
+    doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60,60,60);
+    tx('Período: '+fLarga(R.ini)+' al '+fLarga(R.fin)+' · '+R.fechas.length+' día(s) contado(s) · '+R.nSem+' semana(s)',M,y);y+=12;
+    tx('Alcance: '+(R.quien==='una'?ST.persona:R.quien==='internos'?'Solo internos':'Todo el equipo')+' · Incluye: '+[R.ev?'evaluación diaria':'',R.ta?'tareas asignadas':''].filter(Boolean).join(' y '),M,y);y+=12;
+    tx('Emitido: '+fLarga(hoyStr()),M,y);y+=8;
+    doc.setDrawColor(15,60,90);doc.setLineWidth(1);doc.line(M,y,PW-M,y);y+=16;
+    // Resumen general
+    var T=R.T;
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(15,60,90);tx('Cumplimiento general',M,y);y+=15;
+    doc.setFontSize(10);doc.setTextColor(30,30,30);
+    tx('General: '+(T.pg==null?'-':T.pg+'%')+'  ('+(T.er+T.tc)+' de '+(T.ee+T.ta)+')',M,y);y+=13;
+    if(R.ev){tx('Evaluación diaria: '+(T.pe==null?'-':T.pe+'%')+'  ('+T.er+' de '+T.ee+')',M,y);y+=13;}
+    if(R.ta){tx('Tareas asignadas: '+(T.pt==null?'-':T.pt+'%')+'  ('+T.tc+' de '+T.ta+')',M,y);y+=13;}
+    y+=8;
+    // Tabla por persona
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(15,60,90);tx('Por persona',M,y);y+=14;
+    function fila(c,b){doc.setFont('helvetica',b?'bold':'normal');doc.setFontSize(9.5);doc.setTextColor(b?255:30,b?255:30,b?255:30);if(b){doc.setFillColor(15,60,90);doc.rect(M,y-10,CW,15,'F');}
+      tx(c[0],M+4,y);tx(c[1],M+270,y,{align:'right'});tx(c[2],M+360,y,{align:'right'});tx(c[3],PW-M-4,y,{align:'right'});y+=15;}
+    fila(['Persona','Evaluación','Tareas','General'],true);
+    R.filas.forEach(function(p,i){chk(16);if(i%2===0){doc.setFillColor(243,246,250);doc.rect(M,y-10,CW,15,'F');}
+      fila([p.nombre.slice(0,42),R.ev?p.ev.resp+'/'+p.ev.esp:'-',R.ta?p.ta.cumpl+'/'+p.ta.asig:'-',p.pct==null?'-':p.pct+'%'],false);});
+    // Detalle por persona
+    R.filas.forEach(function(p){
+      doc.addPage();y=M;
+      doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(15,60,90);tx(p.nombre,M,y);y+=15;
+      doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60,60,60);
+      tx('Cumplimiento: '+(p.pct==null?'-':p.pct+'%')+(R.ev?'   Evaluación '+p.ev.resp+'/'+p.ev.esp:'')+(R.ta?'   Tareas '+p.ta.cumpl+'/'+p.ta.asig:''),M,y);y+=14;
+      if(R.ev&&p.ev.dias.length){
+        doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(15,60,90);tx('Evaluación diaria',M,y);y+=12;
+        doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(30,30,30);
+        var linea='';p.ev.dias.forEach(function(d){linea+=(d.ok?'[OK] ':'[FALTA] ')+fCorta(d.f)+'   ';});
+        doc.splitTextToSize(linea,CW).forEach(function(l){chk(12);tx(l,M,y);y+=11;});y+=6;
+      }
+      if(R.ta){
+        var it=p.ta.items.filter(function(x){return ST.det==='todo'||(!x.ok&&!x.aus);});
+        chk(30);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(15,60,90);tx('Tareas asignadas'+(ST.det==='pend'?' (solo pendientes)':''),M,y);y+=13;
+        if(!it.length){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(90,90,90);tx(ST.det==='pend'?'Sin pendientes.':'Sin tareas medibles en el período.',M,y);y+=12;}
+        it.forEach(function(x){
+          var l1=doc.splitTextToSize(x.tarea,CW-120);
+          chk(14+l1.length*11);
+          doc.setFont('helvetica','bold');doc.setFontSize(9);
+          if(x.aus)doc.setTextColor(120,120,120);else if(x.ok)doc.setTextColor(22,128,60);else doc.setTextColor(200,30,30);
+          tx(x.aus?'AUSENTE':x.ok?'CUMPLIDA':'PENDIENTE',M,y);
+          doc.setTextColor(30,30,30);tx(fCorta(x.f),M+66,y);
+          doc.setFont('helvetica','normal');l1.forEach(function(l,k){tx(l,M+110,y+k*11);});y+=l1.length*11;
+          doc.setFontSize(8.5);doc.setTextColor(90,90,90);tx('Horario: '+x.hora+(x.det?'  |  '+x.det:''),M+110,y);y+=12;
+          doc.setDrawColor(225,230,236);doc.setLineWidth(0.4);doc.line(M,y-6,PW-M,y-6);
+        });
+        if(p.ta.aus){chk(14);doc.setFontSize(8.5);doc.setTextColor(90,90,90);tx(p.ta.aus+' tarea(s) en jornada de ausencia aprobada: no cuentan en contra.',M,y);y+=12;}
+      }
+    });
+    // Firma + timbre del Director Técnico en la última página
+    chk(100);y+=24;
+    var cx=PW/2;
+    if(firmaJefe&&firmaJefe.img){try{doc.addImage(firmaJefe.img,'PNG',cx-86,y,100,34);}catch(e){}}
+    if(typeof LM_TIMBRE!=='undefined'){try{doc.addImage(LM_TIMBRE,'PNG',cx+20,y-6,76,35);}catch(e){}}
+    y+=40;doc.setDrawColor(30,30,30);doc.setLineWidth(0.6);doc.line(cx-100,y,cx+100,y);y+=12;
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(20,20,20);tx('Patricio Baeza Aguilar',cx,y,{align:'center'});y+=12;
+    doc.setFont('helvetica','normal');doc.setFontSize(9);tx('Director Técnico · Centro de Salud USS - Valdivia',cx,y,{align:'center'});
+    if(!(firmaJefe&&firmaJefe.img)){y+=12;doc.setFontSize(8);doc.setTextColor(150,60,60);tx('(Firma digital aún no guardada: crea "Mi firma" en la app)',cx,y,{align:'center'});}
+    // Numeración
+    var n=doc.getNumberOfPages();for(var i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(130,130,130);tx('Página '+i+' de '+n,PW-M,PH-24,{align:'right'});tx('GESTHOR · Informe de cumplimiento',M,PH-24);}
+    doc.save('Informe_cumplimiento_'+R.ini+'_a_'+R.fin+'.pdf');
+  };
+
+  // ═════════ Excel ═════════
+  window.infExcel=function(){
+    if(!R)return;
+    if(typeof XLSX==='undefined'){alert('No se pudo cargar el generador de Excel.');return;}
+    var res=[['Persona','Evaluación esperada','Evaluación respondida','% Evaluación','Tareas asignadas','Tareas cumplidas','% Tareas','Total esperado','Total cumplido','% General']];
+    R.filas.forEach(function(p){res.push([p.nombre,p.ev.esp,p.ev.resp,pct(p.ev.resp,p.ev.esp),p.ta.asig,p.ta.cumpl,pct(p.ta.cumpl,p.ta.asig),p.esp,p.ok,p.pct]);});
+    var T=R.T;res.push(['TOTAL EQUIPO',T.ee,T.er,T.pe,T.ta,T.tc,T.pt,T.ee+T.ta,T.er+T.tc,T.pg]);
+    var det=[['Persona','Fecha','Día','Tipo','Actividad','Horario','Estado','Detalle']];
+    R.filas.forEach(function(p){
+      p.ev.dias.forEach(function(d){det.push([p.nombre,d.f,diaDeDate(d.f),'Evaluación diaria','Responder evaluación del día','',d.ok?'Cumplida':'Pendiente','']);});
+      p.ta.items.forEach(function(x){det.push([p.nombre,x.f,diaDeDate(x.f),'Tarea',x.tarea,x.hora,x.aus?'Ausente (no cuenta)':x.ok?'Cumplida':'Pendiente',x.det]);});
+    });
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(res),'Resumen');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(det),'Detalle');
+    XLSX.writeFile(wb,'Informe_cumplimiento_'+R.ini+'_a_'+R.fin+'.xlsx');
+  };
+})();
+
 </script>
 </body>
 </html>
